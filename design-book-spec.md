@@ -45,22 +45,29 @@ export class DesignBook {
   copyScope(sourceName: string, targetName: string): Scope
   deleteScope(name: string): void
   getScope(name: string): Scope | undefined
+  hasScope(name: string): boolean // Check if a scope exists without retrieving it
   getAllScopes(): Array<{ name: string; config: ScopeConfig }>
-  
+  getAllKeysForScope(scopeName: string): string[] // Returns all keys for a scope, including inherited keys from extended scopes
+  getScopeDependencies(scopeName: string): string[] // Returns external keys that tokens in this scope depend on
+
   // Global token operations
   resolve(key: string): string
   has(key: string): boolean
 
   // Custom Function Registration
   registerFunction(name: string, implementation: (...args: any[]) => string): void
-  
+
+  // Processing mode — can be switched at runtime
+  mode: 'auto' | 'batch' // Get or set the current processing mode
+
   // Batch Operations
   flush(): void
-  
+  batchQueueSize: number // Number of pending updates in batch mode (0 in auto mode)
+
   // Event System
   on(event: string, callback: EventListener): void
   watch(key: string, callback: (newValue: string, oldValue?: string) => void): void
-  
+
   // Dependency Analysis
   getDependencyGraph(): DependencyGraph
 }
@@ -70,17 +77,19 @@ export class DesignBook {
 
 A `Scope` represents a collection of related tokens (colors, typography, spacing, etc.) with support for inheritance and dynamic calculations.
 
+`getAllKeys()` returns all token keys in the scope, **including keys inherited** from a parent scope via `extends`. This means an extended scope will list both its own keys and any keys it inherits that it hasn't overridden.
+
 ```typescript
 export class Scope {
   constructor(name: string, book: DesignBook, options?: ScopeOptions)
-  
+
   // Token management
   set(name: string, value: TokenValue): void
   get(name: string): TokenValue | undefined
   resolve(name: string): string
   has(name: string): boolean
   allTokens(): Record<string, TokenValue>
-  getAllKeys(): string[]
+  getAllKeys(): string[] // Includes inherited keys from parent scope
   
   // Reference management
   private referenceResolver: ReferenceResolver
@@ -553,7 +562,9 @@ export class ScopeManager {
   extendScope(name: string, baseScope: string, description?: string): Scope // Creates a new scope based on an existing one. No overrides param.
   copyScope(sourceName: string, targetName: string): Scope
   deleteScope(name: string): string[]
-  getAllKeysForScope(scopeName: string): string[]
+  hasScope(name: string): boolean
+  getAllKeysForScope(scopeName: string): string[] // Includes inherited keys
+  getScopeDependencies(scopeName: string): string[] // External keys this scope's tokens depend on
 }
 ```
 
@@ -761,8 +772,22 @@ ui.set('error-surface', colorMix(
 ui.set('accent-color', closestColor(hex('#ff6600'), brand)); // Finds closest brand color
 ui.set('contrast-color', furthestFrom(brand)); // Finds most contrasting color in brand scope
 
+// Relative color modifications
+ui.set('primary-complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, "+180"], ui));
+ui.set('primary-muted', relativeTo(ref('brand.primary'), 'oklch', [null, "*0.5", null], ui));
+ui.set('primary-light', relativeTo(ref('brand.primary'), 'oklch', ["+0.2", null, null], ui));
+
+// Minimum contrast (AA-compliant but not maximized)
+ui.set('subtle-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
+
+// Average color from a scope
+ui.set('brand-neutral', averageColor(brand, { colorSpace: 'oklch' }));
+
 // Spacing with multipliers
 ui.set('large-spacing', spacingScale(ref('brand.space-md'), ui, { multiplier: 2 }));
+
+// Typography scale
+ui.set('heading-lg', typographyScale(ref('brand.space-md'), ui, { ratio: 1.25, step: 3 }));
 ```
 
 ### Metadata and Documentation
@@ -835,13 +860,9 @@ light.set('surface', hex('#f5f5f5'));
 light.set('primary', hex('#0066cc'));
 
 // Create dark theme extending light
-const dark = book.addScope('dark', {
-  extends: 'light',
-  overrides: {
-    background: hex('#1a1a1a'),
-    surface: hex('#2d2d2d')
-  }
-});
+const dark = book.addScope('dark', { extends: 'light' });
+dark.set('background', hex('#1a1a1a'));
+dark.set('surface', hex('#2d2d2d'));
 
 // dark.primary automatically inherits from light.primary
 // dark.background and dark.surface use overridden values
@@ -972,7 +993,7 @@ brand.set('primary', hex('#0088ff'));
 ### Batch Processing
 
 ```typescript
-// Switch to batch mode for performance
+// Mode can be switched at runtime between auto and batch
 book.mode = 'batch';
 
 // Queue multiple updates
@@ -984,8 +1005,22 @@ brand.set('accent', colorMix(
   { ratio: 0.3, colorSpace: 'oklch' }
 ));
 
+console.log(book.batchQueueSize); // 3
+
+// Listen for batch completion
+book.on('batch-complete', (event) => {
+  console.log(`Processed ${event.detail.totalProcessed} updates`);
+});
+
+book.on('batch-failed', (event) => {
+  console.error('Batch errors:', event.detail.errors);
+});
+
 // Process all updates in optimal dependency order
 book.flush();
+
+// Switch back to auto mode for interactive use
+book.mode = 'auto';
 ```
 
 ### Dependency Analysis
@@ -1019,27 +1054,312 @@ if (path) {
 
 #### Contrast Functions
 
-- `bestContrastWith(targetValue, scope, options?)` - Finds best contrasting color from scope
-- `minContrastWith(targetValue, scope?, options?)` - Finds color meeting minimum contrast
+##### `bestContrastWith(targetValue, scope, options?)`
+
+Finds the color with the highest WCAG contrast ratio against the target from all color tokens in the given scope. Iterates all keys in the scope, filters to color tokens (using cached reference types for performance), and returns the hex value of the best match.
+
+```typescript
+export function bestContrastWith(
+  targetValue: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: { description?: string; [key: string]: any }
+): FunctionTokenValue
+```
+
+- If the scope contains no valid color tokens, throws a `FunctionError`.
+- Uses WCAG 2.1 contrast ratio calculation.
+
+##### `minContrastWith(targetValue, scope, options?)`
+
+Finds a color from the scope that meets a minimum WCAG contrast ratio against the target. Unlike `bestContrastWith` which returns the highest contrast, this returns the color closest to (but still meeting) the specified ratio threshold — useful when you want sufficient contrast without maximizing it (e.g., avoiding pure black/white).
+
+```typescript
+export function minContrastWith(
+  targetValue: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    ratio?: number;       // Minimum WCAG contrast ratio (default: 4.5, i.e. AA for normal text)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- Iterates all color tokens in the scope, filters to those meeting the minimum ratio.
+- From qualifying colors, returns the one with the **lowest** contrast (closest to the threshold).
+- If no color meets the minimum, falls back to the color with the **highest** contrast ratio (same as `bestContrastWith`).
+- Common ratio values: `3.0` (AA large text), `4.5` (AA normal text), `7.0` (AAA normal text).
+
+```typescript
+// Example: find a brand color that meets AA contrast on white
+ui.set('accessible-text', minContrastWith(
+  hex('#ffffff'),
+  brand,
+  { ratio: 4.5 }
+));
+```
 
 #### Color Manipulation
 
-- `colorMix(color1, color2, options?)` - Mixes two colors with ratio and colorSpace options
-- `lighten(color, options?)` - Lightens color by amount
-- `darken(color, options?)` - Darkens color by amount
-- `relativeTo(baseColor, colorSpace, modifications, options?)` - Applies relative modifications
+##### `colorMix(color1, color2, options?)`
+
+Mixes two colors via interpolation in a specified color space. Uses Culori's `interpolate` function internally.
+
+```typescript
+export function colorMix(
+  color1: TokenValue | ReferenceValue,
+  color2: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    ratio?: number;       // 0-1, default 0.5. 0 = 100% color1, 1 = 100% color2
+    colorSpace?: string;  // default 'lab'. Supports: lab, lch, oklch, rgb, hsl, a98-rgb, etc.
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- CSS renderer outputs: `color-mix(in ${colorSpace}, ${color1} ${100 - percentage}%, ${color2})`
+- JSON/W3 renderers resolve to computed hex value.
+
+##### `lighten(color, options?)`
+
+Increases the lightness of a color in HSL space.
+
+```typescript
+export function lighten(
+  color: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    amount?: number;      // 0-1, how much to lighten (default 0.1)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- CSS renderer outputs: `color-mix(in oklch, ${color} ${100 - percentage}%, white)`
+
+##### `darken(color, options?)`
+
+Decreases the lightness of a color in HSL space. Clamped to minimum lightness of 0.
+
+```typescript
+export function darken(
+  color: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    amount?: number;      // 0-1, how much to darken (default 0.1)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- CSS renderer outputs: `color-mix(in oklch, ${color} ${100 - percentage}%, black)`
+
+##### `relativeTo(baseColor, colorSpace, modifications, options?)`
+
+Applies relative modifications to individual color channels. This is one of the most powerful color functions — it allows precise adjustments in any supported color space without manually parsing and reconstructing colors.
+
+```typescript
+export function relativeTo(
+  baseColor: TokenValue | ReferenceValue,
+  colorSpace: string,    // oklch, hsl, lab, a98-rgb, etc.
+  modifications: (null | number | string)[],  // One entry per channel in the color space
+  scope: Scope,
+  options?: {
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+Each entry in `modifications` corresponds to a channel in the color space (e.g., for `oklch`: [lightness, chroma, hue]):
+
+- `null` — preserve the original channel value
+- `number` — set the channel to an absolute value
+- `string` with operator — apply a relative operation:
+  - `"+0.1"` — add to the channel value
+  - `"-30"` — subtract from the channel value
+  - `"*0.5"` — multiply the channel value
+  - `"/2"` — divide the channel value
+
+```typescript
+// Rotate hue by 180° in oklch, keep lightness and chroma
+ui.set('complementary', relativeTo(
+  ref('brand.primary'),
+  'oklch',
+  [null, null, "+180"],
+  ui
+));
+
+// Desaturate by halving chroma in oklch
+ui.set('muted', relativeTo(
+  ref('brand.primary'),
+  'oklch',
+  [null, "*0.5", null],
+  ui
+));
+
+// Set specific lightness while preserving hue and chroma
+ui.set('dark-variant', relativeTo(
+  ref('brand.primary'),
+  'oklch',
+  [0.3, null, null],
+  ui
+));
+```
+
+- CSS renderer outputs: `color(from ${color} ${colorSpace} ${channel-expressions})` using `calc()` for relative operations.
+  - Example: `color(from var(--brand-primary) oklch l c calc(h + 180))`
+- JSON/W3 renderers resolve to computed hex value.
 
 #### Scope Analysis
 
-- `closestColor(targetColor, scope, options?)` - Finds closest color in scope to target
-- `furthestFrom(scope, options?)` - Finds most contrasting color from scope
-- `averageColor(scope, options?)` - Calculates average color from scope colors
+##### `closestColor(targetColor, scope, options?)`
+
+Finds the perceptually closest color in a scope to the given target. Uses Euclidean distance in RGB space.
+
+```typescript
+export function closestColor(
+  targetColor: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: { description?: string; [key: string]: any }
+): FunctionTokenValue
+```
+
+- Returns the hex value of the closest match.
+- If the scope has no valid color tokens, returns `#00000000` (transparent black) as fallback.
+
+##### `furthestFrom(scope, options?)`
+
+Identifies the color in a scope with the greatest average perceptual distance to all other colors in the same scope. Useful for finding the most "unique" or contrasting color.
+
+```typescript
+export function furthestFrom(
+  scope: Scope,
+  options?: { description?: string; [key: string]: any }
+): FunctionTokenValue
+```
+
+- Uses CIELAB Delta E (Euclidean distance in LAB space) for perceptual accuracy.
+- Returns the hex value of the most distant color.
+
+##### `averageColor(scope, options?)`
+
+Calculates the perceptual average of all color tokens in a scope. Useful for generating a representative color for a palette or for neutral tones derived from brand colors.
+
+```typescript
+export function averageColor(
+  scope: Scope,
+  options?: {
+    colorSpace?: string;  // Color space for averaging (default 'lab'). LAB is recommended for perceptual uniformity.
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- Converts all color tokens in the scope to the target color space, averages each channel, and converts back to hex.
+- Ignores non-color tokens and unresolvable references.
+- If the scope has no valid color tokens, throws a `FunctionError`.
+
+```typescript
+// Get the average brand color for a neutral derived tone
+ui.set('brand-neutral', averageColor(brand, {
+  colorSpace: 'oklch',
+  description: 'Average of all brand colors in oklch space'
+}));
+```
 
 ### Non-Color Functions
 
-- `spacingScale(baseValue, options?)` - Multiplies spacing values with multiplier option
-- `typographyScale(baseSize, options?)` - Scales typography sizes with ratio option
-- `timing(duration, easing, options?)` - Creates timing functions
+##### `spacingScale(baseValue, options?)`
+
+Multiplies a dimension token's value by a multiplier, preserving its unit.
+
+```typescript
+export function spacingScale(
+  baseValue: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    multiplier?: number;  // Scale factor (default 1)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- Expects a `dimension` type token. Throws `FunctionError` if the resolved value is not a dimension.
+- Returns `${value * multiplier}${unit}` (e.g., `"32px"`, `"2rem"`).
+
+##### `typographyScale(baseSize, options?)`
+
+Scales a base font size using a modular scale ratio. Useful for generating a consistent type hierarchy from a single base size.
+
+```typescript
+export function typographyScale(
+  baseSize: TokenValue | ReferenceValue,
+  scope: Scope,
+  options?: {
+    ratio?: number;   // Scale ratio (default 1.25, i.e. Major Third). Common values: 1.067 Minor Second, 1.125 Major Second, 1.2 Minor Third, 1.25 Major Third, 1.333 Perfect Fourth, 1.5 Perfect Fifth, 1.618 Golden Ratio
+    step?: number;    // Number of steps up (positive) or down (negative) from the base (default 0)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- Computes `baseSize * (ratio ^ step)`, preserving the unit of the base token.
+- Expects a `dimension` type token. Throws `FunctionError` otherwise.
+
+```typescript
+const brand = book.addScope('brand');
+brand.set('font-base', rem(1));
+
+const ui = book.addScope('ui');
+ui.set('text-sm', typographyScale(ref('brand.font-base'), ui, { ratio: 1.25, step: -1 }));  // 0.8rem
+ui.set('text-base', ref('brand.font-base'));                                                  // 1rem
+ui.set('text-lg', typographyScale(ref('brand.font-base'), ui, { ratio: 1.25, step: 1 }));   // 1.25rem
+ui.set('text-xl', typographyScale(ref('brand.font-base'), ui, { ratio: 1.25, step: 2 }));   // 1.5625rem
+ui.set('text-2xl', typographyScale(ref('brand.font-base'), ui, { ratio: 1.25, step: 3 }));  // 1.953rem
+```
+
+##### `timing(duration, easing, options?)`
+
+Creates a timing/animation token combining a duration value with an easing function name. Useful for defining consistent motion tokens across a design system.
+
+```typescript
+export function timing(
+  duration: TokenValue | ReferenceValue,
+  easing: string,
+  scope: Scope,
+  options?: {
+    delay?: number;       // Optional delay in ms (default 0)
+    description?: string;
+    [key: string]: any;
+  }
+): FunctionTokenValue
+```
+
+- Expects `duration` to resolve to a dimension token (with a time unit like `ms` or `s`).
+- Returns a string like `"200ms ease-in-out"` or `"200ms ease-in-out 100ms"` (with delay).
+- CSS renderer can output the timing as a CSS transition shorthand fragment.
+
+```typescript
+brand.set('duration-fast', px(150));   // px used loosely; consider a ms() helper
+brand.set('duration-normal', px(300));
+
+ui.set('transition-hover', timing(ref('brand.duration-fast'), 'ease-out', ui, {
+  description: 'Quick hover transition'
+}));
+
+ui.set('transition-expand', timing(ref('brand.duration-normal'), 'ease-in-out', ui, {
+  delay: 50,
+  description: 'Panel expand with slight delay'
+}));
+```
 
 ### Value Types with Options Support
 
@@ -1223,6 +1543,8 @@ The event system enables reactive updates and observability throughout the desig
 - `scopeAdded`: Fired when a new scope is added. Payload: `{ scopeName: string }`
 - `scopeRemoved`: Fired when a scope is deleted. Payload: `{ scopeName: string }`
 - `tokenChanged`: Fired when a specific token value changes. Payload: `{ key: string, newValue: any, oldValue: any }`
+- `batch-complete`: Fired after a successful `flush()` in batch mode. Payload: `{ detail: { processedKeys: string[], totalProcessed: number } }`
+- `batch-failed`: Fired when `flush()` encounters errors. Payload: `{ detail: { errors: Error[], affectedKeys: string[] } }`
 
 You can subscribe to these events using `book.on(event, callback)`.
 
