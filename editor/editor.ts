@@ -533,6 +533,30 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
         if (update.docChanged) {
           syncScopeFromEditor(scope, update.state.doc.toString(), _book);
         }
+        // On blur: if editor is empty, remove the scope
+        if (update.focusChanged && !update.view.hasFocus) {
+          const text = update.state.doc.toString().trim();
+          const hasTokens = text.split('\n').some(line => {
+            const colonIdx = line.indexOf(':');
+            if (colonIdx < 0) return false;
+            const key = line.slice(0, colonIdx).trim();
+            const val = line.slice(colonIdx + 1).trim();
+            return key.length > 0 && val.length > 0;
+          });
+          if (!hasTokens) {
+            // Defer to avoid issues during the focus transition
+            setTimeout(() => {
+              try {
+                _book.deleteScope(scope.name);
+                scopeExtendsMap.delete(scope.name);
+              } catch {
+                // scope may already be gone
+              }
+              renderInputColumn();
+              updateAll();
+            }, 0);
+          }
+        }
       }),
       EditorView.theme({
         '&': { fontSize: '13px' },
