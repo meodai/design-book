@@ -89,13 +89,18 @@ h3 {
 .layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
   margin-bottom: var(--s-line);
+  max-height: calc(100vh - 6rem);
 }
 
 /* Input column */
 .input-column {
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  min-height: 0;
 }
 
 .scope-block {
@@ -251,7 +256,7 @@ h3 {
   display: flex;
   flex-direction: column;
   margin-left: calc(var(--s-line) * -1);
-  align-self: stretch;
+  min-height: 0;
 }
 
 .tabs {
