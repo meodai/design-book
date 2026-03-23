@@ -430,13 +430,26 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
     if (funcArgMatch && FUNCTION_NAMES.includes(funcArgMatch[1])) {
       const partial = funcArgMatch[2].trim();
       const wordFrom = context.pos - partial.length;
-      const allKeys = getAllQualifiedKeys();
+      const lowerPartial = partial.toLowerCase();
       const options: any[] = [];
 
-      // Suggest ref('...') completions
+      // Suggest scope names (for scope arguments)
+      for (const scope of book.getAllScopes()) {
+        if (!partial || scope.name.toLowerCase().includes(lowerPartial)) {
+          options.push({
+            label: scope.name,
+            type: 'namespace',
+            detail: 'scope',
+            boost: 1, // show scopes prominently
+          });
+        }
+      }
+
+      // Suggest ref('...') completions (for token arguments)
+      const allKeys = getAllQualifiedKeys();
       for (const { key, color } of allKeys) {
         const refLabel = `ref('${key}')`;
-        if (!partial || refLabel.toLowerCase().includes(partial.toLowerCase()) || key.toLowerCase().includes(partial.toLowerCase())) {
+        if (!partial || refLabel.toLowerCase().includes(lowerPartial) || key.toLowerCase().includes(lowerPartial)) {
           options.push({
             label: refLabel,
             type: 'variable',
