@@ -56,6 +56,15 @@ export class Scope {
     return this.tokens.has(name);
   }
 
+  /** Delete a local token, reverting to inherited value if available */
+  delete(name: string): boolean {
+    const had = this.tokens.delete(name);
+    if (had) {
+      this.book._notifyTokenChange(`${this.name}.${name}`, undefined, undefined);
+    }
+    return had;
+  }
+
   getAllKeys(): string[] {
     const localKeys = Array.from(this.tokens.keys());
     if (!this.extendsName) return localKeys;
