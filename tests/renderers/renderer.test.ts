@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { color, ref, px, rem } from '../../src/tokens';
+import { color, ref, px, rem, ms } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
 import { bestContrastWith, colorMix, lighten, darken, spacingScale, typographyScale } from '../../src/functions';
 
@@ -118,12 +118,16 @@ describe('Renderer', () => {
   });
 
   describe('w3-design-tokens format', () => {
-    it('renders nested structure with $value and $type', () => {
+    it('renders color as structured object with colorSpace, components, hex', () => {
       const book = createTestBook();
       const renderer = new Renderer(book, 'w3-design-tokens');
       const output = JSON.parse(renderer.render());
-      expect(output.brand.primary.$value).toBe('#0066cc');
-      expect(output.brand.primary.$type).toBe('color');
+      const primary = output.brand.primary;
+      expect(primary.$type).toBe('color');
+      expect(primary.$value.colorSpace).toBe('srgb');
+      expect(primary.$value.components).toHaveLength(3);
+      expect(primary.$value.hex).toBe('#0066cc');
+      expect(primary.$value.alpha).toBe(1);
     });
 
     it('renders references with {scope.token} syntax', () => {
@@ -131,6 +135,36 @@ describe('Renderer', () => {
       const renderer = new Renderer(book, 'w3-design-tokens');
       const output = JSON.parse(renderer.render());
       expect(output.ui.bg.$value).toBe('{brand.primary}');
+      expect(output.ui.bg.$type).toBe('color');
+    });
+
+    it('renders dimension as { value, unit } object', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('space', px(16));
+      const renderer = new Renderer(book, 'w3-design-tokens');
+      const output = JSON.parse(renderer.render());
+      expect(output.brand.space.$type).toBe('dimension');
+      expect(output.brand.space.$value).toEqual({ value: 16, unit: 'px' });
+    });
+
+    it('renders ms() tokens as duration type', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('speed', ms(200));
+      const renderer = new Renderer(book, 'w3-design-tokens');
+      const output = JSON.parse(renderer.render());
+      expect(output.brand.speed.$type).toBe('duration');
+      expect(output.brand.speed.$value).toEqual({ value: 200, unit: 'ms' });
+    });
+
+    it('includes $description when present', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc', { description: 'Main brand color' }));
+      const renderer = new Renderer(book, 'w3-design-tokens');
+      const output = JSON.parse(renderer.render());
+      expect(output.brand.primary.$description).toBe('Main brand color');
     });
   });
 

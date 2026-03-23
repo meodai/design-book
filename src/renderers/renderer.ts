@@ -1,6 +1,7 @@
 import { DesignBook } from '../design-book';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../tokens';
 import { registerBuiltinFunctionRenderers } from './function-renderers';
+import { parse, formatHex } from 'culori';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRenderer = (args: any[], options?: any) => string;
@@ -114,27 +115,113 @@ export class Renderer {
         const token = scope.get(key);
         if (!token) continue;
 
-        let dollarValue: string;
-        let dollarType: string;
+        const entry: Record<string, any> = {};
 
         if (token.type === 'reference') {
-          const ref = token as ReferenceValue;
-          dollarValue = `{${ref.key}}`;
-          // Try to determine the type from the resolved token
-          const resolvedToken = this.book.getTokenByKey(ref.key);
-          dollarType = resolvedToken ? getTokenType(resolvedToken, this.book) : 'unknown';
+          const refToken = token as ReferenceValue;
+          entry.$value = `{${refToken.key}}`;
+          // Determine $type from the resolved target
+          const resolvedToken = this.book.getTokenByKey(refToken.key);
+          if (resolvedToken) {
+            entry.$type = this.mapW3Type(resolvedToken);
+          }
+        } else if (token.type === 'function') {
+          // Resolve to computed value, then format per W3 type
+          const fnToken = token as FunctionTokenValue;
+          const internalType = fnToken.metadata?.returnType ?? 'unknown';
+          const resolved = resolveTokenValue(this.book, scope.name, key);
+          entry.$value = this.formatW3Value(internalType, resolved, token);
+          entry.$type = this.mapW3TypeString(internalType);
         } else {
-          dollarValue = resolveTokenValue(this.book, scope.name, key);
-          dollarType = getTokenType(token, this.book);
+          const tv = token as TokenValue;
+          entry.$value = this.formatW3Value(tv.type, String(tv.rawValue), tv);
+          entry.$type = this.mapW3TypeString(tv.type, tv);
         }
 
-        result[scope.name][key] = {
-          $value: dollarValue,
-          $type: dollarType,
-        };
+        // Add $description if present
+        if (token.description) {
+          entry.$description = token.description;
+        }
+
+        result[scope.name][key] = entry;
       }
     }
 
     return JSON.stringify(result, null, 2);
+  }
+
+  /** Map internal type to W3 $type string */
+  private mapW3Type(token: AnyTokenValue): string {
+    const internalType = getTokenType(token, this.book);
+    if (token.type === 'reference') {
+      const resolved = this.book.getTokenByKey((token as ReferenceValue).key);
+      if (resolved) return this.mapW3Type(resolved);
+    }
+    if (token.type !== 'function' && token.type !== 'reference') {
+      return this.mapW3TypeString((token as TokenValue).type, token as TokenValue);
+    }
+    return this.mapW3TypeString(internalType);
+  }
+
+  /** Map internal type string to W3 spec type */
+  private mapW3TypeString(internalType: string, token?: TokenValue): string {
+    if (internalType === 'color') return 'color';
+    if (internalType === 'dimension') {
+      const unit = token?.metadata?.unit;
+      if (unit === 'ms' || unit === 's') return 'duration';
+      return 'dimension';
+    }
+    if (internalType === 'string') return 'fontFamily'; // best W3 match for string
+    if (internalType === 'number') return 'number';
+    return internalType; // pass through for custom types
+  }
+
+  /** Format a resolved value into the W3 structured format */
+  private formatW3Value(internalType: string, resolvedStr: string, token: AnyTokenValue): any {
+    if (internalType === 'color') {
+      // W3 color: { colorSpace, components, alpha, hex }
+      const parsed = parse(resolvedStr);
+      if (parsed) {
+        const hex = formatHex(parsed) ?? resolvedStr;
+        return {
+          colorSpace: 'srgb',
+          components: [
+            Math.round((parsed.r ?? 0) * 1000) / 1000,
+            Math.round((parsed.g ?? 0) * 1000) / 1000,
+            Math.round((parsed.b ?? 0) * 1000) / 1000,
+          ],
+          alpha: parsed.alpha ?? 1,
+          hex,
+        };
+      }
+      return resolvedStr;
+    }
+
+    if (internalType === 'dimension') {
+      const tv = (token.type !== 'function' && token.type !== 'reference')
+        ? token as TokenValue : null;
+      if (tv) {
+        const unit = tv.metadata?.unit ?? 'px';
+        if (unit === 'ms' || unit === 's') {
+          // Duration type
+          return { value: Number(tv.rawValue), unit };
+        }
+        return { value: Number(tv.rawValue), unit };
+      }
+      // Function that returns dimension — parse from resolved string
+      const match = resolvedStr.match(/^([\d.]+)(.+)$/);
+      if (match) {
+        return { value: parseFloat(match[1]), unit: match[2] };
+      }
+      return resolvedStr;
+    }
+
+    if (internalType === 'string') {
+      const tv = (token.type !== 'function' && token.type !== 'reference')
+        ? token as TokenValue : null;
+      return tv ? String(tv.rawValue) : resolvedStr;
+    }
+
+    return resolvedStr;
   }
 }
