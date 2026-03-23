@@ -16,6 +16,8 @@ import { autocompletion, CompletionContext, CompletionResult } from '@codemirror
 // Register the <color-input> web component
 import 'hdr-color-input';
 
+import { parse as culoriParse, formatHex } from 'culori';
+
 // --- Create the design system (populated after event listeners are attached) ---
 
 const book = new DesignBook('demo-system');
@@ -329,12 +331,31 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
 
-    // Find hex colors for swatches (editable — clicking opens picker)
-    const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
+    // Find color('...') and hex('...') calls — editable, opens picker
+    const colorCallRegex = /(?:color|hex)\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;
     let match;
+    while ((match = colorCallRegex.exec(text)) !== null) {
+      const colorVal = match[1];
+      const parsed = culoriParse(colorVal);
+      if (parsed) {
+        const hex = formatHex(parsed) ?? colorVal;
+        const pos = from + match.index;
+        widgets.push({ pos, widget: new ColorSwatchWidget(hex, pos, true) });
+      }
+    }
+
+    // Find bare #hex colors (inside function args) — editable
+    const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
     while ((match = hexRegex.exec(text)) !== null) {
       const pos = from + match.index;
-      widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos, true) });
+      // Skip if already covered by a color() call above
+      const alreadyCovered = widgets.some(w => {
+        const wPos = (w.widget as ColorSwatchWidget).pos;
+        return wPos !== undefined && pos > wPos && pos < wPos + 20;
+      });
+      if (!alreadyCovered) {
+        widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos, true) });
+      }
     }
 
     // Find ref('...') and resolve to show swatch (read-only — no picker)
