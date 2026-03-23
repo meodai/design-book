@@ -177,7 +177,7 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
           if (arg.type === 'reference') {
             argStrs.push(`ref('${arg.key}')`);
           } else if (arg.type === 'color') {
-            argStrs.push(String(arg.rawValue));
+            argStrs.push(`color('${arg.rawValue}')`);
           } else if (typeof arg.getAllKeys === 'function') {
             // Scope argument -- show scope name
             argStrs.push(arg.name || 'scope');
@@ -195,8 +195,14 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   }
   // Plain token
   const tv = token as any;
+  if (tv.type === 'color') {
+    return `color('${tv.rawValue}')`;
+  }
   if (tv.metadata?.unit) {
     return `${tv.metadata.unit}(${tv.rawValue})`;
+  }
+  if (tv.type === 'string') {
+    return `string('${tv.rawValue}')`;
   }
   return String(tv.rawValue);
 }

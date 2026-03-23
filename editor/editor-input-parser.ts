@@ -54,11 +54,6 @@ export function parseTokenInput(
     return ms(parseFloat(msMatch[1]));
   }
 
-  // Hex color: #rgb, #rrggbb, #rrggbbaa
-  if (/^#([0-9a-fA-F]{3,8})$/.test(trimmed)) {
-    return color(trimmed);
-  }
-
   // Function calls: functionName(args...)
   const funcMatch = trimmed.match(/^(\w+)\((.+)\)$/s);
   if (funcMatch) {
@@ -70,12 +65,7 @@ export function parseTokenInput(
     }
   }
 
-  // Try as a CSS color (named colors like "red", "rebeccapurple", or rgb()/hsl())
-  if (parse(trimmed)) {
-    return color(trimmed);
-  }
-
-  throw new Error(`Unknown value: ${trimmed}`);
+  throw new Error(`Unknown value: ${trimmed}. Wrap colors in color(), dimensions in px()/rem()/ms()/dimension(), strings in string().`);
 }
 
 // --- Argument parsing helpers ---
