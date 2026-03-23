@@ -796,8 +796,6 @@ function getOrCreatePicker(): HTMLElement {
   if (!picker) {
     picker = document.createElement('color-input');
     picker.id = 'global-color-picker';
-    picker.setAttribute('popover', 'auto');
-    picker.style.cssText = 'position: fixed; z-index: 2000;';
     document.body.appendChild(picker);
 
     picker.addEventListener('change', () => {
@@ -805,17 +803,14 @@ function getOrCreatePicker(): HTMLElement {
       const newColor = picker.value;
       if (!newColor) return;
 
-      // Find the color(...) or #hex in the document at the stored position
       const doc = pickerTargetView.state.doc;
       const line = doc.lineAt(pickerTargetPos);
       const lineText = line.text;
 
-      // Find and replace color('...') or bare #hex that contains the position
       const colorCallRegex = /color\(\s*['"]([^'"]+)['"]\s*\)/g;
       const hexRegex = /#[0-9a-fA-F]{3,8}/g;
       let replaced = false;
 
-      // Try color('...') first
       let m;
       while ((m = colorCallRegex.exec(lineText)) !== null) {
         const absStart = line.from + m.index;
@@ -829,7 +824,6 @@ function getOrCreatePicker(): HTMLElement {
         }
       }
 
-      // Try bare #hex inside function args
       if (!replaced) {
         while ((m = hexRegex.exec(lineText)) !== null) {
           const absStart = line.from + m.index;
@@ -847,16 +841,33 @@ function getOrCreatePicker(): HTMLElement {
   return picker;
 }
 
+function hidePicker() {
+  const picker = document.getElementById('global-color-picker');
+  if (picker) {
+    picker.style.display = 'none';
+  }
+  pickerTargetView = null;
+  pickerTargetPos = -1;
+}
+
 // Global click handler for color swatches
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
-  if (!target.classList.contains('cm-color-swatch')) return;
+
+  // Clicking inside the picker — don't close
+  const picker = document.getElementById('global-color-picker');
+  if (picker && picker.contains(target)) return;
+
+  if (!target.classList.contains('cm-color-swatch')) {
+    // Clicked outside swatch and picker — hide
+    hidePicker();
+    return;
+  }
 
   const colorValue = target.dataset.color;
   const pos = parseInt(target.dataset.pos || '-1', 10);
   if (!colorValue || pos < 0) return;
 
-  // Find which editor view owns this swatch
   for (const [, view] of editorViews) {
     if (view.dom.contains(target)) {
       pickerTargetView = view;
@@ -865,20 +876,20 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  const picker = getOrCreatePicker() as any;
-  picker.value = colorValue;
+  const p = getOrCreatePicker() as any;
+  p.value = colorValue;
 
-  // Position near the swatch
+  // Position directly below the swatch
   const rect = target.getBoundingClientRect();
-  picker.style.left = `${rect.left}px`;
-  picker.style.top = `${rect.bottom + 4}px`;
+  p.style.position = 'fixed';
+  p.style.left = `${rect.left}px`;
+  p.style.top = `${rect.bottom + 4}px`;
+  p.style.zIndex = '2000';
+  p.style.display = '';
 
-  // Show the picker
-  if (typeof picker.showPopover === 'function') {
-    try { picker.showPopover(); } catch { /* already shown */ }
-  }
-  if (typeof picker.show === 'function') {
-    picker.show();
+  // Use setAnchor if available
+  if (typeof p.setAnchor === 'function') {
+    p.setAnchor(target);
   }
 });
 
