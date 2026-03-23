@@ -231,9 +231,11 @@ h3 {
 }
 
 .color-picker-wrapper color-input {
-  /* The component renders a trigger chip + text input — keep it compact */
-  --radius-2: 0;
-  --radius-3: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+  height: 0;
 }
 
 @keyframes picker-fade-in {
