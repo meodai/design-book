@@ -19,7 +19,8 @@
     "build:editor": "vite build --mode editor",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm test && npm run build"
   },
   "license": "AGPL-3.0-only",
   "dependencies": {

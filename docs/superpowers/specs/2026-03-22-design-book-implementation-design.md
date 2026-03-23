@@ -1,5 +1,7 @@
 # Design Book Implementation Design
 
+> **Note:** This document is historical — it describes the original design from before implementation. The API has since evolved significantly: `hex()` was renamed to `color()` and then removed as an alias, function tokens no longer carry their `implementation` (they use a registry lookup by `name`), `FunctionTokenValue.rawValue` was removed, token processors and reference resolution caches moved to WeakMaps, the event system is now fully typed, 7 functions had their scope argument removed, and more. See `README.md` and `CLAUDE.md` for the current API.
+
 ## Overview
 
 Implementation plan for `design-book`, a reactive TypeScript design system framework for managing tokens (colors, spacing, typography) with dependency tracking, dynamic calculations, and multi-format rendering. Replaces [color-router](https://github.com/meodai/color-router) with a generic, extensible architecture.

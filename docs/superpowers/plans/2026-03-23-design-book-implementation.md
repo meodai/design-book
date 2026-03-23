@@ -1,5 +1,7 @@
 # Design Book Implementation Plan
 
+> **Historical document.** This plan was used for the initial implementation. The API has since evolved — see `README.md` and `CLAUDE.md` for the current state.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the design-book library — a reactive TypeScript design system framework with dependency tracking, built-in color/spacing/typography functions, multi-format rendering, and an interactive demo.

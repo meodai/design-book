@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   if (mode === 'editor') {
     return {
       root: 'editor',
+      base: process.env.BASE_PATH ?? '/',
       server: { host: true },
       build: {
         outDir: '../editor-dist',

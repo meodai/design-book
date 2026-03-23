@@ -232,6 +232,109 @@ Run `npm run dev` to start the interactive editor. Features:
 - SVG dependency visualization
 - Error highlighting for invalid values
 
+## Example Workflow
+
+One useful way to work with Design Book is to separate your system into three layers:
+
+1. Generate raw color primitives with a palette tool such as [Poline](https://meodai.github.io/poline/) or [RampenSau](https://meodai.github.io/rampensau/)
+2. Define semantic tokens as relationships over those primitives
+3. Feed UI tokens and components from the semantic layer instead of hard-coded colors
+
+That keeps your palette exploratory while your product tokens stay stable and meaningful.
+
+### 1. Generate color primitives
+
+For example, Poline can generate a palette from a small set of anchor colors:
+
+```typescript
+import { Poline } from 'poline';
+
+const poline = new Poline({
+  anchorColors: [
+    [230, 0.65, 0.2],
+    [210, 0.9, 0.55],
+    [160, 0.7, 0.78],
+  ],
+  numPoints: 4,
+});
+
+const palette = poline.colorsCSS;
+```
+
+If you prefer a ramp-oriented workflow, RampenSau is a good fit for generating a light-to-dark sequence first and then mapping roles onto it.
+
+### 2. Store those colors as primitives
+
+```typescript
+import {
+  DesignBook, color, ref,
+  bestContrastWith, closestColor, colorMix,
+} from 'design-book';
+
+const book = new DesignBook('workflow');
+
+const primitive = book.addScope('primitive');
+primitive.set('blue-900', color('#102a43'));
+primitive.set('blue-700', color('#1f5f8b'));
+primitive.set('blue-500', color('#2f80ed'));
+primitive.set('mint-300', color('#7ad9b6'));
+primitive.set('sand-100', color('#f6efe7'));
+primitive.set('ink-900', color('#111111'));
+primitive.set('white', color('#ffffff'));
+```
+
+In a real pipeline, those primitive values would usually be imported from Poline, RampenSau, or another color-generation step rather than typed by hand.
+
+### 3. Build a semantic layer from rules
+
+```typescript
+const semantic = book.addScope('semantic');
+
+semantic.set('surface', ref('primitive.sand-100'));
+semantic.set('surface-accent', ref('primitive.blue-500'));
+semantic.set('surface-accent-hover', colorMix(
+  ref('semantic.surface-accent'),
+  ref('primitive.ink-900'),
+  { ratio: 0.12 },
+));
+
+semantic.set('text', bestContrastWith(ref('semantic.surface'), primitive));
+semantic.set('text-on-accent', bestContrastWith(ref('semantic.surface-accent'), primitive));
+semantic.set('border-subtle', closestColor(ref('semantic.surface'), primitive));
+semantic.set('focus-ring', ref('primitive.mint-300'));
+```
+
+This is where Design Book becomes useful: instead of deciding every UI color manually, you encode the rule.
+
+- `text` is whichever primitive gives the best contrast on the current surface
+- `text-on-accent` stays legible even if the accent color changes
+- `surface-accent-hover` is derived from the accent token, not maintained separately
+
+### 4. Consume semantic tokens in UI scopes
+
+```typescript
+const button = book.addScope('button');
+
+button.set('background', ref('semantic.surface-accent'));
+button.set('background-hover', ref('semantic.surface-accent-hover'));
+button.set('text', ref('semantic.text-on-accent'));
+button.set('border', ref('semantic.border-subtle'));
+button.set('focus-ring', ref('semantic.focus-ring'));
+```
+
+Now your components depend on meaning, not on palette coordinates or literal hex values.
+
+If you regenerate the primitive palette, the semantic and component layers recompute automatically as long as the token relationships still make sense.
+
+### Why this workflow works
+
+- Palette tools stay free to explore hue, ramp shape, and tonal structure
+- Semantic tokens preserve intent such as `surface`, `text`, `accent`, and `focus-ring`
+- UI scopes stay stable even when the underlying palette changes
+- Accessibility rules can live in the token graph instead of in design review folklore
+
+Design Book is strongest in that middle layer: not generating colors, but turning a generated palette into a maintainable, explainable system.
+
 ## License
 
 [AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [hello@meodai.me](mailto:hello@meodai.me).
