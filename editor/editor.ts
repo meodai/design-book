@@ -273,8 +273,9 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
         continue;
       }
 
-      // Skip inherited keys that haven't been modified
-      if (!scope.hasOwn(key) && scope.has(key)) {
+      // Skip inherited keys only if the text still says "inherit"
+      // (if the user typed a new value, we should set it locally as an override)
+      if (!scope.hasOwn(key) && scope.has(key) && valueStr === getTokenDisplayValue(scope, key)) {
         continue;
       }
 
@@ -287,14 +288,10 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       }
     }
 
-    // Remove tokens that are no longer in the editor
+    // Remove local tokens that are no longer in the editor
     for (const existingKey of scope.getAllKeys()) {
-      if (!newKeys.has(existingKey)) {
-        try {
-          (scope as any).delete?.(existingKey);
-        } catch {
-          // delete may not exist; skip
-        }
+      if (!newKeys.has(existingKey) && scope.hasOwn(existingKey)) {
+        scope.delete(existingKey);
       }
     }
   } finally {
