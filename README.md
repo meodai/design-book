@@ -207,4 +207,4 @@ Run `npm run dev` to start the interactive editor. Features:
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [hello@meodai.me](mailto:hello@meodai.me).
