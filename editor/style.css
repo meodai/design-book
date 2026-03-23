@@ -105,6 +105,7 @@ h3 {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
+  background: var(--c-surface-subtle);
   font-weight: 400;
   font-size: 0.7rem;
   box-shadow: 0 var(--s-line) 0 0 var(--c-surface-on);
@@ -125,6 +126,7 @@ h3 {
 .scope-editor {
   overflow: hidden;
   background: var(--c-surface);
+  border: var(--s-line) solid var(--c-surface-on);
 }
 
 .scope-editor .cm-editor {
