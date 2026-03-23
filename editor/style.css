@@ -225,20 +225,20 @@ h3 {
     0 var(--s-line--fat) 0 0 var(--c-surface-on);
 }
 
-/* Color picker — hide the trigger (chip + text input), popover panel renders in top layer */
-#global-color-picker {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  overflow: visible;
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
+/* Color picker wrapper — positioned at the swatch */
+.color-picker-wrapper {
+  animation: picker-fade-in 0.1s ease;
 }
 
-#global-color-picker::part(panel) {
-  pointer-events: auto;
+.color-picker-wrapper color-input {
+  /* The component renders a trigger chip + text input — keep it compact */
+  --radius-2: 0;
+  --radius-3: 0;
+}
+
+@keyframes picker-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Output column */

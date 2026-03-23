@@ -787,80 +787,117 @@ showConnectionsCb.addEventListener('change', () => {
 
 // --- Color picker (hdr-color-input) ---
 
-let activeColorPicker: HTMLElement | null = null;
 let pickerTargetView: EditorView | null = null;
 let pickerTargetPos: number = -1;
+let activePicker: HTMLElement | null = null;
 
-function getOrCreatePicker(): any {
-  let picker = document.getElementById('global-color-picker') as any;
-  if (!picker) {
-    picker = document.createElement('color-input');
-    picker.id = 'global-color-picker';
-    document.body.appendChild(picker);
-
-    picker.addEventListener('change', () => {
-      if (!pickerTargetView || pickerTargetPos < 0) return;
-      const newColor = picker.value;
-      if (!newColor) return;
-
-      const doc = pickerTargetView.state.doc;
-      const line = doc.lineAt(pickerTargetPos);
-      const lineText = line.text;
-
-      const colorCallRegex = /color\(\s*['"]([^'"]+)['"]\s*\)/g;
-      const hexRegex = /#[0-9a-fA-F]{3,8}/g;
-      let replaced = false;
-
-      let m;
-      while ((m = colorCallRegex.exec(lineText)) !== null) {
-        const absStart = line.from + m.index;
-        const absEnd = absStart + m[0].length;
-        if (pickerTargetPos >= absStart && pickerTargetPos < absEnd) {
-          pickerTargetView.dispatch({
-            changes: { from: absStart, to: absEnd, insert: `color('${newColor}')` },
-          });
-          replaced = true;
-          break;
-        }
-      }
-
-      if (!replaced) {
-        while ((m = hexRegex.exec(lineText)) !== null) {
-          const absStart = line.from + m.index;
-          const absEnd = absStart + m[0].length;
-          if (pickerTargetPos >= absStart && pickerTargetPos < absEnd) {
-            pickerTargetView.dispatch({
-              changes: { from: absStart, to: absEnd, insert: newColor },
-            });
-            break;
-          }
-        }
-      }
-    });
+function cleanupPicker() {
+  if (activePicker) {
+    activePicker.remove();
+    activePicker = null;
   }
-  return picker;
+  pickerTargetView = null;
+  pickerTargetPos = -1;
+}
+
+function replaceColorInEditor(view: EditorView, pos: number, newColor: string) {
+  const doc = view.state.doc;
+  const line = doc.lineAt(pos);
+  const lineText = line.text;
+
+  const colorCallRegex = /color\(\s*['"]([^'"]+)['"]\s*\)/g;
+  const hexRegex = /#[0-9a-fA-F]{3,8}/g;
+
+  let m;
+  while ((m = colorCallRegex.exec(lineText)) !== null) {
+    const absStart = line.from + m.index;
+    const absEnd = absStart + m[0].length;
+    if (pos >= absStart && pos < absEnd) {
+      view.dispatch({
+        changes: { from: absStart, to: absEnd, insert: `color('${newColor}')` },
+      });
+      return;
+    }
+  }
+
+  while ((m = hexRegex.exec(lineText)) !== null) {
+    const absStart = line.from + m.index;
+    const absEnd = absStart + m[0].length;
+    if (pos >= absStart && pos < absEnd) {
+      view.dispatch({
+        changes: { from: absStart, to: absEnd, insert: newColor },
+      });
+      return;
+    }
+  }
 }
 
 // Global click handler for color swatches
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
-  if (!target.classList.contains('cm-color-swatch')) return;
+
+  // Clicking inside existing picker — leave it alone
+  if (activePicker && activePicker.contains(target)) return;
+
+  if (!target.classList.contains('cm-color-swatch')) {
+    cleanupPicker();
+    return;
+  }
 
   const colorValue = target.dataset.color;
   const pos = parseInt(target.dataset.pos || '-1', 10);
   if (!colorValue || pos < 0) return;
 
+  // Find the owning editor view
+  let foundView: EditorView | null = null;
   for (const [, view] of editorViews) {
     if (view.dom.contains(target)) {
-      pickerTargetView = view;
-      pickerTargetPos = pos;
+      foundView = view;
       break;
     }
   }
+  if (!foundView) return;
 
-  const picker = getOrCreatePicker();
+  pickerTargetView = foundView;
+  pickerTargetPos = pos;
+
+  // Clean up any previous picker
+  cleanupPicker();
+  pickerTargetView = foundView;
+  pickerTargetPos = pos;
+
+  // Create a fresh picker element positioned at the swatch
+  const picker = document.createElement('color-input') as any;
   picker.value = colorValue;
-  picker.show(target);
+  picker.setAttribute('no-alpha', '');
+
+  // Position it absolutely near the swatch
+  const wrapper = document.createElement('div');
+  wrapper.className = 'color-picker-wrapper';
+  const rect = target.getBoundingClientRect();
+  wrapper.style.cssText = `
+    position: fixed;
+    left: ${rect.left}px;
+    top: ${rect.bottom + 4}px;
+    z-index: 2000;
+  `;
+  wrapper.appendChild(picker);
+  document.body.appendChild(wrapper);
+  activePicker = wrapper;
+
+  picker.addEventListener('change', () => {
+    const newColor = picker.value;
+    if (newColor && pickerTargetView && pickerTargetPos >= 0) {
+      replaceColorInEditor(pickerTargetView, pickerTargetPos, newColor);
+    }
+  });
+
+  // Auto-open the picker
+  requestAnimationFrame(() => {
+    if (typeof picker.show === 'function') {
+      picker.show();
+    }
+  });
 });
 
 // --- Boot & initial render ---
