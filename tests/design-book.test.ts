@@ -201,6 +201,81 @@ describe('DesignBook', () => {
     });
   });
 
+  describe('bug fixes', () => {
+    it('Bug 1: deleting a token removes stale dependency-graph edges and node', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      const ui = book.addScope('ui');
+      brand.set('primary', color('#0066cc'));
+      ui.set('bg', ref('brand.primary'));
+
+      const graph = book.getDependencyGraph();
+      // Verify edge exists before deletion
+      expect(graph.getPrerequisitesFor('ui.bg')).toContain('brand.primary');
+
+      // Delete the reference token
+      ui.delete('bg');
+
+      // The node should be removed from the graph
+      expect(graph.getAllNodes()).not.toContain('ui.bg');
+      // No edges should remain for the deleted key
+      expect(graph.getDependentsOf('brand.primary')).not.toContain('ui.bg');
+    });
+
+    it('Bug 2: batch mode reports circular dependency errors and processes non-circular keys', () => {
+      const book = new DesignBook('test', { mode: 'batch' });
+      const scope = book.addScope('test');
+      // Set up a circular dependency
+      scope.set('a', ref('test.b'));
+      scope.set('b', ref('test.a'));
+      // Also set a valid token
+      scope.set('valid', color('#ff0000'));
+
+      const result = book.flush();
+      // Circular dependency should appear in errors
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors.some(e => e.message.toLowerCase().includes('circular'))).toBe(true);
+      // The valid token should still be processed
+      expect(result.processed).toContain('test.valid');
+    });
+
+    it('Bug 3: watch() does not throw when watched token is deleted', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc'));
+
+      const handler = vi.fn();
+      book.watch('brand.primary', handler);
+
+      // Delete the token — should not throw
+      expect(() => brand.delete('primary')).not.toThrow();
+
+      // Callback should have been called with undefined
+      expect(handler).toHaveBeenCalled();
+      expect(handler.mock.calls[0][0]).toBeUndefined();
+    });
+
+    it('Bug 4: propagated tokenChanged events include dependent new resolved value', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      const ui = book.addScope('ui');
+      brand.set('primary', color('#0066cc'));
+      ui.set('bg', ref('brand.primary'));
+
+      const events: any[] = [];
+      book.on('tokenChanged', (event: any) => {
+        events.push(event.detail);
+      });
+
+      brand.set('primary', color('#ff0000'));
+
+      // Find the event for the dependent (ui.bg)
+      const uiBgEvent = events.find(e => e.key === 'ui.bg');
+      expect(uiBgEvent).toBeDefined();
+      expect(uiBgEvent.newValue).toBe('#ff0000');
+    });
+  });
+
   describe('re-entrancy', () => {
     it('queues changes triggered by event handlers in auto mode', () => {
       const book = new DesignBook('test');

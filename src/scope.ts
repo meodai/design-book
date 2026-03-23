@@ -41,6 +41,8 @@ export class Scope {
     const oldValue = this.tokens.get(name);
     this.tokens.set(name, value);
     this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
+    // Update reference cache for any references pointing to this key
+    this.referenceResolver.updateAllReferencesTo(`${this.name}.${name}`);
   }
 
   has(name: string): boolean {

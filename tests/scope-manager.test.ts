@@ -73,4 +73,21 @@ describe('ScopeManager', () => {
     const deps = manager.getScopeDependencies('ui');
     expect(deps).toContain('brand.primary');
   });
+
+  it('Bug 5: getScopeDependencies finds function token dependencies', () => {
+    manager.addScope('brand');
+    const ui = manager.addScope('ui');
+    ui.set('contrast', {
+      type: 'function',
+      rawValue: 'bestContrastWith',
+      implementation: (...args: any[]) => '#000000',
+      args: [ref('brand.primary')],
+      metadata: {
+        dependencies: ['brand.primary'],
+        visualDependencies: [],
+      },
+    } as any);
+    const deps = manager.getScopeDependencies('ui');
+    expect(deps).toContain('brand.primary');
+  });
 });

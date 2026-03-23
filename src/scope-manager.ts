@@ -1,6 +1,6 @@
 import { Scope } from './scope';
 import { ScopeError } from './errors';
-import type { ReferenceValue } from './tokens';
+import type { ReferenceValue, FunctionTokenValue } from './tokens';
 
 export class ScopeManager {
   private scopes: Map<string, Scope> = new Map();
@@ -83,6 +83,15 @@ export class ScopeManager {
         const refScope = refToken.key.split('.')[0];
         if (refScope !== name) {
           deps.push(refToken.key);
+        }
+      } else if (token.type === 'function') {
+        const fnToken = token as FunctionTokenValue;
+        const fnDeps = fnToken.metadata?.dependencies ?? [];
+        for (const dep of fnDeps) {
+          const depScope = dep.split('.')[0];
+          if (depScope !== name) {
+            deps.push(dep);
+          }
         }
       }
     }

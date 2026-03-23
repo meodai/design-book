@@ -150,10 +150,15 @@ export class DesignBook {
     this.listeners.get(event)?.delete(callback);
   }
 
-  watch(key: string, callback: (newValue: string, oldDetail: any) => void): void {
+  watch(key: string, callback: (newValue: string | undefined, oldDetail: any) => void): void {
     this.on('tokenChanged', (event: { detail: any }) => {
       if (event.detail.key === key) {
-        const newValue = this.resolve(key);
+        let newValue: string | undefined;
+        try {
+          newValue = this.resolve(key);
+        } catch {
+          newValue = undefined;
+        }
         callback(newValue, event.detail);
       }
     });
@@ -200,9 +205,8 @@ export class DesignBook {
     // Update dependency graph
     const deps = this._extractDepsFromValue(newValue);
     this.graph.addNode(qualifiedKey);
-    if (deps.length > 0) {
-      this.graph.updateEdges(qualifiedKey, deps);
-    }
+    // Always update edges (even when empty) to clear stale edges on deletion
+    this.graph.updateEdges(qualifiedKey, deps);
 
     const changedKeys: string[] = [qualifiedKey];
     const scopeSet = new Set<string>();
@@ -214,7 +218,7 @@ export class DesignBook {
     // Fire tokenChanged for this key
     this.emit('tokenChanged', { key: qualifiedKey, newValue, oldValue });
 
-    // Fire tokenChanged for all dependents
+    // Fire tokenChanged for all dependents with their actual resolved values
     const dependents = this.graph.getDependentsOf(qualifiedKey);
     for (const dep of dependents) {
       changedKeys.push(dep);
@@ -222,7 +226,19 @@ export class DesignBook {
       if (depDotIndex !== -1) {
         scopeSet.add(dep.substring(0, depDotIndex));
       }
-      this.emit('tokenChanged', { key: dep, newValue: undefined, oldValue: undefined });
+      // Bug 4 fix: try to resolve the dependent's new value
+      let depNewValue: any;
+      try {
+        depNewValue = this.resolve(dep);
+      } catch {
+        depNewValue = undefined;
+      }
+      this.emit('tokenChanged', { key: dep, newValue: depNewValue, oldValue: undefined });
+    }
+
+    // If the token was deleted (newValue is undefined), remove the node from the graph
+    if (newValue === undefined) {
+      this.graph.removeNode(qualifiedKey);
     }
 
     // Fire change event with summary
@@ -249,6 +265,7 @@ export class DesignBook {
   flush(): { processed: string[]; errors: Error[] } {
     const processed: string[] = [];
     const errors: Error[] = [];
+    const failedKeys = new Set<string>();
 
     const keys = Array.from(this.batchQueue.keys());
 
@@ -257,21 +274,25 @@ export class DesignBook {
       this.graph.addNode(key);
       const entry = this.batchQueue.get(key)!;
       const deps = this._extractDepsFromValue(entry.newValue);
-      if (deps.length > 0) {
-        try {
-          this.graph.updateEdges(key, deps);
-        } catch (e) {
-          // ignore circular dep errors during flush
-        }
+      try {
+        this.graph.updateEdges(key, deps);
+      } catch (e) {
+        // Collect circular dependency errors instead of ignoring them
+        errors.push(e instanceof Error ? e : new Error(String(e)));
+        failedKeys.add(key);
       }
     }
 
-    // Try topological sort, fall back to original order
+    // Filter out failed keys before sorting
+    const validKeys = keys.filter(k => !failedKeys.has(k));
+
+    // Try topological sort — don't fall back to original order on failure
     let sortedKeys: string[];
     try {
-      sortedKeys = this.graph.topologicalSort(keys);
-    } catch {
-      sortedKeys = keys;
+      sortedKeys = this.graph.topologicalSort(validKeys);
+    } catch (e) {
+      errors.push(e instanceof Error ? e : new Error(String(e)));
+      sortedKeys = [];
     }
 
     // Process each key
@@ -281,22 +302,27 @@ export class DesignBook {
         processed.push(key);
       } catch (e) {
         errors.push(e instanceof Error ? e : new Error(String(e)));
+        failedKeys.add(key);
       }
     }
 
-    // Also check keys not in sorted output (e.g. those with unresolvable refs)
-    for (const key of keys) {
-      if (!processed.includes(key) && !errors.some(e => e.message.includes(key))) {
+    // Also check valid keys not in sorted output (e.g. those with unresolvable refs)
+    for (const key of validKeys) {
+      if (!processed.includes(key) && !failedKeys.has(key)) {
         try {
           this.resolve(key);
           processed.push(key);
         } catch (e) {
           errors.push(e instanceof Error ? e : new Error(String(e)));
+          failedKeys.add(key);
         }
       }
     }
 
-    this.batchQueue.clear();
+    // Only clear processed keys from the queue, not failed ones
+    for (const key of processed) {
+      this.batchQueue.delete(key);
+    }
 
     if (errors.length > 0) {
       this.emit('batch-failed', { processed, errors });

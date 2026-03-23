@@ -132,6 +132,42 @@ describe('Scope', () => {
     expect(scope.resolve('loud')).toBe('Hello!');
   });
 
+  it('Bug 6: reference cache is updated when referenced token changes', () => {
+    const brand = new Scope('brand', book);
+    book._scopes.set('brand', brand);
+
+    const semantic = new Scope('semantic', book);
+    book._scopes.set('semantic', semantic);
+
+    // Set up a reference before the target exists
+    const myRef = ref('brand.primary');
+    semantic.set('bg', myRef);
+
+    // The reference should not be resolvable yet (no brand.primary)
+    // Now set the target
+    brand.set('primary', color('#0066cc'));
+
+    // After setting the target, the graph needs edges for updateAllReferencesTo to work.
+    // We need to set up the graph edges manually since _notifyTokenChange is mocked.
+    const graph = book.getDependencyGraph();
+    graph.addNode('brand.primary');
+    graph.addNode('semantic.bg');
+    graph.updateEdges('semantic.bg', ['brand.primary']);
+
+    // Now update brand.primary again — this should trigger updateAllReferencesTo
+    book.resolve.mockImplementation((key: string) => {
+      const [s, t] = key.split('.');
+      return book._scopes.get(s)!.resolve(t);
+    });
+
+    brand.set('primary', color('#ff0000'));
+
+    // The reference's resolvedMetadata should now be updated
+    const token = semantic.get('bg') as any;
+    expect(token.resolvedMetadata).toBeDefined();
+    expect(token.resolvedMetadata.isResolvable).toBe(true);
+  });
+
   it('allTokens returns all token objects including inherited', () => {
     const parent = new Scope('light', book);
     book._scopes.set('light', parent);
