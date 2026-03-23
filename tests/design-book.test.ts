@@ -274,6 +274,65 @@ describe('DesignBook', () => {
       expect(uiBgEvent).toBeDefined();
       expect(uiBgEvent.newValue).toBe('#ff0000');
     });
+
+    it('processes token deletion in batch mode and clears it from the queue', () => {
+      const book = new DesignBook('test', { mode: 'batch' });
+      const brand = book.addScope('brand');
+
+      brand.set('primary', color('#0066cc'));
+      expect(book.flush().errors).toHaveLength(0);
+
+      brand.delete('primary');
+      expect(book.batchQueueSize).toBe(1);
+
+      const result = book.flush();
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.processed).toContain('brand.primary');
+      expect(book.batchQueueSize).toBe(0);
+      expect(book.has('brand.primary')).toBe(false);
+    });
+
+    it('keeps inherited dependencies when deleting a local override', () => {
+      const book = new DesignBook('test');
+      const light = book.addScope('light');
+      const dark = book.addScope('dark', { extends: 'light' });
+      const ui = book.addScope('ui');
+
+      light.set('primary', color('#0066cc'));
+      dark.set('primary', color('#ff0000'));
+      ui.set('bg', ref('dark.primary'));
+
+      expect(book.resolve('ui.bg')).toBe('#ff0000');
+
+      dark.delete('primary');
+
+      expect(book.resolve('dark.primary')).toBe('#0066cc');
+      expect(book.resolve('ui.bg')).toBe('#0066cc');
+      expect(book.getDependencyGraph().getPrerequisitesFor('dark.primary')).toContain('light.primary');
+
+      light.set('primary', color('#00aa00'));
+
+      expect(book.resolve('dark.primary')).toBe('#00aa00');
+      expect(book.resolve('ui.bg')).toBe('#00aa00');
+    });
+
+    it('updates reference cache when a referenced token is deleted', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      const semantic = book.addScope('semantic');
+
+      brand.set('primary', color('#0066cc'));
+      semantic.set('bg', ref('brand.primary'));
+      brand.set('primary', color('#0055cc'));
+
+      const token = book.getTokenByKey('semantic.bg') as any;
+      expect(token.resolvedMetadata?.isResolvable).toBe(true);
+
+      brand.delete('primary');
+
+      expect(token.resolvedMetadata?.isResolvable).toBe(false);
+    });
   });
 
   describe('re-entrancy', () => {

@@ -33,8 +33,8 @@ export class ReferenceResolver {
     }
   }
 
-  updateAllReferencesTo(key: string): void {
-    const dependents = this.book.getDependencyGraph().getDependentsOf(key);
+  updateAllReferencesTo(key: string, dependentKeys?: string[]): void {
+    const dependents = dependentKeys ?? this.book.getDependencyGraph().getDependentsOf(key);
     for (const depKey of dependents) {
       const token = this.book.getTokenByKey(depKey);
       if (!token) continue;

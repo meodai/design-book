@@ -202,11 +202,18 @@ export class DesignBook {
   }
 
   private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {
-    // Update dependency graph
-    const deps = this._extractDepsFromValue(newValue);
-    this.graph.addNode(qualifiedKey);
-    // Always update edges (even when empty) to clear stale edges on deletion
-    this.graph.updateEdges(qualifiedKey, deps);
+    const previousDependents = this.graph.getDependentsOf(qualifiedKey);
+    const currentValue = this.getTokenByKey(qualifiedKey);
+
+    if (currentValue) {
+      const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
+      this.graph.addNode(qualifiedKey);
+      this.graph.updateEdges(qualifiedKey, deps);
+      this._updateReferenceCaches(qualifiedKey);
+    } else {
+      this._updateReferenceCaches(qualifiedKey, previousDependents);
+      this.graph.removeNode(qualifiedKey);
+    }
 
     const changedKeys: string[] = [qualifiedKey];
     const scopeSet = new Set<string>();
@@ -219,7 +226,7 @@ export class DesignBook {
     this.emit('tokenChanged', { key: qualifiedKey, newValue, oldValue });
 
     // Fire tokenChanged for all dependents with their actual resolved values
-    const dependents = this.graph.getDependentsOf(qualifiedKey);
+    const dependents = this.graph.dfsTraversal(qualifiedKey).slice(1);
     for (const dep of dependents) {
       changedKeys.push(dep);
       const depDotIndex = dep.indexOf('.');
@@ -234,11 +241,6 @@ export class DesignBook {
         depNewValue = undefined;
       }
       this.emit('tokenChanged', { key: dep, newValue: depNewValue, oldValue: undefined });
-    }
-
-    // If the token was deleted (newValue is undefined), remove the node from the graph
-    if (newValue === undefined) {
-      this.graph.removeNode(qualifiedKey);
     }
 
     // Fire change event with summary
@@ -260,26 +262,72 @@ export class DesignBook {
     return [];
   }
 
+  private _getEffectiveDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) {
+      return this._extractDepsFromValue(value);
+    }
+
+    const scopeName = qualifiedKey.substring(0, dotIndex);
+    const tokenName = qualifiedKey.substring(dotIndex + 1);
+    const scope = this.scopeManager.getScope(scopeName);
+    const sourceKey = scope?.getSourceKey(tokenName);
+
+    if (sourceKey && sourceKey !== qualifiedKey) {
+      return [sourceKey];
+    }
+
+    return this._extractDepsFromValue(value);
+  }
+
+  private _updateReferenceCaches(qualifiedKey: string, dependentKeys?: string[]): void {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return;
+
+    const scopeName = qualifiedKey.substring(0, dotIndex);
+    const scope = this.scopeManager.getScope(scopeName);
+    scope?.updateReferenceCaches(qualifiedKey, dependentKeys);
+  }
+
   // --- Batch ---
 
   flush(): { processed: string[]; errors: Error[] } {
     const processed: string[] = [];
     const errors: Error[] = [];
     const failedKeys = new Set<string>();
+    const deletedKeys = new Set<string>();
+    const previousDependents = new Map<string, string[]>();
 
     const keys = Array.from(this.batchQueue.keys());
 
     // Add all keys as nodes and update edges
     for (const key of keys) {
+      previousDependents.set(key, this.graph.getDependentsOf(key));
+      const currentValue = this.getTokenByKey(key);
+
+      if (!currentValue) {
+        deletedKeys.add(key);
+        this.graph.removeNode(key);
+        continue;
+      }
+
       this.graph.addNode(key);
-      const entry = this.batchQueue.get(key)!;
-      const deps = this._extractDepsFromValue(entry.newValue);
+      const deps = this._getEffectiveDepsForKey(key, currentValue);
       try {
         this.graph.updateEdges(key, deps);
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
         failedKeys.add(key);
+      }
+    }
+
+    for (const key of keys) {
+      if (failedKeys.has(key)) continue;
+      if (deletedKeys.has(key)) {
+        this._updateReferenceCaches(key, previousDependents.get(key));
+      } else {
+        this._updateReferenceCaches(key);
       }
     }
 
@@ -297,6 +345,11 @@ export class DesignBook {
 
     // Process each key
     for (const key of sortedKeys) {
+      if (deletedKeys.has(key)) {
+        processed.push(key);
+        continue;
+      }
+
       try {
         this.resolve(key);
         processed.push(key);
@@ -309,6 +362,11 @@ export class DesignBook {
     // Also check valid keys not in sorted output (e.g. those with unresolvable refs)
     for (const key of validKeys) {
       if (!processed.includes(key) && !failedKeys.has(key)) {
+        if (deletedKeys.has(key)) {
+          processed.push(key);
+          continue;
+        }
+
         try {
           this.resolve(key);
           processed.push(key);

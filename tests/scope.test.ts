@@ -154,13 +154,14 @@ describe('Scope', () => {
     graph.addNode('semantic.bg');
     graph.updateEdges('semantic.bg', ['brand.primary']);
 
-    // Now update brand.primary again — this should trigger updateAllReferencesTo
+    // Now update brand.primary again and manually trigger cache refresh for the mock setup
     book.resolve.mockImplementation((key: string) => {
       const [s, t] = key.split('.');
       return book._scopes.get(s)!.resolve(t);
     });
 
     brand.set('primary', color('#ff0000'));
+    brand.updateReferenceCaches('brand.primary');
 
     // The reference's resolvedMetadata should now be updated
     const token = semantic.get('bg') as any;

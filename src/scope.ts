@@ -37,12 +37,20 @@ export class Scope {
     return undefined;
   }
 
+  getSourceKey(name: string): string | undefined {
+    if (this.tokens.has(name)) {
+      return `${this.name}.${name}`;
+    }
+    if (this.extendsName) {
+      return this.book.getScope(this.extendsName)?.getSourceKey(name);
+    }
+    return undefined;
+  }
+
   set(name: string, value: AnyTokenValue): void {
     const oldValue = this.tokens.get(name);
     this.tokens.set(name, value);
     this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
-    // Update reference cache for any references pointing to this key
-    this.referenceResolver.updateAllReferencesTo(`${this.name}.${name}`);
   }
 
   has(name: string): boolean {
@@ -65,6 +73,10 @@ export class Scope {
       this.book._notifyTokenChange(`${this.name}.${name}`, undefined, undefined);
     }
     return had;
+  }
+
+  updateReferenceCaches(key: string, dependentKeys?: string[]): void {
+    this.referenceResolver.updateAllReferencesTo(key, dependentKeys);
   }
 
   getAllKeys(): string[] {
