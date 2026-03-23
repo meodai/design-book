@@ -260,6 +260,12 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       if (!key || !valueStr) continue;
       newKeys.add(key);
 
+      // Skip inherited keys that haven't been modified
+      if (!scope.hasOwn(key) && scope.has(key)) {
+        const currentDisplay = getTokenDisplayValue(scope, key);
+        if (valueStr === currentDisplay) continue;
+      }
+
       try {
         const tokenValue = parseTokenInput(valueStr, _book, scope);
         scope.set(key, tokenValue);
