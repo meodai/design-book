@@ -23,6 +23,13 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.1",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/language": "^6.12.2",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.40.0",
+    "@lezer/highlight": "^1.2.3",
+    "codemirror": "^6.0.2",
     "culori": "^4.0.2"
   },
   "devDependencies": {

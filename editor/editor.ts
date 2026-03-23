@@ -7,7 +7,11 @@ import {
 import type { RenderFormat } from '../src/index';
 import type { Scope } from '../src/index';
 import { parseTokenInput } from './editor-input-parser';
-import { setupAutocomplete } from './editor-autocomplete';
+
+import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
+import { EditorState, RangeSetBuilder } from '@codemirror/state';
+import { defaultKeymap } from '@codemirror/commands';
+import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 
 // --- Boot the design system ---
 
@@ -48,6 +52,13 @@ dark.set('neutral-light', hex('#1a1a1a'));
 
 let activeFormat: RenderFormat = 'css-variables';
 
+// Track CodeMirror editor instances per scope name
+const editorViews = new Map<string, EditorView>();
+
+// Guard against sync loops: when we're programmatically syncing from editor -> scope,
+// don't let scope events trigger editor re-render
+let syncingFromEditor = false;
+
 // --- DOM refs ---
 
 const inputColumn = document.getElementById('input-column')!;
@@ -83,9 +94,15 @@ function logEvent(type: string, detail: Record<string, unknown>) {
 // Wire up events
 book.on('tokenChanged', (e: { detail: any }) => {
   logEvent('tokenChanged', e.detail);
+  if (!syncingFromEditor) {
+    updateAll();
+  }
 });
 book.on('change', (e: { detail: any }) => {
   logEvent('change', e.detail);
+  if (!syncingFromEditor) {
+    updateAll();
+  }
 });
 book.on('scopeAdded', (e: { detail: any }) => {
   logEvent('scopeAdded', e.detail);
@@ -116,6 +133,11 @@ function renderSVG() {
 function updateAll() {
   renderOutput();
   renderSVG();
+  // Update decorations in all editors (resolved colors may have changed)
+  for (const view of editorViews.values()) {
+    // Force decoration rebuild by dispatching a no-op transaction
+    view.dispatch({ effects: [] });
+  }
 }
 
 // --- Resolve a token for display, returning resolved value or error string ---
@@ -137,110 +159,6 @@ function looksLikeColor(value: string): boolean {
     || value.startsWith('hsl');
 }
 
-// --- Build the input UI ---
-
-function renderInputColumn() {
-  inputColumn.innerHTML = '';
-
-  const scopes = book.getAllScopes();
-
-  for (const scope of scopes) {
-    const block = document.createElement('div');
-    block.className = 'scope-block';
-
-    // Header
-    const header = document.createElement('div');
-    header.className = 'scope-header';
-    header.innerHTML = `<span class="scope-name">${scope.name}</span>`;
-
-    // Check if scope extends another (via allTokens keys vs own keys heuristic)
-    // We'll track extends info separately
-    const extendsInfo = getScopeExtends(scope.name);
-    if (extendsInfo) {
-      header.innerHTML += `<span class="scope-extends">extends ${extendsInfo}</span>`;
-    }
-
-    block.appendChild(header);
-
-    // Token rows
-    const keys = scope.getAllKeys();
-    for (const tokenName of keys) {
-      const { value: resolved, error } = safeResolve(scope.name, tokenName);
-      const isColor = !error && looksLikeColor(resolved);
-
-      const row = document.createElement('div');
-      row.className = 'token-row';
-
-      // Color swatch
-      const swatch = document.createElement('div');
-      swatch.className = `token-swatch${isColor ? '' : ' hidden'}`;
-      if (isColor) {
-        swatch.style.background = resolved;
-      }
-      row.appendChild(swatch);
-
-      // Name (read-only)
-      const nameInput = document.createElement('input');
-      nameInput.className = 'token-name';
-      nameInput.value = tokenName;
-      nameInput.readOnly = true;
-      row.appendChild(nameInput);
-
-      // Value (editable)
-      const valueInput = document.createElement('input');
-      valueInput.className = 'token-value';
-      valueInput.value = getTokenDisplayValue(scope, tokenName);
-      if (error) {
-        valueInput.classList.add('error');
-      }
-      valueInput.addEventListener('change', () => {
-        handleTokenValueChange(scope.name, tokenName, valueInput.value);
-      });
-      row.appendChild(valueInput);
-
-      block.appendChild(row);
-
-      // Error display
-      if (error) {
-        const errorEl = document.createElement('div');
-        errorEl.className = 'token-error';
-        errorEl.textContent = error;
-        block.appendChild(errorEl);
-      }
-    }
-
-    // Add token button
-    const addBtn = document.createElement('button');
-    addBtn.className = 'add-token-btn';
-    addBtn.textContent = '+ Add token';
-    addBtn.addEventListener('click', () => {
-      handleAddToken(scope.name);
-    });
-    block.appendChild(addBtn);
-
-    inputColumn.appendChild(block);
-  }
-
-  // Add scope button / form
-  const addScopeBtn = document.createElement('button');
-  addScopeBtn.className = 'add-scope-btn';
-  addScopeBtn.textContent = '+ Add scope';
-  addScopeBtn.addEventListener('click', () => {
-    showAddScopeForm();
-  });
-  inputColumn.appendChild(addScopeBtn);
-}
-
-// --- Scope extends tracking ---
-
-const scopeExtendsMap = new Map<string, string>();
-// Pre-populate
-scopeExtendsMap.set('dark', 'brand');
-
-function getScopeExtends(name: string): string | undefined {
-  return scopeExtendsMap.get(name);
-}
-
 // --- Get display value for a token ---
 
 function getTokenDisplayValue(scope: Scope, tokenName: string): string {
@@ -252,7 +170,6 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   }
   if (token.type === 'function') {
     const fn = token as any;
-    // Show function name with ref arguments for readability
     const argStrs: string[] = [];
     if (fn.args) {
       for (const arg of fn.args) {
@@ -262,7 +179,7 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
           } else if (arg.type === 'color') {
             argStrs.push(String(arg.rawValue));
           } else if (typeof arg.getAllKeys === 'function') {
-            // Scope argument — show scope name
+            // Scope argument -- show scope name
             argStrs.push(arg.name || 'scope');
           } else if (arg.type === 'dimension') {
             argStrs.push(`${arg.metadata?.unit || ''}(${arg.rawValue})`);
@@ -284,51 +201,400 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   return String(tv.rawValue);
 }
 
-// --- Handle value changes ---
+// --- Scope extends tracking ---
 
-function handleTokenValueChange(scopeName: string, tokenName: string, rawInput: string) {
-  const scope = book.getScope(scopeName);
-  if (!scope) return;
+const scopeExtendsMap = new Map<string, string>();
+scopeExtendsMap.set('dark', 'brand');
 
+function getScopeExtends(name: string): string | undefined {
+  return scopeExtendsMap.get(name);
+}
+
+// --- Convert scope tokens to text for CodeMirror ---
+
+function scopeToText(scope: Scope): string {
+  const lines: string[] = [];
+  for (const key of scope.getAllKeys()) {
+    lines.push(`${key}: ${getTokenDisplayValue(scope, key)}`);
+  }
+  return lines.join('\n');
+}
+
+// --- Sync editor content to scope ---
+
+function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
+  syncingFromEditor = true;
   try {
-    const tokenValue = parseTokenInput(rawInput);
-    scope.set(tokenName, tokenValue);
-  } catch (err) {
-    logEvent('error', { key: `${scopeName}.${tokenName}`, message: (err as Error).message });
+    const lines = text.split('\n');
+    const newKeys = new Set<string>();
+
+    for (const line of lines) {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx < 0) continue;
+
+      const key = line.slice(0, colonIdx).trim();
+      const valueStr = line.slice(colonIdx + 1).trim();
+
+      if (!key || !valueStr) continue;
+      newKeys.add(key);
+
+      try {
+        const tokenValue = parseTokenInput(valueStr);
+        scope.set(key, tokenValue);
+      } catch (err) {
+        // Log but don't interrupt editing
+        logEvent('parseError', { key: `${scope.name}.${key}`, message: (err as Error).message });
+      }
+    }
+
+    // Remove tokens that are no longer in the editor
+    for (const existingKey of scope.getAllKeys()) {
+      if (!newKeys.has(existingKey)) {
+        try {
+          (scope as any).delete?.(existingKey);
+        } catch {
+          // delete may not exist; skip
+        }
+      }
+    }
+  } finally {
+    syncingFromEditor = false;
   }
 
-  // Re-render everything
-  renderInputColumn();
+  // Now update outputs after all changes are applied
   updateAll();
 }
 
-// --- Add token ---
+// --- Color swatch widget ---
 
-function handleAddToken(scopeName: string) {
-  const name = prompt('Token name:');
-  if (!name || !name.trim()) return;
+class ColorSwatchWidget extends WidgetType {
+  constructor(private color: string) { super(); }
 
-  const value = prompt('Token value (e.g. #ff0000, px(16), rem(1)):');
-  if (!value || !value.trim()) return;
-
-  const scope = book.getScope(scopeName);
-  if (!scope) return;
-
-  try {
-    const tokenValue = parseTokenInput(value.trim());
-    scope.set(name.trim(), tokenValue);
-  } catch (err) {
-    logEvent('error', { key: `${scopeName}.${name.trim()}`, message: (err as Error).message });
+  eq(other: ColorSwatchWidget) {
+    return this.color === other.color;
   }
 
-  renderInputColumn();
-  updateAll();
+  toDOM() {
+    const span = document.createElement('span');
+    span.style.cssText = `
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(0,0,0,0.2);
+      vertical-align: middle;
+      margin: 0 4px 0 2px;
+      background: ${this.color};
+    `;
+    span.className = 'cm-color-swatch';
+    return span;
+  }
+
+  ignoreEvent() { return true; }
+}
+
+// --- Build decorations for color swatches ---
+
+function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  const doc = view.state.doc;
+
+  // We need to collect all decoration positions and sort them
+  const decorations: { pos: number; widget: WidgetType }[] = [];
+
+  for (const { from, to } of view.visibleRanges) {
+    const text = doc.sliceString(from, to);
+    // Find hex colors
+    const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
+    let match;
+    while ((match = hexRegex.exec(text)) !== null) {
+      const pos = from + match.index;
+      decorations.push({ pos, widget: new ColorSwatchWidget(match[0]) });
+    }
+
+    // Find ref('...') and resolve to show swatch
+    const refRegex = /ref\(\s*['"]([^'"]+)['"]\s*\)/g;
+    while ((match = refRegex.exec(text)) !== null) {
+      const refKey = match[1];
+      try {
+        const resolved = book.resolve(refKey);
+        if (resolved && looksLikeColor(resolved)) {
+          const pos = from + match.index;
+          decorations.push({ pos, widget: new ColorSwatchWidget(resolved) });
+        }
+      } catch {
+        // skip unresolvable refs
+      }
+    }
+  }
+
+  // Sort by position (required by RangeSetBuilder)
+  decorations.sort((a, b) => a.pos - b.pos);
+
+  for (const { pos, widget } of decorations) {
+    builder.add(pos, pos, Decoration.widget({ widget, side: -1 }));
+  }
+
+  return builder.finish();
+}
+
+// --- Color swatch plugin ---
+
+function colorSwatchPlugin(_book: DesignBook) {
+  return ViewPlugin.fromClass(class {
+    decorations: DecorationSet;
+
+    constructor(view: EditorView) {
+      this.decorations = buildDecorations(view, _book);
+    }
+
+    update(update: ViewUpdate) {
+      // Rebuild decorations on any change (doc change, viewport change, or effects)
+      this.decorations = buildDecorations(update.view, _book);
+    }
+  }, { decorations: v => v.decorations });
+}
+
+// --- Autocomplete ---
+
+const FUNCTION_NAMES = [
+  'bestContrastWith', 'minContrastWith', 'colorMix',
+  'lighten', 'darken', 'relativeTo',
+  'closestColor', 'furthestFrom', 'averageColor',
+  'spacingScale', 'typographyScale', 'timing',
+];
+
+const VALUE_CONSTRUCTORS = [
+  { label: "hex('#...')", apply: "hex('#", type: 'keyword' as const },
+  { label: 'px(...)', apply: 'px(', type: 'keyword' as const },
+  { label: 'rem(...)', apply: 'rem(', type: 'keyword' as const },
+  { label: 'ms(...)', apply: 'ms(', type: 'keyword' as const },
+];
+
+function getAllQualifiedKeys(): { key: string; color?: string }[] {
+  const results: { key: string; color?: string }[] = [];
+  for (const scope of book.getAllScopes()) {
+    for (const tokenName of scope.getAllKeys()) {
+      const qualifiedKey = `${scope.name}.${tokenName}`;
+      let color: string | undefined;
+      try {
+        const resolved = book.resolve(qualifiedKey);
+        if (resolved && (resolved.startsWith('#') || resolved.startsWith('rgb') || resolved.startsWith('hsl'))) {
+          color = resolved;
+        }
+      } catch {
+        // skip
+      }
+      results.push({ key: qualifiedKey, color });
+    }
+  }
+  return results;
+}
+
+function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
+  return (context: CompletionContext): CompletionResult | null => {
+    const line = context.state.doc.lineAt(context.pos);
+    const lineText = line.text;
+    const cursorInLine = context.pos - line.from;
+
+    // Find if we're in value position (after "key: ")
+    const colonIndex = lineText.indexOf(':');
+    if (colonIndex < 0 || cursorInLine <= colonIndex) return null;
+
+    const afterColon = lineText.slice(colonIndex + 1);
+    const afterColonTrimStart = afterColon.length - afterColon.trimStart().length;
+    const valueStart = line.from + colonIndex + 1 + afterColonTrimStart;
+    const valueText = lineText.slice(colonIndex + 1).trimStart();
+    const valueTextUpToCursor = valueText.slice(0, cursorInLine - (colonIndex + 1 + afterColonTrimStart));
+
+    // Check if we're inside ref('...')
+    const insideRefMatch = valueTextUpToCursor.match(/ref\(\s*['"]([^'"]*)$/);
+    if (insideRefMatch) {
+      const partial = insideRefMatch[1];
+      const refFrom = context.pos - partial.length;
+      const allKeys = getAllQualifiedKeys();
+      const options = allKeys
+        .filter(({ key }) => !partial || key.toLowerCase().includes(partial.toLowerCase()))
+        .map(({ key, color }) => ({
+          label: key,
+          type: 'variable' as const,
+          detail: color || undefined,
+          apply: key,
+        }));
+
+      if (options.length === 0) return null;
+      return { from: refFrom, options };
+    }
+
+    // Check if we're inside a function call argument position
+    const funcArgMatch = valueTextUpToCursor.match(/(\w+)\((?:[^)]*,\s*)?([^,)]*)$/);
+    if (funcArgMatch && FUNCTION_NAMES.includes(funcArgMatch[1])) {
+      const partial = funcArgMatch[2].trim();
+      const wordFrom = context.pos - partial.length;
+      const allKeys = getAllQualifiedKeys();
+      const options: any[] = [];
+
+      // Suggest ref('...') completions
+      for (const { key, color } of allKeys) {
+        const refLabel = `ref('${key}')`;
+        if (!partial || refLabel.toLowerCase().includes(partial.toLowerCase()) || key.toLowerCase().includes(partial.toLowerCase())) {
+          options.push({
+            label: refLabel,
+            type: 'variable',
+            detail: color || undefined,
+            apply: `ref('${key}')`,
+          });
+        }
+      }
+
+      if (options.length === 0) return null;
+      return { from: wordFrom, options };
+    }
+
+    // General value position: get word at cursor for "from" position
+    const wordMatch = valueTextUpToCursor.match(/[\w#'(.]*$/);
+    const partial = wordMatch ? wordMatch[0] : '';
+    const wordFrom = context.pos - partial.length;
+
+    // Don't show completions if we have no partial and no explicit activation
+    if (!partial && !context.explicit) return null;
+
+    const lowerPartial = partial.toLowerCase();
+    const options: any[] = [];
+
+    // Refs
+    const allKeys = getAllQualifiedKeys();
+    for (const { key, color } of allKeys) {
+      const refLabel = `ref('${key}')`;
+      if (!partial || refLabel.toLowerCase().includes(lowerPartial) || key.toLowerCase().includes(lowerPartial)) {
+        options.push({
+          label: refLabel,
+          type: 'variable',
+          detail: color || undefined,
+          apply: `ref('${key}')`,
+        });
+      }
+    }
+
+    // Functions
+    for (const fn of FUNCTION_NAMES) {
+      if (!partial || fn.toLowerCase().includes(lowerPartial)) {
+        options.push({
+          label: `${fn}(...)`,
+          type: 'function',
+          apply: `${fn}(`,
+        });
+      }
+    }
+
+    // Value constructors
+    for (const vc of VALUE_CONSTRUCTORS) {
+      if (!partial || vc.label.toLowerCase().includes(lowerPartial)) {
+        options.push({
+          label: vc.label,
+          type: vc.type,
+          apply: vc.apply,
+        });
+      }
+    }
+
+    if (options.length === 0) return null;
+    return { from: wordFrom, options };
+  };
+}
+
+// --- Create a CodeMirror editor for a scope ---
+
+function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBook): EditorView {
+  const initialDoc = scopeToText(scope);
+
+  const state = EditorState.create({
+    doc: initialDoc,
+    extensions: [
+      keymap.of(defaultKeymap),
+      autocompletion({
+        override: [createCompletionSource(_book, scope)],
+        activateOnTyping: true,
+      }),
+      colorSwatchPlugin(_book),
+      EditorView.updateListener.of((update: ViewUpdate) => {
+        if (update.docChanged) {
+          syncScopeFromEditor(scope, update.state.doc.toString(), _book);
+        }
+      }),
+      EditorView.theme({
+        '&': { fontSize: '13px' },
+        '.cm-content': {
+          fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
+          padding: '8px 0',
+        },
+        '.cm-line': { padding: '1px 8px' },
+        '.cm-focused': { outline: 'none' },
+        '.cm-scroller': { overflow: 'auto' },
+        '&.cm-focused .cm-cursor': { borderLeftColor: '#0066cc' },
+        '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
+          background: 'rgba(0, 102, 204, 0.15)',
+        },
+      }),
+    ],
+  });
+
+  const view = new EditorView({ state, parent: container });
+  return view;
+}
+
+// --- Build the input UI ---
+
+function renderInputColumn() {
+  // Destroy existing editors
+  for (const view of editorViews.values()) {
+    view.destroy();
+  }
+  editorViews.clear();
+
+  inputColumn.innerHTML = '';
+
+  const scopes = book.getAllScopes();
+
+  for (const scope of scopes) {
+    const block = document.createElement('div');
+    block.className = 'scope-block';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'scope-header';
+    header.innerHTML = `<span class="scope-name">${scope.name}</span>`;
+
+    const extendsInfo = getScopeExtends(scope.name);
+    if (extendsInfo) {
+      header.innerHTML += `<span class="scope-extends">extends ${extendsInfo}</span>`;
+    }
+
+    block.appendChild(header);
+
+    // CodeMirror editor container
+    const editorContainer = document.createElement('div');
+    editorContainer.className = 'scope-editor';
+    block.appendChild(editorContainer);
+
+    const view = createScopeEditor(scope, editorContainer, book);
+    editorViews.set(scope.name, view);
+
+    inputColumn.appendChild(block);
+  }
+
+  // Add scope button / form
+  const addScopeBtn = document.createElement('button');
+  addScopeBtn.className = 'add-scope-btn';
+  addScopeBtn.textContent = '+ Add scope';
+  addScopeBtn.addEventListener('click', () => {
+    showAddScopeForm();
+  });
+  inputColumn.appendChild(addScopeBtn);
 }
 
 // --- Add scope ---
 
 function showAddScopeForm() {
-  // Remove existing form if present
   const existing = inputColumn.querySelector('.new-scope-form');
   if (existing) {
     existing.remove();
@@ -396,10 +662,6 @@ document.querySelectorAll('.tab').forEach((tab) => {
 showConnectionsCb.addEventListener('change', () => {
   renderSVG();
 });
-
-// --- Autocomplete ---
-
-setupAutocomplete(book);
 
 // --- Initial render ---
 

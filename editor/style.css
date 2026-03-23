@@ -76,64 +76,60 @@ h3 {
   font-weight: 400;
 }
 
-.token-row {
-  display: grid;
-  grid-template-columns: 24px 140px 1fr;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.token-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 1px solid #ccc;
-  flex-shrink: 0;
-}
-
-.token-swatch.hidden {
-  visibility: hidden;
-}
-
-.token-name,
-.token-value {
-  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
-  font-size: 0.8rem;
-  padding: 4px 6px;
+/* CodeMirror scope editor */
+.scope-editor {
   border: 1px solid #ddd;
-  border-radius: 3px;
+  border-radius: 4px;
+  overflow: hidden;
   background: #fafafa;
 }
 
-.token-name {
-  color: #555;
+.scope-editor .cm-editor {
+  font-size: 13px;
+  background: transparent;
 }
 
-.token-value {
-  color: #222;
-}
-
-.token-value:focus {
-  outline: none;
-  border-color: #0066cc;
-  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
-}
-
-.token-value.error {
-  border-color: #dc3545;
-  background: #fff5f5;
-}
-
-.token-error {
-  grid-column: 1 / -1;
-  font-size: 0.75rem;
-  color: #dc3545;
+.scope-editor .cm-content {
   font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace;
-  padding: 2px 6px;
+  padding: 8px 0;
 }
 
-.add-token-btn,
+.scope-editor .cm-line {
+  padding: 1px 8px;
+}
+
+.scope-editor .cm-focused {
+  outline: none;
+}
+
+.scope-editor .cm-gutters {
+  display: none;
+}
+
+/* Autocomplete dropdown styling */
+.cm-tooltip-autocomplete {
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace !important;
+  font-size: 13px !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.cm-tooltip-autocomplete ul li {
+  padding: 3px 8px !important;
+}
+
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  background: #f0f4ff !important;
+  color: #222 !important;
+}
+
+.cm-completionDetail {
+  font-size: 11px;
+  color: #888;
+  margin-left: 8px;
+}
+
 .add-scope-btn {
   font-size: 0.75rem;
   padding: 4px 10px;
@@ -145,14 +141,9 @@ h3 {
   margin-top: 6px;
 }
 
-.add-token-btn:hover,
 .add-scope-btn:hover {
   border-color: #999;
   color: #333;
-}
-
-.add-scope-btn {
-  align-self: flex-start;
 }
 
 /* Output column */
@@ -285,50 +276,6 @@ h3 {
 
 .new-scope-form button:hover {
   background: #0055aa;
-}
-
-/* Autocomplete dropdown */
-.autocomplete-dropdown {
-  position: fixed;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  max-height: 240px;
-  overflow-y: auto;
-  z-index: 1000;
-  font-family: monospace;
-  font-size: 0.8rem;
-}
-
-.autocomplete-item {
-  padding: 4px 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.autocomplete-item:hover,
-.autocomplete-item.selected {
-  background: #f0f4ff;
-}
-
-.autocomplete-header {
-  padding: 4px 10px;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #999;
-  font-weight: 600;
-}
-
-.autocomplete-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  border: 1px solid #ccc;
-  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
