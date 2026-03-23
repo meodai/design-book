@@ -13,40 +13,44 @@ import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap } from '@codemirror/commands';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 
-// --- Boot the design system ---
+// --- Create the design system (populated after event listeners are attached) ---
 
 const book = new DesignBook('demo-system');
 
-// Brand scope
-const brand = book.addScope('brand');
-brand.set('primary', color('#0066cc'));
-brand.set('secondary', color('#ff8800'));
-brand.set('neutral-dark', color('#1a1a1a'));
-brand.set('neutral-light', color('#ffffff'));
-brand.set('success', color('#28a745'));
-brand.set('error', color('#dc3545'));
-brand.set('space-sm', px(8));
-brand.set('space-md', px(16));
-brand.set('font-base', rem(1));
+function bootDesignSystem() {
+  // Brand scope
+  const brand = book.addScope('brand');
+  brand.set('primary', color('#0066cc'));
+  brand.set('secondary', color('#ff8800'));
+  brand.set('neutral-dark', color('#1a1a1a'));
+  brand.set('neutral-light', color('#ffffff'));
+  brand.set('success', color('#28a745'));
+  brand.set('error', color('#dc3545'));
+  brand.set('space-sm', px(8));
+  brand.set('space-md', px(16));
+  brand.set('font-base', rem(1));
 
-// Semantic scope
-const semantic = book.addScope('semantic');
-semantic.set('background', ref('brand.neutral-light'));
-semantic.set('text', bestContrastWith(ref('semantic.background'), brand));
-semantic.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.1 }));
+  // Semantic scope
+  const semantic = book.addScope('semantic');
+  semantic.set('background', ref('brand.neutral-light'));
+  semantic.set('text', bestContrastWith(ref('semantic.background'), brand));
+  semantic.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.1 }));
 
-// UI scope
-const ui = book.addScope('ui');
-ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
-ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null]));
-ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
-ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
-ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
+  // UI scope
+  const ui = book.addScope('ui');
+  ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
+  ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null]));
+  ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
+  ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
+  ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
 
-// Dark theme extending brand
-const dark = book.addScope('dark', { extends: 'brand' });
-dark.set('neutral-dark', color('#ffffff'));
-dark.set('neutral-light', color('#1a1a1a'));
+  // Dark theme extending brand
+  const dark = book.addScope('dark', { extends: 'brand' });
+  dark.set('neutral-dark', color('#ffffff'));
+  dark.set('neutral-light', color('#1a1a1a'));
+
+  scopeExtendsMap.set('dark', 'brand');
+}
 
 // --- State ---
 
@@ -210,7 +214,6 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
 // --- Scope extends tracking ---
 
 const scopeExtendsMap = new Map<string, string>();
-scopeExtendsMap.set('dark', 'brand');
 
 function getScopeExtends(name: string): string | undefined {
   return scopeExtendsMap.get(name);
@@ -769,7 +772,8 @@ showConnectionsCb.addEventListener('change', () => {
   renderSVG();
 });
 
-// --- Initial render ---
+// --- Boot & initial render ---
 
+bootDesignSystem();
 renderInputColumn();
 updateAll();
