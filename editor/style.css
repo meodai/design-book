@@ -259,12 +259,13 @@ h3 {
 }
 
 .tab {
-  padding: 0.45rem 0.75rem;
+  padding: 0.4rem 0.75rem;
+  line-height: 1.5;
+  font-size: 0.7rem;
+  font-weight: 400;
   box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   margin-left: calc(-1 * var(--s-line));
   cursor: pointer;
-  font-size: 0.7rem;
-  font-weight: 400;
   color: var(--c-surface-on-alt);
   transition:
     transform 0.15s ease,
