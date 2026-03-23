@@ -259,7 +259,7 @@ h3 {
 }
 
 .tab {
-  padding: 0.4rem 0.75rem;
+  padding: calc(0.4rem + var(--s-line)) calc(0.75rem + var(--s-line));
   line-height: 1.5;
   font-size: 0.7rem;
   font-weight: 400;
