@@ -239,7 +239,7 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       newKeys.add(key);
 
       try {
-        const tokenValue = parseTokenInput(valueStr);
+        const tokenValue = parseTokenInput(valueStr, _book, scope);
         scope.set(key, tokenValue);
       } catch (err) {
         // Log but don't interrupt editing
@@ -296,7 +296,7 @@ class ColorSwatchWidget extends WidgetType {
 
 const errorLineDeco = Decoration.line({ class: 'cm-error-line' });
 
-function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
+function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): DecorationSet {
   const doc = view.state.doc;
 
   // Collect widget decorations (swatches) with their positions
@@ -355,7 +355,7 @@ function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
     if (!valueStr) continue; // empty value is OK while typing
 
     try {
-      parseTokenInput(valueStr);
+      parseTokenInput(valueStr, _book, _scope);
     } catch {
       errorLines.add(line.from);
     }
@@ -390,16 +390,16 @@ function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
 
 // --- Color swatch + error highlight plugin ---
 
-function colorSwatchPlugin(_book: DesignBook) {
+function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
   return ViewPlugin.fromClass(class {
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
-      this.decorations = buildDecorations(view, _book);
+      this.decorations = buildDecorations(view, _book, _scope);
     }
 
     update(update: ViewUpdate) {
-      this.decorations = buildDecorations(update.view, _book);
+      this.decorations = buildDecorations(update.view, _book, _scope);
     }
   }, { decorations: v => v.decorations });
 }
@@ -578,7 +578,7 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
         override: [createCompletionSource(_book, scope)],
         activateOnTyping: true,
       }),
-      colorSwatchPlugin(_book),
+      colorSwatchPlugin(_book, scope),
       EditorView.updateListener.of((update: ViewUpdate) => {
         if (update.docChanged) {
           syncScopeFromEditor(scope, update.state.doc.toString(), _book);
