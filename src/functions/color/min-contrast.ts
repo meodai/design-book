@@ -1,5 +1,10 @@
 import { wcagContrast, formatHex, parse } from 'culori';
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import {
+  createFunctionToken,
+  extractDependencies,
+  extractVisualDependencies,
+  getTokenProcessors,
+} from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
@@ -33,8 +38,9 @@ export function minContrastWithImpl(
 
     if (token.type === 'color') {
       const tv = token as TokenValue;
-      if (tv.processors && tv.processors[0]) {
-        const formatted = formatHex(tv.processors[0].instance);
+      const processors = getTokenProcessors(tv);
+      if (processors && processors[0]) {
+        const formatted = formatHex(processors[0].instance);
         if (formatted) colorHex = formatted;
       }
       if (!colorHex) {
@@ -89,19 +95,18 @@ export function minContrastWith(
 ): FunctionTokenValue {
   const { ratio = 4.5, description, ...rest } = options ?? {};
 
-  return val(
+  return createFunctionToken(
+    'minContrastWith',
+    [targetValue, scope],
     {
-      type: 'function' as const,
-      rawValue: 'minContrastWith',
-      implementation: (resolvedTarget: string, resolvedScope: Scope) =>
-        minContrastWithImpl(resolvedTarget, resolvedScope, ratio),
-      args: [targetValue, scope],
+      description,
+      ...rest,
+      options: { ratio },
       metadata: {
         dependencies: extractDependencies([targetValue]),
         visualDependencies: extractVisualDependencies([targetValue, scope]),
         returnType: 'color',
       },
     },
-    { description, ...rest }
   );
 }

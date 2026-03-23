@@ -2,12 +2,57 @@ import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { TokenError } from './errors';
+import { registerBuiltinFunctions } from './functions';
 import type { AnyTokenValue, ReferenceValue, FunctionTokenValue } from './tokens';
 
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
   description?: string;
 }
+
+export interface TokenChangedDetail {
+  key: string;
+  newValue: any;
+  oldValue: any;
+}
+
+export interface ChangeDetail {
+  changedKeys: string[];
+  scopes: string[];
+}
+
+export interface ScopeAddedDetail {
+  scope: string;
+}
+
+export interface ScopeRemovedDetail {
+  scope: string;
+  removedKeys: string[];
+}
+
+export interface BatchFailedDetail {
+  processed: string[];
+  errors: Error[];
+}
+
+export interface BatchCompleteDetail {
+  processed: string[];
+}
+
+export interface DesignBookEventMap {
+  tokenChanged: TokenChangedDetail;
+  change: ChangeDetail;
+  scopeAdded: ScopeAddedDetail;
+  scopeRemoved: ScopeRemovedDetail;
+  'batch-failed': BatchFailedDetail;
+  'batch-complete': BatchCompleteDetail;
+}
+
+export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
+  detail: DesignBookEventMap[K];
+};
+
+type EventCallback<K extends keyof DesignBookEventMap> = (event: DesignBookEvent<K>) => void;
 
 export class DesignBook {
   readonly name: string;
@@ -29,6 +74,7 @@ export class DesignBook {
     this._mode = options?.mode ?? 'auto';
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
+    registerBuiltinFunctions(this);
   }
 
   // --- Mode ---
@@ -87,6 +133,26 @@ export class DesignBook {
     return this.scopeManager.getScopeDependencies(name);
   }
 
+  getSourceKey(key: string): string | undefined {
+    const dotIndex = key.indexOf('.');
+    if (dotIndex === -1) return undefined;
+
+    const scopeName = key.substring(0, dotIndex);
+    const tokenName = key.substring(dotIndex + 1);
+    const scope = this.scopeManager.getScope(scopeName);
+    return scope?.getSourceKey(tokenName);
+  }
+
+  isInherited(key: string): boolean {
+    const dotIndex = key.indexOf('.');
+    if (dotIndex === -1) return false;
+
+    const scopeName = key.substring(0, dotIndex);
+    const tokenName = key.substring(dotIndex + 1);
+    const scope = this.scopeManager.getScope(scopeName);
+    return scope?.isInherited(tokenName) ?? false;
+  }
+
   // --- Token operations ---
 
   resolve(key: string): string {
@@ -129,29 +195,34 @@ export class DesignBook {
 
   // --- Function registry ---
 
-  registerFunction(name: string, impl: Function): void {
+  registerFunction(name: string, impl: (...args: any[]) => string): void {
     this.functions.set(name, impl);
   }
 
-  getFunction(name: string): Function | undefined {
-    return this.functions.get(name);
+  getFunction(name: string): ((...args: any[]) => string) | undefined {
+    const fn = this.functions.get(name);
+    return typeof fn === 'function' ? fn as (...args: any[]) => string : undefined;
   }
 
   // --- Events ---
 
-  on(event: string, callback: Function): void {
+  on<K extends keyof DesignBookEventMap>(event: K, callback: EventCallback<K>): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event)!.add(callback);
+    return () => this.off(event, callback);
   }
 
-  off(event: string, callback: Function): void {
+  off<K extends keyof DesignBookEventMap>(event: K, callback: EventCallback<K>): void {
     this.listeners.get(event)?.delete(callback);
   }
 
-  watch(key: string, callback: (newValue: string | undefined, oldDetail: any) => void): void {
-    this.on('tokenChanged', (event: { detail: any }) => {
+  watch(
+    key: string,
+    callback: (newValue: string | undefined, detail: TokenChangedDetail) => void,
+  ): () => void {
+    return this.on('tokenChanged', (event) => {
       if (event.detail.key === key) {
         let newValue: string | undefined;
         try {
@@ -164,11 +235,11 @@ export class DesignBook {
     });
   }
 
-  private emit(event: string, detail: any): void {
+  private emit<K extends keyof DesignBookEventMap>(event: K, detail: DesignBookEventMap[K]): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       for (const cb of callbacks) {
-        cb({ detail });
+        (cb as EventCallback<K>)({ detail });
       }
     }
   }

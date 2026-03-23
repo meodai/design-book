@@ -1,5 +1,5 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -42,12 +42,10 @@ export function lighten(
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
   const amount = options?.amount ?? 0.1;
-  return val(
+  return createFunctionToken(
+    'lighten',
+    [color],
     {
-      type: 'function' as const,
-      rawValue: 'lighten',
-      implementation: (...args: any[]) => lightenImpl(args[0], amount),
-      args: [color],
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
@@ -55,6 +53,5 @@ export function lighten(
         returnType: 'color',
       },
     },
-    options
   );
 }

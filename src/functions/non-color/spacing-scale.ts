@@ -1,4 +1,4 @@
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function spacingScaleImpl(baseValue: string, multiplier: number): string {
@@ -17,12 +17,10 @@ export function spacingScale(
   options?: { multiplier?: number; description?: string }
 ): FunctionTokenValue {
   const multiplier = options?.multiplier ?? 1;
-  return val(
+  return createFunctionToken(
+    'spacingScale',
+    [baseValue],
     {
-      type: 'function' as const,
-      rawValue: 'spacingScale',
-      implementation: (...args: any[]) => spacingScaleImpl(args[0], multiplier),
-      args: [baseValue],
       options: { multiplier },
       metadata: {
         dependencies: extractDependencies([baseValue]),
@@ -30,6 +28,5 @@ export function spacingScale(
         returnType: 'dimension',
       },
     },
-    options
   );
 }

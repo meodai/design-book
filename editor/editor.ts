@@ -78,7 +78,15 @@ const showConnectionsCb = document.getElementById('show-connections') as HTMLInp
 
 // --- Event log ---
 
-function logEvent(type: string, detail: Record<string, unknown>) {
+function logEvent(
+  type: string,
+  detail: {
+    key?: string;
+    changedKeys?: string[];
+    scope?: string;
+    message?: string;
+  },
+) {
   const now = new Date();
   const ts = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
 
@@ -101,19 +109,19 @@ function logEvent(type: string, detail: Record<string, unknown>) {
 }
 
 // Wire up events
-book.on('tokenChanged', (e: { detail: any }) => {
+book.on('tokenChanged', (e) => {
   logEvent('tokenChanged', e.detail);
   if (!syncingFromEditor) {
     updateAll();
   }
 });
-book.on('change', (e: { detail: any }) => {
+book.on('change', (e) => {
   logEvent('change', e.detail);
   if (!syncingFromEditor) {
     updateAll();
   }
 });
-book.on('scopeAdded', (e: { detail: any }) => {
+book.on('scopeAdded', (e) => {
   logEvent('scopeAdded', e.detail);
 });
 
@@ -179,8 +187,7 @@ function looksLikeColor(value: string): boolean {
 // --- Get display value for a token ---
 
 function getTokenDisplayValue(scope: Scope, tokenName: string): string {
-  // If inherited (not locally defined), show "inherit"
-  if (!scope.hasOwn(tokenName) && scope.has(tokenName)) {
+  if (scope.isInherited(tokenName)) {
     return 'inherit';
   }
 
@@ -213,7 +220,7 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
         }
       }
     }
-    return `${fn.rawValue}(${argStrs.join(', ')})`;
+    return `${fn.name || fn.rawValue}(${argStrs.join(', ')})`;
   }
   // Plain token
   const tv = token as any;
@@ -364,6 +371,10 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
 
 class ColorSwatchWidget extends WidgetType {
   constructor(private _color: string, private _pos: number, private _editable: boolean = false) { super(); }
+
+  get pos() {
+    return this._pos;
+  }
 
   eq(other: ColorSwatchWidget) {
     return this._color === other._color && this._pos === other._pos && this._editable === other._editable;

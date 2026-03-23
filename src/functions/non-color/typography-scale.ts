@@ -1,4 +1,4 @@
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function typographyScaleImpl(baseValue: string, ratio: number, step: number): string {
@@ -20,12 +20,10 @@ export function typographyScale(
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 1.25;
   const step = options?.step ?? 0;
-  return val(
+  return createFunctionToken(
+    'typographyScale',
+    [baseSize],
     {
-      type: 'function' as const,
-      rawValue: 'typographyScale',
-      implementation: (...args: any[]) => typographyScaleImpl(args[0], ratio, step),
-      args: [baseSize],
       options: { ratio, step },
       metadata: {
         dependencies: extractDependencies([baseSize]),
@@ -33,6 +31,5 @@ export function typographyScale(
         returnType: 'dimension',
       },
     },
-    options
   );
 }

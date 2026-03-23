@@ -3,6 +3,7 @@ import { ReferenceResolver, BookLike } from './reference-resolver';
 
 type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
+  getFunction(name: string): ((...args: any[]) => string) | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
 };
 
@@ -45,6 +46,10 @@ export class Scope {
       return this.book.getScope(this.extendsName)?.getSourceKey(name);
     }
     return undefined;
+  }
+
+  isInherited(name: string): boolean {
+    return this.has(name) && !this.hasOwn(name);
   }
 
   set(name: string, value: AnyTokenValue): void {
@@ -127,7 +132,11 @@ export class Scope {
         }
         return arg;
       });
-      return fn.implementation(...resolvedArgs);
+      const implementation = this.book.getFunction(fn.name ?? fn.rawValue);
+      if (!implementation) {
+        throw new Error(`Function "${fn.name ?? fn.rawValue}" is not registered`);
+      }
+      return implementation(...resolvedArgs, fn.options);
     }
 
     const tv = token as TokenValue;

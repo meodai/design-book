@@ -1,5 +1,10 @@
 import { parse, formatHex } from 'culori';
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import {
+  createFunctionToken,
+  extractDependencies,
+  extractVisualDependencies,
+  getTokenProcessors,
+} from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
@@ -29,8 +34,9 @@ export function closestColorImpl(targetValue: string, scope: Scope): string {
 
     if (token.type === 'color') {
       const tv = token as TokenValue;
-      if (tv.processors && tv.processors[0]) {
-        const formatted = formatHex(tv.processors[0].instance);
+      const processors = getTokenProcessors(tv);
+      if (processors && processors[0]) {
+        const formatted = formatHex(processors[0].instance);
         if (formatted) colorHex = formatted;
       }
       if (!colorHex) {
@@ -76,19 +82,15 @@ export function closestColor(
   scope: Scope,
   options?: { description?: string; [key: string]: any }
 ): FunctionTokenValue {
-  return val(
+  return createFunctionToken(
+    'closestColor',
+    [targetColor, scope],
     {
-      type: 'function' as const,
-      rawValue: 'closestColor',
-      implementation: (resolvedTarget: string, resolvedScope: Scope) =>
-        closestColorImpl(resolvedTarget, resolvedScope),
-      args: [targetColor, scope],
       metadata: {
         dependencies: extractDependencies([targetColor]),
         visualDependencies: extractVisualDependencies([targetColor, scope]),
         returnType: 'color',
       },
     },
-    options
   );
 }

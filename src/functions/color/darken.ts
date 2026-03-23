@@ -1,5 +1,5 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -42,12 +42,10 @@ export function darken(
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
   const amount = options?.amount ?? 0.1;
-  return val(
+  return createFunctionToken(
+    'darken',
+    [color],
     {
-      type: 'function' as const,
-      rawValue: 'darken',
-      implementation: (...args: any[]) => darkenImpl(args[0], amount),
-      args: [color],
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
@@ -55,6 +53,5 @@ export function darken(
         returnType: 'color',
       },
     },
-    options
   );
 }

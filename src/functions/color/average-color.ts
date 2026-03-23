@@ -1,5 +1,5 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractVisualDependencies, val } from '../../tokens';
+import { createFunctionToken, extractVisualDependencies, getTokenProcessors } from '../../tokens';
 import type { FunctionTokenValue, TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
@@ -17,8 +17,9 @@ export function averageColorImpl(scope: Scope, colorSpace: string): string {
 
     if (token.type === 'color') {
       const tv = token as TokenValue;
-      if (tv.processors && tv.processors[0]) {
-        const formatted = formatHex(tv.processors[0].instance);
+      const processors = getTokenProcessors(tv);
+      if (processors && processors[0]) {
+        const formatted = formatHex(processors[0].instance);
         if (formatted) colorHex = formatted;
       }
       if (!colorHex) {
@@ -78,19 +79,16 @@ export function averageColor(
 ): FunctionTokenValue {
   const colorSpace = options?.colorSpace ?? 'lab';
 
-  return val(
+  return createFunctionToken(
+    'averageColor',
+    [scope],
     {
-      type: 'function' as const,
-      rawValue: 'averageColor',
-      implementation: (resolvedScope: Scope) =>
-        averageColorImpl(resolvedScope, colorSpace),
-      args: [scope],
+      options: { colorSpace },
       metadata: {
         dependencies: [],
         visualDependencies: extractVisualDependencies([scope]),
         returnType: 'color',
       },
     },
-    options
   );
 }

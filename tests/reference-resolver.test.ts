@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ReferenceResolver } from '../src/reference-resolver';
+import { getReferenceResolution, setReferenceResolution } from '../src/tokens';
 import type { ReferenceValue } from '../src/tokens';
 
 function createMockBook(tokens: Record<string, any> = {}, resolvedValues: Record<string, string> = {}) {
@@ -26,9 +27,9 @@ describe('ReferenceResolver', () => {
 
     resolver.updateReferenceMetadata(r);
 
-    expect(r.resolvedType).toBe('color');
-    expect(r.resolvedMetadata?.isResolvable).toBe(true);
-    expect(r.resolvedMetadata?.errorMessage).toBeUndefined();
+    expect(getReferenceResolution(r)?.resolvedType).toBe('color');
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(getReferenceResolution(r)?.errorMessage).toBeUndefined();
   });
 
   it('updateReferenceMetadata marks unresolvable ref', () => {
@@ -38,23 +39,22 @@ describe('ReferenceResolver', () => {
 
     resolver.updateReferenceMetadata(r);
 
-    expect(r.resolvedType).toBeUndefined();
-    expect(r.resolvedMetadata?.isResolvable).toBe(false);
-    expect(r.resolvedMetadata?.errorMessage).toBeDefined();
+    expect(getReferenceResolution(r)?.resolvedType).toBeUndefined();
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(getReferenceResolution(r)?.errorMessage).toBeDefined();
   });
 
   it('getCachedType returns cached type without resolution', () => {
     const resolver = new ReferenceResolver({} as any);
-    const r: ReferenceValue = { type: 'reference', key: 'x', resolvedType: 'color' };
+    const r: ReferenceValue = { type: 'reference', key: 'x' };
+    setReferenceResolution(r, { resolvedType: 'color' });
     expect(resolver.getCachedType(r)).toBe('color');
   });
 
   it('isResolvable returns cached resolvability', () => {
     const resolver = new ReferenceResolver({} as any);
-    const r: ReferenceValue = {
-      type: 'reference', key: 'x',
-      resolvedMetadata: { isResolvable: true },
-    };
+    const r: ReferenceValue = { type: 'reference', key: 'x' };
+    setReferenceResolution(r, { isResolvable: true });
     expect(resolver.isResolvable(r)).toBe(true);
   });
 });

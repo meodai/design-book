@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Scope } from '../src/scope';
-import { color, ref, px } from '../src/tokens';
+import { color, getReferenceResolution, px, ref } from '../src/tokens';
 import { DependencyGraph } from '../src/dependency-graph';
 
 function createMockBook() {
@@ -19,6 +19,7 @@ function createMockBook() {
       return scope.resolve(tokenName);
     }),
     getScope: vi.fn((name: string) => scopes.get(name)),
+    getFunction: vi.fn(),
     _notifyTokenChange: vi.fn(),
     _scopes: scopes,
   };
@@ -98,8 +99,8 @@ describe('Scope', () => {
       book._scopes.set('dark', child);
       child.set('bg', color('#1a1a1a'));
 
-      expect(child.get('bg')?.rawValue).toBe('#1a1a1a'); // overridden
-      expect(child.get('primary')?.rawValue).toBe('#0066cc'); // inherited
+        expect((child.get('bg') as any)?.rawValue).toBe('#1a1a1a'); // overridden
+        expect((child.get('primary') as any)?.rawValue).toBe('#0066cc'); // inherited
     });
 
     it('getAllKeys includes inherited keys', () => {
@@ -118,14 +119,15 @@ describe('Scope', () => {
     });
   });
 
-  it('resolves FunctionTokenValue by executing implementation', () => {
+  it('resolves FunctionTokenValue through the function registry', () => {
     const scope = new Scope('test', book);
     book._scopes.set('test', scope);
+    book.getFunction.mockReturnValue((text: string) => `${text}!`);
     scope.set('greeting', { type: 'string', rawValue: 'Hello' } as any);
     scope.set('loud', {
       type: 'function',
+      name: 'exclaim',
       rawValue: 'exclaim',
-      implementation: (text: string) => `${text}!`,
       args: ['Hello'],
       metadata: { dependencies: [], visualDependencies: [] },
     } as any);
@@ -165,8 +167,20 @@ describe('Scope', () => {
 
     // The reference's resolvedMetadata should now be updated
     const token = semantic.get('bg') as any;
-    expect(token.resolvedMetadata).toBeDefined();
-    expect(token.resolvedMetadata.isResolvable).toBe(true);
+    expect(getReferenceResolution(token)).toBeDefined();
+    expect(getReferenceResolution(token)?.isResolvable).toBe(true);
+  });
+
+  it('getSourceKey and isInherited expose token provenance', () => {
+    const parent = new Scope('light', book);
+    book._scopes.set('light', parent);
+    parent.set('primary', color('#fff'));
+
+    const child = new Scope('dark', book, { extends: 'light' });
+    book._scopes.set('dark', child);
+
+    expect(child.getSourceKey('primary')).toBe('light.primary');
+    expect(child.isInherited('primary')).toBe(true);
   });
 
   it('allTokens returns all token objects including inherited', () => {

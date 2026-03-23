@@ -1,5 +1,5 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -75,12 +75,10 @@ export function relativeTo(
   modifications: (null | number | string)[],
   options?: { description?: string }
 ): FunctionTokenValue {
-  return val(
+  return createFunctionToken(
+    'relativeTo',
+    [baseColor],
     {
-      type: 'function' as const,
-      rawValue: 'relativeTo',
-      implementation: (...args: any[]) => relativeToImpl(args[0], colorSpace, modifications),
-      args: [baseColor],
       options: { colorSpace, modifications },
       metadata: {
         dependencies: extractDependencies([baseColor]),
@@ -88,6 +86,5 @@ export function relativeTo(
         returnType: 'color',
       },
     },
-    options
   );
 }

@@ -42,10 +42,12 @@ ui.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.15 }
 ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
 
 // Reactive — change a base token, dependents update automatically
-book.watch('ui.text', (newValue) => {
+const stopWatching = book.watch('ui.text', (newValue, detail) => {
   console.log('Text color changed to', newValue);
+  console.log('Changed key:', detail.key);
 });
 brand.set('white', color('#f5f5f5')); // triggers re-computation
+stopWatching();
 
 // Render
 const css = new Renderer(book, 'css-variables').render();
@@ -173,15 +175,29 @@ Follows the [W3 Design Tokens spec](https://www.designtokens.org/tr/drafts/forma
 ## Events
 
 ```typescript
-book.on('tokenChanged', (e) => { /* e.detail.key, e.detail.newValue */ });
+const dispose = book.on('tokenChanged', (e) => { /* e.detail.key, e.detail.newValue */ });
 book.on('change', (e) => { /* e.detail.changedKeys, e.detail.scopes */ });
 book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
+book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors */ });
+book.on('batch-complete', (e) => { /* e.detail.processed */ });
 book.watch('brand.primary', (newValue, detail) => {
   // newValue is undefined when the token no longer resolves
   // detail contains the underlying tokenChanged event payload
 });
+dispose();
 ```
+
+`book.on()` and `book.watch()` both return unsubscribe functions.
+
+## Source Introspection
+
+```typescript
+book.getSourceKey('dark.primary'); // 'light.primary' when inherited
+book.isInherited('dark.primary');  // true when the active value comes from a parent scope
+```
+
+This is useful when you want to distinguish local overrides from inherited values without inspecting scope internals.
 
 ## Batch Mode
 

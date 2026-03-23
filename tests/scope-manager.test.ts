@@ -79,8 +79,8 @@ describe('ScopeManager', () => {
     const ui = manager.addScope('ui');
     ui.set('contrast', {
       type: 'function',
+      name: 'bestContrastWith',
       rawValue: 'bestContrastWith',
-      implementation: (...args: any[]) => '#000000',
       args: [ref('brand.primary')],
       metadata: {
         dependencies: ['brand.primary'],

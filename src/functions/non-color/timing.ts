@@ -1,4 +1,4 @@
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function timingImpl(duration: string, easing: string, delay: number): string {
@@ -14,12 +14,10 @@ export function timing(
   options?: { delay?: number; description?: string }
 ): FunctionTokenValue {
   const delay = options?.delay ?? 0;
-  return val(
+  return createFunctionToken(
+    'timing',
+    [duration, easing],
     {
-      type: 'function' as const,
-      rawValue: 'timing',
-      implementation: (...args: any[]) => timingImpl(args[0], easing, delay),
-      args: [duration, easing],
       options: { delay },
       metadata: {
         dependencies: extractDependencies([duration]),
@@ -27,6 +25,5 @@ export function timing(
         returnType: 'timing',
       },
     },
-    options
   );
 }

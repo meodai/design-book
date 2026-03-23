@@ -1,5 +1,5 @@
 import { parse, formatHex, converter, differenceEuclidean } from 'culori';
-import { extractVisualDependencies, val } from '../../tokens';
+import { createFunctionToken, extractVisualDependencies, getTokenProcessors } from '../../tokens';
 import type { FunctionTokenValue, TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
@@ -17,8 +17,9 @@ export function furthestFromImpl(scope: Scope): string {
 
     if (token.type === 'color') {
       const tv = token as TokenValue;
-      if (tv.processors && tv.processors[0]) {
-        const formatted = formatHex(tv.processors[0].instance);
+      const processors = getTokenProcessors(tv);
+      if (processors && processors[0]) {
+        const formatted = formatHex(processors[0].instance);
         if (formatted) colorHex = formatted;
       }
       if (!colorHex) {
@@ -79,18 +80,15 @@ export function furthestFrom(
   scope: Scope,
   options?: { description?: string; [key: string]: any }
 ): FunctionTokenValue {
-  return val(
+  return createFunctionToken(
+    'furthestFrom',
+    [scope],
     {
-      type: 'function' as const,
-      rawValue: 'furthestFrom',
-      implementation: (resolvedScope: Scope) => furthestFromImpl(resolvedScope),
-      args: [scope],
       metadata: {
         dependencies: [],
         visualDependencies: extractVisualDependencies([scope]),
         returnType: 'color',
       },
     },
-    options
   );
 }

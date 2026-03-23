@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color, ref, px } from '../src/tokens';
+import { color, getReferenceResolution, ref } from '../src/tokens';
 
 describe('DesignBook', () => {
   // Note: `ref` is imported above and used in batch-failed and re-entrancy tests
@@ -81,17 +81,19 @@ describe('DesignBook', () => {
       const brand = book.addScope('brand');
       brand.set('primary', color('#000000'));
       const handler = vi.fn();
-      book.watch('brand.primary', handler);
+      const dispose = book.watch('brand.primary', handler);
       brand.set('primary', color('#ffffff'));
       expect(handler).toHaveBeenCalledWith('#ffffff', expect.anything());
+      expect(typeof dispose).toBe('function');
     });
 
     it('fires scopeAdded on addScope', () => {
       const book = new DesignBook('test');
       const handler = vi.fn();
-      book.on('scopeAdded', handler);
+      const dispose = book.on('scopeAdded', handler);
       book.addScope('brand');
       expect(handler).toHaveBeenCalled();
+      expect(typeof dispose).toBe('function');
     });
   });
 
@@ -149,12 +151,31 @@ describe('DesignBook', () => {
       scope.set('greeting', { type: 'string', rawValue: 'Hello' } as any);
       scope.set('loud', {
         type: 'function',
+        name: 'exclaim',
         rawValue: 'exclaim',
-        implementation: (text: string) => `${text}!`,
         args: ['Hello'],
         metadata: { dependencies: [], visualDependencies: [] },
       } as any);
       expect(scope.resolve('loud')).toBe('Hello!');
+    });
+
+    it('built-in functions resolve through the registry', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      const ui = book.addScope('ui');
+
+      brand.set('primary', color('#000000'));
+      brand.set('secondary', color('#ffffff'));
+      ui.set('mixed', {
+        type: 'function',
+        name: 'colorMix',
+        rawValue: 'colorMix',
+        args: [ref('brand.primary'), ref('brand.secondary')],
+        options: { ratio: 0 },
+        metadata: { dependencies: ['brand.primary', 'brand.secondary'], visualDependencies: [] },
+      } as any);
+
+      expect(book.resolve('ui.mixed')).toBe('#000000');
     });
   });
 
@@ -181,12 +202,13 @@ describe('DesignBook', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
       const handler = vi.fn();
-      book.on('change', handler);
+      const dispose = book.on('change', handler);
       brand.set('primary', color('#0066cc'));
       expect(handler).toHaveBeenCalled();
       const detail = handler.mock.calls[0][0].detail;
       expect(detail.changedKeys).toContain('brand.primary');
       expect(detail.scopes).toContain('brand');
+      expect(typeof dispose).toBe('function');
     });
 
     it('fires batch-failed when flush encounters errors', () => {
@@ -327,11 +349,24 @@ describe('DesignBook', () => {
       brand.set('primary', color('#0055cc'));
 
       const token = book.getTokenByKey('semantic.bg') as any;
-      expect(token.resolvedMetadata?.isResolvable).toBe(true);
+      expect(getReferenceResolution(token)?.isResolvable).toBe(true);
 
       brand.delete('primary');
 
-      expect(token.resolvedMetadata?.isResolvable).toBe(false);
+      expect(getReferenceResolution(token)?.isResolvable).toBe(false);
+    });
+  });
+
+  describe('source introspection', () => {
+    it('exposes source keys for inherited tokens', () => {
+      const book = new DesignBook('test');
+      const light = book.addScope('light');
+      const dark = book.addScope('dark', { extends: 'light' });
+
+      light.set('primary', color('#0066cc'));
+
+      expect(book.getSourceKey('dark.primary')).toBe('light.primary');
+      expect(book.isInherited('dark.primary')).toBe(true);
     });
   });
 

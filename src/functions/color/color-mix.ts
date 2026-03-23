@@ -1,5 +1,5 @@
 import { parse, interpolate, formatHex } from 'culori';
-import { extractDependencies, val } from '../../tokens';
+import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -46,12 +46,10 @@ export function colorMix(
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 0.5;
   const colorSpace = options?.colorSpace ?? 'lab';
-  return val(
+  return createFunctionToken(
+    'colorMix',
+    [color1, color2],
     {
-      type: 'function' as const,
-      rawValue: 'colorMix',
-      implementation: (...args: any[]) => colorMixImpl(args[0], args[1], ratio, colorSpace),
-      args: [color1, color2],
       options: { ratio, colorSpace },
       metadata: {
         dependencies: extractDependencies([color1, color2]),
@@ -59,6 +57,5 @@ export function colorMix(
         returnType: 'color',
       },
     },
-    options
   );
 }

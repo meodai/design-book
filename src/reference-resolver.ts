@@ -1,3 +1,7 @@
+import {
+  getReferenceResolution,
+  setReferenceResolution,
+} from './tokens';
 import type { ReferenceValue, FunctionTokenValue } from './tokens';
 
 export interface BookLike {
@@ -17,19 +21,19 @@ export class ReferenceResolver {
     try {
       this.book.resolve(ref.key);
       const token = this.book.getTokenByKey(ref.key);
-      ref.resolvedType = token?.type;
-      ref.resolvedMetadata = {
+      setReferenceResolution(ref, {
+        resolvedType: token?.type,
         isResolvable: true,
         lastResolvedAt: Date.now(),
         errorMessage: undefined,
-      };
+      });
     } catch (error: any) {
-      ref.resolvedType = undefined;
-      ref.resolvedMetadata = {
+      setReferenceResolution(ref, {
+        resolvedType: undefined,
         isResolvable: false,
         lastResolvedAt: Date.now(),
         errorMessage: error.message,
-      };
+      });
     }
   }
 
@@ -55,10 +59,10 @@ export class ReferenceResolver {
   }
 
   getCachedType(ref: ReferenceValue): string | undefined {
-    return ref.resolvedType;
+    return getReferenceResolution(ref)?.resolvedType;
   }
 
   isResolvable(ref: ReferenceValue): boolean {
-    return ref.resolvedMetadata?.isResolvable ?? false;
+    return getReferenceResolution(ref)?.isResolvable ?? false;
   }
 }

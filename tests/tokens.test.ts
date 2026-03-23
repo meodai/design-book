@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { val, color, hex, ref, px, rem, ms, dimension, string, extractDependencies, extractVisualDependencies } from '../src/tokens';
-import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../src/tokens';
+import {
+  val,
+  color,
+  hex,
+  ref,
+  px,
+  rem,
+  ms,
+  dimension,
+  string,
+  extractDependencies,
+  extractVisualDependencies,
+  getReferenceResolution,
+  getTokenProcessors,
+} from '../src/tokens';
 
 describe('val', () => {
   it('merges description onto an object', () => {
@@ -18,11 +31,12 @@ describe('val', () => {
 describe('color', () => {
   it('creates a color TokenValue with culori processor', () => {
     const c = color('#ff0000');
+    const processors = getTokenProcessors(c);
     expect(c.type).toBe('color');
     expect(c.rawValue).toBe('#ff0000');
-    expect(c.processors).toHaveLength(1);
-    expect(c.processors![0].name).toBe('culori');
-    expect(c.processors![0].instance).toBeDefined();
+    expect(processors).toHaveLength(1);
+    expect(processors![0].name).toBe('culori');
+    expect(processors![0].instance).toBeDefined();
     expect(c.metadata?.validated).toBe(true);
   });
 
@@ -39,7 +53,7 @@ describe('color', () => {
     const c = color('red');
     expect(c.type).toBe('color');
     expect(c.rawValue).toBe('red');
-    expect(c.processors).toHaveLength(1);
+    expect(getTokenProcessors(c)).toHaveLength(1);
   });
 });
 
@@ -52,7 +66,7 @@ describe('hex (deprecated alias)', () => {
     const c = hex('#00ff00');
     expect(c.type).toBe('color');
     expect(c.rawValue).toBe('#00ff00');
-    expect(c.processors).toHaveLength(1);
+    expect(getTokenProcessors(c)).toHaveLength(1);
   });
 
   it('throws on invalid colors just like color()', () => {
@@ -65,8 +79,7 @@ describe('ref', () => {
     const r = ref('brand.primary');
     expect(r.type).toBe('reference');
     expect(r.key).toBe('brand.primary');
-    expect(r.resolvedType).toBeUndefined();
-    expect(r.resolvedMetadata?.isResolvable).toBeUndefined();
+    expect(getReferenceResolution(r)).toBeUndefined();
   });
 
   it('accepts description option', () => {
