@@ -476,9 +476,14 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
     }
 
     // Check if we're inside a function call argument position
-    const funcArgMatch = valueTextUpToCursor.match(/(\w+)\((?:[^)]*,\s*)?([^,)]*)$/);
+    // Use a smarter match that handles nested parens (e.g. ref('...') inside the args)
+    const funcArgMatch = valueTextUpToCursor.match(/^(\w+)\((.*?)$/s);
     if (funcArgMatch && FUNCTION_NAMES.includes(funcArgMatch[1])) {
-      const partial = funcArgMatch[2].trim();
+      // Extract the current (last) argument being typed
+      const argsText = funcArgMatch[2];
+      const lastComma = argsText.lastIndexOf(',');
+      const currentArgText = lastComma >= 0 ? argsText.slice(lastComma + 1).trim() : argsText.trim();
+      const partial = currentArgText;
       const wordFrom = context.pos - partial.length;
       const lowerPartial = partial.toLowerCase();
       const options: any[] = [];
