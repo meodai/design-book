@@ -132,9 +132,9 @@ export class Scope {
         }
         return arg;
       });
-      const implementation = this.book.getFunction(fn.name ?? fn.rawValue);
+      const implementation = this.book.getFunction(fn.name);
       if (!implementation) {
-        throw new Error(`Function "${fn.name ?? fn.rawValue}" is not registered`);
+        throw new Error(`Function "${fn.name}" is not registered`);
       }
       return implementation(...resolvedArgs, fn.options);
     }

@@ -28,7 +28,6 @@ export interface ReferenceValue {
 export interface FunctionTokenValue {
   type: 'function';
   name: string;
-  rawValue: string;
   args: any[];
   description?: string;
   options?: Record<string, any>;
@@ -68,7 +67,6 @@ export function createFunctionToken(
     {
       type: 'function' as const,
       name,
-      rawValue: name,
       args,
       options,
       metadata,
@@ -110,9 +108,6 @@ export function color(value: string, options?: { description?: string; [key: str
   }, options);
   return setTokenProcessors(token, [{ name: 'culori', instance: parsed }]);
 }
-
-/** @deprecated Use `color()` instead */
-export const hex = color;
 
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
   return val({

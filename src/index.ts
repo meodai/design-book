@@ -16,7 +16,6 @@ export { Scope } from './scope';
 export {
   val,
   color,
-  hex,
   ref,
   px,
   rem,

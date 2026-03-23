@@ -152,7 +152,6 @@ describe('DesignBook', () => {
       scope.set('loud', {
         type: 'function',
         name: 'exclaim',
-        rawValue: 'exclaim',
         args: ['Hello'],
         metadata: { dependencies: [], visualDependencies: [] },
       } as any);
@@ -169,7 +168,6 @@ describe('DesignBook', () => {
       ui.set('mixed', {
         type: 'function',
         name: 'colorMix',
-        rawValue: 'colorMix',
         args: [ref('brand.primary'), ref('brand.secondary')],
         options: { ratio: 0 },
         metadata: { dependencies: ['brand.primary', 'brand.secondary'], visualDependencies: [] },

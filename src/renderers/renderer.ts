@@ -1,10 +1,12 @@
 import { DesignBook } from '../design-book';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../tokens';
 import { registerBuiltinFunctionRenderers } from './function-renderers';
-import { parse, formatHex } from 'culori';
+import { parse, formatHex, converter } from 'culori';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRenderer = (args: any[], options?: any) => string;
+
+const toRgb = converter('rgb');
 
 function keyToHyphen(key: string): string {
   return key.replace(/[._]/g, '-');
@@ -72,7 +74,7 @@ export class Renderer {
           value = `var(--${keyToHyphen(ref.key)})`;
         } else if (token.type === 'function') {
           const fn = token as FunctionTokenValue;
-          const funcRenderer = this.functionRenderers.get(fn.rawValue);
+          const funcRenderer = this.functionRenderers.get(fn.name);
           if (funcRenderer) {
             value = funcRenderer(fn.args, fn.options);
           } else {
@@ -181,16 +183,17 @@ export class Renderer {
     if (internalType === 'color') {
       // W3 color: { colorSpace, components, alpha, hex }
       const parsed = parse(resolvedStr);
-      if (parsed) {
-        const hex = formatHex(parsed) ?? resolvedStr;
+      const rgb = parsed ? toRgb(parsed) : null;
+      if (parsed && rgb) {
+        const hex = formatHex(rgb) ?? resolvedStr;
         return {
           colorSpace: 'srgb',
           components: [
-            Math.round((parsed.r ?? 0) * 1000) / 1000,
-            Math.round((parsed.g ?? 0) * 1000) / 1000,
-            Math.round((parsed.b ?? 0) * 1000) / 1000,
+            Math.round((rgb.r ?? 0) * 1000) / 1000,
+            Math.round((rgb.g ?? 0) * 1000) / 1000,
+            Math.round((rgb.b ?? 0) * 1000) / 1000,
           ],
-          alpha: parsed.alpha ?? 1,
+          alpha: rgb.alpha ?? 1,
           hex,
         };
       }

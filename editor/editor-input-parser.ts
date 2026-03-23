@@ -12,7 +12,7 @@ import { parse } from 'culori';
  * Parse a user-entered value string into a token value.
  *
  * Supports:
- *   #ff0000 or any CSS color         -> hex(value)
+ *   #ff0000 or any CSS color         -> color(value)
  *   ref('scope.token')               -> ref('scope.token')
  *   px(16), rem(1.5), ms(200)        -> dimension tokens
  *   bestContrastWith(arg, scope)      -> function tokens
@@ -114,7 +114,7 @@ function splitArgs(argsStr: string): string[] {
 function parseArg(
   arg: string,
   book?: DesignBook,
-): { type: 'ref'; value: AnyTokenValue } | { type: 'hex'; value: AnyTokenValue } | { type: 'scope'; value: Scope } | { type: 'raw'; value: string | number } {
+): { type: 'ref'; value: AnyTokenValue } | { type: 'token'; value: AnyTokenValue } | { type: 'scope'; value: Scope } | { type: 'raw'; value: string | number } {
   const trimmed = arg.trim();
 
   // ref('...')
@@ -123,10 +123,10 @@ function parseArg(
     return { type: 'ref', value: ref(refMatch[1]) };
   }
 
-  // color('...') or hex('...')
-  const colorMatch = trimmed.match(/^(?:color|hex)\(\s*['"]?([^'")\s]+)['"]?\s*\)$/);
+  // color('...')
+  const colorMatch = trimmed.match(/^color\(\s*['"]?([^'")\s]+)['"]?\s*\)$/);
   if (colorMatch) {
-    return { type: 'hex', value: color(colorMatch[1]) };
+    return { type: 'token', value: color(colorMatch[1]) };
   }
 
   // px(number), rem(number), ms(number)
@@ -134,26 +134,26 @@ function parseArg(
   if (dimMatch) {
     const unit = dimMatch[1];
     const val = parseFloat(dimMatch[2]);
-    if (unit === 'px') return { type: 'hex', value: px(val) };
-    if (unit === 'rem') return { type: 'hex', value: rem(val) };
-    if (unit === 'ms') return { type: 'hex', value: ms(val) };
+    if (unit === 'px') return { type: 'token', value: px(val) };
+    if (unit === 'rem') return { type: 'token', value: rem(val) };
+    if (unit === 'ms') return { type: 'token', value: ms(val) };
   }
 
   // dimension(number, 'unit')
   const dimensionMatch = trimmed.match(/^dimension\(\s*([\d.]+)\s*,\s*['"]([^'"]+)['"]\s*\)$/);
   if (dimensionMatch) {
-    return { type: 'hex', value: dimension(parseFloat(dimensionMatch[1]), dimensionMatch[2]) };
+    return { type: 'token', value: dimension(parseFloat(dimensionMatch[1]), dimensionMatch[2]) };
   }
 
   // string('...')
   const stringMatch = trimmed.match(/^string\(\s*['"]([^'"]*)['"]\s*\)$/);
   if (stringMatch) {
-    return { type: 'hex', value: string(stringMatch[1]) };
+    return { type: 'token', value: string(stringMatch[1]) };
   }
 
   // #hex color (bare, inside function args)
   if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
-    return { type: 'hex', value: color(trimmed) };
+    return { type: 'token', value: color(trimmed) };
   }
 
   // CSS named color or scope name
@@ -163,7 +163,7 @@ function parseArg(
     if (scope) return { type: 'scope', value: scope };
     // Then try as CSS named color
     if (parse(trimmed)) {
-      return { type: 'hex', value: color(trimmed) };
+      return { type: 'token', value: color(trimmed) };
     }
   }
 
@@ -183,13 +183,13 @@ function parseArg(
 }
 
 function getTokenArg(parsed: ReturnType<typeof parseArg>): AnyTokenValue {
-  if (parsed.type === 'ref' || parsed.type === 'hex') return parsed.value;
+  if (parsed.type === 'ref' || parsed.type === 'token') return parsed.value;
   throw new Error(`Expected token argument, got ${parsed.type}`);
 }
 
 function getScopeArg(parsed: ReturnType<typeof parseArg>): Scope {
   if (parsed.type === 'scope') return parsed.value;
-  throw new Error(`Expected scope name (e.g. "brand"), got "${parsed.type === 'hex' ? 'color' : parsed.type}"`);
+  throw new Error(`Expected scope name (e.g. "brand"), got "${parsed.type === 'token' ? 'token value' : parsed.type}"`);
 }
 
 // --- Function parsers ---
@@ -316,13 +316,6 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
 
   // color('...') as an explicit constructor
   color(argsStr) {
-    const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
-    if (match) return color(match[1]);
-    return color(argsStr.trim());
-  },
-
-  // hex('...') as deprecated alias for color
-  hex(argsStr) {
     const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
     if (match) return color(match[1]);
     return color(argsStr.trim());

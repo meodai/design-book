@@ -220,7 +220,7 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
         }
       }
     }
-    return `${fn.name || fn.rawValue}(${argStrs.join(', ')})`;
+    return `${fn.name}(${argStrs.join(', ')})`;
   }
   // Plain token
   const tv = token as any;
@@ -452,8 +452,8 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
 
-    // Find color('...') and hex('...') calls — editable, opens picker
-    const colorCallRegex = /(?:color|hex)\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;
+    // Find color('...') calls — editable, opens picker
+    const colorCallRegex = /color\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;
     let match;
     while ((match = colorCallRegex.exec(text)) !== null) {
       const colorVal = match[1];

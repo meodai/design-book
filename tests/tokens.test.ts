@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   val,
   color,
-  hex,
   ref,
   px,
   rem,
@@ -54,23 +53,6 @@ describe('color', () => {
     expect(c.type).toBe('color');
     expect(c.rawValue).toBe('red');
     expect(getTokenProcessors(c)).toHaveLength(1);
-  });
-});
-
-describe('hex (deprecated alias)', () => {
-  it('is the same function as color', () => {
-    expect(hex).toBe(color);
-  });
-
-  it('still works to create color tokens', () => {
-    const c = hex('#00ff00');
-    expect(c.type).toBe('color');
-    expect(c.rawValue).toBe('#00ff00');
-    expect(getTokenProcessors(c)).toHaveLength(1);
-  });
-
-  it('throws on invalid colors just like color()', () => {
-    expect(() => hex('not-a-color')).toThrow('Invalid color: not-a-color');
   });
 });
 

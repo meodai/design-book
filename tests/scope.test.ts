@@ -127,7 +127,6 @@ describe('Scope', () => {
     scope.set('loud', {
       type: 'function',
       name: 'exclaim',
-      rawValue: 'exclaim',
       args: ['Hello'],
       metadata: { dependencies: [], visualDependencies: [] },
     } as any);

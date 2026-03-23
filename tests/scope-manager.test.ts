@@ -80,7 +80,6 @@ describe('ScopeManager', () => {
     ui.set('contrast', {
       type: 'function',
       name: 'bestContrastWith',
-      rawValue: 'bestContrastWith',
       args: [ref('brand.primary')],
       metadata: {
         dependencies: ['brand.primary'],
