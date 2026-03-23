@@ -225,12 +225,13 @@ h3 {
     0 var(--s-line--fat) 0 0 var(--c-surface-on);
 }
 
-/* Color picker */
+/* Color picker — hide the trigger, only show the popover panel */
 #global-color-picker {
-  display: none;
-  border: none;
-  background: none;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 0 0 var(--s-line) var(--c-surface-on);
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 /* Output column */

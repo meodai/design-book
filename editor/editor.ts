@@ -791,11 +791,13 @@ let activeColorPicker: HTMLElement | null = null;
 let pickerTargetView: EditorView | null = null;
 let pickerTargetPos: number = -1;
 
-function getOrCreatePicker(): HTMLElement {
+function getOrCreatePicker(): any {
   let picker = document.getElementById('global-color-picker') as any;
   if (!picker) {
     picker = document.createElement('color-input');
     picker.id = 'global-color-picker';
+    // Hide the built-in trigger — we show the picker programmatically
+    picker.style.cssText = 'position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;';
     document.body.appendChild(picker);
 
     picker.addEventListener('change', () => {
@@ -841,28 +843,10 @@ function getOrCreatePicker(): HTMLElement {
   return picker;
 }
 
-function hidePicker() {
-  const picker = document.getElementById('global-color-picker');
-  if (picker) {
-    picker.style.display = 'none';
-  }
-  pickerTargetView = null;
-  pickerTargetPos = -1;
-}
-
 // Global click handler for color swatches
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
-
-  // Clicking inside the picker — don't close
-  const picker = document.getElementById('global-color-picker');
-  if (picker && picker.contains(target)) return;
-
-  if (!target.classList.contains('cm-color-swatch')) {
-    // Clicked outside swatch and picker — hide
-    hidePicker();
-    return;
-  }
+  if (!target.classList.contains('cm-color-swatch')) return;
 
   const colorValue = target.dataset.color;
   const pos = parseInt(target.dataset.pos || '-1', 10);
@@ -876,21 +860,10 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  const p = getOrCreatePicker() as any;
-  p.value = colorValue;
-
-  // Position directly below the swatch
-  const rect = target.getBoundingClientRect();
-  p.style.position = 'fixed';
-  p.style.left = `${rect.left}px`;
-  p.style.top = `${rect.bottom + 4}px`;
-  p.style.zIndex = '2000';
-  p.style.display = '';
-
-  // Use setAnchor if available
-  if (typeof p.setAnchor === 'function') {
-    p.setAnchor(target);
-  }
+  const picker = getOrCreatePicker();
+  picker.value = colorValue;
+  picker.setAnchor(target);
+  picker.show();
 });
 
 // --- Boot & initial render ---
