@@ -27,12 +27,16 @@ export {
   extractVisualDependencies,
   getReferenceResolution,
   getTokenProcessors,
+  isReferenceValue,
+  isTokenValue,
 } from './tokens';
 export type {
   AnyTokenValue,
+  FunctionArg,
   FunctionTokenValue,
   ReferenceResolution,
   ReferenceValue,
+  ScopeFunctionArg,
   TokenProcessor,
   TokenValue,
 } from './tokens';

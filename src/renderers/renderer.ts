@@ -1,10 +1,10 @@
 import { DesignBook } from '../design-book';
-import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../tokens';
+import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
-export type FunctionRenderer = (args: any[], options?: any) => string;
+export type FunctionRenderer = (args: FunctionArg[], options?: any) => string;
 
 const toRgb = converter('rgb');
 

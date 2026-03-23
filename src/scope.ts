@@ -1,4 +1,5 @@
-import type { AnyTokenValue, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import { isReferenceValue, isTokenValue } from './tokens';
+import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 
 type BookWithScope = BookLike & {
@@ -121,11 +122,11 @@ export class Scope {
 
     if (token.type === 'function') {
       const fn = token as FunctionTokenValue;
-      const resolvedArgs = fn.args.map((arg: any) => {
-        if (typeof arg === 'object' && arg !== null && arg.type === 'reference') {
+      const resolvedArgs = fn.args.map((arg: FunctionArg) => {
+        if (isReferenceValue(arg)) {
           return this.book.resolve((arg as ReferenceValue).key);
         }
-        if (typeof arg === 'object' && arg !== null && 'rawValue' in arg) {
+        if (isTokenValue(arg)) {
           const tv = arg as TokenValue;
           if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
           return String(tv.rawValue);

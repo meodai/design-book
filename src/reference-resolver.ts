@@ -1,5 +1,6 @@
 import {
   getReferenceResolution,
+  isReferenceValue,
   setReferenceResolution,
 } from './tokens';
 import type { ReferenceValue, FunctionTokenValue } from './tokens';
@@ -50,7 +51,7 @@ export class ReferenceResolver {
       if (token.type === 'function') {
         const fn = token as FunctionTokenValue;
         for (const arg of fn.args) {
-          if (typeof arg === 'object' && arg !== null && arg.type === 'reference' && arg.key === key) {
+          if (isReferenceValue(arg) && arg.key === key) {
             this.updateReferenceMetadata(arg as ReferenceValue);
           }
         }

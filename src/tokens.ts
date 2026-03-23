@@ -25,10 +25,30 @@ export interface ReferenceValue {
   description?: string;
 }
 
+export interface ScopeFunctionArg {
+  name: string;
+  getAllKeys(): string[];
+}
+
+export type FunctionArg =
+  | TokenValue
+  | ReferenceValue
+  | ScopeFunctionArg
+  | string
+  | number;
+
+export function isReferenceValue(arg: unknown): arg is ReferenceValue {
+  return typeof arg === 'object' && arg !== null && 'type' in arg && (arg as { type?: string }).type === 'reference';
+}
+
+export function isTokenValue(arg: unknown): arg is TokenValue {
+  return typeof arg === 'object' && arg !== null && 'rawValue' in arg;
+}
+
 export interface FunctionTokenValue {
   type: 'function';
   name: string;
-  args: any[];
+  args: FunctionArg[];
   description?: string;
   options?: Record<string, any>;
   metadata?: {
@@ -54,7 +74,7 @@ export function val<T>(value: T, options?: { description?: string; [key: string]
 
 export function createFunctionToken(
   name: string,
-  args: any[],
+  args: FunctionArg[],
   config?: {
     description?: string;
     options?: Record<string, any>;
@@ -142,17 +162,17 @@ export function string(value: string, options?: { description?: string; [key: st
   return val({ type: 'string', rawValue: value }, options);
 }
 
-export function extractDependencies(args: any[]): string[] {
+export function extractDependencies(args: FunctionArg[]): string[] {
   const deps: string[] = [];
   for (const arg of args) {
-    if (typeof arg === 'object' && arg !== null && arg.type === 'reference') {
+    if (isReferenceValue(arg)) {
       deps.push(arg.key);
     }
   }
   return deps;
 }
 
-export function extractVisualDependencies(args: any[]): string[] {
+export function extractVisualDependencies(args: FunctionArg[]): string[] {
   const deps: string[] = [];
   for (const arg of args) {
     if (typeof arg === 'object' && arg !== null && typeof arg.getAllKeys === 'function') {

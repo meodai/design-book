@@ -1,7 +1,7 @@
 import type { Renderer } from './renderer';
-import type { ReferenceValue, TokenValue } from '../tokens';
+import type { FunctionArg, ReferenceValue, TokenValue } from '../tokens';
 
-function argToCssValue(arg: any): string {
+function argToCssValue(arg: FunctionArg): string {
   if (typeof arg === 'string') return arg;
   if (typeof arg === 'number') return String(arg);
   if (typeof arg === 'object' && arg !== null) {
