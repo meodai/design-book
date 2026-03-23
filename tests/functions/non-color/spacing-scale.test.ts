@@ -7,7 +7,7 @@ describe('spacingScale', () => {
   it('multiplies spacing value', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('large', spacingScale(px(8), ui, { multiplier: 2 }));
+    ui.set('large', spacingScale(px(8), { multiplier: 2 }));
 
     expect(book.resolve('ui.large')).toBe('16px');
   });
@@ -15,7 +15,7 @@ describe('spacingScale', () => {
   it('preserves unit', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('large', spacingScale(rem(1), ui, { multiplier: 3 }));
+    ui.set('large', spacingScale(rem(1), { multiplier: 3 }));
 
     expect(book.resolve('ui.large')).toBe('3rem');
   });

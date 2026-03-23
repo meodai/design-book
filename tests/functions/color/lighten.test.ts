@@ -10,7 +10,7 @@ describe('lighten', () => {
     brand.set('dark', hex('#333333'));
 
     const ui = book.addScope('ui');
-    ui.set('lighter', lighten(hex('#333333'), ui, { amount: 0.2 }));
+    ui.set('lighter', lighten(hex('#333333'), { amount: 0.2 }));
 
     const result = book.resolve('ui.lighter');
     expect(result).toMatch(/^#[0-9a-f]{6}$/);

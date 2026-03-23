@@ -7,7 +7,7 @@ describe('typographyScale', () => {
   it('scales up with positive step', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('lg', typographyScale(rem(1), ui, { ratio: 1.25, step: 1 }));
+    ui.set('lg', typographyScale(rem(1), { ratio: 1.25, step: 1 }));
 
     expect(book.resolve('ui.lg')).toBe('1.25rem');
   });
@@ -15,7 +15,7 @@ describe('typographyScale', () => {
   it('scales down with negative step', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('sm', typographyScale(rem(1), ui, { ratio: 1.25, step: -1 }));
+    ui.set('sm', typographyScale(rem(1), { ratio: 1.25, step: -1 }));
 
     expect(book.resolve('ui.sm')).toBe('0.8rem');
   });
@@ -23,7 +23,7 @@ describe('typographyScale', () => {
   it('step 0 returns base size', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('base', typographyScale(rem(1), ui, { ratio: 1.25, step: 0 }));
+    ui.set('base', typographyScale(rem(1), { ratio: 1.25, step: 0 }));
 
     expect(book.resolve('ui.base')).toBe('1rem');
   });

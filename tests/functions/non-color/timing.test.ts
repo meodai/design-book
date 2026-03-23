@@ -7,7 +7,7 @@ describe('timing', () => {
   it('creates timing string', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('hover', timing(ms(200), 'ease-out', ui));
+    ui.set('hover', timing(ms(200), 'ease-out'));
 
     expect(book.resolve('ui.hover')).toBe('200ms ease-out');
   });
@@ -15,7 +15,7 @@ describe('timing', () => {
   it('includes delay when specified', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('expand', timing(ms(300), 'ease-in-out', ui, { delay: 100 }));
+    ui.set('expand', timing(ms(300), 'ease-in-out', { delay: 100 }));
 
     expect(book.resolve('ui.expand')).toBe('300ms ease-in-out 100ms');
   });

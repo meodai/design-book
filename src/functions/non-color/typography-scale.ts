@@ -1,6 +1,5 @@
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import { extractDependencies, val } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
-import type { Scope } from '../../scope';
 
 export function typographyScaleImpl(baseValue: string, ratio: number, step: number): string {
   const match = baseValue.match(/^([\d.]+)(.*)$/);
@@ -17,7 +16,6 @@ export function typographyScaleImpl(baseValue: string, ratio: number, step: numb
 
 export function typographyScale(
   baseSize: TokenValue | ReferenceValue,
-  scope: Scope,
   options?: { ratio?: number; step?: number; description?: string }
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 1.25;
@@ -27,10 +25,10 @@ export function typographyScale(
       type: 'function' as const,
       rawValue: 'typographyScale',
       implementation: (...args: any[]) => typographyScaleImpl(args[0], ratio, step),
-      args: [baseSize, scope],
+      args: [baseSize],
       metadata: {
         dependencies: extractDependencies([baseSize]),
-        visualDependencies: extractVisualDependencies([baseSize, scope]),
+        visualDependencies: [],
         returnType: 'dimension',
       },
     },

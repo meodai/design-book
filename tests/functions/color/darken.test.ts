@@ -9,7 +9,7 @@ describe('darken', () => {
     const brand = book.addScope('brand');
 
     const ui = book.addScope('ui');
-    ui.set('darker', darken(hex('#cccccc'), ui, { amount: 0.2 }));
+    ui.set('darker', darken(hex('#cccccc'), { amount: 0.2 }));
 
     const result = book.resolve('ui.darker');
     expect(result).toMatch(/^#[0-9a-f]{6}$/);
@@ -19,7 +19,7 @@ describe('darken', () => {
   it('clamps at black', () => {
     const book = new DesignBook('test');
     const ui = book.addScope('ui');
-    ui.set('dark', darken(hex('#000000'), ui, { amount: 0.5 }));
+    ui.set('dark', darken(hex('#000000'), { amount: 0.5 }));
 
     expect(book.resolve('ui.dark')).toBe('#000000');
   });

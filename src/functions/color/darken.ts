@@ -1,7 +1,6 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import { extractDependencies, val } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
-import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 
 const toHsl = converter('hsl');
@@ -40,7 +39,6 @@ export function darkenImpl(colorValue: string, amount: number): string {
 
 export function darken(
   color: TokenValue | ReferenceValue,
-  scope: Scope,
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
   const amount = options?.amount ?? 0.1;
@@ -49,10 +47,10 @@ export function darken(
       type: 'function' as const,
       rawValue: 'darken',
       implementation: (...args: any[]) => darkenImpl(args[0], amount),
-      args: [color, scope],
+      args: [color],
       metadata: {
         dependencies: extractDependencies([color]),
-        visualDependencies: extractVisualDependencies([color, scope]),
+        visualDependencies: [],
         returnType: 'color',
       },
     },

@@ -1,6 +1,5 @@
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import { extractDependencies, val } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
-import type { Scope } from '../../scope';
 
 export function spacingScaleImpl(baseValue: string, multiplier: number): string {
   const match = baseValue.match(/^([\d.]+)(.*)$/);
@@ -15,7 +14,6 @@ export function spacingScaleImpl(baseValue: string, multiplier: number): string 
 
 export function spacingScale(
   baseValue: TokenValue | ReferenceValue,
-  scope: Scope,
   options?: { multiplier?: number; description?: string }
 ): FunctionTokenValue {
   const multiplier = options?.multiplier ?? 1;
@@ -24,10 +22,10 @@ export function spacingScale(
       type: 'function' as const,
       rawValue: 'spacingScale',
       implementation: (...args: any[]) => spacingScaleImpl(args[0], multiplier),
-      args: [baseValue, scope],
+      args: [baseValue],
       metadata: {
         dependencies: extractDependencies([baseValue]),
-        visualDependencies: extractVisualDependencies([baseValue, scope]),
+        visualDependencies: [],
         returnType: 'dimension',
       },
     },

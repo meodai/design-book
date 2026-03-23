@@ -16,7 +16,7 @@ import { parse } from 'culori';
  *   ref('scope.token')               -> ref('scope.token')
  *   px(16), rem(1.5), ms(200)        -> dimension tokens
  *   bestContrastWith(arg, scope)      -> function tokens
- *   colorMix(arg1, arg2, scope, ...) -> function tokens
+ *   colorMix(arg1, arg2, ...)        -> function tokens
  *   ... and all other built-in functions
  *
  * When book/scope are provided, function calls can resolve scope names
@@ -196,57 +196,49 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return minContrastWith(target, scope, options);
   },
 
-  // colorMix(color1, color2, scope, options?)
+  // colorMix(color1, color2, options?)
   colorMix(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 3) throw new Error('colorMix requires 3 arguments');
+    if (args.length < 2) throw new Error('colorMix requires 2 arguments');
     const color1 = getTokenArg(parseArg(args[0], book));
     const color2 = getTokenArg(parseArg(args[1], book));
-    const scope = getScopeArg(parseArg(args[2], book));
-    const options = args.length > 3 ? parseOptionsArg(args.slice(3).join(',')) : undefined;
-    return colorMix(color1, color2, scope, options);
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return colorMix(color1, color2, options);
   },
 
-  // lighten(color, scope, options?)
+  // lighten(color, options?)
   lighten(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('lighten requires 2 arguments');
+    if (args.length < 1) throw new Error('lighten requires 1 argument');
     const color = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return lighten(color, scope, options);
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return lighten(color, options);
   },
 
-  // darken(color, scope, options?)
+  // darken(color, options?)
   darken(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('darken requires 2 arguments');
+    if (args.length < 1) throw new Error('darken requires 1 argument');
     const color = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return darken(color, scope, options);
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return darken(color, options);
   },
 
-  // relativeTo(color, scope) — colorSpace and modifications are from the original set, not editable via text
-  // In text form we just re-create with default oklch [null,null,null] unless we detect them
+  // relativeTo(color, colorSpace, modifications, options?)
   relativeTo(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('relativeTo requires at least 2 arguments');
+    if (args.length < 1) throw new Error('relativeTo requires at least 1 argument');
     const color = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[args.length - 1], book));
-    // If there are extra args between color and scope, treat them as colorSpace and modifications
     // Default: oklch, [null, null, null]
     let colorSpace = 'oklch';
     let modifications: (null | number | string)[] = [null, null, null];
-    if (args.length > 2) {
-      // args[1] could be colorSpace or scope
-      const mid = args.slice(1, -1);
-      if (mid.length >= 1 && /^[a-z]+$/i.test(mid[0]) && !book?.getScope(mid[0])) {
-        colorSpace = mid[0];
+    if (args.length > 1) {
+      if (/^[a-z]+$/i.test(args[1].trim())) {
+        colorSpace = args[1].trim();
       }
       // TODO: parse modifications from text if needed
     }
-    return relativeTo(color, colorSpace, modifications, scope);
+    return relativeTo(color, colorSpace, modifications);
   },
 
   // closestColor(target, scope)
@@ -274,35 +266,32 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return averageColor(scope);
   },
 
-  // spacingScale(base, scope, options?)
+  // spacingScale(base, options?)
   spacingScale(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('spacingScale requires 2 arguments');
+    if (args.length < 1) throw new Error('spacingScale requires 1 argument');
     const base = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return spacingScale(base, scope, options);
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return spacingScale(base, options);
   },
 
-  // typographyScale(base, scope, options?)
+  // typographyScale(base, options?)
   typographyScale(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('typographyScale requires 2 arguments');
+    if (args.length < 1) throw new Error('typographyScale requires 1 argument');
     const base = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return typographyScale(base, scope, options);
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return typographyScale(base, options);
   },
 
-  // timing(duration, easing, scope, options?)
+  // timing(duration, easing, options?)
   timing(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 3) throw new Error('timing requires 3 arguments');
+    if (args.length < 2) throw new Error('timing requires 2 arguments');
     const duration = getTokenArg(parseArg(args[0], book));
     const easing = args[1].trim().replace(/^['"]|['"]$/g, '');
-    const scope = getScopeArg(parseArg(args[2], book));
-    const options = args.length > 3 ? parseOptionsArg(args.slice(3).join(',')) : undefined;
-    return timing(duration, easing, scope, options);
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return timing(duration, easing, options);
   },
 
   // hex('...') as an explicit constructor

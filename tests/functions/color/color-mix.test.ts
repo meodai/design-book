@@ -11,7 +11,7 @@ describe('colorMix', () => {
     brand.set('b', hex('#ffffff'));
 
     const ui = book.addScope('ui');
-    ui.set('mixed', colorMix(hex('#000000'), hex('#ffffff'), brand));
+    ui.set('mixed', colorMix(hex('#000000'), hex('#ffffff')));
 
     const result = book.resolve('ui.mixed');
     // Should be a mid-gray (not exact due to color space)
@@ -23,7 +23,7 @@ describe('colorMix', () => {
     const brand = book.addScope('brand');
 
     const ui = book.addScope('ui');
-    ui.set('mixed', colorMix(hex('#000000'), hex('#ffffff'), ui, { ratio: 0 }));
+    ui.set('mixed', colorMix(hex('#000000'), hex('#ffffff'), { ratio: 0 }));
 
     // ratio 0 = 100% color1
     expect(book.resolve('ui.mixed')).toBe('#000000');
@@ -36,7 +36,7 @@ describe('colorMix', () => {
     brand.set('light', hex('#ffffff'));
 
     const ui = book.addScope('ui');
-    ui.set('mixed', colorMix(ref('brand.dark'), ref('brand.light'), ui));
+    ui.set('mixed', colorMix(ref('brand.dark'), ref('brand.light')));
 
     const result = book.resolve('ui.mixed');
     expect(result).toMatch(/^#[0-9a-f]{6}$/);

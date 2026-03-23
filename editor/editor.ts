@@ -33,15 +33,15 @@ brand.set('font-base', rem(1));
 const semantic = book.addScope('semantic');
 semantic.set('background', ref('brand.neutral-light'));
 semantic.set('text', bestContrastWith(ref('semantic.background'), brand));
-semantic.set('hover', colorMix(ref('brand.primary'), hex('#000000'), semantic, { ratio: 0.1 }));
+semantic.set('hover', colorMix(ref('brand.primary'), hex('#000000'), { ratio: 0.1 }));
 
 // UI scope
 const ui = book.addScope('ui');
-ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180'], ui));
-ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null], ui));
+ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
+ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null]));
 ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
-ui.set('heading-lg', typographyScale(ref('brand.font-base'), ui, { ratio: 1.25, step: 3 }));
-ui.set('section-spacing', spacingScale(ref('brand.space-md'), ui, { multiplier: 2 }));
+ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
+ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
 
 // Dark theme extending brand
 const dark = book.addScope('dark', { extends: 'brand' });
@@ -488,15 +488,21 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       const lowerPartial = partial.toLowerCase();
       const options: any[] = [];
 
-      // Suggest scope names (for scope arguments)
-      for (const scope of book.getAllScopes()) {
-        if (!partial || scope.name.toLowerCase().includes(lowerPartial)) {
-          options.push({
-            label: scope.name,
-            type: 'namespace',
-            detail: 'scope',
-            boost: 1, // show scopes prominently
-          });
+      // Only suggest scope names for functions that take a scope argument
+      const SCOPE_ARG_FUNCTIONS = [
+        'bestContrastWith', 'minContrastWith', 'closestColor',
+        'furthestFrom', 'averageColor',
+      ];
+      if (SCOPE_ARG_FUNCTIONS.includes(funcArgMatch[1])) {
+        for (const scope of book.getAllScopes()) {
+          if (!partial || scope.name.toLowerCase().includes(lowerPartial)) {
+            options.push({
+              label: scope.name,
+              type: 'namespace',
+              detail: 'scope',
+              boost: 1, // show scopes prominently
+            });
+          }
         }
       }
 

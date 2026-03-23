@@ -1,7 +1,6 @@
 import { parse, formatHex, converter } from 'culori';
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import { extractDependencies, val } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
-import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 
 export function relativeToImpl(
@@ -74,7 +73,6 @@ export function relativeTo(
   baseColor: TokenValue | ReferenceValue,
   colorSpace: string,
   modifications: (null | number | string)[],
-  scope: Scope,
   options?: { description?: string }
 ): FunctionTokenValue {
   return val(
@@ -82,10 +80,10 @@ export function relativeTo(
       type: 'function' as const,
       rawValue: 'relativeTo',
       implementation: (...args: any[]) => relativeToImpl(args[0], colorSpace, modifications),
-      args: [baseColor, scope],
+      args: [baseColor],
       metadata: {
         dependencies: extractDependencies([baseColor]),
-        visualDependencies: extractVisualDependencies([baseColor, scope]),
+        visualDependencies: [],
         returnType: 'color',
       },
     },

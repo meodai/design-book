@@ -1,7 +1,6 @@
 import { parse, interpolate, formatHex } from 'culori';
-import { extractDependencies, extractVisualDependencies, val } from '../../tokens';
+import { extractDependencies, val } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
-import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 
 export function colorMixImpl(
@@ -43,7 +42,6 @@ export function colorMixImpl(
 export function colorMix(
   color1: TokenValue | ReferenceValue,
   color2: TokenValue | ReferenceValue,
-  scope: Scope,
   options?: { ratio?: number; colorSpace?: string; description?: string }
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 0.5;
@@ -53,10 +51,10 @@ export function colorMix(
       type: 'function' as const,
       rawValue: 'colorMix',
       implementation: (...args: any[]) => colorMixImpl(args[0], args[1], ratio, colorSpace),
-      args: [color1, color2, scope],
+      args: [color1, color2],
       metadata: {
         dependencies: extractDependencies([color1, color2]),
-        visualDependencies: extractVisualDependencies([color1, color2, scope]),
+        visualDependencies: [],
         returnType: 'color',
       },
     },
