@@ -10,6 +10,14 @@
   line-height: 1.5;
   font-weight: 300;
 
+  --font-mono:
+    'Iosevka Web',
+    'Iosevka',
+    'Fira Code',
+    'SF Mono',
+    ui-monospace,
+    monospace;
+
   --c-white: #fff;
   --c-black: #292f2f;
 

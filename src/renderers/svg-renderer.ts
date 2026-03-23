@@ -203,17 +203,21 @@ export class SVGRenderer {
     const lines: string[] = [];
     lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}">`);
 
-    // Embedded styles
+    // Embedded styles — inherit CSS custom properties from the editor when embedded in HTML
     lines.push('<style>');
-    lines.push('.palette-table { fill: white; stroke: black; stroke-width: 1; }');
-    lines.push('.palette-table__row { fill: none; stroke: black; stroke-width: 1; }');
-    lines.push('.palette-table__row--header { fill: black; }');
-    lines.push('text { font-family: monospace; }');
-    lines.push('.palette-table__label { fill: black; }');
-    lines.push('.palette-table__label--header { font-weight: bold; fill: white; }');
-    lines.push('.connections-bg { opacity: 0.8; }');
-    lines.push('.connections { opacity: 0.9; }');
+    lines.push(`svg { --surface: var(--c-surface, #fff); --on-surface: var(--c-surface-on, #292f2f); --on-surface-alt: var(--c-surface-on-alt, #888); --font: var(--font-mono, 'Iosevka Web', 'Iosevka', 'Fira Code', ui-monospace, monospace); }`);
+    lines.push('.palette-table { fill: var(--surface); stroke: var(--on-surface); stroke-width: 1; }');
+    lines.push('.palette-table__row { fill: none; stroke: var(--on-surface); stroke-width: 0.5; }');
+    lines.push('.palette-table__row--header { fill: var(--on-surface); }');
+    lines.push('text { font-family: var(--font); font-weight: 300; }');
+    lines.push('.palette-table__label { fill: var(--on-surface); }');
+    lines.push('.palette-table__label--header { font-weight: 400; fill: var(--surface); }');
+    lines.push('.connections-bg { opacity: 0.6; }');
+    lines.push('.connections { opacity: 0.8; }');
+    lines.push('.dots circle { transition: r 0.15s ease, stroke-width 0.15s ease; }');
     lines.push('.dots circle:hover { stroke-width: 2; }');
+    lines.push('.dots rect { transition: stroke-width 0.15s ease; }');
+    lines.push('.dots rect:hover { stroke-width: 2; }');
     lines.push('</style>');
 
     // Render connections
@@ -257,7 +261,7 @@ export class SVGRenderer {
         const cp2x = to.x + (to.isLeft ? amp : -amp);
 
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="#000" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
+        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
       }
       lines.push('</g>');
 
@@ -310,10 +314,10 @@ export class SVGRenderer {
       if (dot.isHeader) {
         // Rotated square for scope headers
         const size = dotSize;
-        lines.push(`  <rect x="${dot.x - size}" y="${dot.y - size}" width="${size * 2}" height="${size * 2}" fill="#000000" stroke="#333333" stroke-width="${strokeWidth / 2}" transform="rotate(45 ${dot.x} ${dot.y})"/>`);
+        lines.push(`  <rect x="${dot.x - size}" y="${dot.y - size}" width="${size * 2}" height="${size * 2}" fill="var(--on-surface)" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}" transform="rotate(45 ${dot.x} ${dot.y})"/>`);
       } else {
         // Circle for tokens
-        lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="${dot.color}" stroke="#333333" stroke-width="${strokeWidth / 2}"/>`);
+        lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="${dot.color}" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}"/>`);
       }
     }
     lines.push('</g>');
