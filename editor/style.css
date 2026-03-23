@@ -225,13 +225,20 @@ h3 {
     0 var(--s-line--fat) 0 0 var(--c-surface-on);
 }
 
-/* Color picker — hide the trigger, only show the popover panel */
+/* Color picker — hide the trigger (chip + text input), popover panel renders in top layer */
 #global-color-picker {
-  position: absolute;
+  display: inline-block;
   width: 0;
   height: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: fixed;
+  top: 0;
+  left: 0;
   pointer-events: none;
+}
+
+#global-color-picker::part(panel) {
+  pointer-events: auto;
 }
 
 /* Output column */

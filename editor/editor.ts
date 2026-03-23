@@ -796,8 +796,6 @@ function getOrCreatePicker(): any {
   if (!picker) {
     picker = document.createElement('color-input');
     picker.id = 'global-color-picker';
-    // Hide the built-in trigger — we show the picker programmatically
-    picker.style.cssText = 'position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;';
     document.body.appendChild(picker);
 
     picker.addEventListener('change', () => {
@@ -862,8 +860,7 @@ document.addEventListener('click', (e) => {
 
   const picker = getOrCreatePicker();
   picker.value = colorValue;
-  picker.setAnchor(target);
-  picker.show();
+  picker.show(target);
 });
 
 // --- Boot & initial render ---
