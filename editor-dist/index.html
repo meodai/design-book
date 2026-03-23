@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Book Editor</title>
+  <script type="module" crossorigin src="/assets/index-CNcg7QOU.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CiBmcf0n.css">
+</head>
+<body>
+  <h1>Design Book</h1>
+  <div class="layout">
+    <div class="input-column" id="input-column">
+      <!-- Scopes and tokens will be rendered here -->
+    </div>
+    <div class="output-column">
+      <div class="tabs">
+        <button class="tab active" data-format="css-variables">CSS</button>
+        <button class="tab" data-format="json">JSON</button>
+        <button class="tab" data-format="w3-design-tokens">W3</button>
+      </div>
+      <pre class="output" id="output"></pre>
+      <h3>Event Log</h3>
+      <div class="event-log" id="event-log"></div>
+    </div>
+  </div>
+  <div class="visualization">
+    <label><input type="checkbox" id="show-connections" checked> Show connections</label>
+    <div id="svg-container"></div>
+  </div>
+</body>
+</html>

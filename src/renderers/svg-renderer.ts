@@ -214,64 +214,53 @@ export class SVGRenderer {
     lines.push('</style>');
 
     // Render connections
+    // Edge direction in the graph: prerequisite → dependent (from → to)
+    // Visual: we draw FROM the dependent TO its prerequisite (arrow shows "depends on")
+    // Color: use the dependent's color (the one that references)
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
       const allNodes = graph.getAllNodes();
+      const cx = centerX + offsetX;
+
+      // Collect connection pairs: dependent → prerequisite
+      const connections: Array<{ from: DotInfo; to: DotInfo; isDashed: boolean }> = [];
+      for (const depKey of allNodes) {
+        const prerequisites = graph.getIncoming(depKey);
+        for (const prereqKey of prerequisites) {
+          const depDot = dots.get(depKey);
+          const prereqDot = dots.get(prereqKey);
+          if (!depDot || !prereqDot) continue;
+
+          const depToken = this.book.getTokenByKey(depKey);
+          const isDashed = depToken?.type === 'function';
+          connections.push({ from: depDot, to: prereqDot, isDashed });
+        }
+      }
 
       // Background pass (black, thicker)
       lines.push('<g class="connections-bg">');
-      for (const fromKey of allNodes) {
-        const outgoing = graph.getOutgoing(fromKey);
-        for (const toKey of outgoing) {
-          const fromDot = dots.get(fromKey);
-          const toDot = dots.get(toKey);
-          if (!fromDot || !toDot) continue;
+      for (const { from, to, isDashed } of connections) {
+        const yDiff = Math.abs(from.y - to.y);
+        const amp = 40 + yDiff * 0.3;
+        // Control points curve outward from the table edge
+        const cp1x = from.x + (from.x < cx ? -amp : amp);
+        const cp2x = to.x + (to.x < cx ? -amp : amp);
 
-          const fromToken = this.book.getTokenByKey(fromKey);
-          const isDashed = fromToken?.type === 'function';
-
-          const yDiff = Math.abs(toDot.y - fromDot.y);
-          const amp = 40 + yDiff * 0.3;
-          const dirFrom = fromDot.x < centerX + offsetX ? -1 : 1;
-          const dirTo = toDot.x < centerX + offsetX ? -1 : 1;
-
-          const cp1x = fromDot.x + amp * dirFrom;
-          const cp1y = fromDot.y;
-          const cp2x = toDot.x + amp * dirTo;
-          const cp2y = toDot.y;
-
-          const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-          lines.push(`  <path d="M ${fromDot.x} ${fromDot.y} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${toDot.x} ${toDot.y}" fill="none" stroke="#000000" stroke-width="${strokeWidth + 2}"${dashAttr}/>`);
-        }
+        const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
+        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y} ${cp2x} ${to.y} ${to.x} ${to.y}" fill="none" stroke="#000000" stroke-width="${strokeWidth + 2}"${dashAttr}/>`);
       }
       lines.push('</g>');
 
       // Color pass
       lines.push('<g class="connections">');
-      for (const fromKey of allNodes) {
-        const outgoing = graph.getOutgoing(fromKey);
-        for (const toKey of outgoing) {
-          const fromDot = dots.get(fromKey);
-          const toDot = dots.get(toKey);
-          if (!fromDot || !toDot) continue;
+      for (const { from, to, isDashed } of connections) {
+        const yDiff = Math.abs(from.y - to.y);
+        const amp = 40 + yDiff * 0.3;
+        const cp1x = from.x + (from.x < cx ? -amp : amp);
+        const cp2x = to.x + (to.x < cx ? -amp : amp);
 
-          const fromToken = this.book.getTokenByKey(fromKey);
-          const isDashed = fromToken?.type === 'function';
-
-          const yDiff = Math.abs(toDot.y - fromDot.y);
-          const amp = 40 + yDiff * 0.3;
-          const dirFrom = fromDot.x < centerX + offsetX ? -1 : 1;
-          const dirTo = toDot.x < centerX + offsetX ? -1 : 1;
-
-          const cp1x = fromDot.x + amp * dirFrom;
-          const cp1y = fromDot.y;
-          const cp2x = toDot.x + amp * dirTo;
-          const cp2y = toDot.y;
-
-          const color = fromDot.color;
-          const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-          lines.push(`  <path d="M ${fromDot.x} ${fromDot.y} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${toDot.x} ${toDot.y}" fill="none" stroke="${color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
-        }
+        const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
+        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y} ${cp2x} ${to.y} ${to.x} ${to.y}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
       }
       lines.push('</g>');
     }

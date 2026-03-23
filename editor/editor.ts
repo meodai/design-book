@@ -252,7 +252,29 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   }
   if (token.type === 'function') {
     const fn = token as any;
-    return `${fn.rawValue}(...)`;
+    // Show function name with ref arguments for readability
+    const argStrs: string[] = [];
+    if (fn.args) {
+      for (const arg of fn.args) {
+        if (typeof arg === 'object' && arg !== null) {
+          if (arg.type === 'reference') {
+            argStrs.push(`ref('${arg.key}')`);
+          } else if (arg.type === 'color') {
+            argStrs.push(String(arg.rawValue));
+          } else if (typeof arg.getAllKeys === 'function') {
+            // Scope argument — show scope name
+            argStrs.push(arg.name || 'scope');
+          } else if (arg.type === 'dimension') {
+            argStrs.push(`${arg.metadata?.unit || ''}(${arg.rawValue})`);
+          }
+        } else if (typeof arg === 'string') {
+          argStrs.push(arg);
+        } else if (typeof arg === 'number') {
+          argStrs.push(String(arg));
+        }
+      }
+    }
+    return `${fn.rawValue}(${argStrs.join(', ')})`;
   }
   // Plain token
   const tv = token as any;
