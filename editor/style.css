@@ -205,6 +205,11 @@ h3 {
   opacity: 0.5;
 }
 
+/* Inherited line — dimmed to show it comes from parent scope */
+.cm-inherited-line {
+  opacity: 0.4;
+}
+
 /* Error line highlighting */
 .cm-error-line {
   background: color-mix(in lab, #dc3545 8%, var(--c-surface));

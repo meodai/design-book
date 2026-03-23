@@ -51,6 +51,11 @@ export class Scope {
     return false;
   }
 
+  /** Check if a key is defined locally (not inherited) */
+  hasOwn(name: string): boolean {
+    return this.tokens.has(name);
+  }
+
   getAllKeys(): string[] {
     const localKeys = Array.from(this.tokens.keys());
     if (!this.extendsName) return localKeys;

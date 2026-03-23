@@ -323,14 +323,16 @@ class ColorSwatchWidget extends WidgetType {
 // --- Build decorations for color swatches + error highlighting ---
 
 const errorLineDeco = Decoration.line({ class: 'cm-error-line' });
+const inheritedLineDeco = Decoration.line({ class: 'cm-inherited-line' });
 
 function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): DecorationSet {
   const doc = view.state.doc;
 
   // Collect widget decorations (swatches) with their positions
   const widgets: { pos: number; widget: WidgetType }[] = [];
-  // Collect line decorations (errors) — keyed by line start to deduplicate
+  // Collect line decorations — keyed by line start to deduplicate
   const errorLines = new Set<number>();
+  const inheritedLines = new Set<number>();
 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
@@ -406,6 +408,11 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     } catch {
       errorLines.add(line.from);
     }
+
+    // Mark inherited lines (key exists in scope but not locally owned)
+    if (_scope && !_scope.hasOwn(key) && _scope.has(key)) {
+      inheritedLines.add(line.from);
+    }
   }
 
   // Build a single sorted DecorationSet with both widgets and line decorations
@@ -416,6 +423,9 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
 
   for (const { pos, widget } of widgets) {
     allDecos.push({ pos, deco: Decoration.widget({ widget, side: -1 }), isLine: false });
+  }
+  for (const lineStart of inheritedLines) {
+    allDecos.push({ pos: lineStart, deco: inheritedLineDeco, isLine: true });
   }
   for (const lineStart of errorLines) {
     allDecos.push({ pos: lineStart, deco: errorLineDeco, isLine: true });
