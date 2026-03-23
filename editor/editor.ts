@@ -13,6 +13,9 @@ import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap } from '@codemirror/commands';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 
+// Register the <color-input> web component
+import 'hdr-color-input';
+
 // --- Create the design system (populated after event listeners are attached) ---
 
 const book = new DesignBook('demo-system');
@@ -54,7 +57,7 @@ function bootDesignSystem() {
 
 // --- State ---
 
-let activeFormat: RenderFormat = 'css-variables';
+let activeFormat: RenderFormat | 'svg' = 'css-variables';
 
 // Track CodeMirror editor instances per scope name
 const editorViews = new Map<string, EditorView>();
@@ -114,32 +117,36 @@ book.on('scopeAdded', (e: { detail: any }) => {
 
 // --- Rendering ---
 
-function renderOutput() {
-  try {
-    const renderer = new Renderer(book, activeFormat);
-    outputEl.textContent = renderer.render();
-  } catch (err) {
-    outputEl.textContent = `Error: ${(err as Error).message}`;
-  }
-}
+const visualizationEl = document.getElementById('visualization')!;
 
-function renderSVG() {
-  try {
-    const svgRenderer = new SVGRenderer(book, {
-      showConnections: showConnectionsCb.checked,
-    });
-    svgContainer.innerHTML = svgRenderer.render();
-  } catch (err) {
-    svgContainer.innerHTML = `<p style="color:#dc3545">SVG render error: ${(err as Error).message}</p>`;
+function renderActiveTab() {
+  if (activeFormat === 'svg') {
+    outputEl.style.display = 'none';
+    visualizationEl.style.display = '';
+    try {
+      const svgRenderer = new SVGRenderer(book, {
+        showConnections: showConnectionsCb.checked,
+      });
+      svgContainer.innerHTML = svgRenderer.render();
+    } catch (err) {
+      svgContainer.innerHTML = `<p style="color:#dc3545">SVG render error: ${(err as Error).message}</p>`;
+    }
+  } else {
+    outputEl.style.display = '';
+    visualizationEl.style.display = 'none';
+    try {
+      const renderer = new Renderer(book, activeFormat as RenderFormat);
+      outputEl.textContent = renderer.render();
+    } catch (err) {
+      outputEl.textContent = `Error: ${(err as Error).message}`;
+    }
   }
 }
 
 function updateAll() {
-  renderOutput();
-  renderSVG();
+  renderActiveTab();
   // Update decorations in all editors (resolved colors may have changed)
   for (const view of editorViews.values()) {
-    // Force decoration rebuild by dispatching a no-op transaction
     view.dispatch({ effects: [] });
   }
 }
@@ -277,10 +284,13 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
 // --- Color swatch widget ---
 
 class ColorSwatchWidget extends WidgetType {
-  constructor(private color: string) { super(); }
+  constructor(private _color: string, private _pos: number) { super(); }
+
+  get color() { return this._color; }
+  get pos() { return this._pos; }
 
   eq(other: ColorSwatchWidget) {
-    return this.color === other.color;
+    return this._color === other._color && this._pos === other._pos;
   }
 
   toDOM() {
@@ -292,13 +302,16 @@ class ColorSwatchWidget extends WidgetType {
       border: 1px solid rgba(0,0,0,0.2);
       vertical-align: middle;
       margin: 0 4px 0 2px;
-      background: ${this.color};
+      background: ${this._color};
+      cursor: pointer;
     `;
     span.className = 'cm-color-swatch';
+    span.dataset.color = this._color;
+    span.dataset.pos = String(this._pos);
     return span;
   }
 
-  ignoreEvent() { return true; }
+  ignoreEvent() { return false; } // allow click events through
 }
 
 // --- Build decorations for color swatches + error highlighting ---
@@ -321,7 +334,7 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     let match;
     while ((match = hexRegex.exec(text)) !== null) {
       const pos = from + match.index;
-      widgets.push({ pos, widget: new ColorSwatchWidget(match[0]) });
+      widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos) });
     }
 
     // Find ref('...') and resolve to show swatch
@@ -332,7 +345,7 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
         const resolved = book.resolve(refKey);
         if (resolved && looksLikeColor(resolved)) {
           const pos = from + match.index;
-          widgets.push({ pos, widget: new ColorSwatchWidget(resolved) });
+          widgets.push({ pos, widget: new ColorSwatchWidget(resolved, pos) });
         }
       } catch {
         // skip unresolvable refs
@@ -761,15 +774,112 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
-    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat;
-    renderOutput();
+    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg';
+    renderActiveTab();
   });
 });
 
 // --- Show connections toggle ---
 
 showConnectionsCb.addEventListener('change', () => {
-  renderSVG();
+  if (activeFormat === 'svg') renderActiveTab();
+});
+
+// --- Color picker (hdr-color-input) ---
+
+let activeColorPicker: HTMLElement | null = null;
+let pickerTargetView: EditorView | null = null;
+let pickerTargetPos: number = -1;
+
+function getOrCreatePicker(): HTMLElement {
+  let picker = document.getElementById('global-color-picker') as any;
+  if (!picker) {
+    picker = document.createElement('color-input');
+    picker.id = 'global-color-picker';
+    picker.setAttribute('popover', 'auto');
+    picker.style.cssText = 'position: fixed; z-index: 2000;';
+    document.body.appendChild(picker);
+
+    picker.addEventListener('change', () => {
+      if (!pickerTargetView || pickerTargetPos < 0) return;
+      const newColor = picker.value;
+      if (!newColor) return;
+
+      // Find the color(...) or #hex in the document at the stored position
+      const doc = pickerTargetView.state.doc;
+      const line = doc.lineAt(pickerTargetPos);
+      const lineText = line.text;
+
+      // Find and replace color('...') or bare #hex that contains the position
+      const colorCallRegex = /color\(\s*['"]([^'"]+)['"]\s*\)/g;
+      const hexRegex = /#[0-9a-fA-F]{3,8}/g;
+      let replaced = false;
+
+      // Try color('...') first
+      let m;
+      while ((m = colorCallRegex.exec(lineText)) !== null) {
+        const absStart = line.from + m.index;
+        const absEnd = absStart + m[0].length;
+        if (pickerTargetPos >= absStart && pickerTargetPos < absEnd) {
+          pickerTargetView.dispatch({
+            changes: { from: absStart, to: absEnd, insert: `color('${newColor}')` },
+          });
+          replaced = true;
+          break;
+        }
+      }
+
+      // Try bare #hex inside function args
+      if (!replaced) {
+        while ((m = hexRegex.exec(lineText)) !== null) {
+          const absStart = line.from + m.index;
+          const absEnd = absStart + m[0].length;
+          if (pickerTargetPos >= absStart && pickerTargetPos < absEnd) {
+            pickerTargetView.dispatch({
+              changes: { from: absStart, to: absEnd, insert: newColor },
+            });
+            break;
+          }
+        }
+      }
+    });
+  }
+  return picker;
+}
+
+// Global click handler for color swatches
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement;
+  if (!target.classList.contains('cm-color-swatch')) return;
+
+  const colorValue = target.dataset.color;
+  const pos = parseInt(target.dataset.pos || '-1', 10);
+  if (!colorValue || pos < 0) return;
+
+  // Find which editor view owns this swatch
+  for (const [, view] of editorViews) {
+    if (view.dom.contains(target)) {
+      pickerTargetView = view;
+      pickerTargetPos = pos;
+      break;
+    }
+  }
+
+  const picker = getOrCreatePicker() as any;
+  picker.value = colorValue;
+
+  // Position near the swatch
+  const rect = target.getBoundingClientRect();
+  picker.style.left = `${rect.left}px`;
+  picker.style.top = `${rect.bottom + 4}px`;
+
+  // Show the picker
+  if (typeof picker.showPopover === 'function') {
+    try { picker.showPopover(); } catch { /* already shown */ }
+  }
+  if (typeof picker.show === 'function') {
+    picker.show();
+  }
 });
 
 // --- Boot & initial render ---
