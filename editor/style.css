@@ -82,13 +82,13 @@ h3 {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--c-surface-on-alt);
+  margin-left: 1em;
 }
 
 /* Two-column layout */
 .layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--s-line);
   margin-bottom: var(--s-line);
 }
 
@@ -96,7 +96,6 @@ h3 {
 .input-column {
   display: flex;
   flex-direction: column;
-  gap: var(--s-line);
 }
 
 .scope-block {
@@ -251,6 +250,7 @@ h3 {
 .output-column {
   display: flex;
   flex-direction: column;
+  margin-left: calc(var(--s-line) * -1);
 }
 
 .tabs {
