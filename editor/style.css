@@ -232,10 +232,6 @@ h3 {
 
 .color-picker-wrapper color-input {
   opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  width: 0;
-  height: 0;
 }
 
 @keyframes picker-fade-in {
