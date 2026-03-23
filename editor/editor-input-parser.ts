@@ -110,7 +110,7 @@ function splitArgs(argsStr: string): string[] {
   return args;
 }
 
-/** Parse a single argument — could be ref(), hex, a scope name, a number, or a string */
+/** Parse a single argument — could be ref(), color(), px(), a scope name, a number, or a string */
 function parseArg(
   arg: string,
   book?: DesignBook,
@@ -123,21 +123,51 @@ function parseArg(
     return { type: 'ref', value: ref(refMatch[1]) };
   }
 
-  // #hex color
+  // color('...') or hex('...')
+  const colorMatch = trimmed.match(/^(?:color|hex)\(\s*['"]?([^'")\s]+)['"]?\s*\)$/);
+  if (colorMatch) {
+    return { type: 'hex', value: color(colorMatch[1]) };
+  }
+
+  // px(number), rem(number), ms(number)
+  const dimMatch = trimmed.match(/^(px|rem|ms)\(\s*([\d.]+)\s*\)$/);
+  if (dimMatch) {
+    const unit = dimMatch[1];
+    const val = parseFloat(dimMatch[2]);
+    if (unit === 'px') return { type: 'hex', value: px(val) };
+    if (unit === 'rem') return { type: 'hex', value: rem(val) };
+    if (unit === 'ms') return { type: 'hex', value: ms(val) };
+  }
+
+  // dimension(number, 'unit')
+  const dimensionMatch = trimmed.match(/^dimension\(\s*([\d.]+)\s*,\s*['"]([^'"]+)['"]\s*\)$/);
+  if (dimensionMatch) {
+    return { type: 'hex', value: dimension(parseFloat(dimensionMatch[1]), dimensionMatch[2]) };
+  }
+
+  // string('...')
+  const stringMatch = trimmed.match(/^string\(\s*['"]([^'"]*)['"]\s*\)$/);
+  if (stringMatch) {
+    return { type: 'hex', value: string(stringMatch[1]) };
+  }
+
+  // #hex color (bare, inside function args)
   if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
     return { type: 'hex', value: color(trimmed) };
   }
 
-  // CSS color
-  if (parse(trimmed) && /^[a-z]/i.test(trimmed) && book) {
-    // Check if it's a scope name first
+  // CSS named color or scope name
+  if (/^[a-z]/i.test(trimmed) && book) {
+    // Check scope first
     const scope = book.getScope(trimmed);
     if (scope) return { type: 'scope', value: scope };
-    // Otherwise it's a named color
-    return { type: 'hex', value: color(trimmed) };
+    // Then try as CSS named color
+    if (parse(trimmed)) {
+      return { type: 'hex', value: color(trimmed) };
+    }
   }
 
-  // Scope name
+  // Scope name (without book having named colors)
   if (book) {
     const scope = book.getScope(trimmed);
     if (scope) return { type: 'scope', value: scope };
