@@ -30,6 +30,7 @@ interface DotInfo {
   y: number;
   color: string;
   isHeader: boolean;
+  isLeft: boolean; // true if table is on left half — dot faces inward (right edge)
 }
 
 function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string): string {
@@ -170,6 +171,7 @@ export class SVGRenderer {
         y: table.y + offsetY + rowHeight / 2,
         color: '#000000',
         isHeader: true,
+        isLeft: table.onLeft,
       });
 
       // Token dots
@@ -192,6 +194,7 @@ export class SVGRenderer {
           y: table.y + offsetY + (i + 1) * rowHeight + rowHeight / 2,
           color,
           isHeader: false,
+          isLeft: table.onLeft,
         });
       }
     }
@@ -214,26 +217,32 @@ export class SVGRenderer {
     lines.push('</style>');
 
     // Render connections
-    // Edge direction in the graph: prerequisite → dependent (from → to)
-    // Visual: we draw FROM the dependent TO its prerequisite (arrow shows "depends on")
-    // Color: use the dependent's color (the one that references)
+    // OG pattern: iterate each token, get its visual dependencies (what it depends on),
+    // draw FROM the token TO each dependency. Color = token's color.
+    // isLeft means the table is on the left half → dot is on right edge → curve goes RIGHT (+amp)
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
-      const allNodes = graph.getAllNodes();
-      const cx = centerX + offsetX;
+      const processedConnections = new Set<string>();
 
-      // Collect connection pairs: dependent → prerequisite
-      const connections: Array<{ from: DotInfo; to: DotInfo; isDashed: boolean }> = [];
-      for (const depKey of allNodes) {
-        const prerequisites = graph.getIncoming(depKey);
-        for (const prereqKey of prerequisites) {
-          const depDot = dots.get(depKey);
-          const prereqDot = dots.get(prereqKey);
-          if (!depDot || !prereqDot) continue;
+      type Conn = { from: DotInfo; to: DotInfo; isDashed: boolean };
+      const connections: Conn[] = [];
 
-          const depToken = this.book.getTokenByKey(depKey);
-          const isDashed = depToken?.type === 'function';
-          connections.push({ from: depDot, to: prereqDot, isDashed });
+      for (const [key, fromDot] of dots) {
+        if (fromDot.isHeader) continue;
+
+        // Get what this token depends on (its prerequisites / inputs)
+        const prerequisites = graph.getIncoming(key);
+        for (const depKey of prerequisites) {
+          const toDot = dots.get(depKey);
+          if (!toDot) continue;
+
+          const connId = `${key}->${depKey}`;
+          if (processedConnections.has(connId)) continue;
+          processedConnections.add(connId);
+
+          const token = this.book.getTokenByKey(key);
+          const isDashed = token?.type === 'function';
+          connections.push({ from: fromDot, to: toDot, isDashed });
         }
       }
 
@@ -242,12 +251,13 @@ export class SVGRenderer {
       for (const { from, to, isDashed } of connections) {
         const yDiff = Math.abs(from.y - to.y);
         const amp = 40 + yDiff * 0.3;
-        // Control points curve outward from the table edge
-        const cp1x = from.x + (from.x < cx ? -amp : amp);
-        const cp2x = to.x + (to.x < cx ? -amp : amp);
+        // isLeft = table on left half, dot on right edge → curve goes RIGHT (+amp)
+        // !isLeft = table on right half, dot on left edge → curve goes LEFT (-amp)
+        const cp1x = from.x + (from.isLeft ? amp : -amp);
+        const cp2x = to.x + (to.isLeft ? amp : -amp);
 
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y} ${cp2x} ${to.y} ${to.x} ${to.y}" fill="none" stroke="#000000" stroke-width="${strokeWidth + 2}"${dashAttr}/>`);
+        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="#000" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
       }
       lines.push('</g>');
 
@@ -256,11 +266,11 @@ export class SVGRenderer {
       for (const { from, to, isDashed } of connections) {
         const yDiff = Math.abs(from.y - to.y);
         const amp = 40 + yDiff * 0.3;
-        const cp1x = from.x + (from.x < cx ? -amp : amp);
-        const cp2x = to.x + (to.x < cx ? -amp : amp);
+        const cp1x = from.x + (from.isLeft ? amp : -amp);
+        const cp2x = to.x + (to.isLeft ? amp : -amp);
 
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y} ${cp2x} ${to.y} ${to.x} ${to.y}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
       }
       lines.push('</g>');
     }
