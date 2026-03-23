@@ -96,7 +96,7 @@ h3 {
 
 .scope-block {
   background: var(--c-surface);
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-border);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   padding: 0;
 }
 
@@ -107,7 +107,7 @@ h3 {
   padding: 0.4rem 0.75rem;
   font-weight: 400;
   font-size: 0.7rem;
-  box-shadow: 0 var(--s-line) 0 0 var(--c-border);
+  box-shadow: 0 var(--s-line) 0 0 var(--c-surface-on);
 }
 
 .scope-header .scope-name {
@@ -207,7 +207,7 @@ h3 {
   font-weight: 400;
   padding: 0.4rem 0.75rem;
   border: none;
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-border);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   background: var(--c-surface);
   cursor: pointer;
   color: var(--c-surface-on-alt);
@@ -239,7 +239,8 @@ h3 {
 
 .tab {
   padding: 0.4rem 0.75rem;
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-border);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
+  margin-left: calc(-1 * var(--s-line));
   cursor: pointer;
   font-size: 0.6rem;
   font-weight: 400;
@@ -251,8 +252,8 @@ h3 {
   transform: translateY(0);
 }
 
-.tab + .tab {
-  margin-left: calc(-1 * var(--s-line));
+.tab:first-child {
+  margin-left: 0;
 }
 
 .tab:hover {
@@ -267,7 +268,8 @@ h3 {
 .tab.active {
   color: var(--c-surface-on);
   font-weight: 400;
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
+  background: var(--c-surface-on);
+  color: var(--c-surface);
   z-index: 1;
 }
 
@@ -290,6 +292,7 @@ h3 {
 .event-log {
   background: var(--c-surface-on);
   color: var(--c-surface);
+  margin-top: var(--s-line);
   box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   padding: 0.5rem 0.75rem;
   font-size: 0.6rem;
@@ -318,9 +321,9 @@ h3 {
 /* Visualization */
 .visualization {
   background: var(--c-surface);
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-border);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   padding: 1rem;
-  margin-top: calc(-1 * var(--s-line));
+  margin-top: var(--s-line);
 }
 
 .visualization label {
@@ -360,13 +363,13 @@ h3 {
 .new-scope-form select {
   font-size: 0.65rem;
   padding: 0.4rem 0.6rem;
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-border);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
   background: var(--c-surface);
 }
 
 .new-scope-form input:focus,
 .new-scope-form select:focus {
-  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
+  box-shadow: inset 0 0 0 var(--s-line--fat) var(--c-surface-on);
 }
 
 .new-scope-form button {
