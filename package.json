@@ -14,9 +14,9 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode editor --host",
     "build": "vite build",
-    "build:demo": "vite build --mode demo",
+    "build:editor": "vite build --mode editor",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

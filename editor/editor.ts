@@ -6,7 +6,8 @@ import {
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
 import type { Scope } from '../src/index';
-import { parseTokenInput } from './demo-input-parser';
+import { parseTokenInput } from './editor-input-parser';
+import { setupAutocomplete } from './editor-autocomplete';
 
 // --- Boot the design system ---
 
@@ -373,6 +374,10 @@ document.querySelectorAll('.tab').forEach((tab) => {
 showConnectionsCb.addEventListener('change', () => {
   renderSVG();
 });
+
+// --- Autocomplete ---
+
+setupAutocomplete(book);
 
 // --- Initial render ---
 

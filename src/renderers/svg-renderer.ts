@@ -10,25 +10,36 @@ export interface SVGRenderOptions {
   strokeWidth?: number;
 }
 
-interface TokenNode {
+interface TableInfo {
+  scopeName: string;
+  keys: string[];
+  width: number;
+  height: number;
+  diagonal: number;
+  x: number;
+  y: number;
+  angle: number;
+  onLeft: boolean;
+}
+
+interface DotInfo {
   qualifiedKey: string;
   scopeName: string;
   tokenName: string;
   x: number;
   y: number;
   color: string;
-  tokenType: string;
+  isHeader: boolean;
 }
 
-function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string, token: AnyTokenValue): string {
+function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string): string {
   try {
     const resolved = book.resolve(`${scopeName}.${tokenName}`);
-    // If it looks like a color (starts with # or is a named color), use it
     if (resolved && (resolved.startsWith('#') || resolved.startsWith('rgb') || resolved.startsWith('hsl'))) {
       return resolved;
     }
   } catch {
-    // fallback below
+    // fallback
   }
   return '#888888';
 }
@@ -51,6 +62,10 @@ function isColorToken(book: DesignBook, token: AnyTokenValue): boolean {
   return getTokenBaseType(book, token) === 'color';
 }
 
+function escapeXml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 export class SVGRenderer {
   private book: DesignBook;
   private options: Required<SVGRenderOptions>;
@@ -62,7 +77,7 @@ export class SVGRenderer {
       gap: options?.gap ?? 20,
       padding: options?.padding ?? 40,
       fontSize: options?.fontSize ?? 12,
-      dotSize: options?.dotSize ?? 8,
+      dotSize: options?.dotSize ?? 5,
       strokeWidth: options?.strokeWidth ?? 1.5,
     };
   }
@@ -71,116 +86,238 @@ export class SVGRenderer {
     const { gap, padding, fontSize, dotSize, strokeWidth } = this.options;
     const scopes = this.book.getAllScopes();
 
-    // Build token nodes in a vertical list layout, grouped by scope
-    const nodes: Map<string, TokenNode> = new Map();
-    const scopeHeaderHeight = fontSize * 2 + gap;
-    const rowHeight = dotSize * 2 + gap;
+    if (scopes.length === 0) {
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"></svg>';
+    }
 
-    let currentY = padding;
-    const columnWidth = 200;
+    const rowHeight = fontSize * 2;
+    const widthPerLetter = fontSize * 0.62;
+    const tablePadding = 12;
+    const tableGap = gap * 2;
+
+    // 1. Calculate table dimensions for each scope
+    const tables: TableInfo[] = [];
 
     for (const scope of scopes) {
-      // scope header
-      const headerY = currentY;
-      currentY += scopeHeaderHeight;
-
       const keys = scope.getAllKeys();
-      for (let i = 0; i < keys.length; i++) {
-        const tokenName = keys[i];
+      const allLabels = [scope.name, ...keys];
+      const maxLabelLen = Math.max(...allLabels.map(l => l.length));
+      const width = maxLabelLen * widthPerLetter + tablePadding * 2 + dotSize * 4;
+      const height = (1 + keys.length) * rowHeight;
+
+      const diagonal = Math.sqrt(width * width + height * height);
+
+      tables.push({
+        scopeName: scope.name,
+        keys,
+        width,
+        height,
+        diagonal,
+        x: 0,
+        y: 0,
+        angle: 0,
+        onLeft: false,
+      });
+    }
+
+    // 2. Circular layout
+    const totalCircumference = tables.reduce((sum, t) => sum + t.diagonal, 0) + tableGap * tables.length;
+    const radius = Math.max(totalCircumference / (Math.PI * 2), 100);
+    const centerX = radius + padding + Math.max(...tables.map(t => t.width));
+    const centerY = radius + padding + Math.max(...tables.map(t => t.height));
+
+    let cumulative = 0;
+    for (const table of tables) {
+      cumulative += table.diagonal / 2;
+      const fraction = cumulative / totalCircumference;
+      const angle = fraction * Math.PI * 2 - Math.PI / 2; // start from top
+      table.angle = angle;
+      table.x = centerX + radius * Math.cos(angle) - table.width / 2;
+      table.y = centerY + radius * Math.sin(angle) - table.height / 2;
+      table.onLeft = Math.cos(angle) < 0;
+      cumulative += table.diagonal / 2 + tableGap;
+    }
+
+    // Compute SVG bounds
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const table of tables) {
+      minX = Math.min(minX, table.x - padding);
+      minY = Math.min(minY, table.y - padding);
+      maxX = Math.max(maxX, table.x + table.width + padding);
+      maxY = Math.max(maxY, table.y + table.height + padding);
+    }
+
+    const svgWidth = Math.ceil(maxX - minX);
+    const svgHeight = Math.ceil(maxY - minY);
+    const offsetX = -minX;
+    const offsetY = -minY;
+
+    // Build dot map for connections
+    const dots: Map<string, DotInfo> = new Map();
+
+    for (const table of tables) {
+      const scope = this.book.getScope(table.scopeName)!;
+      const dotX = table.onLeft
+        ? table.x + offsetX + table.width
+        : table.x + offsetX;
+
+      // Scope header dot
+      dots.set(`__header__${table.scopeName}`, {
+        qualifiedKey: `__header__${table.scopeName}`,
+        scopeName: table.scopeName,
+        tokenName: '',
+        x: dotX,
+        y: table.y + offsetY + rowHeight / 2,
+        color: '#000000',
+        isHeader: true,
+      });
+
+      // Token dots
+      for (let i = 0; i < table.keys.length; i++) {
+        const tokenName = table.keys[i];
         const token = scope.get(tokenName);
         if (!token) continue;
 
-        const x = padding + dotSize;
-        const y = currentY + dotSize;
-
         const isColor = isColorToken(this.book, token);
         const color = isColor
-          ? getResolvedColor(this.book, scope.name, tokenName, token)
+          ? getResolvedColor(this.book, table.scopeName, tokenName)
           : '#888888';
 
-        const qualifiedKey = `${scope.name}.${tokenName}`;
-        nodes.set(qualifiedKey, {
+        const qualifiedKey = `${table.scopeName}.${tokenName}`;
+        dots.set(qualifiedKey, {
           qualifiedKey,
-          scopeName: scope.name,
+          scopeName: table.scopeName,
           tokenName,
-          x,
-          y,
+          x: dotX,
+          y: table.y + offsetY + (i + 1) * rowHeight + rowHeight / 2,
           color,
-          tokenType: getTokenBaseType(this.book, token),
+          isHeader: false,
         });
-
-        currentY += rowHeight;
       }
-
-      currentY += gap;
     }
 
-    const totalHeight = currentY + padding;
-    const totalWidth = columnWidth + padding * 2;
-
+    // Start building SVG
     const lines: string[] = [];
-    lines.push(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" width="${totalWidth}" height="${totalHeight}">`
-    );
+    lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}">`);
 
-    // Render connections (paths) first so they appear behind circles
+    // Embedded styles
+    lines.push('<style>');
+    lines.push('.palette-table { fill: white; stroke: black; stroke-width: 1; }');
+    lines.push('.palette-table__row { fill: none; stroke: black; stroke-width: 1; }');
+    lines.push('.palette-table__row--header { fill: black; }');
+    lines.push('text { font-family: monospace; }');
+    lines.push('.palette-table__label { fill: black; }');
+    lines.push('.palette-table__label--header { font-weight: bold; fill: white; }');
+    lines.push('.connections-bg { opacity: 0.8; }');
+    lines.push('.connections { opacity: 0.9; }');
+    lines.push('.dots circle:hover { stroke-width: 2; }');
+    lines.push('</style>');
+
+    // Render connections
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
       const allNodes = graph.getAllNodes();
 
+      // Background pass (black, thicker)
+      lines.push('<g class="connections-bg">');
       for (const fromKey of allNodes) {
         const outgoing = graph.getOutgoing(fromKey);
         for (const toKey of outgoing) {
-          const fromNode = nodes.get(fromKey);
-          const toNode = nodes.get(toKey);
-          if (!fromNode || !toNode) continue;
+          const fromDot = dots.get(fromKey);
+          const toDot = dots.get(toKey);
+          if (!fromDot || !toDot) continue;
 
-          // Determine if the source token is a function type (dashed)
           const fromToken = this.book.getTokenByKey(fromKey);
           const isDashed = fromToken?.type === 'function';
 
-          // Cubic bezier curve
-          const cx1 = fromNode.x + (toNode.x - fromNode.x) * 0.5;
-          const cy1 = fromNode.y;
-          const cx2 = fromNode.x + (toNode.x - fromNode.x) * 0.5;
-          const cy2 = toNode.y;
+          const yDiff = Math.abs(toDot.y - fromDot.y);
+          const amp = 40 + yDiff * 0.3;
+          const dirFrom = fromDot.x < centerX + offsetX ? -1 : 1;
+          const dirTo = toDot.x < centerX + offsetX ? -1 : 1;
 
-          const dashAttr = isDashed ? ` stroke-dasharray="4 2"` : '';
-          lines.push(
-            `  <path d="M ${fromNode.x} ${fromNode.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${toNode.x} ${toNode.y}" fill="none" stroke="#aaaaaa" stroke-width="${strokeWidth}"${dashAttr}/>`
-          );
+          const cp1x = fromDot.x + amp * dirFrom;
+          const cp1y = fromDot.y;
+          const cp2x = toDot.x + amp * dirTo;
+          const cp2y = toDot.y;
+
+          const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
+          lines.push(`  <path d="M ${fromDot.x} ${fromDot.y} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${toDot.x} ${toDot.y}" fill="none" stroke="#000000" stroke-width="${strokeWidth + 2}"${dashAttr}/>`);
         }
       }
+      lines.push('</g>');
+
+      // Color pass
+      lines.push('<g class="connections">');
+      for (const fromKey of allNodes) {
+        const outgoing = graph.getOutgoing(fromKey);
+        for (const toKey of outgoing) {
+          const fromDot = dots.get(fromKey);
+          const toDot = dots.get(toKey);
+          if (!fromDot || !toDot) continue;
+
+          const fromToken = this.book.getTokenByKey(fromKey);
+          const isDashed = fromToken?.type === 'function';
+
+          const yDiff = Math.abs(toDot.y - fromDot.y);
+          const amp = 40 + yDiff * 0.3;
+          const dirFrom = fromDot.x < centerX + offsetX ? -1 : 1;
+          const dirTo = toDot.x < centerX + offsetX ? -1 : 1;
+
+          const cp1x = fromDot.x + amp * dirFrom;
+          const cp1y = fromDot.y;
+          const cp2x = toDot.x + amp * dirTo;
+          const cp2y = toDot.y;
+
+          const color = fromDot.color;
+          const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
+          lines.push(`  <path d="M ${fromDot.x} ${fromDot.y} C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${toDot.x} ${toDot.y}" fill="none" stroke="${color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        }
+      }
+      lines.push('</g>');
     }
 
-    // Render scope headers and token circles + labels
-    currentY = padding;
+    // Render tables
+    for (const table of tables) {
+      const tx = table.x + offsetX;
+      const ty = table.y + offsetY;
 
-    for (const scope of scopes) {
-      const headerY = currentY + fontSize;
-      lines.push(
-        `  <text x="${padding}" y="${headerY}" font-size="${fontSize + 2}" font-weight="bold" fill="#333333">${scope.name}</text>`
-      );
-      currentY += scopeHeaderHeight;
+      lines.push(`<g class="palette-table-group">`);
 
-      const keys = scope.getAllKeys();
-      for (const tokenName of keys) {
-        const qualifiedKey = `${scope.name}.${tokenName}`;
-        const node = nodes.get(qualifiedKey);
-        if (!node) continue;
+      // Table background
+      lines.push(`  <rect class="palette-table" x="${tx}" y="${ty}" width="${table.width}" height="${table.height}" rx="2"/>`);
 
-        lines.push(
-          `  <circle cx="${node.x}" cy="${node.y}" r="${dotSize}" fill="${node.color}" stroke="#333333" stroke-width="${strokeWidth / 2}"/>`
-        );
-        lines.push(
-          `  <text x="${node.x + dotSize + 6}" y="${node.y + fontSize / 3}" font-size="${fontSize}" fill="#333333">${tokenName}</text>`
-        );
+      // Header row
+      lines.push(`  <rect class="palette-table__row palette-table__row--header" x="${tx}" y="${ty}" width="${table.width}" height="${rowHeight}" rx="2"/>`);
+      const headerTextX = tx + tablePadding;
+      const headerTextY = ty + rowHeight / 2 + fontSize / 3;
+      lines.push(`  <text class="palette-table__label palette-table__label--header" x="${headerTextX}" y="${headerTextY}" font-size="${fontSize}">${escapeXml(table.scopeName)}</text>`);
 
-        currentY += rowHeight;
+      // Data rows
+      for (let i = 0; i < table.keys.length; i++) {
+        const tokenName = table.keys[i];
+        const ry = ty + (i + 1) * rowHeight;
+        lines.push(`  <rect class="palette-table__row" x="${tx}" y="${ry}" width="${table.width}" height="${rowHeight}"/>`);
+        const textX = tx + tablePadding;
+        const textY = ry + rowHeight / 2 + fontSize / 3;
+        lines.push(`  <text class="palette-table__label" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(tokenName)}</text>`);
       }
 
-      currentY += gap;
+      lines.push('</g>');
     }
+
+    // Render dots
+    lines.push('<g class="dots">');
+    for (const [, dot] of dots) {
+      if (dot.isHeader) {
+        // Rotated square for scope headers
+        const size = dotSize;
+        lines.push(`  <rect x="${dot.x - size}" y="${dot.y - size}" width="${size * 2}" height="${size * 2}" fill="#000000" stroke="#333333" stroke-width="${strokeWidth / 2}" transform="rotate(45 ${dot.x} ${dot.y})"/>`);
+      } else {
+        // Circle for tokens
+        lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="${dot.color}" stroke="#333333" stroke-width="${strokeWidth / 2}"/>`);
+      }
+    }
+    lines.push('</g>');
 
     lines.push('</svg>');
 

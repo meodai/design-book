@@ -6,11 +6,12 @@ import dts from 'vite-plugin-dts';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  if (mode === 'demo') {
+  if (mode === 'editor') {
     return {
-      root: 'demo',
+      root: 'editor',
+      server: { host: true },
       build: {
-        outDir: '../demo-dist',
+        outDir: '../editor-dist',
       },
     };
   }
