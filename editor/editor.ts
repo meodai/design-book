@@ -691,6 +691,18 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       }
     }
 
+    // "inherit" keyword — only in scopes that extend another
+    if (getScopeExtends(_currentScope.name)) {
+      if (!partial || 'inherit'.includes(lowerPartial)) {
+        options.push({
+          label: 'inherit',
+          type: 'keyword',
+          detail: 'use parent value',
+          boost: 2,
+        });
+      }
+    }
+
     if (options.length === 0) return null;
     return { from: wordFrom, options };
   };

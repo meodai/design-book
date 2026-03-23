@@ -210,6 +210,12 @@ h3 {
   opacity: 0.4;
 }
 
+/* Resolved value shown after "inherit" keyword */
+.cm-inherited-value {
+  opacity: 0.5;
+  font-style: italic;
+}
+
 /* Error line highlighting */
 .cm-error-line {
   background: color-mix(in lab, #dc3545 8%, var(--c-surface));
