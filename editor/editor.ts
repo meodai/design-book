@@ -262,8 +262,10 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       const key = line.slice(0, colonIdx).trim();
       const valueStr = line.slice(colonIdx + 1).trim();
 
+      // Track key even if incomplete — prevents deletion while editing
+      if (key) newKeys.add(key);
+
       if (!key || !valueStr) continue;
-      newKeys.add(key);
 
       // "inherit" keyword — delete local override, revert to parent
       if (valueStr === 'inherit') {
@@ -296,6 +298,36 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
     }
   } finally {
     syncingFromEditor = false;
+  }
+
+  // Re-inject missing inherited keys into the editor
+  const scopeView = editorViews.get(scope.name);
+  if (scopeView) {
+    const currentText = scopeView.state.doc.toString();
+    const currentKeys = new Set<string>();
+    for (const line of currentText.split('\n')) {
+      const ci = line.indexOf(':');
+      if (ci >= 0) {
+        const k = line.slice(0, ci).trim();
+        if (k) currentKeys.add(k);
+      }
+    }
+
+    const missingLines: string[] = [];
+    for (const key of scope.getAllKeys()) {
+      if (!currentKeys.has(key)) {
+        missingLines.push(`${key}: ${getTokenDisplayValue(scope, key)}`);
+      }
+    }
+
+    if (missingLines.length > 0) {
+      syncingFromEditor = true;
+      const insertText = (currentText.endsWith('\n') || !currentText ? '' : '\n') + missingLines.join('\n');
+      scopeView.dispatch({
+        changes: { from: scopeView.state.doc.length, insert: insertText },
+      });
+      syncingFromEditor = false;
+    }
   }
 
   // Now update outputs after all changes are applied
