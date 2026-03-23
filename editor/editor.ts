@@ -1,5 +1,5 @@
 import {
-  DesignBook, hex, ref, px, rem, ms,
+  DesignBook, color, ref, px, rem, ms,
   bestContrastWith, minContrastWith, colorMix, relativeTo,
   spacingScale, typographyScale,
   Renderer, SVGRenderer,
@@ -19,12 +19,12 @@ const book = new DesignBook('demo-system');
 
 // Brand scope
 const brand = book.addScope('brand');
-brand.set('primary', hex('#0066cc'));
-brand.set('secondary', hex('#ff8800'));
-brand.set('neutral-dark', hex('#1a1a1a'));
-brand.set('neutral-light', hex('#ffffff'));
-brand.set('success', hex('#28a745'));
-brand.set('error', hex('#dc3545'));
+brand.set('primary', color('#0066cc'));
+brand.set('secondary', color('#ff8800'));
+brand.set('neutral-dark', color('#1a1a1a'));
+brand.set('neutral-light', color('#ffffff'));
+brand.set('success', color('#28a745'));
+brand.set('error', color('#dc3545'));
 brand.set('space-sm', px(8));
 brand.set('space-md', px(16));
 brand.set('font-base', rem(1));
@@ -33,7 +33,7 @@ brand.set('font-base', rem(1));
 const semantic = book.addScope('semantic');
 semantic.set('background', ref('brand.neutral-light'));
 semantic.set('text', bestContrastWith(ref('semantic.background'), brand));
-semantic.set('hover', colorMix(ref('brand.primary'), hex('#000000'), { ratio: 0.1 }));
+semantic.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.1 }));
 
 // UI scope
 const ui = book.addScope('ui');
@@ -45,8 +45,8 @@ ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 })
 
 // Dark theme extending brand
 const dark = book.addScope('dark', { extends: 'brand' });
-dark.set('neutral-dark', hex('#ffffff'));
-dark.set('neutral-light', hex('#1a1a1a'));
+dark.set('neutral-dark', color('#ffffff'));
+dark.set('neutral-light', color('#1a1a1a'));
 
 // --- State ---
 
@@ -414,10 +414,12 @@ const FUNCTION_NAMES = [
 ];
 
 const VALUE_CONSTRUCTORS = [
-  { label: "hex('#...')", apply: "hex('#", type: 'keyword' as const },
+  { label: "color('#...')", apply: "color('#", type: 'keyword' as const },
   { label: 'px(...)', apply: 'px(', type: 'keyword' as const },
   { label: 'rem(...)', apply: 'rem(', type: 'keyword' as const },
   { label: 'ms(...)', apply: 'ms(', type: 'keyword' as const },
+  { label: "dimension(n, 'unit')", apply: "dimension(", type: 'keyword' as const },
+  { label: "string('...')", apply: "string('", type: 'keyword' as const },
 ];
 
 function getAllQualifiedKeys(): { key: string; color?: string }[] {

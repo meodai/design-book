@@ -1,5 +1,5 @@
 import {
-  hex, ref, px, rem, ms,
+  color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, relativeTo,
   closestColor, furthestFrom, averageColor,
@@ -56,7 +56,7 @@ export function parseTokenInput(
 
   // Hex color: #rgb, #rrggbb, #rrggbbaa
   if (/^#([0-9a-fA-F]{3,8})$/.test(trimmed)) {
-    return hex(trimmed);
+    return color(trimmed);
   }
 
   // Function calls: functionName(args...)
@@ -72,7 +72,7 @@ export function parseTokenInput(
 
   // Try as a CSS color (named colors like "red", "rebeccapurple", or rgb()/hsl())
   if (parse(trimmed)) {
-    return hex(trimmed);
+    return color(trimmed);
   }
 
   throw new Error(`Unknown value: ${trimmed}`);
@@ -135,7 +135,7 @@ function parseArg(
 
   // #hex color
   if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
-    return { type: 'hex', value: hex(trimmed) };
+    return { type: 'hex', value: color(trimmed) };
   }
 
   // CSS color
@@ -144,7 +144,7 @@ function parseArg(
     const scope = book.getScope(trimmed);
     if (scope) return { type: 'scope', value: scope };
     // Otherwise it's a named color
-    return { type: 'hex', value: hex(trimmed) };
+    return { type: 'hex', value: color(trimmed) };
   }
 
   // Scope name
@@ -294,11 +294,34 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return timing(duration, easing, options);
   },
 
-  // hex('...') as an explicit constructor
+  // color('...') as an explicit constructor
+  color(argsStr) {
+    const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
+    if (match) return color(match[1]);
+    return color(argsStr.trim());
+  },
+
+  // hex('...') as deprecated alias for color
   hex(argsStr) {
     const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
-    if (match) return hex(match[1]);
-    return hex(argsStr.trim());
+    if (match) return color(match[1]);
+    return color(argsStr.trim());
+  },
+
+  // dimension(number, 'unit')
+  dimension(argsStr) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('dimension requires 2 arguments: value and unit');
+    const value = parseFloat(args[0].trim());
+    const unit = args[1].trim().replace(/^['"]|['"]$/g, '');
+    return dimension(value, unit);
+  },
+
+  // string('...')
+  string(argsStr) {
+    const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
+    if (match) return string(match[1]);
+    return string(argsStr.trim());
   },
 };
 

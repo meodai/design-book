@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { val, hex, ref, px, rem, ms, extractDependencies, extractVisualDependencies } from '../src/tokens';
+import { val, color, hex, ref, px, rem, ms, dimension, string, extractDependencies, extractVisualDependencies } from '../src/tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../src/tokens';
 
 describe('val', () => {
@@ -15,9 +15,9 @@ describe('val', () => {
   });
 });
 
-describe('hex', () => {
+describe('color', () => {
   it('creates a color TokenValue with culori processor', () => {
-    const c = hex('#ff0000');
+    const c = color('#ff0000');
     expect(c.type).toBe('color');
     expect(c.rawValue).toBe('#ff0000');
     expect(c.processors).toHaveLength(1);
@@ -26,16 +26,37 @@ describe('hex', () => {
     expect(c.metadata?.validated).toBe(true);
   });
 
-  it('handles invalid colors gracefully', () => {
-    const c = hex('not-a-color');
-    expect(c.type).toBe('color');
-    expect(c.metadata?.validated).toBe(false);
-    expect(c.processors).toBeUndefined();
+  it('throws on invalid colors', () => {
+    expect(() => color('not-a-color')).toThrow('Invalid color: not-a-color');
   });
 
   it('accepts description option', () => {
-    const c = hex('#000', { description: 'black' });
+    const c = color('#000', { description: 'black' });
     expect(c.description).toBe('black');
+  });
+
+  it('accepts CSS named colors', () => {
+    const c = color('red');
+    expect(c.type).toBe('color');
+    expect(c.rawValue).toBe('red');
+    expect(c.processors).toHaveLength(1);
+  });
+});
+
+describe('hex (deprecated alias)', () => {
+  it('is the same function as color', () => {
+    expect(hex).toBe(color);
+  });
+
+  it('still works to create color tokens', () => {
+    const c = hex('#00ff00');
+    expect(c.type).toBe('color');
+    expect(c.rawValue).toBe('#00ff00');
+    expect(c.processors).toHaveLength(1);
+  });
+
+  it('throws on invalid colors just like color()', () => {
+    expect(() => hex('not-a-color')).toThrow('Invalid color: not-a-color');
   });
 });
 
@@ -54,6 +75,40 @@ describe('ref', () => {
   });
 });
 
+describe('dimension', () => {
+  it('creates a dimension TokenValue with given unit', () => {
+    const d = dimension(16, 'px');
+    expect(d.type).toBe('dimension');
+    expect(d.rawValue).toBe(16);
+    expect(d.metadata?.unit).toBe('px');
+    expect(d.metadata?.validated).toBe(true);
+  });
+
+  it('works with arbitrary units', () => {
+    const d = dimension(50, '%');
+    expect(d.type).toBe('dimension');
+    expect(d.rawValue).toBe(50);
+    expect(d.metadata?.unit).toBe('%');
+  });
+
+  it('accepts description option', () => {
+    const d = dimension(1, 'em', { description: 'base em' });
+    expect(d.description).toBe('base em');
+  });
+
+  it('throws on NaN', () => {
+    expect(() => dimension(NaN, 'px')).toThrow('Invalid dimension value: NaN');
+  });
+
+  it('throws on Infinity', () => {
+    expect(() => dimension(Infinity, 'px')).toThrow('Invalid dimension value: Infinity');
+  });
+
+  it('throws on -Infinity', () => {
+    expect(() => dimension(-Infinity, 'px')).toThrow('Invalid dimension value: -Infinity');
+  });
+});
+
 describe('px', () => {
   it('creates a dimension TokenValue with px unit', () => {
     const p = px(16);
@@ -61,6 +116,10 @@ describe('px', () => {
     expect(p.rawValue).toBe(16);
     expect(p.metadata?.unit).toBe('px');
     expect(p.metadata?.validated).toBe(true);
+  });
+
+  it('delegates to dimension', () => {
+    expect(() => px(NaN)).toThrow('Invalid dimension value: NaN');
   });
 });
 
@@ -71,6 +130,10 @@ describe('rem', () => {
     expect(r.rawValue).toBe(1.5);
     expect(r.metadata?.unit).toBe('rem');
   });
+
+  it('delegates to dimension', () => {
+    expect(() => rem(Infinity)).toThrow('Invalid dimension value: Infinity');
+  });
 });
 
 describe('ms', () => {
@@ -80,21 +143,44 @@ describe('ms', () => {
     expect(t.rawValue).toBe(200);
     expect(t.metadata?.unit).toBe('ms');
   });
+
+  it('delegates to dimension', () => {
+    expect(() => ms(NaN)).toThrow('Invalid dimension value: NaN');
+  });
+});
+
+describe('string', () => {
+  it('creates a string TokenValue', () => {
+    const s = string('hello');
+    expect(s.type).toBe('string');
+    expect(s.rawValue).toBe('hello');
+  });
+
+  it('accepts description option', () => {
+    const s = string('world', { description: 'greeting' });
+    expect(s.description).toBe('greeting');
+  });
+
+  it('throws on non-string values', () => {
+    expect(() => string(42 as any)).toThrow('Expected string, got number');
+    expect(() => string(null as any)).toThrow('Expected string, got object');
+    expect(() => string(undefined as any)).toThrow('Expected string, got undefined');
+  });
 });
 
 describe('extractDependencies', () => {
   it('collects keys from ReferenceValue args', () => {
-    const args = [hex('#fff'), ref('brand.primary'), 'literal', ref('brand.secondary')];
+    const args = [color('#fff'), ref('brand.primary'), 'literal', ref('brand.secondary')];
     expect(extractDependencies(args)).toEqual(['brand.primary', 'brand.secondary']);
   });
 
   it('returns empty array for no references', () => {
-    expect(extractDependencies([hex('#fff'), 42])).toEqual([]);
+    expect(extractDependencies([color('#fff'), 42])).toEqual([]);
   });
 });
 
 describe('extractVisualDependencies', () => {
   it('returns empty for non-scope args', () => {
-    expect(extractVisualDependencies([hex('#fff'), ref('x')])).toEqual([]);
+    expect(extractVisualDependencies([color('#fff'), ref('x')])).toEqual([]);
   });
 });

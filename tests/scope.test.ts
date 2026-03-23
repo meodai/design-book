@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Scope } from '../src/scope';
-import { hex, ref, px } from '../src/tokens';
+import { color, ref, px } from '../src/tokens';
 import { DependencyGraph } from '../src/dependency-graph';
 
 function createMockBook() {
@@ -35,23 +35,23 @@ describe('Scope', () => {
   it('sets and gets tokens', () => {
     const scope = new Scope('brand', book);
     book._scopes.set('brand', scope);
-    const color = hex('#ff0000');
-    scope.set('primary', color);
-    expect(scope.get('primary')).toEqual(color);
+    const c = color('#ff0000');
+    scope.set('primary', c);
+    expect(scope.get('primary')).toEqual(c);
   });
 
   it('has() checks token existence', () => {
     const scope = new Scope('brand', book);
     book._scopes.set('brand', scope);
     expect(scope.has('primary')).toBe(false);
-    scope.set('primary', hex('#ff0000'));
+    scope.set('primary', color('#ff0000'));
     expect(scope.has('primary')).toBe(true);
   });
 
   it('getAllKeys returns all local keys', () => {
     const scope = new Scope('brand', book);
     book._scopes.set('brand', scope);
-    scope.set('primary', hex('#ff0000'));
+    scope.set('primary', color('#ff0000'));
     scope.set('spacing', px(8));
     expect(scope.getAllKeys().sort()).toEqual(['primary', 'spacing']);
   });
@@ -59,7 +59,7 @@ describe('Scope', () => {
   it('resolves basic TokenValue to rawValue string', () => {
     const scope = new Scope('brand', book);
     book._scopes.set('brand', scope);
-    scope.set('primary', hex('#ff0000'));
+    scope.set('primary', color('#ff0000'));
     expect(scope.resolve('primary')).toBe('#ff0000');
   });
 
@@ -73,7 +73,7 @@ describe('Scope', () => {
   it('resolves ReferenceValue via book.resolve', () => {
     const brand = new Scope('brand', book);
     book._scopes.set('brand', brand);
-    brand.set('primary', hex('#0066cc'));
+    brand.set('primary', color('#0066cc'));
 
     const semantic = new Scope('semantic', book);
     book._scopes.set('semantic', semantic);
@@ -91,12 +91,12 @@ describe('Scope', () => {
     it('inherits tokens from parent scope', () => {
       const parent = new Scope('light', book);
       book._scopes.set('light', parent);
-      parent.set('bg', hex('#ffffff'));
-      parent.set('primary', hex('#0066cc'));
+      parent.set('bg', color('#ffffff'));
+      parent.set('primary', color('#0066cc'));
 
       const child = new Scope('dark', book, { extends: 'light' });
       book._scopes.set('dark', child);
-      child.set('bg', hex('#1a1a1a'));
+      child.set('bg', color('#1a1a1a'));
 
       expect(child.get('bg')?.rawValue).toBe('#1a1a1a'); // overridden
       expect(child.get('primary')?.rawValue).toBe('#0066cc'); // inherited
@@ -105,13 +105,13 @@ describe('Scope', () => {
     it('getAllKeys includes inherited keys', () => {
       const parent = new Scope('light', book);
       book._scopes.set('light', parent);
-      parent.set('bg', hex('#fff'));
-      parent.set('primary', hex('#000'));
+      parent.set('bg', color('#fff'));
+      parent.set('primary', color('#000'));
 
       const child = new Scope('dark', book, { extends: 'light' });
       book._scopes.set('dark', child);
-      child.set('bg', hex('#111'));
-      child.set('surface', hex('#222'));
+      child.set('bg', color('#111'));
+      child.set('surface', color('#222'));
 
       const keys = child.getAllKeys().sort();
       expect(keys).toEqual(['bg', 'primary', 'surface']);
@@ -135,11 +135,11 @@ describe('Scope', () => {
   it('allTokens returns all token objects including inherited', () => {
     const parent = new Scope('light', book);
     book._scopes.set('light', parent);
-    parent.set('bg', hex('#fff'));
+    parent.set('bg', color('#fff'));
 
     const child = new Scope('dark', book, { extends: 'light' });
     book._scopes.set('dark', child);
-    child.set('surface', hex('#222'));
+    child.set('surface', color('#222'));
 
     const tokens = child.allTokens();
     expect(tokens['bg']).toBeDefined();

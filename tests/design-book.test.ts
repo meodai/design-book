@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { hex, ref, px } from '../src/tokens';
+import { color, ref, px } from '../src/tokens';
 
 describe('DesignBook', () => {
   // Note: `ref` is imported above and used in batch-failed and re-entrancy tests
@@ -36,14 +36,14 @@ describe('DesignBook', () => {
     it('resolve parses scope.token and returns value', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       expect(book.resolve('brand.primary')).toBe('#0066cc');
     });
 
     it('has checks existence', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       expect(book.has('brand.primary')).toBe(true);
       expect(book.has('brand.missing')).toBe(false);
     });
@@ -51,7 +51,7 @@ describe('DesignBook', () => {
     it('resolves references across scopes', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       const ui = book.addScope('ui');
       ui.set('bg', ref('brand.primary'));
       expect(book.resolve('ui.bg')).toBe('#0066cc');
@@ -60,7 +60,7 @@ describe('DesignBook', () => {
     it('getTokenByKey returns raw token', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       const token = book.getTokenByKey('brand.primary');
       expect(token?.type).toBe('color');
     });
@@ -72,17 +72,17 @@ describe('DesignBook', () => {
       const brand = book.addScope('brand');
       const handler = vi.fn();
       book.on('tokenChanged', handler);
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       expect(handler).toHaveBeenCalled();
     });
 
     it('watch fires for specific key', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#000000'));
+      brand.set('primary', color('#000000'));
       const handler = vi.fn();
       book.watch('brand.primary', handler);
-      brand.set('primary', hex('#ffffff'));
+      brand.set('primary', color('#ffffff'));
       expect(handler).toHaveBeenCalledWith('#ffffff', expect.anything());
     });
 
@@ -100,11 +100,11 @@ describe('DesignBook', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
       const ui = book.addScope('ui');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       ui.set('bg', ref('brand.primary'));
       expect(book.resolve('ui.bg')).toBe('#0066cc');
 
-      brand.set('primary', hex('#ff0000'));
+      brand.set('primary', color('#ff0000'));
       expect(book.resolve('ui.bg')).toBe('#ff0000');
     });
   });
@@ -113,7 +113,7 @@ describe('DesignBook', () => {
     it('queues changes and processes on flush', () => {
       const book = new DesignBook('test', { mode: 'batch' });
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       expect(book.batchQueueSize).toBeGreaterThan(0);
 
       const result = book.flush();
@@ -126,7 +126,7 @@ describe('DesignBook', () => {
       const handler = vi.fn();
       book.on('batch-complete', handler);
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       book.flush();
       expect(handler).toHaveBeenCalled();
     });
@@ -182,7 +182,7 @@ describe('DesignBook', () => {
       const brand = book.addScope('brand');
       const handler = vi.fn();
       book.on('change', handler);
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       expect(handler).toHaveBeenCalled();
       const detail = handler.mock.calls[0][0].detail;
       expect(detail.changedKeys).toContain('brand.primary');
@@ -207,16 +207,16 @@ describe('DesignBook', () => {
       const brand = book.addScope('brand');
       const ui = book.addScope('ui');
 
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       ui.set('bg', ref('brand.primary'));
 
       book.on('tokenChanged', (event: any) => {
         if (event.detail.key === 'brand.primary') {
-          brand.set('derived', hex('#111111'));
+          brand.set('derived', color('#111111'));
         }
       });
 
-      brand.set('primary', hex('#ff0000'));
+      brand.set('primary', color('#ff0000'));
       expect(book.resolve('brand.derived')).toBe('#111111');
       expect(book.resolve('ui.bg')).toBe('#ff0000');
     });

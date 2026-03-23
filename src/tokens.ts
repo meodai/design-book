@@ -47,22 +47,21 @@ export function val<T>(value: T, options?: { description?: string; [key: string]
   return value as T & { description?: string };
 }
 
-export function hex(value: string, options?: { description?: string; [key: string]: any }): TokenValue {
+export function color(value: string, options?: { description?: string; [key: string]: any }): TokenValue {
   const parsed = parse(value);
-  if (parsed) {
-    return val({
-      type: 'color',
-      rawValue: value,
-      processors: [{ name: 'culori', instance: parsed }],
-      metadata: { colorSpace: 'srgb', validated: true },
-    }, options);
+  if (!parsed) {
+    throw new Error(`Invalid color: ${value}`);
   }
   return val({
     type: 'color',
     rawValue: value,
-    metadata: { validated: false },
+    processors: [{ name: 'culori', instance: parsed }],
+    metadata: { colorSpace: 'srgb', validated: true },
   }, options);
 }
+
+/** @deprecated Use `color()` instead */
+export const hex = color;
 
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
   return val({
@@ -73,16 +72,30 @@ export function ref(key: string, options?: { description?: string; [key: string]
   }, options);
 }
 
+export function dimension(value: number, unit: string, options?: { description?: string; [key: string]: any }): TokenValue {
+  if (!Number.isFinite(value)) {
+    throw new Error(`Invalid dimension value: ${value}`);
+  }
+  return val({ type: 'dimension', rawValue: value, metadata: { unit, validated: true } }, options);
+}
+
 export function px(value: number, options?: { description?: string; [key: string]: any }): TokenValue {
-  return val({ type: 'dimension', rawValue: value, metadata: { unit: 'px', validated: true } }, options);
+  return dimension(value, 'px', options);
 }
 
 export function rem(value: number, options?: { description?: string; [key: string]: any }): TokenValue {
-  return val({ type: 'dimension', rawValue: value, metadata: { unit: 'rem', validated: true } }, options);
+  return dimension(value, 'rem', options);
 }
 
 export function ms(value: number, options?: { description?: string; [key: string]: any }): TokenValue {
-  return val({ type: 'dimension', rawValue: value, metadata: { unit: 'ms', validated: true } }, options);
+  return dimension(value, 'ms', options);
+}
+
+export function string(value: string, options?: { description?: string; [key: string]: any }): TokenValue {
+  if (typeof value !== 'string') {
+    throw new Error(`Expected string, got ${typeof value}`);
+  }
+  return val({ type: 'string', rawValue: value }, options);
 }
 
 export function extractDependencies(args: any[]): string[] {

@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { hex, ref } from '../../src/tokens';
+import { color, ref } from '../../src/tokens';
 import { SVGRenderer } from '../../src/renderers/svg-renderer';
 
 function createTestBook() {
   const book = new DesignBook('test');
   const brand = book.addScope('brand');
-  brand.set('primary', hex('#0066cc'));
-  brand.set('white', hex('#ffffff'));
+  brand.set('primary', color('#0066cc'));
+  brand.set('white', color('#ffffff'));
   const ui = book.addScope('ui');
   ui.set('bg', ref('brand.primary'));
   return book;

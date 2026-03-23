@@ -3,7 +3,7 @@ export { DesignBook } from './design-book';
 export { Scope } from './scope';
 
 // Tokens
-export { val, hex, ref, px, rem, ms, extractDependencies, extractVisualDependencies } from './tokens';
+export { val, color, hex, ref, px, rem, ms, dimension, string, extractDependencies, extractVisualDependencies } from './tokens';
 export type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from './tokens';
 
 // Errors

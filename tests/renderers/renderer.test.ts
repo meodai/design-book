@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { hex, ref, px, rem } from '../../src/tokens';
+import { color, ref, px, rem } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
 import { bestContrastWith, colorMix, lighten, darken, spacingScale, typographyScale } from '../../src/functions';
 
 function createTestBook() {
   const book = new DesignBook('test');
   const brand = book.addScope('brand');
-  brand.set('primary', hex('#0066cc'));
-  brand.set('white', hex('#ffffff'));
+  brand.set('primary', color('#0066cc'));
+  brand.set('white', color('#ffffff'));
   const ui = book.addScope('ui');
   ui.set('bg', ref('brand.primary'));
   return book;
@@ -33,9 +33,9 @@ describe('Renderer', () => {
     it('renders colorMix with var() refs and color-mix()', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       const ui = book.addScope('ui');
-      ui.set('hover', colorMix(ref('brand.primary'), hex('#000000'), { ratio: 0.1 }));
+      ui.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.1 }));
 
       const renderer = new Renderer(book, 'css-variables');
       const output = renderer.render();
@@ -46,7 +46,7 @@ describe('Renderer', () => {
     it('renders lighten with color-mix and var() ref', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       const ui = book.addScope('ui');
       ui.set('light', lighten(ref('brand.primary'), { amount: 0.2 }));
 
@@ -58,7 +58,7 @@ describe('Renderer', () => {
     it('renders darken with color-mix and var() ref', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('primary', hex('#0066cc'));
+      brand.set('primary', color('#0066cc'));
       const ui = book.addScope('ui');
       ui.set('dark', darken(ref('brand.primary'), { amount: 0.1 }));
 
@@ -95,10 +95,10 @@ describe('Renderer', () => {
     it('renders bestContrastWith as resolved value (no CSS equivalent)', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
-      brand.set('dark', hex('#000000'));
-      brand.set('light', hex('#ffffff'));
+      brand.set('dark', color('#000000'));
+      brand.set('light', color('#ffffff'));
       const ui = book.addScope('ui');
-      ui.set('text', bestContrastWith(hex('#ffffff'), brand));
+      ui.set('text', bestContrastWith(color('#ffffff'), brand));
 
       const renderer = new Renderer(book, 'css-variables');
       const output = renderer.render();

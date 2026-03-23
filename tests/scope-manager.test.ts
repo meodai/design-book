@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ScopeManager } from '../src/scope-manager';
-import { hex, ref } from '../src/tokens';
+import { color, ref } from '../src/tokens';
 import { DependencyGraph } from '../src/dependency-graph';
 
 function createMockBook() {
@@ -38,18 +38,18 @@ describe('ScopeManager', () => {
 
   it('extendScope creates scope extending another', () => {
     const parent = manager.addScope('light');
-    parent.set('bg', hex('#fff'));
+    parent.set('bg', color('#fff'));
     const child = manager.extendScope('dark', 'light');
     expect(child.get('bg')?.rawValue).toBe('#fff');
   });
 
   it('copyScope deep-copies tokens without inheritance', () => {
     const source = manager.addScope('source');
-    source.set('a', hex('#111'));
+    source.set('a', color('#111'));
     const copy = manager.copyScope('source', 'copy');
     expect(copy.get('a')?.rawValue).toBe('#111');
     // Modifying source doesn't affect copy
-    source.set('a', hex('#222'));
+    source.set('a', color('#222'));
     expect(copy.get('a')?.rawValue).toBe('#111');
   });
 
