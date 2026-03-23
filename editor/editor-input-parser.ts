@@ -1,5 +1,6 @@
 import { hex, ref, px, rem, ms } from '../src/index';
 import type { AnyTokenValue } from '../src/index';
+import { parse } from 'culori';
 
 /**
  * Parse a user-entered value string into a token value.
@@ -10,7 +11,7 @@ import type { AnyTokenValue } from '../src/index';
  *   rem(1.5) -> rem(1.5)
  *   ms(200) -> ms(200)
  *
- * Falls back to hex() if nothing else matches.
+ * Throws if the input doesn't match any known pattern.
  */
 export function parseTokenInput(input: string): AnyTokenValue {
   const trimmed = input.trim();
@@ -44,7 +45,10 @@ export function parseTokenInput(input: string): AnyTokenValue {
     return hex(trimmed);
   }
 
-  // CSS named colors or other color formats (rgb, hsl, etc.)
-  // Try as hex - culori's parse inside hex() will validate
-  return hex(trimmed);
+  // Try as a CSS color (named colors like "red", "rebeccapurple", or rgb()/hsl())
+  if (parse(trimmed)) {
+    return hex(trimmed);
+  }
+
+  throw new Error(`Unknown value: ${trimmed}`);
 }
