@@ -1,5 +1,7 @@
 # Design Book
 
+A reactive TypeScript design system framework. Define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or [W3 Design Tokens](https://www.designtokens.org/tr/drafts/format/).
+
 Design systems are usually built as collections of fixed values — a color picked here, a spacing value decided there, each choice made in isolation and checked against every other. Design Book takes a different approach: instead of encoding *results*, you encode *relationships*.
 
 A text color isn't `#ffffff` — it's "the highest-contrast color from this palette against this background." A hover state isn't a manually darkened hex — it's "primary mixed 15% toward black." Change the primary color once, and every relationship updates: contrast pairs recalculate, derived tones shift, spacing scales recompute. The system maintains coherence across complexity you couldn't track by hand.
