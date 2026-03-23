@@ -799,7 +799,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
-    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg';
+    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg' | 'log';
     renderActiveTab();
   });
 });
