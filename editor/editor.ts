@@ -284,13 +284,10 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
 // --- Color swatch widget ---
 
 class ColorSwatchWidget extends WidgetType {
-  constructor(private _color: string, private _pos: number) { super(); }
-
-  get color() { return this._color; }
-  get pos() { return this._pos; }
+  constructor(private _color: string, private _pos: number, private _editable: boolean = false) { super(); }
 
   eq(other: ColorSwatchWidget) {
-    return this._color === other._color && this._pos === other._pos;
+    return this._color === other._color && this._pos === other._pos && this._editable === other._editable;
   }
 
   toDOM() {
@@ -303,15 +300,18 @@ class ColorSwatchWidget extends WidgetType {
       vertical-align: middle;
       margin: 0 4px 0 2px;
       background: ${this._color};
-      cursor: pointer;
+      cursor: ${this._editable ? 'pointer' : 'default'};
     `;
     span.className = 'cm-color-swatch';
-    span.dataset.color = this._color;
-    span.dataset.pos = String(this._pos);
+    if (this._editable) {
+      span.classList.add('cm-color-swatch--editable');
+      span.dataset.color = this._color;
+      span.dataset.pos = String(this._pos);
+    }
     return span;
   }
 
-  ignoreEvent() { return false; } // allow click events through
+  ignoreEvent() { return !this._editable; }
 }
 
 // --- Build decorations for color swatches + error highlighting ---
@@ -329,15 +329,15 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
 
-    // Find hex colors for swatches
+    // Find hex colors for swatches (editable — clicking opens picker)
     const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
     let match;
     while ((match = hexRegex.exec(text)) !== null) {
       const pos = from + match.index;
-      widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos) });
+      widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos, true) });
     }
 
-    // Find ref('...') and resolve to show swatch
+    // Find ref('...') and resolve to show swatch (read-only — no picker)
     const refRegex = /ref\(\s*['"]([^'"]+)['"]\s*\)/g;
     while ((match = refRegex.exec(text)) !== null) {
       const refKey = match[1];
@@ -345,7 +345,7 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
         const resolved = book.resolve(refKey);
         if (resolved && looksLikeColor(resolved)) {
           const pos = from + match.index;
-          widgets.push({ pos, widget: new ColorSwatchWidget(resolved, pos) });
+          widgets.push({ pos, widget: new ColorSwatchWidget(resolved, pos, false) });
         }
       } catch {
         // skip unresolvable refs
@@ -839,7 +839,7 @@ document.addEventListener('click', (e) => {
   // Clicking inside existing picker — leave it alone
   if (activePicker && activePicker.contains(target)) return;
 
-  if (!target.classList.contains('cm-color-swatch')) {
+  if (!target.classList.contains('cm-color-swatch--editable')) {
     cleanupPicker();
     return;
   }
