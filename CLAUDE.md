@@ -2,39 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Commands
+
+```bash
+npm run dev          # Start editor (Vite dev server with network access)
+npm test             # Run all tests (vitest)
+npm run test:watch   # Run tests in watch mode
+npm run build        # Build library to dist/
+npm run build:editor # Build editor to editor-dist/
+```
+
+Run a single test file: `npx vitest run tests/graph.test.ts`
+
 ## Project Overview
 
-Design Book is a reactive TypeScript design system framework for managing tokens (colors, spacing, typography) with dependency tracking, dynamic calculations, and multi-format output. The complete specification lives in `design-book-spec.md`.
-
-**Status:** Specification phase — no source code has been implemented yet. The spec document is the source of truth.
+Design Book is a reactive TypeScript design system framework for managing tokens (colors, spacing, typography) with dependency tracking, dynamic calculations, and multi-format rendering. Uses Culori for color operations.
 
 ## Architecture
 
-The system is built around four core classes:
+### Core Classes
 
-- **DesignBook** — Central orchestrator managing scopes, tokens, dependencies, and rendering. Supports `auto` (immediate) and `batch` (deferred) processing modes.
-- **Scope** — Collection of related tokens with inheritance support. Tokens are set/get/resolved within scopes.
-- **ReferenceResolver** — Cached reference resolution with metadata tracking to avoid redundant computation.
-- **DependencyGraph** — Tracks token relationships, detects circular dependencies, supports topological sorting.
+- **DesignBook** (`src/design-book.ts`) — Central orchestrator. Owns ScopeManager, DependencyGraph, event emitter, function registry. Supports `auto` (immediate propagation) and `batch` (deferred via `flush()`) modes. Re-entrant-safe in auto mode.
+- **Scope** (`src/scope.ts`) — Named token container with inheritance via `extends`. Resolves tokens: basic values, references (cross-scope via DesignBook), and functions (executes implementation with resolved args).
+- **ScopeManager** (`src/scope-manager.ts`) — CRUD for scopes, tracks inheritance.
+- **DependencyGraph** (`src/dependency-graph.ts`) — Extends generic `Graph` (`src/graph.ts`). Tracks token relationships, prevents circular dependencies at write time via `updateEdges()`.
+- **ReferenceResolver** (`src/reference-resolver.ts`) — Caches reference metadata (resolvability, type) on the ReferenceValue objects themselves.
 
-### Token Value Types
+### Token System (`src/tokens.ts`)
 
-Three value types: `TokenValue` (basic), `ReferenceValue` (pointer to another token), `FunctionTokenValue` (computed via registered functions). Helper constructors: `hex()`, `ref()`, `px()`, `rem()`.
+Three value types: `TokenValue`, `ReferenceValue`, `FunctionTokenValue` (union: `AnyTokenValue`).
 
-### Renderer System
+Constructors — all validate and throw on invalid input:
+- `color(value)` — any CSS color via Culori. `hex` is a deprecated alias.
+- `ref(key)` — reference to another token (always fully qualified: `'scope.token'`)
+- `px(n)`, `rem(n)`, `ms(n)` — dimension shortcuts, delegate to `dimension(n, unit)`
+- `dimension(n, unit)` — generic dimension
+- `string(value)` — string token
 
-- **ColorRenderer** — Outputs CSS variables, JSON, or W3 Design Tokens format
-- **SVGRenderer** — Generates dependency visualizations
-- Function renderers provide format-specific output for complex operations
+### Functions (`src/functions/`)
 
-### Built-in Functions
+Each function exports a constructor (returns `FunctionTokenValue`) and an implementation. Two categories:
 
-Color functions use the Culori library: `bestContrastWith()`, `colorMix()`, `lighten()`, `darken()`, `closestColor()`, `furthestFrom()`, `averageColor()`. Non-color: `spacingScale()`, `typographyScale()`, `timing()`.
+**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `averageColor`
 
-### Error Handling
+**Without scope** (pure transforms): `colorMix`, `lighten`, `darken`, `relativeTo`, `spacingScale`, `typographyScale`, `timing`
 
-Custom error classes (`TokenError`, `ScopeError`, `CircularDependencyError`, `FunctionError`). In auto mode errors throw immediately; in batch mode they collect and report after `flush()`.
+### Renderers (`src/renderers/`)
 
-### Event System
+- **Renderer** — Outputs CSS variables (with `var()` refs, `color-mix()`, `calc()`), JSON (resolved values), or W3 Design Tokens (structured objects per spec). Built-in function renderers auto-registered.
+- **SVGRenderer** — Circular table layout with Bezier dependency curves. Dashed lines for function dependencies.
 
-Reactive updates via `on()` (event-based) and `watch()` (key-based) methods with automatic change propagation through the dependency graph.
+### Editor (`editor/`)
+
+Interactive CodeMirror 6-based editor. One CodeMirror instance per scope with autocomplete (context-aware: refs, scope names, functions, value constructors), inline color swatches, and error highlighting (wavy red underline for unparseable lines). Empty scopes are removed on blur.
+
+### Key Design Decisions
+
+- All token keys are fully qualified: `"scope.token"`
+- Token `type` field is `string` (not a union) — extensible for custom types
+- `flush()` does not throw — collects errors, fires `batch-failed`
+- Re-entrancy in auto mode: changes from event handlers are queued
+- Custom event emitter (no Node dependency) — works in browser and Node
+- CodeMirror is a devDependency (editor-only, not in library bundle)
