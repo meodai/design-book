@@ -300,32 +300,58 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
     syncingFromEditor = false;
   }
 
-  // Re-inject missing inherited keys into the editor
+  // Re-inject missing inherited keys at their expected position
   const scopeView = editorViews.get(scope.name);
   if (scopeView) {
-    const currentText = scopeView.state.doc.toString();
-    const currentKeys = new Set<string>();
-    for (const line of currentText.split('\n')) {
-      const ci = line.indexOf(':');
+    const allKeys = scope.getAllKeys();
+    const doc = scopeView.state.doc;
+    const editorLines = doc.toString().split('\n');
+
+    // Build map of key → line index in editor
+    const keyToLineIdx = new Map<string, number>();
+    for (let i = 0; i < editorLines.length; i++) {
+      const ci = editorLines[i].indexOf(':');
       if (ci >= 0) {
-        const k = line.slice(0, ci).trim();
-        if (k) currentKeys.add(k);
+        const k = editorLines[i].slice(0, ci).trim();
+        if (k) keyToLineIdx.set(k, i);
       }
     }
 
-    const missingLines: string[] = [];
-    for (const key of scope.getAllKeys()) {
-      if (!currentKeys.has(key)) {
-        missingLines.push(`${key}: ${getTokenDisplayValue(scope, key)}`);
+    // Find missing inherited keys and insert them after the previous key's line
+    const missingInserts: Array<{ afterLineIdx: number; text: string }> = [];
+    for (let ki = 0; ki < allKeys.length; ki++) {
+      const key = allKeys[ki];
+      if (keyToLineIdx.has(key)) continue;
+
+      const lineText = `${key}: ${getTokenDisplayValue(scope, key)}`;
+
+      // Find the last preceding key that exists in the editor
+      let insertAfter = -1;
+      for (let prev = ki - 1; prev >= 0; prev--) {
+        const prevIdx = keyToLineIdx.get(allKeys[prev]);
+        if (prevIdx !== undefined) {
+          insertAfter = prevIdx;
+          break;
+        }
       }
+
+      missingInserts.push({ afterLineIdx: insertAfter, text: lineText });
     }
 
-    if (missingLines.length > 0) {
+    if (missingInserts.length > 0) {
       syncingFromEditor = true;
-      const insertText = (currentText.endsWith('\n') || !currentText ? '' : '\n') + missingLines.join('\n');
-      scopeView.dispatch({
-        changes: { from: scopeView.state.doc.length, insert: insertText },
-      });
+      // Apply in reverse order so line indices stay valid
+      const changes: Array<{ from: number; insert: string }> = [];
+      for (const { afterLineIdx, text } of missingInserts.reverse()) {
+        if (afterLineIdx >= 0 && afterLineIdx < doc.lines) {
+          const line = doc.line(afterLineIdx + 1); // 1-based
+          changes.push({ from: line.to, insert: '\n' + text });
+        } else {
+          // Insert at the beginning
+          changes.push({ from: 0, insert: text + '\n' });
+        }
+      }
+      scopeView.dispatch({ changes });
       syncingFromEditor = false;
     }
   }
