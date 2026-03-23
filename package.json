@@ -23,17 +23,17 @@
   },
   "license": "MIT",
   "dependencies": {
+    "culori": "^4.0.2"
+  },
+  "devDependencies": {
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.2",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.40.0",
     "@lezer/highlight": "^1.2.3",
-    "codemirror": "^6.0.2",
-    "culori": "^4.0.2"
-  },
-  "devDependencies": {
     "@types/culori": "^4.0.1",
+    "codemirror": "^6.0.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
