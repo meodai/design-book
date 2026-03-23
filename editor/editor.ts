@@ -59,7 +59,7 @@ function bootDesignSystem() {
 
 // --- State ---
 
-let activeFormat: RenderFormat | 'svg' = 'css-variables';
+let activeFormat: RenderFormat | 'svg' | 'log' = 'log';
 
 // Track CodeMirror editor instances per scope name
 const editorViews = new Map<string, EditorView>();
@@ -122,8 +122,13 @@ book.on('scopeAdded', (e: { detail: any }) => {
 const visualizationEl = document.getElementById('visualization')!;
 
 function renderActiveTab() {
-  if (activeFormat === 'svg') {
-    outputEl.style.display = 'none';
+  outputEl.style.display = 'none';
+  visualizationEl.style.display = 'none';
+  eventLog.style.display = 'none';
+
+  if (activeFormat === 'log') {
+    eventLog.style.display = '';
+  } else if (activeFormat === 'svg') {
     visualizationEl.style.display = '';
     try {
       const svgRenderer = new SVGRenderer(book, {
@@ -135,7 +140,6 @@ function renderActiveTab() {
     }
   } else {
     outputEl.style.display = '';
-    visualizationEl.style.display = 'none';
     try {
       const renderer = new Renderer(book, activeFormat as RenderFormat);
       outputEl.textContent = renderer.render();

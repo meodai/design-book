@@ -363,8 +363,7 @@ h3 {
 }
 
 #svg-container {
-  overflow: auto;
-  scrollbar-width: thin;
+  
 }
 
 #svg-container svg {

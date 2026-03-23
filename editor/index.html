@@ -14,18 +14,18 @@
     </div>
     <div class="output-column">
       <div class="tabs">
-        <button class="tab active" data-format="css-variables">CSS</button>
+        <button class="tab active" data-format="log">Log</button>
+        <button class="tab" data-format="css-variables">CSS</button>
         <button class="tab" data-format="json">JSON</button>
         <button class="tab" data-format="w3-design-tokens">W3 Design Tokens</button>
         <button class="tab" data-format="svg">SVG</button>
       </div>
-      <pre class="output" id="output"></pre>
+      <div class="event-log" id="event-log"></div>
+      <pre class="output" id="output" style="display: none;"></pre>
       <div class="visualization" id="visualization" style="display: none;">
         <label><input type="checkbox" id="show-connections" checked> Show connections</label>
         <div id="svg-container"></div>
       </div>
-      <h3>Event Log</h3>
-      <div class="event-log" id="event-log"></div>
     </div>
   </div>
   <script type="module" src="editor.ts"></script>
