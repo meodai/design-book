@@ -292,23 +292,27 @@ class ColorSwatchWidget extends WidgetType {
   ignoreEvent() { return true; }
 }
 
-// --- Build decorations for color swatches ---
+// --- Build decorations for color swatches + error highlighting ---
+
+const errorLineDeco = Decoration.line({ class: 'cm-error-line' });
 
 function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
   const doc = view.state.doc;
 
-  // We need to collect all decoration positions and sort them
-  const decorations: { pos: number; widget: WidgetType }[] = [];
+  // Collect widget decorations (swatches) with their positions
+  const widgets: { pos: number; widget: WidgetType }[] = [];
+  // Collect line decorations (errors) — keyed by line start to deduplicate
+  const errorLines = new Set<number>();
 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
-    // Find hex colors
+
+    // Find hex colors for swatches
     const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
     let match;
     while ((match = hexRegex.exec(text)) !== null) {
       const pos = from + match.index;
-      decorations.push({ pos, widget: new ColorSwatchWidget(match[0]) });
+      widgets.push({ pos, widget: new ColorSwatchWidget(match[0]) });
     }
 
     // Find ref('...') and resolve to show swatch
@@ -319,7 +323,7 @@ function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
         const resolved = book.resolve(refKey);
         if (resolved && looksLikeColor(resolved)) {
           const pos = from + match.index;
-          decorations.push({ pos, widget: new ColorSwatchWidget(resolved) });
+          widgets.push({ pos, widget: new ColorSwatchWidget(resolved) });
         }
       } catch {
         // skip unresolvable refs
@@ -327,17 +331,64 @@ function buildDecorations(view: EditorView, _book: DesignBook): DecorationSet {
     }
   }
 
-  // Sort by position (required by RangeSetBuilder)
-  decorations.sort((a, b) => a.pos - b.pos);
+  // Check each line for parse errors
+  for (let i = 1; i <= doc.lines; i++) {
+    const line = doc.line(i);
+    const lineText = line.text.trim();
+    if (!lineText) continue; // blank lines are fine
 
-  for (const { pos, widget } of decorations) {
-    builder.add(pos, pos, Decoration.widget({ widget, side: -1 }));
+    const colonIdx = lineText.indexOf(':');
+    if (colonIdx < 0) {
+      // No colon — not a valid key: value line
+      errorLines.add(line.from);
+      continue;
+    }
+
+    const key = lineText.slice(0, colonIdx).trim();
+    const valueStr = lineText.slice(colonIdx + 1).trim();
+
+    if (!key) {
+      errorLines.add(line.from);
+      continue;
+    }
+
+    if (!valueStr) continue; // empty value is OK while typing
+
+    try {
+      parseTokenInput(valueStr);
+    } catch {
+      errorLines.add(line.from);
+    }
+  }
+
+  // Build a single sorted DecorationSet with both widgets and line decorations
+  const builder = new RangeSetBuilder<Decoration>();
+
+  // Merge widgets and error lines into a single sorted pass
+  const allDecos: { pos: number; deco: Decoration; isLine: boolean }[] = [];
+
+  for (const { pos, widget } of widgets) {
+    allDecos.push({ pos, deco: Decoration.widget({ widget, side: -1 }), isLine: false });
+  }
+  for (const lineStart of errorLines) {
+    allDecos.push({ pos: lineStart, deco: errorLineDeco, isLine: true });
+  }
+
+  // Sort by position
+  allDecos.sort((a, b) => a.pos - b.pos);
+
+  for (const { pos, deco, isLine } of allDecos) {
+    if (isLine) {
+      builder.add(pos, pos, deco);
+    } else {
+      builder.add(pos, pos, deco);
+    }
   }
 
   return builder.finish();
 }
 
-// --- Color swatch plugin ---
+// --- Color swatch + error highlight plugin ---
 
 function colorSwatchPlugin(_book: DesignBook) {
   return ViewPlugin.fromClass(class {
@@ -348,7 +399,6 @@ function colorSwatchPlugin(_book: DesignBook) {
     }
 
     update(update: ViewUpdate) {
-      // Rebuild decorations on any change (doc change, viewport change, or effects)
       this.decorations = buildDecorations(update.view, _book);
     }
   }, { decorations: v => v.decorations });
