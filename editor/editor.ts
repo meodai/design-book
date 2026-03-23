@@ -451,12 +451,14 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     }
 
     if (!valueStr) continue; // empty value is OK while typing
-    if (valueStr === 'inherit') continue; // inherit keyword is valid
 
-    try {
-      parseTokenInput(valueStr, _book, _scope);
-    } catch {
-      errorLines.add(line.from);
+    // Parse check (skip for "inherit" keyword)
+    if (valueStr !== 'inherit') {
+      try {
+        parseTokenInput(valueStr, _book, _scope);
+      } catch {
+        errorLines.add(line.from);
+      }
     }
 
     // Mark inherited lines (key exists in scope but not locally owned)
