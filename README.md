@@ -115,7 +115,13 @@ const dark = book.addScope('dark', { extends: 'light' });
 dark.set('bg', color('#1a1a1a'));
 dark.set('text', color('#ffffff'));
 // dark still inherits any tokens from light that aren't overridden
+
+// If you later delete a local override, the scope falls back to the inherited token again
+dark.delete('text');
+dark.resolve('text'); // '#1a1a1a'
 ```
+
+Inherited tokens remain part of the dependency graph. If `dark.primary` currently resolves from `light.primary`, anything depending on `dark.primary` will continue to update when `light.primary` changes.
 
 ## Rendering
 
@@ -169,9 +175,12 @@ Follows the [W3 Design Tokens spec](https://www.designtokens.org/tr/drafts/forma
 ```typescript
 book.on('tokenChanged', (e) => { /* e.detail.key, e.detail.newValue */ });
 book.on('change', (e) => { /* e.detail.changedKeys, e.detail.scopes */ });
-book.on('scopeAdded', (e) => { /* e.detail.scopeName */ });
-book.on('scopeRemoved', (e) => { /* e.detail.scopeName */ });
-book.watch('brand.primary', (newValue, oldValue) => { /* ... */ });
+book.on('scopeAdded', (e) => { /* e.detail.scope */ });
+book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
+book.watch('brand.primary', (newValue, detail) => {
+  // newValue is undefined when the token no longer resolves
+  // detail contains the underlying tokenChanged event payload
+});
 ```
 
 ## Batch Mode
@@ -194,6 +203,8 @@ graph.getEvaluationOrderFor('ui.text');     // Resolution order
 graph.findShortestPath('brand.primary', 'ui.text');
 graph.hasCycles();
 ```
+
+For inherited tokens, prerequisites reflect the active source token. If `dark.primary` is inherited from `light.primary`, `graph.getPrerequisitesFor('dark.primary')` includes `light.primary`.
 
 ## Editor
 
