@@ -451,6 +451,7 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     }
 
     if (!valueStr) continue; // empty value is OK while typing
+    if (valueStr === 'inherit') continue; // inherit keyword is valid
 
     try {
       parseTokenInput(valueStr, _book, _scope);
