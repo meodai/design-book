@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { hex, ref } from '../../src/tokens';
+import { hex, ref, px, rem } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
+import { bestContrastWith, colorMix, lighten, darken, spacingScale, typographyScale } from '../../src/functions';
 
 function createTestBook() {
   const book = new DesignBook('test');
@@ -27,6 +28,82 @@ describe('Renderer', () => {
       const renderer = new Renderer(book, 'css-variables');
       const output = renderer.render();
       expect(output).toContain('--ui-bg: var(--brand-primary)');
+    });
+
+    it('renders colorMix with var() refs and color-mix()', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', hex('#0066cc'));
+      const ui = book.addScope('ui');
+      ui.set('hover', colorMix(ref('brand.primary'), hex('#000000'), { ratio: 0.1 }));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      // ratio 0.1 → 90% of color1 (1-0.1=0.9 → 90%)
+      expect(output).toContain('color-mix(in lab, var(--brand-primary) 90%, #000000)');
+    });
+
+    it('renders lighten with color-mix and var() ref', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', hex('#0066cc'));
+      const ui = book.addScope('ui');
+      ui.set('light', lighten(ref('brand.primary'), { amount: 0.2 }));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      expect(output).toContain('color-mix(in oklch, var(--brand-primary) 80%, white)');
+    });
+
+    it('renders darken with color-mix and var() ref', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', hex('#0066cc'));
+      const ui = book.addScope('ui');
+      ui.set('dark', darken(ref('brand.primary'), { amount: 0.1 }));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      expect(output).toContain('color-mix(in oklch, var(--brand-primary) 90%, black)');
+    });
+
+    it('renders spacingScale with calc() and var() ref', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('space', px(16));
+      const ui = book.addScope('ui');
+      ui.set('large', spacingScale(ref('brand.space'), { multiplier: 2 }));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      expect(output).toContain('calc(var(--brand-space) * 2)');
+    });
+
+    it('renders typographyScale with calc() and var() ref', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('font', rem(1));
+      const ui = book.addScope('ui');
+      ui.set('lg', typographyScale(ref('brand.font'), { ratio: 1.25, step: 2 }));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      // 1.25^2 = 1.5625
+      expect(output).toContain('calc(var(--brand-font) * 1.5625)');
+    });
+
+    it('renders bestContrastWith as resolved value (no CSS equivalent)', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('dark', hex('#000000'));
+      brand.set('light', hex('#ffffff'));
+      const ui = book.addScope('ui');
+      ui.set('text', bestContrastWith(hex('#ffffff'), brand));
+
+      const renderer = new Renderer(book, 'css-variables');
+      const output = renderer.render();
+      // bestContrastWith resolves to computed hex — no CSS function for this
+      expect(output).toContain('--ui-text: #000000');
     });
   });
 

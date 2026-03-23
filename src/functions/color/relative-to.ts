@@ -81,6 +81,7 @@ export function relativeTo(
       rawValue: 'relativeTo',
       implementation: (...args: any[]) => relativeToImpl(args[0], colorSpace, modifications),
       args: [baseColor],
+      options: { colorSpace, modifications },
       metadata: {
         dependencies: extractDependencies([baseColor]),
         visualDependencies: [],

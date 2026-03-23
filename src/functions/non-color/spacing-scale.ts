@@ -23,6 +23,7 @@ export function spacingScale(
       rawValue: 'spacingScale',
       implementation: (...args: any[]) => spacingScaleImpl(args[0], multiplier),
       args: [baseValue],
+      options: { multiplier },
       metadata: {
         dependencies: extractDependencies([baseValue]),
         visualDependencies: [],

@@ -1,5 +1,6 @@
 import { DesignBook } from '../design-book';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue } from '../tokens';
+import { registerBuiltinFunctionRenderers } from './function-renderers';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRenderer = (args: any[], options?: any) => string;
@@ -34,6 +35,7 @@ export class Renderer {
   constructor(book: DesignBook, format: RenderFormat = 'css-variables') {
     this.book = book;
     this.format = format;
+    registerBuiltinFunctionRenderers(this);
   }
 
   render(): string {

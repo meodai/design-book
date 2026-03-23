@@ -48,6 +48,7 @@ export function lighten(
       rawValue: 'lighten',
       implementation: (...args: any[]) => lightenImpl(args[0], amount),
       args: [color],
+      options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
         visualDependencies: [],

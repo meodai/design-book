@@ -19,7 +19,8 @@ export function timing(
       type: 'function' as const,
       rawValue: 'timing',
       implementation: (...args: any[]) => timingImpl(args[0], easing, delay),
-      args: [duration],
+      args: [duration, easing],
+      options: { delay },
       metadata: {
         dependencies: extractDependencies([duration]),
         visualDependencies: [],

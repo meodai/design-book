@@ -52,6 +52,7 @@ export function colorMix(
       rawValue: 'colorMix',
       implementation: (...args: any[]) => colorMixImpl(args[0], args[1], ratio, colorSpace),
       args: [color1, color2],
+      options: { ratio, colorSpace },
       metadata: {
         dependencies: extractDependencies([color1, color2]),
         visualDependencies: [],

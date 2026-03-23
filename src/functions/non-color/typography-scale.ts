@@ -26,6 +26,7 @@ export function typographyScale(
       rawValue: 'typographyScale',
       implementation: (...args: any[]) => typographyScaleImpl(args[0], ratio, step),
       args: [baseSize],
+      options: { ratio, step },
       metadata: {
         dependencies: extractDependencies([baseSize]),
         visualDependencies: [],

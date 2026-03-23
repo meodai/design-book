@@ -48,6 +48,7 @@ export function darken(
       rawValue: 'darken',
       implementation: (...args: any[]) => darkenImpl(args[0], amount),
       args: [color],
+      options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
         visualDependencies: [],
