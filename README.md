@@ -2,7 +2,6 @@
 
 A reactive TypeScript design system framework. Define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or [W3 Design Tokens](https://www.designtokens.org/tr/drafts/format/).
 
-
 ## Philosophy
 
 Design systems are usually built as collections of fixed values — a color picked here, a spacing value decided there, each choice made in isolation and checked against every other. Design Book takes a different approach: instead of encoding *results*, you encode *relationships*.
