@@ -179,6 +179,11 @@ function looksLikeColor(value: string): boolean {
 // --- Get display value for a token ---
 
 function getTokenDisplayValue(scope: Scope, tokenName: string): string {
+  // If inherited (not locally defined), show "inherit"
+  if (!scope.hasOwn(tokenName) && scope.has(tokenName)) {
+    return 'inherit';
+  }
+
   const token = scope.get(tokenName);
   if (!token) return '';
 
@@ -260,10 +265,17 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       if (!key || !valueStr) continue;
       newKeys.add(key);
 
+      // "inherit" keyword — delete local override, revert to parent
+      if (valueStr === 'inherit') {
+        if (scope.hasOwn(key)) {
+          scope.delete(key);
+        }
+        continue;
+      }
+
       // Skip inherited keys that haven't been modified
       if (!scope.hasOwn(key) && scope.has(key)) {
-        const currentDisplay = getTokenDisplayValue(scope, key);
-        if (valueStr === currentDisplay) continue;
+        continue;
       }
 
       try {
@@ -330,6 +342,37 @@ class ColorSwatchWidget extends WidgetType {
 
 const errorLineDeco = Decoration.line({ class: 'cm-error-line' });
 const inheritedLineDeco = Decoration.line({ class: 'cm-inherited-line' });
+
+class InheritedValueWidget extends WidgetType {
+  constructor(private _resolved: string, private _isColor: boolean) { super(); }
+
+  eq(other: InheritedValueWidget) {
+    return this._resolved === other._resolved;
+  }
+
+  toDOM() {
+    const span = document.createElement('span');
+    span.className = 'cm-inherited-value';
+    let content = ` → ${this._resolved}`;
+    span.textContent = content;
+    if (this._isColor) {
+      const swatch = document.createElement('span');
+      swatch.style.cssText = `
+        display: inline-block;
+        width: 10px; height: 10px;
+        border-radius: 2px;
+        border: 1px solid rgba(0,0,0,0.2);
+        vertical-align: middle;
+        margin-left: 4px;
+        background: ${this._resolved};
+      `;
+      span.appendChild(swatch);
+    }
+    return span;
+  }
+
+  ignoreEvent() { return true; }
+}
 
 function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): DecorationSet {
   const doc = view.state.doc;
@@ -418,6 +461,18 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     // Mark inherited lines (key exists in scope but not locally owned)
     if (_scope && !_scope.hasOwn(key) && _scope.has(key)) {
       inheritedLines.add(line.from);
+    }
+
+    // Show resolved value after "inherit" keyword
+    if (valueStr === 'inherit' && _scope) {
+      try {
+        const resolved = book.resolve(`${_scope.name}.${key}`);
+        const isColor = looksLikeColor(resolved);
+        const endOfLine = line.from + line.text.length;
+        widgets.push({ pos: endOfLine, widget: new InheritedValueWidget(resolved, isColor) });
+      } catch {
+        // skip if can't resolve
+      }
     }
   }
 
