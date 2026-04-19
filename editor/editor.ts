@@ -55,11 +55,25 @@ function bootDesignSystem() {
   dark.set('neutral-light', color('#1a1a1a'));
 
   scopeExtendsMap.set('dark', 'brand');
+
+  // Card palette — tokens consumed by the Example tab
+  const card = book.addScope('card');
+  card.set('surface', ref('brand.neutral-light'));
+  card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
+  card.set('interactive', ref('brand.primary'));
+  card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));
+  card.set('border', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.15 }));
+  card.set('on-surface-weak', colorMix(ref('card.on-surface'), ref('card.surface'), { ratio: 0.4 }));
+  card.set('input', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.06 }));
+  card.set('on-input', ref('card.on-surface'));
+  card.set('padding', px(32));
+  card.set('radius', px(12));
+  card.set('gap', px(16));
 }
 
 // --- State ---
 
-let activeFormat: RenderFormat | 'svg' | 'log' = 'log';
+let activeFormat: RenderFormat | 'svg' | 'log' | 'example' = 'example';
 
 // Track CodeMirror editor instances per scope name
 const editorViews = new Map<string, EditorView>();
@@ -75,6 +89,14 @@ const outputEl = document.getElementById('output')!;
 const eventLog = document.getElementById('event-log')!;
 const svgContainer = document.getElementById('svg-container')!;
 const showConnectionsCb = document.getElementById('show-connections') as HTMLInputElement;
+const exampleView = document.getElementById('example-view')!;
+const exampleStage = document.getElementById('example-stage')!;
+const exampleStyle = document.getElementById('example-style') as HTMLStyleElement;
+const exampleError = document.getElementById('example-error')!;
+const loginTemplate = document.getElementById('login-template') as HTMLTemplateElement;
+
+// Mount the login template once
+exampleStage.appendChild(loginTemplate.content.cloneNode(true));
 
 // --- Event log ---
 
@@ -133,9 +155,25 @@ function renderActiveTab() {
   outputEl.style.display = 'none';
   visualizationEl.style.display = 'none';
   eventLog.style.display = 'none';
+  exampleView.style.display = 'none';
 
   if (activeFormat === 'log') {
     eventLog.style.display = '';
+  } else if (activeFormat === 'example') {
+    exampleView.style.display = '';
+    try {
+      const renderer = new Renderer(book, 'css-variables');
+      // Scope the generated variables to the example view so they don't leak
+      // into the editor chrome
+      exampleStyle.textContent = renderer.render().replace(/:root/, '#example-view');
+      exampleError.hidden = true;
+      exampleError.textContent = '';
+    } catch (err) {
+      // Keep the last good stylesheet and the mounted template — just show
+      // a non-destructive banner so the preview recovers once the error clears
+      exampleError.hidden = false;
+      exampleError.textContent = `Error: ${(err as Error).message}`;
+    }
   } else if (activeFormat === 'svg') {
     visualizationEl.style.display = '';
     try {
@@ -951,7 +989,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
-    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg' | 'log';
+    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg' | 'log' | 'example';
     renderActiveTab();
   });
 });

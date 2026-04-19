@@ -14,20 +14,44 @@
     </div>
     <div class="output-column">
       <div class="tabs">
-        <button class="tab active" data-format="log">Log</button>
+        <button class="tab active" data-format="example">Example</button>
+        <button class="tab" data-format="log">Log</button>
         <button class="tab" data-format="css-variables">CSS</button>
         <button class="tab" data-format="json">JSON</button>
         <button class="tab" data-format="w3-design-tokens">W3 Design Tokens</button>
         <button class="tab" data-format="svg">SVG</button>
       </div>
-      <div class="event-log" id="event-log"></div>
+      <div class="event-log" id="event-log" style="display: none;"></div>
       <pre class="output" id="output" style="display: none;"></pre>
       <div class="visualization" id="visualization" style="display: none;">
         <label><input type="checkbox" id="show-connections" checked> Show connections</label>
         <div id="svg-container"></div>
       </div>
+      <div class="example-view" id="example-view">
+        <style id="example-style"></style>
+        <div class="example-error" id="example-error" hidden></div>
+        <div class="example-stage" id="example-stage"></div>
+      </div>
     </div>
   </div>
+
+  <template id="login-template">
+    <form class="login-card" novalidate>
+      <h2 class="login-title">Welcome back</h2>
+      <p class="login-subtitle">Sign in to continue</p>
+      <label class="login-field">
+        <span>Email</span>
+        <input type="email" placeholder="you@example.com" autocomplete="off">
+      </label>
+      <label class="login-field">
+        <span>Password</span>
+        <input type="password" placeholder="••••••••" autocomplete="off">
+      </label>
+      <button type="button" class="login-btn">Log in</button>
+      <p class="login-footnote">Don't have an account? <a href="#">Sign up</a></p>
+    </form>
+  </template>
+
   <script type="module" src="editor.ts"></script>
 </body>
 </html>

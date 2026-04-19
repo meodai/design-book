@@ -357,6 +357,141 @@ h3 {
   opacity: 1;
 }
 
+/* Example view — live-rendered component using the `card` scope */
+.example-view {
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
+  margin-top: calc(-1 * var(--s-line));
+  padding: 2rem;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scrollbar-width: thin;
+}
+
+.example-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.example-error {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.65rem;
+  background: color-mix(in lab, #dc3545 12%, var(--c-surface));
+  color: #dc3545;
+  box-shadow: inset 0 0 0 var(--s-line) color-mix(in lab, #dc3545 40%, var(--c-surface));
+  z-index: 10;
+}
+
+.example-view {
+  position: relative;
+}
+
+.login-card {
+  background: var(--card-surface);
+  color: var(--card-on-surface);
+  padding: var(--card-padding);
+  border-radius: var(--card-radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  min-width: 18rem;
+  max-width: 22rem;
+  width: 100%;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.12);
+  font-family: var(--font-mono);
+}
+
+.login-title {
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.login-subtitle {
+  font-size: 0.7rem;
+  color: var(--card-on-surface-weak);
+  margin: 0 0 0.5rem;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--card-on-surface-weak);
+}
+
+.login-field input {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 0.6rem 0.75rem;
+  border-radius: calc(var(--card-radius) / 2);
+  background: var(--card-input);
+  color: var(--card-on-input);
+  box-shadow: inset 0 0 0 var(--s-line) var(--card-border);
+}
+
+.login-field input::placeholder {
+  color: var(--card-on-surface-weak);
+}
+
+.login-field input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--s-line--fat) var(--card-interactive);
+}
+
+.login-btn {
+  background: var(--card-interactive);
+  color: var(--card-on-interactive);
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--card-radius) / 2);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+.login-footnote {
+  font-size: 0.65rem;
+  color: var(--card-on-surface-weak);
+  margin: 0;
+  text-align: center;
+}
+
+.login-footnote a {
+  color: var(--card-interactive);
+  text-decoration: none;
+}
+
+.login-footnote a:hover {
+  text-decoration: underline;
+}
+
 /* Visualization */
 .visualization {
   background: var(--c-surface);

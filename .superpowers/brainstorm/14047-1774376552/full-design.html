@@ -1,0 +1,302 @@
+<h2>Spreadsheet Token Editor — Full Design</h2>
+<p class="subtitle">Custom HTML table + CodeMirror, two tab types, context-aware tools</p>
+
+<!-- TAB TYPES -->
+<div class="section">
+  <h3>Two Tab Types</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Free Tab — "color-math"</div>
+      <div class="mockup-body" style="padding:0;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:monospace">
+          <thead>
+            <tr style="background:rgba(128,128,128,0.15);text-align:left">
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2);width:30px;color:rgba(128,128,128,0.5)"></th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">A</th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">B</th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">C</th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">D</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1);color:rgba(128,128,128,0.5)">1</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">base</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#0066cc;vertical-align:middle;margin-right:4px"></span>color('#0066cc')</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">=lighten(B1, 0.3)</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#66aaee;vertical-align:middle;margin-right:4px"></span>#66aaee</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1);color:rgba(128,128,128,0.5)">2</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">step</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">4</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">=B2 * 2</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">8</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1);color:rgba(128,128,128,0.5)">3</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">ramp</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#1a3a5c;vertical-align:middle;margin-right:4px"></span>#1a3a5c</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#3377aa;vertical-align:middle;margin-right:4px"></span>#3377aa</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#88bbdd;vertical-align:middle;margin-right:4px"></span>#88bbdd</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;color:rgba(128,128,128,0.3)">4</td>
+              <td style="padding:4px 10px;color:rgba(128,128,128,0.2)" colspan="4"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">Scope Tab — "brand" <span style="opacity:0.5;font-weight:normal">→ outputs to CSS/JSON/W3</span></div>
+      <div class="mockup-body" style="padding:0;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:monospace">
+          <thead>
+            <tr style="background:rgba(128,128,128,0.15);text-align:left">
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">Name</th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">Formula</th>
+              <th style="padding:6px 10px;border-bottom:1px solid rgba(128,128,128,0.2)">Resolved</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">primary</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">=color-math.B1</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#0066cc;vertical-align:middle;margin-right:4px"></span>#0066cc</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">primary-light</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">lighten(ref('brand.primary'), 0.2)</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#3399ee;vertical-align:middle;margin-right:4px"></span>#3399ee</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">spacing-base</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">=color-math.B2</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">4px</td>
+            </tr>
+            <tr style="opacity:0.4">
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)">neutral</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1);font-style:italic">inherit</td>
+              <td style="padding:4px 10px;border-bottom:1px solid rgba(128,128,128,0.1)"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#888;vertical-align:middle;margin-right:4px"></span>#888888</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 10px;color:rgba(128,128,128,0.3)" colspan="3">+ new token</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="section">
+  <h3>Tab Bar</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:12px;background:rgba(128,128,128,0.05)">
+      <div style="display:flex;gap:2px;align-items:end;font-size:13px;font-family:system-ui">
+        <div style="padding:8px 16px;background:rgba(128,128,128,0.1);border-radius:6px 6px 0 0;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0066cc"></span>
+          brand
+        </div>
+        <div style="padding:8px 16px;background:rgba(128,128,128,0.1);border-radius:6px 6px 0 0;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22aa44"></span>
+          semantic
+        </div>
+        <div style="padding:8px 16px;background:rgba(128,128,128,0.2);border-radius:6px 6px 0 0;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(128,128,128,0.4);transform:rotate(45deg)"></span>
+          color-math
+        </div>
+        <div style="padding:8px 16px;background:rgba(128,128,128,0.1);border-radius:6px 6px 0 0;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(128,128,128,0.4);transform:rotate(45deg)"></span>
+          spacing-calc
+        </div>
+        <div style="padding:4px 12px;border-radius:6px 6px 0 0;cursor:pointer;color:rgba(128,128,128,0.5);font-size:18px" title="Add tab">+</div>
+      </div>
+      <div style="height:1px;background:rgba(128,128,128,0.2)"></div>
+      <p style="margin:12px 0 0;font-size:12px;opacity:0.6">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#888;vertical-align:middle;margin-right:4px"></span> = Scope tab (outputs to CSS/JSON/W3) &nbsp;&nbsp;
+        <span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:rgba(128,128,128,0.5);transform:rotate(45deg);vertical-align:middle;margin-right:4px"></span> = Free tab (scratchpad)
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- SIDE PANEL -->
+<div class="section">
+  <h3>Selection Side Panel</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Numeric Selection → Bezier Curve</div>
+      <div class="mockup-body" style="padding:16px">
+        <div style="display:flex;gap:16px;align-items:start">
+          <div style="flex:1">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px">Selected: 8 numeric values</div>
+            <svg viewBox="0 0 200 120" style="width:100%;background:rgba(128,128,128,0.05);border-radius:4px">
+              <!-- bars (current values) -->
+              <rect x="5" y="95" width="20" height="15" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="30" y="85" width="20" height="25" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="55" y="72" width="20" height="38" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="80" y="55" width="20" height="55" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="105" y="45" width="20" height="65" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="130" y="30" width="20" height="80" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="155" y="18" width="20" height="92" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <rect x="180" y="5" width="20" height="105" fill="rgba(255,180,0,0.6)" rx="1"/>
+              <!-- bezier curve overlay -->
+              <path d="M15,108 C60,105 140,20 190,8" stroke="#ff4444" stroke-width="2" fill="none" stroke-dasharray="4,3"/>
+              <!-- control point handles -->
+              <circle cx="60" cy="105" r="5" fill="#ff4444" stroke="white" stroke-width="1.5"/>
+              <circle cx="140" cy="20" r="5" fill="#ff4444" stroke="white" stroke-width="1.5"/>
+              <line x1="15" y1="108" x2="60" y2="105" stroke="rgba(255,68,68,0.3)" stroke-width="1"/>
+              <line x1="190" y1="8" x2="140" y2="20" stroke="rgba(255,68,68,0.3)" stroke-width="1"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;opacity:0.5">
+              <span>min: 4px</span>
+              <span>max: 64px</span>
+            </div>
+          </div>
+          <div style="width:100px;font-size:12px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px">Presets</div>
+            <div style="padding:4px 8px;background:rgba(128,128,128,0.1);border-radius:4px;margin-bottom:4px;cursor:pointer">Linear</div>
+            <div style="padding:4px 8px;background:rgba(128,128,128,0.2);border-radius:4px;margin-bottom:4px;cursor:pointer;font-weight:600">Ease-out</div>
+            <div style="padding:4px 8px;background:rgba(128,128,128,0.1);border-radius:4px;margin-bottom:4px;cursor:pointer">Ease-in</div>
+            <div style="padding:4px 8px;background:rgba(128,128,128,0.1);border-radius:4px;margin-bottom:4px;cursor:pointer">Ease-in-out</div>
+            <button style="margin-top:12px;padding:6px 12px;background:#0066cc;color:white;border:none;border-radius:4px;cursor:pointer;width:100%">Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">Color Selection → Tools</div>
+      <div class="mockup-body" style="padding:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px">Selected: 5 color values</div>
+        <div style="display:flex;gap:4px;margin-bottom:16px">
+          <div style="flex:1;height:32px;background:#1a3a5c;border-radius:4px 0 0 4px"></div>
+          <div style="flex:1;height:32px;background:#2a5a8c"></div>
+          <div style="flex:1;height:32px;background:#3377aa"></div>
+          <div style="flex:1;height:32px;background:#66aadd"></div>
+          <div style="flex:1;height:32px;background:#99ccee;border-radius:0 4px 4px 0"></div>
+        </div>
+        <div style="font-size:13px">
+          <div style="padding:8px 12px;background:rgba(128,128,128,0.1);border-radius:6px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+            <span>Generate Ramp</span>
+            <span style="font-size:11px;opacity:0.5">poline / rampensau</span>
+          </div>
+          <div style="padding:8px 12px;background:rgba(128,128,128,0.1);border-radius:6px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+            <span>Modify All</span>
+            <span style="font-size:11px;opacity:0.5">lighten / darken / saturate</span>
+          </div>
+          <div style="padding:8px 12px;background:rgba(128,128,128,0.1);border-radius:6px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+            <span>Sort</span>
+            <span style="font-size:11px;opacity:0.5">hue / lightness / chroma</span>
+          </div>
+          <div style="padding:8px 12px;background:rgba(128,128,128,0.1);border-radius:6px;margin-bottom:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+            <span>Redistribute</span>
+            <span style="font-size:11px;opacity:0.5">even spacing via curve</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAG FILL -->
+<div class="section">
+  <h3>Drag-Fill Handle</h3>
+  <div class="mockup">
+    <div class="mockup-header">Smart series detection</div>
+    <div class="mockup-body" style="padding:16px">
+      <div style="display:flex;gap:24px;font-size:13px;font-family:monospace">
+        <div style="flex:1">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px;font-family:system-ui">Numeric name suffix</div>
+          <div style="padding:4px 10px;background:rgba(0,102,204,0.1);border:1px solid rgba(0,102,204,0.3);border-radius:3px">gray-100</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.6">gray-200</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.4">gray-300</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px;font-family:system-ui">Arithmetic progression</div>
+          <div style="padding:4px 10px;background:rgba(0,102,204,0.1);border:1px solid rgba(0,102,204,0.3);border-radius:3px">px(4)</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.6">px(8)</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.4">px(12)</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin-bottom:8px;font-family:system-ui">Color lightness ramp</div>
+          <div style="padding:4px 10px;background:rgba(0,102,204,0.1);border:1px solid rgba(0,102,204,0.3);border-radius:3px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#0066cc"></span>color('#0066cc')</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.6;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#3388dd"></span>#3388dd</div>
+          <div style="padding:4px 10px;border-left:2px dashed rgba(0,102,204,0.3);margin-left:8px;opacity:0.4;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#66aaee"></span>#66aaee</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FORMULA LANGUAGE -->
+<div class="section">
+  <h3>Unified Formula Language</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="padding:16px;font-size:13px;font-family:monospace">
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;width:140px;font-family:system-ui;font-size:12px">Spreadsheet math</td>
+          <td style="padding:6px 10px">=A1 * 2</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Cell range functions</td>
+          <td style="padding:6px 10px">=SUM(A1:A10)</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Cross-sheet cell ref</td>
+          <td style="padding:6px 10px">=color-math.B3</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Design-book function</td>
+          <td style="padding:6px 10px">lighten(color('#0066cc'), 0.2)</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Hybrid (cell ref in fn)</td>
+          <td style="padding:6px 10px">lighten(A3, 0.2)</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Scope token ref</td>
+          <td style="padding:6px 10px">ref('brand.primary')</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 10px;opacity:0.5;font-family:system-ui;font-size:12px">Scope ref in free tab</td>
+          <td style="padding:6px 10px">=lighten(ref('brand.primary'), 0.5)</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE -->
+<div class="section">
+  <h3>Architecture Split</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Design-Book Core (reactive, renderable)</div>
+      <div class="mockup-body" style="padding:16px;font-size:13px">
+        <ul style="margin:0;padding-left:16px">
+          <li>Color modification functions (lighten, darken, saturate curves)</li>
+          <li>Scope tokens with ref() and function values</li>
+          <li>Renders to CSS / JSON / W3 Design Tokens</li>
+          <li>Dependency tracking & reactive updates</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">Editor-Only (generative, static output)</div>
+      <div class="mockup-body" style="padding:16px;font-size:13px">
+        <ul style="margin:0;padding-left:16px">
+          <li>Free tabs with spreadsheet formulas (=, SUM, etc.)</li>
+          <li>Poline / rampensau ramp generation</li>
+          <li>colorsort-js sorting</li>
+          <li>Bezier curve value redistribution</li>
+          <li>Drag-fill smart series</li>
+          <li>Side panel selection tools</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<h2>Spreadsheet Editor: Which approach?</h2>
+<p class="subtitle">Three viable options for the token grid editor</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Custom HTML Table + CodeMirror (DIY)</h3>
+      <p><strong>0 KB added</strong> &mdash; reuse everything you already have</p>
+      <ul style="margin:8px 0;padding-left:20px;font-size:14px;opacity:0.85">
+        <li>HTML &lt;table&gt; with Name / Formula / Value columns</li>
+        <li>Click a formula cell &rarr; CodeMirror activates in-place with full autocomplete</li>
+        <li>Tab bar for scope switching (trivial HTML/CSS)</li>
+        <li>Color swatches, error highlighting, inherit &mdash; all reused from current editor</li>
+        <li>~150 LOC for keyboard nav (arrows, Enter, Esc, Tab)</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero new deps</li><li>Full control over UX</li><li>Reuse existing CodeMirror setup</li><li>Tailored to token editing</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Must build keyboard nav</li><li>No multi-cell select/drag-fill</li><li>Focus management DIY</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Jspreadsheet CE</h3>
+      <p><strong>~35 KB gzip</strong> &mdash; lightweight spreadsheet with built-in tabs</p>
+      <ul style="margin:8px 0;padding-left:20px;font-size:14px;opacity:0.85">
+        <li>MIT, vanilla JS, no framework dependency</li>
+        <li>Built-in worksheet tabs (unique among lightweight options)</li>
+        <li>Custom cell editor API &mdash; can embed CodeMirror</li>
+        <li>Built-in autocomplete column type (but likely want CodeMirror's)</li>
+        <li>Excel-like keyboard nav out of the box</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Tabs built-in</li><li>Keyboard nav free</li><li>Custom editors supported</li><li>Spreadsheet feel out of box</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>A1 cell reference model (awkward for key-value)</li><li>New dependency</li><li>Fighting lib abstractions</li><li>CE docs mix with Pro docs</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>AG Grid Community</h3>
+      <p><strong>~200 KB gzip</strong> &mdash; battle-tested grid, best custom editor API</p>
+      <ul style="margin:8px 0;padding-left:20px;font-size:14px;opacity:0.85">
+        <li>MIT, framework-agnostic, huge ecosystem</li>
+        <li>Most mature custom cell editor interface</li>
+        <li>Excellent keyboard navigation</li>
+        <li>cellEditorPopup for overlay editing</li>
+        <li>No built-in tabs (build tab bar yourself)</li>
+      </ul>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Most polished editing UX</li><li>Huge community</li><li>Handles edge cases</li><li>Virtual scrolling</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>~200KB for a 2-column grid</li><li>No tabs</li><li>Overkill for this use case</li><li>Enterprise features tempting but paywalled</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
