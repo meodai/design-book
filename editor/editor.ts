@@ -127,6 +127,13 @@ function logEvent(
 
   entry.innerHTML = `<span class="event-time">${ts}</span> <span class="event-type">${type}</span>${detailStr}`;
   eventLog.appendChild(entry);
+
+  // Cap the log so it doesn't grow unbounded (events fire per-keystroke)
+  const MAX_ENTRIES = 200;
+  while (eventLog.childElementCount > MAX_ENTRIES) {
+    eventLog.firstElementChild!.remove();
+  }
+
   eventLog.scrollTop = eventLog.scrollHeight;
 }
 
