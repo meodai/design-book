@@ -11,7 +11,7 @@ import { parseTokenInput } from './editor-input-parser';
 import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap } from '@codemirror/commands';
-import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { autocompletion, CompletionContext, CompletionResult, acceptCompletion } from '@codemirror/autocomplete';
 
 // Register the <color-input> web component
 import 'hdr-color-input';
@@ -257,6 +257,13 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
           argStrs.push(String(arg));
         }
       }
+    }
+    // Preserve options across edit-cycle round-trips so ratios, steps, etc.
+    // aren't reset to defaults on re-parse
+    const optionKeys = fn.options ? Object.keys(fn.options).filter(k => k !== 'description') : [];
+    if (optionKeys.length > 0) {
+      const optionPairs = optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`);
+      argStrs.push(`{ ${optionPairs.join(', ')} }`);
     }
     return `${fn.name}(${argStrs.join(', ')})`;
   }
@@ -823,6 +830,9 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
   const state = EditorState.create({
     doc: initialDoc,
     extensions: [
+      // Tab accepts the active completion; falls through to default Tab when
+      // no completion is open
+      keymap.of([{ key: 'Tab', run: acceptCompletion }]),
       keymap.of(defaultKeymap),
       autocompletion({
         override: [createCompletionSource(_book, scope)],
