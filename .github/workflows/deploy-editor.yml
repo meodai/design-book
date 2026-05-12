@@ -1,4 +1,4 @@
-name: Deploy Editor to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -23,12 +23,27 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
+      # Editor → site/ (root)
       - run: npm run build:editor
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+
+      # Article → site/article/
+      - run: npm run build:article
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/article/
+
+      # Combine both builds into one upload directory.
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp -r editor-dist/. site/
+          cp -r article-dist site/article
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: editor-dist
+          path: site
 
   deploy:
     needs: build
