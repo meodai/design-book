@@ -317,15 +317,28 @@
         <h3>A ramp between two intents</h3>
         <p>
           The seven bars in the chart aren't seven hand-picked colours.
-          They're seven steps of a procedurally-generated ramp built with
-          <code>colorMix(color.surface, color.interaction)</code> at
-          increasing ratios. Move
-          <button class="token-chip" data-token="values.blue500" type="button"></button>
-          and the chart re-tones; re-point
-          <button class="token-chip" data-token="color.interaction" type="button"></button>
-          to a different palette colour and it re-tones again. The ramp is
-          downstream of two decisions: which surface we sit on, and which
-          colour we use to act.
+          They're seven steps of a procedurally-generated ramp running
+          between the two intents we've already named:
+        </p>
+        <p class="rule-line">
+          <code>ramp.sN</code> =
+          <code>colorMix(</code><button
+            class="token-chip"
+            data-token="color.surface"
+            data-quick-color
+            type="button"
+          ></button><code>,&nbsp;</code><button
+            class="token-chip"
+            data-token="color.interaction"
+            data-quick-color
+            type="button"
+          ></button><code>, ratio)</code>
+        </p>
+        <p>
+          Drag either endpoint. The chart re-tones in place because every
+          bar reads from the same ramp, and the ramp re-runs the mix on
+          every change. The ramp is downstream of two decisions: which
+          surface we sit on, and which colour we use to act.
         </p>
 
         <h3>Darker on hover</h3>
@@ -368,6 +381,30 @@
           Procedural tokens answer "why this, under these conditions?"
           When the why lives in the token, the system stays legible longer,
           and it keeps making sense even after the inputs move.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Future</h2>
+        <p>
+          The examples in this demo are still small. They mostly deal with
+          colour, spacing, and simple transforms. What interests me next is
+          pushing the same idea into more complex design decisions:
+          typography that responds to contrast, or font choices that depend
+          on the features a UI needs to express.
+        </p>
+        <p>
+          A token could decide not just <em>how large</em> text should be,
+          but which face should be used for a given context, script, or
+          reading condition. It could encode typographic contrast the same
+          way the button border encodes contrast now: as a rule with inputs,
+          constraints, and a visible reason for the outcome.
+        </p>
+        <p>
+          That is the direction I want to explore further. Once tokens can
+          carry reasoning, there is no reason to stop at colours. The more
+          complex the design decision, the more valuable it becomes to keep
+          the logic inside the system instead of leaving it behind in notes.
         </p>
       </section>
     </article>
