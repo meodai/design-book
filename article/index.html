@@ -233,29 +233,34 @@
         </p>
         <p>
           In this demo, that shows up in four different kinds of design
-          choices: state, scale, palette, and threshold.
+          choices: threshold, scale, palette, and state.
         </p>
 
-        <h3>Darker on hover</h3>
+        <h3>Contrast with a threshold</h3>
         <p>
-          Hover the link in the example panel and you'll see a shade of
-          <code>color.interaction</code>. That shade isn't stored — it's
-          computed:
+          Start with the button border, because you can see the effect
+          immediately. Its hairline outline is computed:
         </p>
         <p class="rule-line">
-          <code>color.linkHover</code> =
-          <code>darken(color.interaction,&nbsp;</code><button
+          <code>color.line</code> =
+          <code>minContrastWith(color.surface, ramp, { ratio:&nbsp;</code><button
             class="token-chip"
-            data-fn-option="color.linkHover.amount"
-            data-min="0"
-            data-max="0.5"
-            data-step="0.01"
+            data-fn-option="color.line.ratio"
+            data-min="1"
+            data-max="7"
+            data-step="0.1"
             type="button"
-          ></button><code>)</code>
+          ></button><code> })</code>
         </p>
         <p>
-          Move the amount. The hover state updates wherever it's used — no
-          CSS edit, no rebuild.
+          Where <code>bestContrastWith</code> picks the <em>highest</em>
+          contrast available, <code>minContrastWith</code> picks the
+          <em>lowest</em> step that still clears the threshold. The result
+          is a soft line that's visible against the surface but never
+          shouts. Drop the threshold and it fades; raise it and it darkens.
+          Flip the surface dark and it auto-inverts. The decision encoded
+          in the token isn't "use this colour" — it's "use the faintest
+          colour that's still readable as a boundary."
         </p>
 
         <h3>Spacing as a scale</h3>
@@ -287,31 +292,27 @@
           colour we use to act.
         </p>
 
-        <h3>Contrast with a threshold</h3>
+        <h3>Darker on hover</h3>
         <p>
-          Same idea as the button label, slightly different rule. The
-          button's hairline border is computed:
+          The hover state is a smaller example, but it shows the same idea.
+          Hover the link in the example panel and you'll see a shade of
+          <code>color.interaction</code>. That shade isn't stored — it's
+          computed:
         </p>
         <p class="rule-line">
-          <code>color.line</code> =
-          <code>minContrastWith(color.surface, ramp, { ratio:&nbsp;</code><button
+          <code>color.linkHover</code> =
+          <code>darken(color.interaction,&nbsp;</code><button
             class="token-chip"
-            data-fn-option="color.line.ratio"
-            data-min="1"
-            data-max="7"
-            data-step="0.1"
+            data-fn-option="color.linkHover.amount"
+            data-min="0"
+            data-max="0.5"
+            data-step="0.01"
             type="button"
-          ></button><code> })</code>
+          ></button><code>)</code>
         </p>
         <p>
-          Where <code>bestContrastWith</code> picks the <em>highest</em>
-          contrast available, <code>minContrastWith</code> picks the
-          <em>lowest</em> step that still clears the threshold. The result
-          is a soft line that's visible against the surface but never
-          shouts. Drop the threshold and it fades; raise it and it darkens.
-          Flip the surface dark and it auto-inverts. The decision encoded
-          in the token isn't "use this colour" — it's "use the faintest
-          colour that's still readable as a boundary."
+          Move the amount. The hover state updates wherever it's used — no
+          CSS edit, no rebuild.
         </p>
       </section>
 
