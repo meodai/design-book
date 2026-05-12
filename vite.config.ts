@@ -17,6 +17,17 @@ export default defineConfig(({ mode }) => {
     };
   }
 
+  if (mode === 'article') {
+    return {
+      root: 'article',
+      base: process.env.BASE_PATH ?? '/',
+      server: { host: true },
+      build: {
+        outDir: '../article-dist',
+      },
+    };
+  }
+
   return {
     plugins: [dts({ rollupTypes: true })],
     build: {

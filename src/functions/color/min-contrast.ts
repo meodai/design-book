@@ -47,7 +47,10 @@ export function minContrastWithImpl(
         const parsed = parse(String(tv.rawValue));
         if (parsed) colorHex = formatHex(parsed) ?? null;
       }
-    } else if (token.type === 'reference') {
+    } else {
+      // Reference or function token — resolve through the scope so the
+      // candidate pool includes computed colors (colorMix, lighten, darken,
+      // etc.), not just hand-written ones.
       try {
         const resolved = scope.resolve(key);
         const parsed = parse(resolved);
@@ -55,8 +58,6 @@ export function minContrastWithImpl(
       } catch {
         continue;
       }
-    } else {
-      continue;
     }
 
     if (!colorHex) continue;

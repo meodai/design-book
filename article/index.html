@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procedural Tokens — encoding design decisions</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="example-panel" aria-label="Live example components">
+      <p class="example-label">Live example</p>
+      <div class="example-frame">
+        <h3 class="example-title">Quarterly revenue</h3>
+        <p class="example-body">
+          Revenue grew 12% over Q3, led by enterprise deals.
+          <a href="#" class="example-link">See the full report</a>.
+        </p>
+        <svg class="example-chart" viewBox="0 0 280 110" role="img" aria-label="Bar chart, seven steps of the ramp">
+          <rect x="0"   y="80" width="32" height="30"  fill="var(--ramp-100)" rx="2" />
+          <rect x="40"  y="62" width="32" height="48"  fill="var(--ramp-200)" rx="2" />
+          <rect x="80"  y="42" width="32" height="68"  fill="var(--ramp-300)" rx="2" />
+          <rect x="120" y="22" width="32" height="88"  fill="var(--ramp-400)" rx="2" />
+          <rect x="160" y="10" width="32" height="100" fill="var(--ramp-500)" rx="2" />
+          <rect x="200" y="32" width="32" height="78"  fill="var(--ramp-700)" rx="2" />
+          <rect x="240" y="55" width="32" height="55"  fill="var(--ramp-900)" rx="2" />
+        </svg>
+        <div class="example-actions">
+          <button class="example-button" type="button">View dashboard</button>
+        </div>
+      </div>
+      <button id="reset" class="reset-btn" type="button">Reset all tokens</button>
+    </aside>
+
+    <article class="article-content">
+      <header class="article-header">
+        <p class="kicker">A Design Book demo</p>
+        <h1>Procedural Tokens — encoding design decisions</h1>
+        <p class="lede">
+          Most design tokens hold a value. The interesting ones hold a
+          rule. This is a short tour from the first kind to the second —
+          from the atom layer of raw values, through the reference layer
+          that gives them meaning, to procedural tokens: little rules that
+          re-decide themselves when their inputs change.
+        </p>
+      </header>
+
+      <section>
+        <h2>1. A token is a name for a value</h2>
+        <p>
+          <code>#0066cc</code> is a hex code. It tells you a colour exists.
+          It tells you nothing about <em>why</em> it's there.
+        </p>
+        <p>
+          A design token gives that value a name. CSS, components, docs —
+          anything that needs the colour — read the name, not the hex.
+          Change the value once and every reader updates.
+        </p>
+        <p>
+          That's the whole idea. But picking the <em>right</em> name is
+          where design tokens get interesting: different names belong on
+          different layers, and the layer they live on changes what they're
+          allowed to mean. The rest of this article walks through those
+          layers.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Value tokens — the atoms</h2>
+        <p>
+          A value token is the simplest kind: a name and a literal value.
+          Crucially, the name describes <em>what the value is</em>, not what
+          it means: <code>values.gray800</code>, <code>values.blue500</code>,
+          <code>type.base</code>. There's no role attached yet — just raw
+          material.
+        </p>
+        <ul class="token-list">
+          <li>
+            <code>values.gray800</code> =
+            <button class="token-chip" data-token="values.gray800" type="button"></button>
+          </li>
+          <li>
+            <code>values.gray50</code> =
+            <button class="token-chip" data-token="values.gray50" type="button"></button>
+          </li>
+          <li>
+            <code>values.blue500</code> =
+            <button class="token-chip" data-token="values.blue500" type="button"></button>
+          </li>
+          <li>
+            <code>type.base</code> =
+            <button
+              class="token-chip"
+              data-token="type.base"
+              data-min="14"
+              data-max="28"
+              data-step="1"
+              type="button"
+            ></button>
+          </li>
+          <li>
+            <code>radius.base</code> =
+            <button
+              class="token-chip"
+              data-token="radius.base"
+              data-min="0"
+              data-max="20"
+              data-step="1"
+              type="button"
+            ></button>
+          </li>
+        </ul>
+        <p>
+          A subtle but important rule: a value token never gets a semantic
+          name. Calling one <code>values.brand</code> would smuggle a
+          decision ("this is <em>the</em> brand colour") into a layer that's
+          supposed to hold pure material. Edit <code>values.gray800</code>
+          to red and the name is still <code>values.gray800</code> — a
+          slight lie, but a localised one. Meaning belongs upstairs.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Reference tokens — give names meaning</h2>
+        <p>
+          A reference token points to a value token. Its job is to
+          introduce <em>meaning</em>. Where <code>values.gray800</code> only
+          says "this hex," <code>color.brand</code> says "this is what we
+          call our brand." Same colour, but the name now has a job in the
+          system.
+        </p>
+        <ul class="token-list">
+          <li>
+            <code>color.brand</code> =
+            <button class="token-chip" data-token="color.brand" type="button"></button>
+            <span class="aside">— points at <code>values.gray800</code></span>
+          </li>
+          <li>
+            <code>color.surface</code> =
+            <button class="token-chip" data-token="color.surface" type="button"></button>
+            <span class="aside">— points at <code>values.gray50</code></span>
+          </li>
+          <li>
+            <code>color.onSurface</code> =
+            <button class="token-chip" data-token="color.onSurface" type="button"></button>
+            <span class="aside">— paired with <code>color.surface</code>; the text colour that goes on it</span>
+          </li>
+          <li>
+            <code>color.text</code> =
+            <button class="token-chip" data-token="color.text" type="button"></button>
+            <span class="aside">— points at <code>color.onSurface</code> (references can chain)</span>
+          </li>
+        </ul>
+        <p>
+          Notice what just happened. The value layer holds no opinions —
+          <code>values.gray800</code> is just a hex with a descriptive
+          label. The colour layer is where the design system makes
+          decisions: <em>this</em> grey is our brand,
+          <em>that</em> surface and its paired text always travel together,
+          links use <code>color.interaction</code>. Same mechanism each
+          time — a ref. Click any ref chip and you'll see the candidates it
+          could point at instead.
+        </p>
+        <p>
+          But a reference still only tells you the choice. Not why it was
+          made.
+        </p>
+      </section>
+
+      <section>
+        <h2>4. The problem with decisions</h2>
+        <p>
+          A reference token captures the <strong>outcome</strong> of a
+          decision: <code>color.brand = ref('values.gray800')</code> — the
+          brand is this particular grey. It hides the
+          <strong>reason</strong>. Why <em>that</em> grey? Was it a contrast
+          measurement, an accessibility floor, a marketing call? Was it ever
+          measured at all, or did someone just feel it was right?
+        </p>
+        <p>
+          Once the token ships, the reasoning lives outside the system — in
+          a Figma comment, a PR description, a Slack thread — and decays.
+          Six months later nobody is sure why the choice was made, so nobody
+          wants to touch it. The design system encodes the answer and
+          forgets the question.
+        </p>
+        <p>
+          I wanted the design system to encode the question too. Make the
+          decision <em>process</em> part of the token. So that:
+        </p>
+        <ul>
+          <li>The decision can be re-run automatically when its inputs change.</li>
+          <li>Anyone reading the token — including future me — can see how the choice was made, without hunting through documentation.</li>
+        </ul>
+        <p>
+          The button label in the example panel already works that way. The
+          naive version would be
+          <code>color.buttonText = ref('values.white')</code> — a decision
+          someone made off-screen, valid only as long as the button stays
+          dark. Instead, it's
+          <code>bestContrastWith(color.brand, ramp)</code>: the rule re-runs
+          against whatever the button background ends up being and picks the
+          most readable step from the ramp. The decision is right there in
+          the token.
+        </p>
+        <p>
+          Re-point the brand colour and watch the label re-decide:
+        </p>
+        <p class="rule-line">
+          <code>color.brand</code> =
+          <button class="token-chip" data-token="color.brand" type="button"></button>
+        </p>
+        <p>
+          Try pointing it at a light palette colour, then a dark one. The
+          label flips with it — because the rule re-runs against the new
+          background and picks the ramp step with the highest contrast. No
+          documentation to chase down: the token is the documentation.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Procedural tokens — rules, not values</h2>
+        <p>
+          A procedural token moves the reasoning <em>into</em> the token.
+          The token isn't a value anymore; it's a rule. Read the rule, see
+          the reasoning. Run the rule, reproduce the answer. Change the
+          inputs, the rule reapplies.
+        </p>
+
+        <h3>Darker on hover</h3>
+        <p>
+          Hover the link in the example panel and you'll see a shade of
+          <code>color.interaction</code>. That shade isn't stored — it's
+          computed:
+        </p>
+        <p class="rule-line">
+          <code>color.linkHover</code> =
+          <code>darken(color.interaction,&nbsp;</code><button
+            class="token-chip"
+            data-fn-option="color.linkHover.amount"
+            data-min="0"
+            data-max="0.5"
+            data-step="0.01"
+            type="button"
+          ></button><code>)</code>
+        </p>
+        <p>
+          Move the amount. The hover state updates wherever it's used — no
+          CSS edit, no rebuild.
+        </p>
+
+        <h3>Spacing as a scale</h3>
+        <p>
+          Every gap inside the example panel — title to paragraph, paragraph
+          to chart, chart to button — is a multiple of
+          <button
+            class="token-chip"
+            data-token="space.base"
+            data-min="8"
+            data-max="32"
+            data-step="1"
+            type="button"
+          ></button>. Pull the base, the whole rhythm scales together via
+          <code>spacingScale</code>. The rule already knew what to do.
+        </p>
+
+        <h3>A ramp between two intents</h3>
+        <p>
+          The seven bars in the chart aren't seven hand-picked colours.
+          They're seven steps of a procedurally-generated ramp built with
+          <code>colorMix(color.surface, color.interaction)</code> at
+          increasing ratios. Move
+          <button class="token-chip" data-token="values.blue500" type="button"></button>
+          and the chart re-tones; re-point
+          <button class="token-chip" data-token="color.interaction" type="button"></button>
+          to a different palette colour and it re-tones again. The ramp is
+          downstream of two decisions: which surface we sit on, and which
+          colour we use to act.
+        </p>
+
+        <h3>Contrast with a threshold</h3>
+        <p>
+          Same idea as the button label, slightly different rule. The
+          button's hairline border is computed:
+        </p>
+        <p class="rule-line">
+          <code>color.line</code> =
+          <code>minContrastWith(color.surface, ramp, { ratio:&nbsp;</code><button
+            class="token-chip"
+            data-fn-option="color.line.ratio"
+            data-min="1"
+            data-max="7"
+            data-step="0.1"
+            type="button"
+          ></button><code> })</code>
+        </p>
+        <p>
+          Where <code>bestContrastWith</code> picks the <em>highest</em>
+          contrast available, <code>minContrastWith</code> picks the
+          <em>lowest</em> step that still clears the threshold. The result
+          is a soft line that's visible against the surface but never
+          shouts. Drop the threshold and it fades; raise it and it darkens.
+          Flip the surface dark and it auto-inverts. The decision encoded
+          in the token isn't "use this colour" — it's "use the faintest
+          colour that's still readable as a boundary."
+        </p>
+      </section>
+
+      <section>
+        <h2>6. So what</h2>
+        <p>
+          Once your tokens are rules, your design system stops being a list
+          of paint colours and starts behaving like software. The system
+          holds the relationships; you change the inputs.
+        </p>
+        <p>
+          You stop writing <code>#0066cc</code>. You start writing
+          <em>the conditions under which colours exist</em>.
+        </p>
+      </section>
+    </article>
+  </div>
+
+  <div id="popover-root"></div>
+
+  <script type="module" src="article.ts"></script>
+</body>
+</html>

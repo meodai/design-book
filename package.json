@@ -17,6 +17,8 @@
     "dev": "vite --mode editor --host",
     "build": "vite build",
     "build:editor": "vite build --mode editor",
+    "dev:article": "vite --mode article --host",
+    "build:article": "vite build --mode article",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
