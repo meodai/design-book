@@ -304,6 +304,22 @@ let activeChip: HTMLElement | null = null;
 
 function closePopover() {
   if (activePopover) {
+    // hdr-color-input's panel uses the native popover API. Its transition
+    // (display + overlay, ~200ms) can keep the top-layer element briefly
+    // alive after removal, intermittently trapping clicks. Calling .hide()
+    // on the host first asks it to close synchronously before we yank the
+    // wrapper out of the DOM.
+    const picker = activePopover.querySelector('color-input') as
+      | (HTMLElement & { hide?: () => void; hidePopover?: () => void })
+      | null;
+    if (picker) {
+      try {
+        if (typeof picker.hide === 'function') picker.hide();
+        else if (typeof picker.hidePopover === 'function') picker.hidePopover();
+      } catch {
+        // ignore — best-effort cleanup
+      }
+    }
     activePopover.remove();
     activePopover = null;
   }

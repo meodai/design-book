@@ -402,6 +402,14 @@ html, body {
 #popover-root {
   position: relative;
   z-index: 1000;
+  /* Belt-and-braces: the root itself never captures pointer events, only
+     its actual popover children do. Without this an oversized fixed-position
+     descendant could accidentally trap clicks when its content is gone. */
+  pointer-events: none;
+}
+
+#popover-root > * {
+  pointer-events: auto;
 }
 
 .popover {
