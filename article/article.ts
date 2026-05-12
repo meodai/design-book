@@ -332,6 +332,14 @@ function openPopover(chip: HTMLElement) {
     const tok = scope.get(info.name);
     if (!tok) return;
 
+    // Colors get a bare picker — no popover chrome — since the picker IS
+    // the UI. Routing it through openColorPicker bypasses the labelled
+    // popover entirely.
+    if (tok.type === 'color') {
+      openColorPicker(chip, info.scopeName, info.name);
+      return;
+    }
+
     const label = document.createElement('div');
     label.className = 'popover-title';
     label.textContent = `${info.scopeName}.${info.name}`;
@@ -342,8 +350,6 @@ function openPopover(chip: HTMLElement) {
       // means re-pointing it at a different token of compatible type, not
       // changing the destination's value.
       buildRefUI(pop, info.scopeName, info.name);
-    } else if (tok.type === 'color') {
-      buildColorUI(pop, info.scopeName, info.name);
     } else if (tok.type === 'dimension') {
       buildDimensionUI(pop, info.scopeName, info.name, chip);
     } else {
@@ -360,31 +366,44 @@ function openPopover(chip: HTMLElement) {
   activeChip = chip;
 }
 
-function buildColorUI(pop: HTMLElement, scopeName: string, name: string) {
+function openColorPicker(chip: HTMLElement, scopeName: string, name: string) {
   const scope = book.getScope(scopeName)!;
-  const tok = scope.get(name) as TokenValue;
-  const current = String(tok.rawValue);
+  let current = '#000000';
+  try {
+    const resolved = book.resolve(`${scopeName}.${name}`);
+    if (/^#[0-9a-f]{6}$/i.test(resolved)) current = resolved;
+  } catch {
+    // leave default
+  }
 
-  const input = document.createElement('color-input') as HTMLElement & {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'color-picker-wrapper';
+
+  const picker = document.createElement('color-input') as HTMLElement & {
     value: string;
     show?: () => void;
   };
-  input.value = current;
-  input.setAttribute('no-alpha', '');
-  pop.append(input);
+  picker.value = current;
+  picker.setAttribute('no-alpha', '');
+  wrapper.append(picker);
 
-  input.addEventListener('change', () => {
-    const v = input.value;
-    if (!v) return;
+  popoverRoot.append(wrapper);
+  positionPopover(wrapper, chip);
+  activePopover = wrapper;
+  activeChip = chip;
+
+  picker.addEventListener('change', () => {
+    if (!picker.value) return;
     try {
-      scope.set(name, color(v));
+      scope.set(name, color(picker.value));
     } catch (err) {
-      console.warn('[article] invalid color', v, err);
+      console.warn('[article] invalid color', picker.value, err);
     }
   });
 
+  // Open the picker panel immediately — we're inside the chip-click gesture.
   requestAnimationFrame(() => {
-    if (typeof input.show === 'function') input.show();
+    if (typeof picker.show === 'function') picker.show();
   });
 }
 
@@ -558,11 +577,9 @@ document.addEventListener('click', (e) => {
 
   const chip = target.closest<HTMLElement>('.token-chip');
   if (chip) {
-    if (activeChip === chip) {
-      closePopover();
-    } else {
-      openPopover(chip);
-    }
+    // Always (re)open: clicking the same chip while its popover is open
+    // simply rebuilds the popover. Closing is via outside click or Escape.
+    openPopover(chip);
     return;
   }
 
@@ -608,49 +625,21 @@ document.getElementById('reset')?.addEventListener('click', () => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// 6. Scroll-driven section focus
-// ---------------------------------------------------------------------------
-//
-// At any moment one section is "active" — the one closest to a reading sweet
-// spot near the top of the viewport. Chips in inactive sections fade so the
-// only editable controls visible are the ones relevant to what you're reading.
-
-const sections = Array.from(document.querySelectorAll<HTMLElement>('.article-content > section'));
-
-function updateActiveSection() {
-  if (!sections.length) return;
-  const target = window.innerHeight * 0.3;
-  let bestSection: HTMLElement | null = null;
-  let bestDistance = Infinity;
-  for (const section of sections) {
-    const rect = section.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > window.innerHeight) continue;
-    const distance = Math.abs(rect.top - target);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestSection = section;
-    }
-  }
-  for (const section of sections) {
-    section.classList.toggle('section--active', section === bestSection);
-  }
-  // If the currently-open popover belongs to a chip that scrolled off-screen,
-  // close it.
-  if (activeChip) {
-    const rect = activeChip.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > window.innerHeight) {
-      closePopover();
-    }
+// Close the popover when the chip it belongs to scrolls off-screen, so a
+// stale popover never floats in the middle of the article.
+function closePopoverIfChipOffScreen() {
+  if (!activeChip) return;
+  const rect = activeChip.getBoundingClientRect();
+  if (rect.bottom < 0 || rect.top > window.innerHeight) {
+    closePopover();
   }
 }
 
-window.addEventListener('scroll', updateActiveSection, { passive: true });
-window.addEventListener('resize', updateActiveSection);
+window.addEventListener('scroll', closePopoverIfChipOffScreen, { passive: true });
+window.addEventListener('resize', closePopoverIfChipOffScreen);
 
 // ---------------------------------------------------------------------------
-// 7. Boot
+// 6. Boot
 // ---------------------------------------------------------------------------
 
 syncCss();
-updateActiveSection();

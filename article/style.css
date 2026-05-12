@@ -310,18 +310,6 @@ html, body {
   padding: 0;
 }
 
-/* ---------- Section emphasis (scroll-driven) ---------- */
-
-article:has(section.section--active) section:not(.section--active) .token-chip {
-  opacity: 0.4;
-  border-color: transparent;
-}
-
-article:has(section.section--active) section.section--active .token-chip {
-  opacity: 1;
-  border-color: var(--article-accent);
-}
-
 /* ---------- Token chips ---------- */
 
 .token-chip {
@@ -431,9 +419,16 @@ article:has(section.section--active) section.section--active .token-chip {
   font-variant-numeric: tabular-nums;
 }
 
-color-input {
-  display: block;
-  width: 100%;
+/* Color edits skip the popover chrome and just float the hdr-color-input
+   near the chip. Its trigger button + opened panel provide all the UI. */
+.color-picker-wrapper {
+  position: fixed;
+  z-index: 2000;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 6px 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
 }
 
 .ref-list {
