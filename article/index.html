@@ -233,18 +233,50 @@
           inputs and the system can make the decision again.
         </p>
         <p>
-          In this demo, that shows up in four different kinds of design
-          choices: threshold, scale, palette, and state.
+          A handful of demos follow, each one a different shape of decision:
+          contrast, scale, palette, state.
+        </p>
+
+        <h3 data-rewire="onSurface">What if the text was always the most readable on its surface?</h3>
+        <p>
+          Up in <a href="#">section&nbsp;3</a>, <code>color.onSurface</code>
+          was a plain ref to <code>values.gray900</code> — a decision pinned
+          for the light surface. It works until someone changes the surface
+          to something dark, and then black-on-dark stops being readable.
+        </p>
+        <p>
+          As you scrolled into this subsection, that token was rewired in
+          place:
+        </p>
+        <p class="rule-line">
+          <code>color.onSurface</code> =
+          <code>bestContrastWith(color.surface, values)</code>
+        </p>
+        <p>
+          Same name, same place in the system — but now it carries its own
+          reasoning. Try editing
+          <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
+          and watch the body text in the panel re-decide itself: drag the
+          colour darker and the text flips white, drag to something
+          mid-toned and it picks whichever entry in the values pool offers
+          the highest contrast. The pair <code>surface</code> /
+          <code>onSurface</code> is no longer a convention you have to
+          maintain — it's a rule the token enforces on its own.
         </p>
 
         <h3>Contrast with a threshold</h3>
         <p>
-          Start with the button border, because you can see the effect
-          immediately. Its hairline outline is computed:
+          Same family of rule, slightly different brief. The button's
+          hairline outline is computed:
         </p>
         <p class="rule-line">
           <code>color.line</code> =
-          <code>minContrastWith(color.surface, ramp, { ratio:&nbsp;</code><button
+          <code>minContrastWith(</code><button
+            class="token-chip"
+            data-token="color.surface"
+            data-quick-color
+            type="button"
+          ></button><code>, ramp, { ratio:&nbsp;</code><button
             class="token-chip"
             data-fn-option="color.line.ratio"
             data-min="1"

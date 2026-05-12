@@ -230,6 +230,31 @@ html, body {
   font-weight: 600;
 }
 
+/* When a scroll-triggered rewire fires, the heading sprouts a tiny live
+   badge so the reader can see the moment something happened. */
+[data-rewire].rewire-fired::after {
+  content: "live";
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 0.55em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--article-accent);
+  border-radius: 999px;
+  vertical-align: middle;
+  opacity: 0;
+  animation: rewire-fade-in 0.5s 0.15s forwards;
+}
+
+@keyframes rewire-fade-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .article-content p,
 .article-content ul,
 .article-content ol {

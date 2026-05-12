@@ -341,6 +341,21 @@ function openPopover(chip: HTMLElement) {
       return;
     }
 
+    // Ref chips with `data-quick-color` skip the re-point list and open the
+    // picker for the underlying primitive value instead. Useful inline in
+    // prose where the point is "change this colour" rather than "choose
+    // which token to point at."
+    if (tok.type === 'reference' && chip.dataset.quickColor !== undefined) {
+      const prim = resolveToPrimitive(info.scopeName, info.name);
+      if (prim) {
+        const primTok = book.getScope(prim.scopeName)?.get(prim.name);
+        if (primTok?.type === 'color') {
+          openColorPicker(chip, prim.scopeName, prim.name);
+          return;
+        }
+      }
+    }
+
     const label = document.createElement('div');
     label.className = 'popover-title';
     label.textContent = `${info.scopeName}.${info.name}`;
@@ -725,6 +740,13 @@ document.getElementById('reset')?.addEventListener('click', () => {
       }
     }
   }
+
+  // Restore the scroll-triggered rewire to its starting ref so the §5 demo
+  // can fire again the next time the reader scrolls into the subsection.
+  unwireOnSurface();
+  document.querySelectorAll('[data-rewire="onSurface"]').forEach((m) => {
+    (m as HTMLElement).classList.remove('rewire-fired');
+  });
 });
 
 // Close the popover when the chip it belongs to scrolls off-screen, so a
@@ -739,6 +761,48 @@ function closePopoverIfChipOffScreen() {
 
 window.addEventListener('scroll', closePopoverIfChipOffScreen, { passive: true });
 window.addEventListener('resize', closePopoverIfChipOffScreen);
+
+// ---------------------------------------------------------------------------
+// 7. Scroll-triggered rewire of color.onSurface
+// ---------------------------------------------------------------------------
+//
+// color.onSurface starts as a plain `ref('values.gray900')` — a decision
+// pinned for the light surface. When the reader scrolls into the §5
+// "onSurface as a rule" subsection, the token is rewired in place to
+// `bestContrastWith(color.surface, values)`. The body text in the example
+// panel re-decides itself for whatever surface is in play. Reset restores
+// the original ref so the demo is repeatable.
+//
+// The observer stays attached: after a reset, scrolling back into the
+// subsection re-fires the rewire.
+
+function rewireOnSurface() {
+  const current = colorScope.get('onSurface');
+  if (current && current.type === 'function') return; // already rewired
+  colorScope.set('onSurface', bestContrastWith(ref('color.surface'), values));
+}
+
+function unwireOnSurface() {
+  const current = colorScope.get('onSurface');
+  if (current && current.type === 'reference') return; // already a ref
+  colorScope.set('onSurface', ref('values.gray900'));
+}
+
+const rewireMarkers = document.querySelectorAll<HTMLElement>('[data-rewire="onSurface"]');
+if (rewireMarkers.length) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          rewireOnSurface();
+          (entry.target as HTMLElement).classList.add('rewire-fired');
+        }
+      }
+    },
+    { rootMargin: '0px 0px -35% 0px' },
+  );
+  rewireMarkers.forEach((m) => observer.observe(m));
+}
 
 // ---------------------------------------------------------------------------
 // 6. Boot
