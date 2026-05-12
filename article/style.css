@@ -135,6 +135,13 @@ html, body {
   transition: color 0.25s ease, font-size 0.25s ease;
 }
 
+.example-separator {
+  height: 1px;
+  width: 100%;
+  background: var(--color-line);
+  transition: background 0.25s ease;
+}
+
 .example-link {
   color: var(--color-interaction);
   text-decoration: underline;

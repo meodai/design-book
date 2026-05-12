@@ -15,6 +15,7 @@ import type {
   ReferenceValue,
   TokenValue,
 } from '../src';
+import { parse, wcagContrast } from 'culori';
 import 'hdr-color-input';
 import './style.css';
 
@@ -470,25 +471,126 @@ function buildFnOptionUI(
 
   const range = document.createElement('input');
   range.type = 'range';
-  range.min = String(min);
-  range.max = String(max);
-  range.step = String(step);
-  range.value = String(currentVal);
 
   const display = document.createElement('span');
   display.className = 'slider-value';
-  display.textContent = formatNumber(currentVal);
+
+  const snapValues = getSnapValuesForFnOption(tok, info.optionName);
+  let currentIndex = -1;
+
+  if (snapValues) {
+    currentIndex = findClosestIndex(snapValues, currentVal);
+    range.min = '0';
+    range.max = String(snapValues.length - 1);
+    range.step = '1';
+    range.value = String(currentIndex);
+    display.textContent = formatNumber(snapValues[currentIndex]);
+
+    const note = document.createElement('div');
+    note.className = 'popover-note';
+    note.textContent = 'This control snaps to the contrast levels available in the current ramp.';
+    pop.append(note);
+  } else {
+    range.min = String(min);
+    range.max = String(max);
+    range.step = String(step);
+    range.value = String(currentVal);
+    display.textContent = formatNumber(currentVal);
+  }
 
   wrap.append(range, display);
   pop.append(wrap);
 
   range.addEventListener('input', () => {
-    const v = Number(range.value);
+    const v = snapValues
+      ? snapValues[Math.max(0, Math.min(snapValues.length - 1, Number(range.value)))]
+      : Number(range.value);
     display.textContent = formatNumber(v);
     const fresh = scope.get(info.name) as FunctionTokenValue;
     const newOptions = { ...(fresh.options ?? {}), [info.optionName]: v };
     scope.set(info.name, { ...fresh, options: newOptions });
   });
+}
+
+function getSnapValuesForFnOption(tok: FunctionTokenValue, optionName: string): number[] | null {
+  if (tok.name !== 'minContrastWith' || optionName !== 'ratio') return null;
+
+  const [targetArg, candidateScope] = tok.args;
+  const targetValue = resolveColorArg(targetArg);
+  if (!targetValue) return null;
+
+  const targetColor = parse(targetValue);
+  if (!targetColor) return null;
+
+  const scopeLike = candidateScope as { getAllKeys?: () => string[]; resolve?: (key: string) => string };
+  if (typeof scopeLike.getAllKeys !== 'function' || typeof scopeLike.resolve !== 'function') {
+    return null;
+  }
+
+  const values: number[] = [];
+  for (const key of scopeLike.getAllKeys()) {
+    try {
+      const resolved = scopeLike.resolve(key);
+      const candidateColor = parse(resolved);
+      if (!candidateColor) continue;
+      values.push(wcagContrast(targetColor, candidateColor));
+    } catch {
+      continue;
+    }
+  }
+
+  values.sort((a, b) => a - b);
+
+  const unique: number[] = [];
+  for (const value of values) {
+    if (!unique.some(existing => Math.abs(existing - value) < 0.01)) {
+      unique.push(value);
+    }
+  }
+
+  return unique.length > 1 ? unique : null;
+}
+
+function resolveColorArg(arg: unknown): string | null {
+  if (typeof arg === 'string') {
+    return parse(arg) ? arg : null;
+  }
+
+  if (typeof arg !== 'object' || arg === null || !('type' in arg)) {
+    return null;
+  }
+
+  const token = arg as TokenValue | ReferenceValue;
+  if ('key' in token && token.type === 'reference') {
+    try {
+      const resolved = book.resolve(token.key);
+      return parse(resolved) ? resolved : null;
+    } catch {
+      return null;
+    }
+  }
+
+  if ('rawValue' in token) {
+    const raw = String(token.rawValue);
+    return parse(raw) ? raw : null;
+  }
+
+  return null;
+}
+
+function findClosestIndex(values: number[], target: number): number {
+  let bestIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  values.forEach((value, index) => {
+    const distance = Math.abs(value - target);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
 }
 
 function buildRefUI(pop: HTMLElement, scopeName: string, name: string) {

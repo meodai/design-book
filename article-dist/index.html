@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Procedural Tokens — encoding design decisions</title>
-  <script type="module" crossorigin src="/assets/index-B8zNip_l.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-C0Vmr-aN.css">
+  <script type="module" crossorigin src="/assets/index-CFhWABKC.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-15PvUVYf.css">
 </head>
 <body>
   <div class="layout">
@@ -17,6 +17,7 @@
           Revenue grew 12% over Q3, led by enterprise deals.
           <a href="#" class="example-link">See the full report</a>.
         </p>
+        <div class="example-separator" aria-hidden="true"></div>
         <svg class="example-chart" viewBox="0 0 280 110" role="img" aria-label="Bar chart, seven steps of the ramp">
           <rect x="0"   y="80" width="32" height="30"  fill="var(--ramp-100)" rx="2" />
           <rect x="40"  y="62" width="32" height="48"  fill="var(--ramp-200)" rx="2" />
@@ -259,9 +260,12 @@
           <em>lowest</em> step that still clears the threshold. The result
           is a soft line that's visible against the surface but never
           shouts. Drop the threshold and it fades; raise it and it darkens.
-          Flip the surface dark and it auto-inverts. The decision encoded
-          in the token isn't "use this colour" — it's "use the faintest
-          colour that's still readable as a boundary."
+          In this demo the control snaps to the contrast levels the current
+          ramp can actually produce, because the function is choosing from a
+          discrete set of candidates. Flip the surface dark and it
+          auto-inverts. The decision encoded in the token isn't "use this
+          colour" — it's "use the faintest colour that's still readable as
+          a boundary."
         </p>
 
         <h3>Spacing as a scale</h3>
