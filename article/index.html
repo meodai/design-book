@@ -41,44 +41,40 @@
         <p class="kicker">A Design Book demo</p>
         <h1>Procedural Tokens — encoding design decisions</h1>
         <p class="lede">
-          Most design tokens store an answer. The interesting ones store
-          the rule that produces the answer. This is a short walk from the
-          first kind to the second: from raw values, to references that
-          assign them a role, to procedural tokens that keep the reasoning
-          attached and can re-run it when the inputs change. In that sense,
-          they are closer to design programs than static collections:
+          Most token systems already separate values from semantics. The
+          interesting part is the connection between them. Usually it is a
+          fixed link: one token points at another and stops there. I am
+          interested in making that connection work more like a spreadsheet
+          cell. It can stay static, choose one value from a set, or apply a
+          small formula. In that sense, procedural tokens are closer to
+          design programs than static collections:
           systems with internal logic that keep generating outcomes.
         </p>
       </header>
 
       <section>
-        <h2>1. A token is a name for a value</h2>
+        <h2>1. The connection is the interesting part</h2>
         <p>
-          <code>#0066cc</code> is a hex code. It tells you a colour exists.
-          It tells you nothing about <em>why</em> it's there.
+          Assume the usual setup: raw values in one place, semantic names
+          in another. That part is already familiar. What interests me here
+          is not re-explaining token layers, but the kinds of links between
+          them.
         </p>
         <p>
-          A design token gives that value a name. CSS, components, docs —
-          anything that needs the colour — read the name, not the hex.
-          Change the value once and every reader updates.
-        </p>
-        <p>
-          That's the whole idea. But picking the <em>right</em> name is
-          where design tokens get interesting: different names belong on
-          different layers, and the layer they live on changes what they're
-          allowed to mean. The rest of this article walks through those
-          layers.
+          In this demo there are three useful connection types. A token can
+          point statically to one other token. It can choose one option from
+          a set. Or it can take an input value and do something to it. The
+          examples below stay close to colour and spacing, but the point is
+          the connection, not the medium.
         </p>
       </section>
 
       <section>
-        <h2>2. Value tokens — the atoms</h2>
+        <h2>2. The source values</h2>
         <p>
-          A value token is the simplest kind: a name and a literal value.
-          Crucially, the name describes <em>what the value is</em>, not what
-          it means: <code>values.gray800</code>, <code>values.blue500</code>,
-          <code>type.base</code>. There's no role attached yet — just raw
-          material.
+          The demo starts with a small pool of values. By themselves they
+          are not the interesting part; they are the inputs the later
+          connections read from.
         </p>
         <ul class="token-list">
           <li>
@@ -117,23 +113,21 @@
           </li>
         </ul>
         <p>
-          A subtle but important rule: a value token never gets a semantic
-          name. Calling one <code>values.brand</code> would smuggle a
-          decision ("this is <em>the</em> brand colour") into a layer that's
-          supposed to hold pure material. Edit <code>values.gray800</code>
-          to red and the name is still <code>values.gray800</code> — a
-          slight lie, but a localised one. Meaning belongs upstairs.
+          These stay deliberately non-semantic. They are raw inputs. Change
+          one and the system gets different material to work with, but the
+          meaning still lives elsewhere.
         </p>
       </section>
 
       <section>
-        <h2>3. Reference tokens — give names meaning</h2>
+        <h2>3. Static connections</h2>
         <p>
-          A reference token points to a value token. Its job is to
-          introduce <em>meaning</em>. Where <code>values.gray800</code> only
-          says "this hex," <code>color.brand</code> says "this is what we
-          call our brand." Same colour, but the name now has a job in the
-          system.
+          A semantic token gives one of those inputs a job in the system.
+          In the simplest case it does that with a static connection:
+          <code>color.brand</code> points at <code>values.gray800</code>,
+          <code>color.surface</code> points at <code>values.gray50</code>,
+          <code>color.onSurface</code> points at
+          <code>values.gray900</code>.
         </p>
         <ul class="token-list">
           <li>
@@ -158,67 +152,43 @@
           </li>
         </ul>
         <p>
-          Notice what just happened. The value layer holds no opinions —
-          <code>values.gray800</code> is just a hex with a descriptive
-          label. The colour layer is where the design system makes
-          decisions: <em>this</em> grey is our brand,
-          <em>that</em> surface and its paired text always travel together,
-          links use <code>color.interaction</code>. Same mechanism each
-          time — a ref. Click any ref chip and you'll see the candidates it
-          could point at instead.
+          Static connections are good. They are direct, inspectable, and
+          easy to reason about. Click any ref chip and you'll see the
+          candidates it could point at instead.
         </p>
         <p>
-          <code>color.surface</code> and <code>color.onSurface</code> are a
-          <strong>pair token</strong>: two refs whose values are decided
-          together and used together. The same pattern shows up wherever
-          something sits on something else — <code>button</code> /
-          <code>onButton</code>, <code>card</code> / <code>onCard</code>.
-          Naming the pair is half the design decision; we'll come back to
-          the other half in section&nbsp;5.
-        </p>
-        <p>
-          That's the stack so far: value tokens describe material,
-          reference tokens assign role. But a reference still only tells
-          you the choice. Not why it was made.
+          The limit shows up when the relationship matters more than the
+          pointer. Pairs like <code>surface</code> / <code>onSurface</code>
+          are clearly related, but a static connection still stores each
+          side as a pinned choice. The relationship itself lives somewhere
+          outside the token.
         </p>
       </section>
 
       <section>
-        <h2>4. The problem with decisions</h2>
+        <h2>4. When static stops being enough</h2>
         <p>
-          The weakness shows up the moment a token contains a decision
-          instead of a fact. A fact is easy:
-          <code>values.gray800 = '#202126'</code>. A decision is harder:
-          <code>color.buttonText = ref('values.white')</code>. White
-          compared to what? Chosen for what reason? Valid under what
-          conditions?
+          Some tokens are really decisions, not just pointers.
+          <code>color.buttonText = ref('values.white')</code> stores an
+          answer, but not the reasoning behind it: what it was compared
+          against, why white was chosen, and when that decision should stop
+          holding.
         </p>
         <p>
-          Reference tokens capture the <strong>outcome</strong> of a
-          decision but hide the <strong>reason</strong>. Once the token
-          ships, that reasoning lives somewhere else — in a Figma comment,
-          a PR description, a Slack thread — and then decays. Six months
-          later nobody is sure why the choice was made, so nobody wants to
-          touch it. The system remembers the answer and forgets the
-          question.
+          This is where the spreadsheet analogy helps. Instead of treating a
+          token like a cell with a fixed link, treat it like a cell that can
+          also hold a formula. The connection can stay static when that is
+          enough. But when the logic matters, it can become dynamic instead.
         </p>
         <p>
-          That opacity is what makes changing values in many design systems
-          feel scary. The repercussions are real, but the logic is often
-          scattered across documentation, conventions, and people's memory.
-          My goal is not to turn a design system into an even denser web of
-          hidden decisions. It is the opposite: to simplify the system by
-          putting the decisions where everyone can see them.
-        </p>
-        <p>
-          That is the point where I want a third layer. Not a token that
-          stores the chosen value, but a token that stores the decision
-          procedure. In other words: make the question part of the system
-          too. Then two useful things happen:
+          In this demo the dynamic cases fall into two buckets. One kind of
+          rule chooses one option from a set. The other kind takes a value
+          and does something to it. Both are still connections between the
+          same tokens. They are just formulas instead of fixed links.
         </p>
         <ul>
-          <li>The decision can be re-run automatically when its inputs change.</li>
-          <li>Anyone reading the token — including future me — can see how the choice was made, without hunting through documentation.</li>
+          <li>They can be re-run automatically when inputs change.</li>
+          <li>They keep the reasoning attached to the token instead of leaving it in documentation.</li>
         </ul>
         <p>
           The button label in the example panel already works that way. The
@@ -247,25 +217,19 @@
       </section>
 
       <section>
-        <h2>5. Procedural tokens — rules, not values</h2>
+        <h2>5. Dynamic connections in practice</h2>
         <p>
-          A procedural token is the third layer: instead of storing a
-          settled answer, it stores the logic that can keep producing one.
-          Read the rule and you can see the decision. Change the inputs and
-          the system can make the decision again.
+          A procedural token is just a token with a dynamic connection. In
+          this demo there are two main kinds: choose one option from a set,
+          or take a value and transform it. Both live comfortably alongside
+          plain static refs.
         </p>
         <p>
-          A few short demos follow, each one a different shape of decision:
-          paired contrast, thresholds, scale, palette.
-        </p>
-        <p>
-          Another way to name this category is <strong>utility tokens</strong>
-          or <strong>transform tokens</strong>: instead of storing yet another
-          explicit output, they store a reusable operation such as "darken by
-          15%" or "multiply the base spacing by 1.75".
+          The first two examples choose from a set. The next two do
+          something to a value.
         </p>
 
-        <h3 data-rewire="onSurface">What if the text was always the most readable on its surface?</h3>
+        <h3 data-rewire="onSurface">Choose one of a set: the most readable foreground</h3>
         <p>
           Up in <a href="#">section&nbsp;3</a>, <code>color.onSurface</code>
           was a plain ref to <code>values.gray900</code> — a decision pinned
@@ -313,7 +277,7 @@
           </p>
         </div>
 
-        <h3>Contrast with a threshold</h3>
+        <h3>Choose one of a set: the faintest line that still works</h3>
         <p>
           Same family of rule, slightly different brief. The button's
           hairline outline is computed:
@@ -348,7 +312,7 @@
           a boundary."
         </p>
 
-        <h3>Spacing as a scale</h3>
+        <h3>Do something to a value: scale it</h3>
         <p>
           Every gap inside the example panel — title to paragraph, paragraph
           to chart, chart to button — is a multiple of
@@ -417,7 +381,7 @@
           </p>
         </div>
 
-        <h3>A ramp between two intents</h3>
+        <h3>Do something to values: blend them</h3>
         <p>
           The seven bars in the chart aren't seven hand-picked colours.
           They're seven steps of a procedurally-generated ramp running
@@ -490,11 +454,13 @@
           time.
         </p>
         <p>
-          That is the narrative shift I care about. Tokens stop being a
-          catalogue of settled answers and become a set of small design
-          programs: inspectable, repeatable, and capable of surprise. When
-          the why lives in the token, the system stays legible even after
-          the inputs move.
+          That is the narrative shift I care about. Keep the value layer
+          and the semantic layer, but stop treating every connection
+          between them as static. Some connections pin a choice. Others
+          encode the rule that keeps making it. At that point tokens stop
+          being a catalogue of settled answers and become a set of small
+          design programs: inspectable, repeatable, and capable of
+          surprise.
         </p>
       </section>
 
