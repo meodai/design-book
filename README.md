@@ -337,4 +337,4 @@ Design Book is strongest in that middle layer: not generating colors, but turnin
 
 ## License
 
-[AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [hello@meodai.me](mailto:hello@meodai.me).
+[AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [david@elastq.ch](mailto:david@elastq.ch).

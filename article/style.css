@@ -272,10 +272,11 @@ html, body {
 }
 
 .article-content .lede {
-  font-size: 19px;
+  font-size: 1.5rem;
   color: var(--article-text);
   opacity: 0.85;
   line-height: 1.5;
+  max-width: 42ch;
 }
 
 .article-content section {
