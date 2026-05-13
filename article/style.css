@@ -353,6 +353,104 @@ html, body {
   padding: 0;
 }
 
+.pair-demo {
+  margin: 20px 0 24px 0;
+  padding: 16px;
+  max-width: 34rem;
+  border: 1px solid var(--article-rule);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.035));
+}
+
+.pair-demo__title {
+  margin: 0 0 8px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--article-muted);
+}
+
+.pair-demo__rule {
+  margin: 0 0 14px 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.pair-demo__rule code {
+  background: transparent;
+  padding: 0;
+}
+
+.pair-demo__rows {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pair-demo__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.pair-demo__label {
+  min-width: 7.5rem;
+}
+
+.pair-demo__note {
+  margin: 0;
+  color: var(--article-muted);
+  font-size: 0.95rem;
+}
+
+.scale-demo {
+  margin: 20px 0 24px 0;
+  padding: 16px;
+  max-width: 42rem;
+  border: 1px solid var(--article-rule);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.scale-demo__title {
+  margin: 0 0 10px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--article-muted);
+}
+
+.scale-demo__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 0;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.scale-demo__label {
+  min-width: 7.5rem;
+}
+
+.scale-demo__row code {
+  background: transparent;
+  padding: 0;
+}
+
+.scale-demo__equals {
+  color: var(--article-muted);
+}
+
 /* ---------- Token chips ---------- */
 
 .token-chip {

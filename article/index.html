@@ -166,6 +166,15 @@
           could point at instead.
         </p>
         <p>
+          <code>color.surface</code> and <code>color.onSurface</code> are a
+          <strong>pair token</strong>: two refs whose values are decided
+          together and used together. The same pattern shows up wherever
+          something sits on something else — <code>button</code> /
+          <code>onButton</code>, <code>card</code> / <code>onCard</code>.
+          Naming the pair is half the design decision; we'll come back to
+          the other half in section&nbsp;5.
+        </p>
+        <p>
           That's the stack so far: value tokens describe material,
           reference tokens assign role. But a reference still only tells
           you the choice. Not why it was made.
@@ -247,6 +256,12 @@
           A handful of demos follow, each one a different shape of decision:
           contrast, scale, palette, state.
         </p>
+        <p>
+          Another way to name this category is <strong>utility tokens</strong>
+          or <strong>transform tokens</strong>: instead of storing yet another
+          explicit output, they store a reusable operation such as "darken by
+          15%" or "multiply the base spacing by 1.75".
+        </p>
 
         <h3 data-rewire="onSurface">What if the text was always the most readable on its surface?</h3>
         <p>
@@ -274,6 +289,27 @@
           <code>onSurface</code> is no longer a convention you have to
           maintain — it's a rule the token enforces on its own.
         </p>
+        <div class="pair-demo" aria-label="Paired surface and on-surface treatment demo">
+          <p class="pair-demo__title">Paired treatment</p>
+          <p class="pair-demo__rule">
+            <code>surfaceTreatment.default = { surface, onSurface }</code>
+          </p>
+          <div class="pair-demo__rows">
+            <p class="pair-demo__row">
+              <span class="pair-demo__label"><code>surface</code></span>
+              <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
+            </p>
+            <p class="pair-demo__row">
+              <span class="pair-demo__label"><code>onSurface</code></span>
+              <button class="token-chip" data-token="color.onSurface" type="button"></button>
+            </p>
+          </div>
+          <p class="pair-demo__note">
+            Treat these as one named decision, not two unrelated variables:
+            edit the surface and the readable foreground re-decides itself to
+            keep the pair coherent.
+          </p>
+        </div>
 
         <h3>Contrast with a threshold</h3>
         <p>
@@ -324,6 +360,60 @@
           ></button>. Pull the base, the whole rhythm scales together via
           <code>spacingScale</code>. The rule already knew what to do.
         </p>
+        <div class="scale-demo" aria-label="Editable spacing scale demo">
+          <p class="scale-demo__title">Edit the scale here</p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.base</code></span>
+            <button
+              class="token-chip"
+              data-token="space.base"
+              data-min="8"
+              data-max="32"
+              data-step="1"
+              type="button"
+            ></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.xs</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.xs.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.xs" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.s</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.s.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.s" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.m</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.m.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.m" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.l</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.l.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.l" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.xl</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.xl.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.xl" type="button"></button>
+          </p>
+        </div>
 
         <h3>A ramp between two intents</h3>
         <p>
@@ -396,6 +486,18 @@
           knowledge.
         </p>
         <p>
+          There is a practical side too. Without rules, a design system
+          grows on a hockey stick: <code>button.border.color</code>,
+          <code>button.background.color</code>,
+          <code>button.background.color.hover</code>, on and on into the
+          tens of thousands. With rules, hundreds of derived values
+          compress back into a handful of inputs. The trade-off is real —
+          <code>darken(color.interaction, 0.15)</code> is harder to read
+          at a glance than <code>color.linkHover = #133380</code> — but
+          intentional: the harder-to-skim line is also the one that
+          updates itself when its inputs move.
+        </p>
+        <p>
           That is the narrative shift I care about. Value tokens answer
           "what is it?" Reference tokens answer "what is it for?"
           Procedural tokens answer "why this, under these conditions?"
@@ -419,6 +521,24 @@
           reading condition. It could encode typographic contrast the same
           way the button border encodes contrast now: as a rule with inputs,
           constraints, and a visible reason for the outcome.
+        </p>
+        <p>
+          And it isn't only typography. Motion has its own rules in flight
+          — easing curves, durations, staged delays that read better as a
+          single named treatment than as a dozen unrelated values. So do
+          content choices: a confirmation label, an error message, the
+          icon a destructive action should use. Each of those is a
+          decision someone makes today by convention or by hand. Each of
+          them could be a procedural token tomorrow, with the reasoning
+          attached.
+        </p>
+        <p>
+          The same applies to grouped decisions, not just single outputs:
+          a surface/on-surface pair, a small palette of colours that are
+          meant to travel together, or a typographic treatment that sets
+          size, weight, and line height as one named unit. Some design
+          decisions are more legible as coordinated sets than as isolated
+          variables.
         </p>
         <p>
           That is the direction I want to explore further. Once tokens can
