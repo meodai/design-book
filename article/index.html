@@ -249,14 +249,14 @@
       <section>
         <h2>5. Procedural tokens — rules, not values</h2>
         <p>
-          A procedural token is that third layer. Value tokens describe
-          material. Reference tokens assign role. Procedural tokens encode
-          reasoning. Read the rule and you can see the decision. Change the
-          inputs and the system can make the decision again.
+          A procedural token is the third layer: instead of storing a
+          settled answer, it stores the logic that can keep producing one.
+          Read the rule and you can see the decision. Change the inputs and
+          the system can make the decision again.
         </p>
         <p>
-          A handful of demos follow, each one a different shape of decision:
-          contrast, scale, palette, state.
+          A few short demos follow, each one a different shape of decision:
+          paired contrast, thresholds, scale, palette.
         </p>
         <p>
           Another way to name this category is <strong>utility tokens</strong>
@@ -443,28 +443,10 @@
           every change. The ramp is downstream of two decisions: which
           surface we sit on, and which colour we use to act.
         </p>
-
-        <h3>Darker on hover</h3>
         <p>
-          The hover state is a smaller example, but it shows the same idea.
-          Hover the link in the example panel and you'll see a shade of
-          <code>color.interaction</code>. That shade isn't stored — it's
-          computed:
-        </p>
-        <p class="rule-line">
-          <code>color.linkHover</code> =
-          <code>darken(color.interaction,&nbsp;</code><button
-            class="token-chip"
-            data-fn-option="color.linkHover.amount"
-            data-min="0"
-            data-max="0.5"
-            data-step="0.01"
-            type="button"
-          ></button><code>)</code>
-        </p>
-        <p>
-          Move the amount. The hover state updates wherever it's used — no
-          CSS edit, no rebuild.
+          The same pattern also works at much smaller scales. A hover shade
+          can be a rule just as easily as a palette or a spacing system; the
+          size of the decision changes, not the idea.
         </p>
       </section>
 
@@ -508,53 +490,30 @@
           time.
         </p>
         <p>
-          That is the narrative shift I care about. Value tokens answer
-          "what is it?" Reference tokens answer "what is it for?"
-          Procedural tokens answer "why this, under these conditions?"
-          When the why lives in the token, the system stays legible longer,
-          and it keeps making sense even after the inputs move.
+          That is the narrative shift I care about. Tokens stop being a
+          catalogue of settled answers and become a set of small design
+          programs: inspectable, repeatable, and capable of surprise. When
+          the why lives in the token, the system stays legible even after
+          the inputs move.
         </p>
       </section>
 
       <section>
-        <h2>7. Future</h2>
+        <h2>7. Beyond colour</h2>
         <p>
-          The examples in this demo are still small. They mostly deal with
-          colour, spacing, and simple transforms. What interests me next is
-          pushing the same idea into more complex design decisions:
-          typography that responds to contrast, or font choices that depend
-          on the features a UI needs to express.
+          The examples here stay close to colour and spacing because those
+          are easy to see. But the same pattern matters even more in places
+          where design systems still rely on convention and memory: type
+          treatments, motion rules, content strings, icon choices, or
+          grouped decisions like a surface/on-surface pair.
         </p>
         <p>
-          A token could decide not just <em>how large</em> text should be,
-          but which face should be used for a given context, script, or
-          reading condition. It could encode typographic contrast the same
-          way the button border encodes contrast now: as a rule with inputs,
-          constraints, and a visible reason for the outcome.
-        </p>
-        <p>
-          And it isn't only typography. Motion has its own rules in flight
-          — easing curves, durations, staged delays that read better as a
-          single named treatment than as a dozen unrelated values. So do
-          content choices: a confirmation label, an error message, the
-          icon a destructive action should use. Each of those is a
-          decision someone makes today by convention or by hand. Each of
-          them could be a procedural token tomorrow, with the reasoning
-          attached.
-        </p>
-        <p>
-          The same applies to grouped decisions, not just single outputs:
-          a surface/on-surface pair, a small palette of colours that are
-          meant to travel together, or a typographic treatment that sets
-          size, weight, and line height as one named unit. Some design
-          decisions are more legible as coordinated sets than as isolated
-          variables.
-        </p>
-        <p>
-          That is the direction I want to explore further. Once tokens can
-          carry reasoning, there is no reason to stop at colours. The more
-          complex the design decision, the more valuable it becomes to keep
-          the logic inside the system instead of leaving it behind in notes.
+          The more complex the decision, the more valuable it becomes to
+          encode the relationship instead of pinning a result. That is where
+          procedural tokens stop being a convenience and start becoming a
+          real design tool: not just a way to keep systems consistent, but a
+          way to make them more legible, more adaptable, and more capable of
+          producing outcomes you would not have arrived at by hand.
         </p>
       </section>
     </article>
