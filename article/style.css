@@ -45,8 +45,10 @@
   --ramp-900: #060607;
 
   /* Static article styling — never overwritten. */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans:            ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:            ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-article:         "Libertinus Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-article-display: "Libertinus Serif", ui-serif, Georgia, serif;
   --article-text:       #1a1a1a;
   --article-muted:      rgba(0, 0, 0, 0.6);
   --article-rule:       rgba(0, 0, 0, 0.08);
@@ -189,8 +191,9 @@ html, body {
 /* ---------- Article column (STATIC) ---------- */
 
 .article-content {
-  font-size: 17px;
-  line-height: 1.65;
+  font-family: var(--font-article);
+  font-size: 18px;
+  line-height: 1.6;
   color: var(--article-text);
 }
 
@@ -207,27 +210,33 @@ html, body {
   margin: 0 0 12px 0;
 }
 
+.article-content h1,
+.article-content h2,
+.article-content h3 {
+  font-family: var(--font-article-display);
+}
+
 .article-content h1 {
-  font-size: 36px;
-  line-height: 1.1;
-  margin: 0 0 20px 0;
-  letter-spacing: -0.015em;
-  font-weight: 700;
+  font-size: 64px;
+  line-height: 1.05;
+  margin: 0 0 24px 0;
+  letter-spacing: -0.02em;
+  font-weight: 400;
 }
 
 .article-content h2 {
-  font-size: 24px;
-  line-height: 1.2;
-  margin: 56px 0 16px 0;
-  letter-spacing: -0.005em;
-  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.15;
+  margin: 72px 0 20px 0;
+  letter-spacing: -0.01em;
+  font-weight: 400;
 }
 
 .article-content h3 {
-  font-size: 18px;
-  line-height: 1.3;
-  margin: 32px 0 8px 0;
-  font-weight: 600;
+  font-size: 26px;
+  line-height: 1.25;
+  margin: 40px 0 10px 0;
+  font-weight: 400;
 }
 
 /* When a scroll-triggered rewire fires, the heading sprouts a tiny live
@@ -259,6 +268,7 @@ html, body {
 .article-content ul,
 .article-content ol {
   margin: 0 0 16px 0;
+  max-width: 55ch;
 }
 
 .article-content .lede {
