@@ -8,6 +8,7 @@ import { lightenImpl } from './color/lighten';
 import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
 import { relativeToImpl } from './color/relative-to';
+import { shadeImpl } from './color/shade';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
@@ -22,6 +23,7 @@ export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
 export { averageColor } from './color/average-color';
 export { mostVivid } from './color/most-vivid';
+export { shade } from './color/shade';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';
@@ -56,6 +58,9 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction('mostVivid', (scope: any, against: string | null, options?: { minContrast?: number }) =>
 		mostVividImpl(scope, against, options?.minContrast ?? 0),
+	);
+	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
+		shadeImpl(colorValue, options?.amount ?? 0.1),
 	);
 	book.registerFunction('spacingScale', (baseValue: string, options?: { multiplier?: number }) =>
 		spacingScaleImpl(baseValue, options?.multiplier ?? 1),

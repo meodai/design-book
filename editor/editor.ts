@@ -1,6 +1,6 @@
 import {
   DesignBook, color, ref, px, rem, ms,
-  bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid,
+  bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade,
   spacingScale, typographyScale,
   Renderer, SVGRenderer,
 } from '../src/index';
@@ -67,7 +67,9 @@ function bootDesignSystem() {
     minContrast: 4.5,
   }));
   card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));
-  card.set('border', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.15 }));
+  // shade adapts to the surface's lightness — darkens light surfaces,
+  // lightens dark ones — so the border is always subtly visible.
+  card.set('border', shade(ref('card.surface'), { amount: 0.12 }));
   card.set('on-surface-weak', colorMix(ref('card.on-surface'), ref('card.surface'), { ratio: 0.4 }));
   card.set('input', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.06 }));
   card.set('on-input', ref('card.on-surface'));
@@ -652,7 +654,7 @@ function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
 
 const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
-  'lighten', 'darken', 'relativeTo',
+  'lighten', 'darken', 'shade', 'relativeTo',
   'closestColor', 'furthestFrom', 'averageColor', 'mostVivid',
   'spacingScale', 'typographyScale', 'timing',
 ];

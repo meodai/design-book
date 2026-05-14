@@ -50,7 +50,7 @@ export { DependencyGraph } from './dependency-graph';
 // Functions
 export {
   bestContrastWith, minContrastWith,
-  colorMix, lighten, darken, relativeTo,
+  colorMix, lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
   registerBuiltinFunctions,

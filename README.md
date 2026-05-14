@@ -95,8 +95,11 @@ mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally 
 colorMix(color1, color2, { ratio, colorSpace })   // Interpolate two colors
 lighten(color, { amount })                          // Increase lightness
 darken(color, { amount })                           // Decrease lightness
+shade(color, { amount })                            // Tonal step that adapts: darkens if input is light, lightens if dark
 relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
 ```
+
+`shade` is useful when you want a subtle variation that's *always* visible against the input — `darken(surface)` collapses to black when the surface is already dark, but `shade(surface)` flips direction and lightens instead. Picks based on OKLCH lightness: > 0.5 darkens, ≤ 0.5 lightens.
 
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
 

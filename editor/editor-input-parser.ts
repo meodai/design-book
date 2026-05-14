@@ -1,7 +1,7 @@
 import {
   color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
-  lighten, darken, relativeTo,
+  lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
 } from '../src/index';
@@ -242,6 +242,15 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const color = getTokenArg(parseArg(args[0], book));
     const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
     return darken(color, options);
+  },
+
+  // shade(color, options?)
+  shade(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('shade requires 1 argument');
+    const color = getTokenArg(parseArg(args[0], book));
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return shade(color, options);
   },
 
   // relativeTo(color, colorSpace, modifications, options?)

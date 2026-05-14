@@ -5,6 +5,7 @@ import {
   ref,
   px,
   darken,
+  shade,
   spacingScale,
   typographyScale,
   bestContrastWith,
@@ -162,17 +163,24 @@ colorScope.set('brand',       ref('values.gray800'));
 colorScope.set('interaction', ref('values.blue500'));
 colorScope.set('text',        ref('color.onSurface'));
 colorScope.set('linkHover',   darken(ref('color.interaction'), { amount: 0.15 }));
+// A slightly-shifted surface used as the lighter end of the ramp. Subtle
+// contrast against the actual surface so the chart bars stand out without
+// looking like a separate panel. `shade` picks its direction from the
+// input's lightness — darkens light surfaces, lightens dark ones — so the
+// demo keeps working under Poline mode no matter where the surface lands.
+colorScope.set('surfaceDim',  shade(ref('color.surface'), { amount: 0.10 }));
 
-// A procedural ramp: 7 steps interpolated between color.surface and
-// color.interaction in oklch. Re-pointing either anchor re-tones the chart,
-// the button outline, and any best/min-contrast tokens that read from it.
+// A procedural ramp: 7 steps interpolated between a slightly-darkened
+// surface and color.interaction in oklch. Re-pointing either anchor
+// re-tones the chart, the button outline, and any best/min-contrast tokens
+// that read from it.
 const ramp = book.addScope('ramp');
-ramp.set('s100', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.05, colorSpace: 'oklch' }));
-ramp.set('s200', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.15, colorSpace: 'oklch' }));
-ramp.set('s300', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.30, colorSpace: 'oklch' }));
-ramp.set('s400', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.50, colorSpace: 'oklch' }));
-ramp.set('s500', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.70, colorSpace: 'oklch' }));
-ramp.set('s700', colorMix(ref('color.surface'), ref('color.interaction'), { ratio: 0.90, colorSpace: 'oklch' }));
+ramp.set('s100', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.05, colorSpace: 'oklch' }));
+ramp.set('s200', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.15, colorSpace: 'oklch' }));
+ramp.set('s300', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.30, colorSpace: 'oklch' }));
+ramp.set('s400', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.50, colorSpace: 'oklch' }));
+ramp.set('s500', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.70, colorSpace: 'oklch' }));
+ramp.set('s700', colorMix(ref('color.surfaceDim'), ref('color.interaction'), { ratio: 0.90, colorSpace: 'oklch' }));
 ramp.set('s900', ref('color.interaction'));
 // Button label: highest-contrast ramp step against color.brand (the button
 // background). The decision ("readable label on whatever the button is")
