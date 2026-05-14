@@ -273,7 +273,8 @@ html, body {
 .article-content ul,
 .article-content ol {
   margin: 0 0 16px 0;
-  max-width: 55ch;
+  max-width: 60ch;
+  text-wrap: balance;
 }
 
 .article-content .lede {
@@ -281,7 +282,7 @@ html, body {
   color: var(--article-text);
   opacity: 0.85;
   line-height: 1.5;
-  max-width: 42ch;
+  max-width: 50ch;
 }
 
 .article-content section {
