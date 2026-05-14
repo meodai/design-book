@@ -88,6 +88,16 @@ function activateProceduralPalette() {
   if (proceduralActivated) return;
   proceduralActivated = true;
 
+  // §3's onSurface rewire must have fired before we touch the values pool.
+  // If the reader landed on §5 without scrolling past §3 (deep link, fast
+  // scroll, page reloaded near the bottom), color.onSurface would still be
+  // `ref('values.gray900')` — and would dangle the moment we delete the
+  // descriptive value tokens below. rewireOnSurface() is idempotent.
+  rewireOnSurface();
+  document.querySelectorAll('[data-rewire="onSurface"]').forEach((m) => {
+    (m as HTMLElement).classList.add('rewire-fired');
+  });
+
   // Build the new palette first so refs always point at something valid
   // during the transition.
   syncPolineValues();
