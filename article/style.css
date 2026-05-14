@@ -326,6 +326,44 @@ html, body {
   accent-color: var(--article-accent);
 }
 
+/* ---------- Dependency graph (under the live example) ---------- */
+.dep-graph-figure {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--article-rule);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.dep-graph-figure__caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--article-muted);
+  margin-bottom: 8px;
+}
+
+.dep-graph svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- Article footer ---------- */
+.article-footer {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 1px solid var(--article-rule);
+  font-size: 0.95em;
+  color: var(--article-muted);
+}
+
+.article-footer p {
+  margin-bottom: 8px;
+  max-width: 55ch;
+}
+
 .article-content p,
 .article-content ul,
 .article-content ol {

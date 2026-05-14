@@ -1,5 +1,6 @@
 import {
   DesignBook,
+  SVGRenderer,
   color,
   ref,
   px,
@@ -1010,6 +1011,24 @@ if (polinePicker) {
     { rootMargin: '0px 0px -35% 0px' },
   );
   observer.observe(polinePicker);
+}
+
+// ---------------------------------------------------------------------------
+// Dependency graph (under the live example panel)
+// ---------------------------------------------------------------------------
+//
+// SVGRenderer draws a circular layout of every scope + the edges between
+// them, including the dashed function-token edges. We re-render on every
+// `change` so the reader sees the graph reorganise as tokens get added,
+// removed, or rewired (e.g. on §3 onSurface rewire, on §5 Poline activation).
+const depGraphContainer = document.getElementById('dep-graph');
+if (depGraphContainer) {
+  const svgRenderer = new SVGRenderer(book);
+  const renderDepGraph = () => {
+    depGraphContainer.innerHTML = svgRenderer.render();
+  };
+  book.on('change', renderDepGraph);
+  renderDepGraph();
 }
 
 // ---------------------------------------------------------------------------
