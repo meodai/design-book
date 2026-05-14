@@ -333,7 +333,42 @@
       </section>
 
       <section>
-        <h2>5. Better links</h2>
+        <h2>5. Truly procedural design</h2>
+        <p>
+          Tokenising everything used to feel like the death of creative
+          freedom. Every choice locked in. Every relationship buried in a
+          dependency graph that no human wanted to climb. Once the system
+          was set up, exploration moved elsewhere — back into Figma, back
+          into a script, back to ad-hoc decisions made outside the system
+          and then patched in.
+        </p>
+        <p>
+          Procedural tokens flip that. The exploration tool can live inside
+          the system. Every value token in this article — every grey, every
+          accent — is now a point on a single colour line. Drag any anchor
+          and the entire system shifts together: the values move, the refs
+          that point at them follow, the ramp re-interpolates, the contrast
+          rules re-pick. One small input. Hundreds of coherent outputs.
+        </p>
+        <div class="poline-demo" aria-label="Palette generator driving every value token">
+          <p class="poline-demo__caption">
+            Each dot on the wheel is an anchor; the line between them is
+            the palette. Every <code>values.*</code> token is sampled
+            somewhere on that line — even the ones named for greys.
+          </p>
+          <poline-picker id="poline" interactive></poline-picker>
+        </div>
+        <p>
+          The names <code>values.gray800</code>, <code>values.red500</code>
+          stay where they were. Their colours don't. That is the point: a
+          token system that can be explored rather than just maintained.
+          Coherence is enforced by the structure; freedom is restored at
+          the input.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Better links</h2>
         <p>
           This is not an argument against static refs. Most links should
           stay static, because static is clear. The point is simply to stop

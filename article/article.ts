@@ -16,6 +16,8 @@ import type {
   TokenValue,
 } from '../src';
 import { parse, wcagContrast } from 'culori';
+import { Poline, positionFunctions } from 'poline';
+import 'poline/picker';
 import 'hdr-color-input';
 import './style.css';
 
@@ -36,6 +38,96 @@ values.set('gray900',  color('#1a1a1a'));
 values.set('blue500',  color('#1d4eb8'));
 values.set('red500',   color('#dc2626'));
 values.set('white',    color('#ffffff'));
+
+// ---------------------------------------------------------------------------
+// Poline (§5) — a procedural palette that takes over the values pool on scroll
+// ---------------------------------------------------------------------------
+//
+// At boot the values scope still holds the hard-coded hex tokens (gray50,
+// gray800, blue500, …). When the reader scrolls into the §5 palette picker,
+// activateProceduralPalette() runs once: the descriptive tokens are deleted,
+// nine new `values.poline100`…`values.poline900` tokens are sampled along
+// the Poline line, and the semantic refs (color.surface / color.brand /
+// color.interaction) are re-pointed at the new palette. From that moment on
+// any drag in the picker re-runs syncPolineValues, and the entire system —
+// chart bars, button label, body text, ramp anchors — moves together.
+const polineState = new Poline({
+  anchorColors: [
+    [270, 0.55, 0.99],
+    [88,  0.94, 0.93],
+  ],
+  numPoints: 8,
+  positionFunctionX: positionFunctions.linearPosition,
+  positionFunctionY: positionFunctions.linearPosition,
+  positionFunctionZ: positionFunctions.linearPosition,
+});
+
+const POLINE_TOKEN_COUNT = 9;
+const polineTokenNames = Array.from(
+  { length: POLINE_TOKEN_COUNT },
+  (_, i) => `poline${(i + 1) * 100}`,
+);
+
+let proceduralActivated = false;
+
+function syncPolineValues() {
+  if (!proceduralActivated) return;
+  const steps = POLINE_TOKEN_COUNT - 1;
+  for (let i = 0; i < POLINE_TOKEN_COUNT; i++) {
+    const t = i / steps;
+    try {
+      const point = polineState.getColorAt(t);
+      values.set(polineTokenNames[i], color(point.hslCSS));
+    } catch (err) {
+      console.warn(`[poline] sync failed for ${polineTokenNames[i]}:`, err);
+    }
+  }
+}
+
+function activateProceduralPalette() {
+  if (proceduralActivated) return;
+  proceduralActivated = true;
+
+  // Build the new palette first so refs always point at something valid
+  // during the transition.
+  syncPolineValues();
+
+  // Re-point semantic refs to the new palette positions. surface lands at
+  // the lightest step; brand near the dark midsection; interaction at a
+  // distinct point past the middle.
+  colorScope.set('surface',     ref('values.poline100'));
+  colorScope.set('brand',       ref('values.poline500'));
+  colorScope.set('interaction', ref('values.poline700'));
+
+  // Drop the descriptive value tokens — the palette is now Poline-driven.
+  for (const name of ['gray50', 'gray500', 'gray800', 'gray900', 'blue500', 'red500', 'white']) {
+    values.delete(name);
+  }
+}
+
+function deactivateProceduralPalette() {
+  if (!proceduralActivated) return;
+  proceduralActivated = false;
+
+  // Restore original descriptive tokens before pulling poline tokens out,
+  // so semantic refs always point at something valid in between.
+  values.set('gray50',   color('#fafafa'));
+  values.set('gray500',  color('#717c8f'));
+  values.set('gray800',  color('#202126'));
+  values.set('gray900',  color('#1a1a1a'));
+  values.set('blue500',  color('#1d4eb8'));
+  values.set('red500',   color('#dc2626'));
+  values.set('white',    color('#ffffff'));
+
+  // Re-point semantic refs back to the originals.
+  colorScope.set('surface',     ref('values.gray50'));
+  colorScope.set('brand',       ref('values.gray800'));
+  colorScope.set('interaction', ref('values.blue500'));
+
+  for (const name of polineTokenNames) {
+    values.delete(name);
+  }
+}
 
 // The color layer is the semantic layer: refs that give the raw values a
 // role in the system. "surface" / "onSurface" name a paired purpose;
@@ -782,6 +874,11 @@ document.getElementById('reset')?.addEventListener('click', () => {
   document.querySelectorAll('[data-rewire="onSurface"]').forEach((m) => {
     (m as HTMLElement).classList.remove('rewire-fired');
   });
+
+  // Tear down the Poline-driven palette so the descriptive value tokens
+  // are back and the section's intersection observer can re-fire on the
+  // next scroll into view.
+  deactivateProceduralPalette();
 });
 
 // Close the popover when the chip it belongs to scrolls off-screen, so a
@@ -837,6 +934,36 @@ if (rewireMarkers.length) {
     { rootMargin: '0px 0px -35% 0px' },
   );
   rewireMarkers.forEach((m) => observer.observe(m));
+}
+
+// Attach the Poline state to the §5 picker and listen for drags. The picker
+// is in the DOM at boot, but it doesn't drive anything until the reader
+// scrolls into the section — see the IntersectionObserver below.
+const polinePicker = document.getElementById('poline') as
+  | (HTMLElement & { setPoline?: (p: Poline) => void })
+  | null;
+if (polinePicker) {
+  if (typeof polinePicker.setPoline === 'function') {
+    polinePicker.setPoline(polineState);
+  }
+  polinePicker.addEventListener('poline-change', () => {
+    // Activate on first drag too, in case the reader hits the picker before
+    // its section enters the viewport (e.g. deep-linked or short page).
+    if (!proceduralActivated) activateProceduralPalette();
+    else syncPolineValues();
+  });
+
+  // Scroll-triggered activation: when the picker enters the reading area,
+  // swap the descriptive value tokens for the Poline-driven palette.
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) activateProceduralPalette();
+      }
+    },
+    { rootMargin: '0px 0px -35% 0px' },
+  );
+  observer.observe(polinePicker);
 }
 
 // ---------------------------------------------------------------------------

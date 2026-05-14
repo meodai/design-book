@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Procedural Tokens — encoding design decisions</title>
-  <script type="module" crossorigin src="/assets/index-DZP3Dnf-.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CPP31rf9.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-B7fiDbj6.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-D53wnniD.css">
 </head>
 <body>
   <div class="layout">
@@ -18,15 +21,15 @@
           <a href="#" class="example-link">See the full report</a>.
         </p>
         <div class="example-separator" aria-hidden="true"></div>
-        <svg class="example-chart" viewBox="0 0 280 110" role="img" aria-label="Bar chart, seven steps of the ramp">
-          <rect x="0"   y="80" width="32" height="30"  fill="var(--ramp-100)" rx="2" />
-          <rect x="40"  y="62" width="32" height="48"  fill="var(--ramp-200)" rx="2" />
-          <rect x="80"  y="42" width="32" height="68"  fill="var(--ramp-300)" rx="2" />
-          <rect x="120" y="22" width="32" height="88"  fill="var(--ramp-400)" rx="2" />
-          <rect x="160" y="10" width="32" height="100" fill="var(--ramp-500)" rx="2" />
-          <rect x="200" y="32" width="32" height="78"  fill="var(--ramp-700)" rx="2" />
-          <rect x="240" y="55" width="32" height="55"  fill="var(--ramp-900)" rx="2" />
-        </svg>
+        <div class="example-chart" role="img" aria-label="Bar chart, seven steps of the ramp">
+          <span class="example-chart-bar" style="--h: 30px;  background: var(--ramp-100);"></span>
+          <span class="example-chart-bar" style="--h: 48px;  background: var(--ramp-200);"></span>
+          <span class="example-chart-bar" style="--h: 68px;  background: var(--ramp-300);"></span>
+          <span class="example-chart-bar" style="--h: 88px;  background: var(--ramp-400);"></span>
+          <span class="example-chart-bar" style="--h: 100px; background: var(--ramp-500);"></span>
+          <span class="example-chart-bar" style="--h: 78px;  background: var(--ramp-700);"></span>
+          <span class="example-chart-bar" style="--h: 55px;  background: var(--ramp-900);"></span>
+        </div>
         <div class="example-actions">
           <button class="example-button" type="button">View dashboard</button>
         </div>
@@ -39,97 +42,31 @@
         <p class="kicker">A Design Book demo</p>
         <h1>Procedural Tokens — encoding design decisions</h1>
         <p class="lede">
-          Most design tokens store an answer. The interesting ones store
-          the rule that produces the answer. This is a short walk from the
-          first kind to the second: from raw values, to references that
-          assign them a role, to procedural tokens that keep the reasoning
-          attached and can re-run it when the inputs change.
+          Most token systems already separate values from semantics. The
+          interesting part is the connection between them. Usually it is a
+          fixed link: one token points at another and stops there. I am
+          interested in making that connection work more like a spreadsheet
+          cell. It can stay static, choose one value from a set, or apply a
+          small formula. That is not just a technical convenience. It is a
+          way to bake flexibility into the system early enough that changing
+          the basics can produce new outcomes instead of a repair job. In
+          that sense, procedural tokens are closer to design programs than
+          static collections:
+          systems with internal logic that keep generating outcomes.
         </p>
       </header>
 
       <section>
-        <h2>1. A token is a name for a value</h2>
+        <h2>1. Static links are the baseline</h2>
         <p>
-          <code>#0066cc</code> is a hex code. It tells you a colour exists.
-          It tells you nothing about <em>why</em> it's there.
+          Most token systems already have the familiar split: raw values in
+          one place, semantic names in another. A small pool of source
+          values like <code>values.gray800</code>,
+          <code>values.gray50</code>, and <code>values.blue500</code> is
+          enough.
         </p>
         <p>
-          A design token gives that value a name. CSS, components, docs —
-          anything that needs the colour — read the name, not the hex.
-          Change the value once and every reader updates.
-        </p>
-        <p>
-          That's the whole idea. But picking the <em>right</em> name is
-          where design tokens get interesting: different names belong on
-          different layers, and the layer they live on changes what they're
-          allowed to mean. The rest of this article walks through those
-          layers.
-        </p>
-      </section>
-
-      <section>
-        <h2>2. Value tokens — the atoms</h2>
-        <p>
-          A value token is the simplest kind: a name and a literal value.
-          Crucially, the name describes <em>what the value is</em>, not what
-          it means: <code>values.gray800</code>, <code>values.blue500</code>,
-          <code>type.base</code>. There's no role attached yet — just raw
-          material.
-        </p>
-        <ul class="token-list">
-          <li>
-            <code>values.gray800</code> =
-            <button class="token-chip" data-token="values.gray800" type="button"></button>
-          </li>
-          <li>
-            <code>values.gray50</code> =
-            <button class="token-chip" data-token="values.gray50" type="button"></button>
-          </li>
-          <li>
-            <code>values.blue500</code> =
-            <button class="token-chip" data-token="values.blue500" type="button"></button>
-          </li>
-          <li>
-            <code>type.base</code> =
-            <button
-              class="token-chip"
-              data-token="type.base"
-              data-min="14"
-              data-max="28"
-              data-step="1"
-              type="button"
-            ></button>
-          </li>
-          <li>
-            <code>radius.base</code> =
-            <button
-              class="token-chip"
-              data-token="radius.base"
-              data-min="0"
-              data-max="20"
-              data-step="1"
-              type="button"
-            ></button>
-          </li>
-        </ul>
-        <p>
-          A subtle but important rule: a value token never gets a semantic
-          name. Calling one <code>values.brand</code> would smuggle a
-          decision ("this is <em>the</em> brand colour") into a layer that's
-          supposed to hold pure material. Edit <code>values.gray800</code>
-          to red and the name is still <code>values.gray800</code> — a
-          slight lie, but a localised one. Meaning belongs upstairs.
-        </p>
-      </section>
-
-      <section>
-        <h2>3. Reference tokens — give names meaning</h2>
-        <p>
-          A reference token points to a value token. Its job is to
-          introduce <em>meaning</em>. Where <code>values.gray800</code> only
-          says "this hex," <code>color.brand</code> says "this is what we
-          call our brand." Same colour, but the name now has a job in the
-          system.
+          Those inputs become useful once semantic tokens give them a job:
         </p>
         <ul class="token-list">
           <li>
@@ -147,136 +84,101 @@
             <button class="token-chip" data-token="color.onSurface" type="button"></button>
             <span class="aside">— paired with <code>color.surface</code>; the text colour that goes on it</span>
           </li>
-          <li>
-            <code>color.text</code> =
-            <button class="token-chip" data-token="color.text" type="button"></button>
-            <span class="aside">— points at <code>color.onSurface</code> (references can chain)</span>
-          </li>
         </ul>
         <p>
-          Notice what just happened. The value layer holds no opinions —
-          <code>values.gray800</code> is just a hex with a descriptive
-          label. The colour layer is where the design system makes
-          decisions: <em>this</em> grey is our brand,
-          <em>that</em> surface and its paired text always travel together,
-          links use <code>color.interaction</code>. Same mechanism each
-          time — a ref. Click any ref chip and you'll see the candidates it
-          could point at instead.
-        </p>
-        <p>
-          That's the stack so far: value tokens describe material,
-          reference tokens assign role. But a reference still only tells
-          you the choice. Not why it was made.
+          Static links are good. They are direct, inspectable, and
+          predictable. I do not want to replace them. I want to stop using
+          them for relationships they are too simple to express. A pair like
+          <code>surface</code> / <code>onSurface</code> already hints at the
+          limit: two pinned choices are standing in for one design decision.
         </p>
       </section>
 
       <section>
-        <h2>4. The problem with decisions</h2>
+        <h2>2. Some links are really formulas</h2>
         <p>
-          The weakness shows up the moment a token contains a decision
-          instead of a fact. A fact is easy:
-          <code>values.gray800 = '#202126'</code>. A decision is harder:
-          <code>color.buttonText = ref('values.white')</code>. White
-          compared to what? Chosen for what reason? Valid under what
-          conditions?
+          Some semantic tokens are not really aliases. They are tiny
+          policies. <code>color.buttonText</code> is a good example. Writing
+          <code>ref('values.white')</code> stores an answer, but not the
+          reasoning behind it: white against what, chosen for what purpose,
+          valid for how long?
         </p>
         <p>
-          Reference tokens capture the <strong>outcome</strong> of a
-          decision but hide the <strong>reason</strong>. Once the token
-          ships, that reasoning lives somewhere else — in a Figma comment,
-          a PR description, a Slack thread — and then decays. Six months
-          later nobody is sure why the choice was made, so nobody wants to
-          touch it. The system remembers the answer and forgets the
-          question.
+          That is where the spreadsheet analogy helps. A token can behave
+          like a cell with a fixed link, or like a cell with a simple
+          formula. The fixed link remains the default. The point is simply
+          to allow formulas when the relationship is the thing you actually
+          care about.
         </p>
         <p>
-          That opacity is what makes changing values in many design systems
-          feel scary. The repercussions are real, but the logic is often
-          scattered across documentation, conventions, and people's memory.
-          My goal is not to turn a design system into an even denser web of
-          hidden decisions. It is the opposite: to simplify the system by
-          putting the decisions where everyone can see them.
-        </p>
-        <p>
-          That is the point where I want a third layer. Not a token that
-          stores the chosen value, but a token that stores the decision
-          procedure. In other words: make the question part of the system
-          too. Then two useful things happen:
-        </p>
-        <ul>
-          <li>The decision can be re-run automatically when its inputs change.</li>
-          <li>Anyone reading the token — including future me — can see how the choice was made, without hunting through documentation.</li>
-        </ul>
-        <p>
-          The button label in the example panel already works that way. The
-          brittle version would be
-          <code>color.buttonText = ref('values.white')</code> — fine for as
-          long as the button stays dark, wrong the moment it doesn't.
-          Instead, it's
-          <code>bestContrastWith(color.brand, ramp)</code>: the rule re-runs
-          against whatever the button background ends up being and picks the
-          most readable step from the ramp. The token does not just name the
-          answer. It exposes the reasoning that produced it.
-        </p>
-        <p>
-          Re-point the brand colour and watch the label re-decide:
+          The button label already works like that. The brittle version
+          would be <code>color.buttonText = ref('values.white')</code>. The
+          stronger version stores the rule instead of the answer:
         </p>
         <p class="rule-line">
-          <code>color.brand</code> =
-          <button class="token-chip" data-token="color.brand" type="button"></button>
+          <code>color.buttonText</code> =
+          <code>bestContrastWith(</code><button class="token-chip" data-token="color.brand" type="button"></button><code>, ramp)</code>
         </p>
         <p>
-          Try pointing it at a light palette colour, then a dark one. The
-          label flips with it — because the rule re-runs against the new
-          background and picks the ramp step with the highest contrast. No
-          documentation to chase down: the token is the documentation.
+          Re-point the brand colour and the label re-decides itself. The
+          token does not just expose the outcome. It exposes the logic that
+          produced it.
         </p>
       </section>
 
       <section>
-        <h2>5. Procedural tokens — rules, not values</h2>
+        <h2>3. Choose one of a set</h2>
         <p>
-          A procedural token is that third layer. Value tokens describe
-          material. Reference tokens assign role. Procedural tokens encode
-          reasoning. Read the rule and you can see the decision. Change the
-          inputs and the system can make the decision again.
-        </p>
-        <p>
-          A handful of demos follow, each one a different shape of decision:
-          contrast, scale, palette, state.
+          One kind of dynamic connection looks at a pool of candidates and
+          picks one. It is useful whenever the decision is comparative: the
+          most readable foreground, or the faintest line that still clears
+          a threshold.
         </p>
 
-        <h3 data-rewire="onSurface">What if the text was always the most readable on its surface?</h3>
+        <h3 data-rewire="onSurface">The most readable foreground</h3>
         <p>
-          Up in <a href="#">section&nbsp;3</a>, <code>color.onSurface</code>
-          was a plain ref to <code>values.gray900</code> — a decision pinned
-          for the light surface. It works until someone changes the surface
-          to something dark, and then black-on-dark stops being readable.
-        </p>
-        <p>
-          As you scrolled into this subsection, that token was rewired in
-          place:
+          <code>color.onSurface</code> starts as a plain ref to
+          <code>values.gray900</code>. That works for a light surface, and
+          fails the moment the surface stops being light.
         </p>
         <p class="rule-line">
           <code>color.onSurface</code> =
           <code>bestContrastWith(color.surface, values)</code>
         </p>
         <p>
-          Same name, same place in the system — but now it carries its own
-          reasoning. Try editing
+          Edit
           <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
-          and watch the body text in the panel re-decide itself: drag the
-          colour darker and the text flips white, drag to something
-          mid-toned and it picks whichever entry in the values pool offers
-          the highest contrast. The pair <code>surface</code> /
-          <code>onSurface</code> is no longer a convention you have to
-          maintain — it's a rule the token enforces on its own.
+          and the foreground re-decides itself. The pair
+          <code>surface</code> / <code>onSurface</code> stops being two
+          separate pinned choices and becomes one relationship the system can
+          maintain.
         </p>
+        <div class="pair-demo" aria-label="Paired surface and on-surface treatment demo">
+          <p class="pair-demo__title">Paired treatment</p>
+          <p class="pair-demo__rule">
+            <code>surfaceTreatment.default = { surface, onSurface }</code>
+          </p>
+          <div class="pair-demo__rows">
+            <p class="pair-demo__row">
+              <span class="pair-demo__label"><code>surface</code></span>
+              <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
+            </p>
+            <p class="pair-demo__row">
+              <span class="pair-demo__label"><code>onSurface</code></span>
+              <button class="token-chip" data-token="color.onSurface" type="button"></button>
+            </p>
+          </div>
+          <p class="pair-demo__note">
+            Treat these as one named decision, not two unrelated variables:
+            edit the surface and the readable foreground re-decides itself to
+            keep the pair coherent.
+          </p>
+        </div>
 
-        <h3>Contrast with a threshold</h3>
+        <h3>The faintest line that still works</h3>
         <p>
-          Same family of rule, slightly different brief. The button's
-          hairline outline is computed:
+          The same pattern can choose not the strongest option, but the
+          weakest one that still satisfies a condition.
         </p>
         <p class="rule-line">
           <code>color.line</code> =
@@ -297,18 +199,22 @@
         <p>
           Where <code>bestContrastWith</code> picks the <em>highest</em>
           contrast available, <code>minContrastWith</code> picks the
-          <em>lowest</em> step that still clears the threshold. The result
-          is a soft line that's visible against the surface but never
-          shouts. Drop the threshold and it fades; raise it and it darkens.
-          In this demo the control snaps to the contrast levels the current
-          ramp can actually produce, because the function is choosing from a
-          discrete set of candidates. Flip the surface dark and it
-          auto-inverts. The decision encoded in the token isn't "use this
-          colour" — it's "use the faintest colour that's still readable as
-          a boundary."
+          <em>lowest</em> step that still clears the threshold. The token is
+          not saying "use this grey." It is saying "pick the weakest
+          boundary that still reads as a boundary."
+        </p>
+      </section>
+
+      <section>
+        <h2>4. Do something to a value</h2>
+        <p>
+          The second kind of dynamic connection does not choose from a set.
+          It takes an input and applies a small operation to it. This is
+          where utility or transform tokens become useful: scale, mix,
+          darken, lighten, offset.
         </p>
 
-        <h3>Spacing as a scale</h3>
+        <h3>Scale from a base</h3>
         <p>
           Every gap inside the example panel — title to paragraph, paragraph
           to chart, chart to button — is a multiple of
@@ -319,15 +225,91 @@
             data-max="32"
             data-step="1"
             type="button"
-          ></button>. Pull the base, the whole rhythm scales together via
-          <code>spacingScale</code>. The rule already knew what to do.
+          ></button>. Pull the base and the whole rhythm scales together via
+          <code>spacingScale</code>.
+        </p>
+        <div class="scale-demo" aria-label="Editable spacing scale demo">
+          <p class="scale-demo__title">Edit the scale here</p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.base</code></span>
+            <button
+              class="token-chip"
+              data-token="space.base"
+              data-min="8"
+              data-max="32"
+              data-step="1"
+              type="button"
+            ></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.xs</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.xs.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.xs" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.s</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.s.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.s" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.m</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.m.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.m" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.l</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.l.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.l" type="button"></button>
+          </p>
+          <p class="scale-demo__row">
+            <span class="scale-demo__label"><code>space.xl</code></span>
+            <code>spacingScale(base, { multiplier:</code>
+            <button class="token-chip" data-fn-option="space.xl.multiplier" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+            <code>})</code>
+            <span class="scale-demo__equals">=</span>
+            <button class="token-chip" data-token="space.xl" type="button"></button>
+          </p>
+        </div>
+
+        <h3>Shift a value</h3>
+        <p>
+          The simplest version of this kind of rule takes one input and
+          nudges it. The link's hover state in the example panel is one of
+          those: a darker shade of <code>color.interaction</code> computed
+          on the fly, not stored.
+        </p>
+        <p class="rule-line">
+          <code>color.linkHover</code> =
+          <code>darken(color.interaction,&nbsp;</code><button
+            class="token-chip"
+            data-fn-option="color.linkHover.amount"
+            data-min="0"
+            data-max="0.5"
+            data-step="0.01"
+            type="button"
+          ></button><code>)</code>
+        </p>
+        <p>
+          Move the amount. Every link that uses the hover token shifts at
+          once because there is only ever one decision to re-evaluate.
         </p>
 
-        <h3>A ramp between two intents</h3>
+        <h3>Blend two inputs</h3>
         <p>
-          The seven bars in the chart aren't seven hand-picked colours.
-          They're seven steps of a procedurally-generated ramp running
-          between the two intents we've already named:
+          The seven bars in the chart are not seven hand-picked colours.
+          They are seven steps of a ramp generated between two inputs:
         </p>
         <p class="rule-line">
           <code>ramp.sN</code> =
@@ -344,85 +326,96 @@
           ></button><code>, ratio)</code>
         </p>
         <p>
-          Drag either endpoint. The chart re-tones in place because every
-          bar reads from the same ramp, and the ramp re-runs the mix on
-          every change. The ramp is downstream of two decisions: which
-          surface we sit on, and which colour we use to act.
-        </p>
-
-        <h3>Darker on hover</h3>
-        <p>
-          The hover state is a smaller example, but it shows the same idea.
-          Hover the link in the example panel and you'll see a shade of
-          <code>color.interaction</code>. That shade isn't stored — it's
-          computed:
-        </p>
-        <p class="rule-line">
-          <code>color.linkHover</code> =
-          <code>darken(color.interaction,&nbsp;</code><button
-            class="token-chip"
-            data-fn-option="color.linkHover.amount"
-            data-min="0"
-            data-max="0.5"
-            data-step="0.01"
-            type="button"
-          ></button><code>)</code>
-        </p>
-        <p>
-          Move the amount. The hover state updates wherever it's used — no
-          CSS edit, no rebuild.
+          Drag either endpoint and the bars re-tone together because the
+          connection stores a formula, not seven frozen outputs. A hover
+          shade or pressed state works the same way; the scale changes, not
+          the idea.
         </p>
       </section>
 
       <section>
-        <h2>6. So what</h2>
+        <h2>5. Truly procedural design</h2>
         <p>
-          Once your tokens can hold rules, your design system gets safer to
-          change. You stop hard-coding yesterday's answers and start
-          preserving the logic that produced them. Change the brand colour,
-          the surface, the base spacing, the contrast threshold — the
-          system can recompute the dependent choices instead of asking a
-          human to remember them.
+          Tokenising everything used to feel like the death of creative
+          freedom. Every choice locked in. Every relationship buried in a
+          dependency graph that no human wanted to climb. Once the system
+          was set up, exploration moved elsewhere — back into Figma, back
+          into a script, back to ad-hoc decisions made outside the system
+          and then patched in.
         </p>
         <p>
-          That matters because my ambition here is not more complexity. I
-          do not want a design system to become a dense network of clever
-          decisions that only its author can understand. I want the system
-          to become easier to read, easier to trust, and less intimidating
-          to change because the reasoning is encoded directly into it,
-          instead of being distributed across tools, habits, and tribal
-          knowledge.
+          Procedural tokens flip that. The exploration tool can live inside
+          the system. Every value token in this article — every grey, every
+          accent — is now a point on a single colour line. Drag any anchor
+          and the entire system shifts together: the values move, the refs
+          that point at them follow, the ramp re-interpolates, the contrast
+          rules re-pick. One small input. Hundreds of coherent outputs.
         </p>
+        <div class="poline-demo" aria-label="Palette generator driving every value token">
+          <p class="poline-demo__caption">
+            Each dot on the wheel is an anchor; the line between them is
+            the palette. Every <code>values.*</code> token is sampled
+            somewhere on that line — even the ones named for greys.
+          </p>
+          <poline-picker id="poline" interactive></poline-picker>
+        </div>
         <p>
-          That is the narrative shift I care about. Value tokens answer
-          "what is it?" Reference tokens answer "what is it for?"
-          Procedural tokens answer "why this, under these conditions?"
-          When the why lives in the token, the system stays legible longer,
-          and it keeps making sense even after the inputs move.
+          The names <code>values.gray800</code>, <code>values.red500</code>
+          stay where they were. Their colours don't. That is the point: a
+          token system that can be explored rather than just maintained.
+          Coherence is enforced by the structure; freedom is restored at
+          the input.
         </p>
       </section>
 
       <section>
-        <h2>7. Future</h2>
+        <h2>6. Better links</h2>
         <p>
-          The examples in this demo are still small. They mostly deal with
-          colour, spacing, and simple transforms. What interests me next is
-          pushing the same idea into more complex design decisions:
-          typography that responds to contrast, or font choices that depend
-          on the features a UI needs to express.
+          This is not an argument against static refs. Most links should
+          stay static, because static is clear. The point is simply to stop
+          forcing every relationship to pretend it is an alias.
         </p>
         <p>
-          A token could decide not just <em>how large</em> text should be,
-          but which face should be used for a given context, script, or
-          reading condition. It could encode typographic contrast the same
-          way the button border encodes contrast now: as a rule with inputs,
-          constraints, and a visible reason for the outcome.
+          When a connection is really a choice or a transformation, the
+          token should be allowed to say so. That makes systems safer to
+          change: change the brand colour, the surface, the base spacing,
+          or the threshold, and the dependent choices can be recalculated
+          instead of fossilizing old assumptions.
         </p>
         <p>
-          That is the direction I want to explore further. Once tokens can
-          carry reasoning, there is no reason to stop at colours. The more
-          complex the design decision, the more valuable it becomes to keep
-          the logic inside the system instead of leaving it behind in notes.
+          Too often the workflow goes the other way around: generate a ramp,
+          freeze it into tokens, then build the design around that frozen
+          result. It works until dark mode arrives, or a second theme, or a
+          broader brand shift. Then all the flexibility that should have
+          been inside the system has to be retrofitted after the fact.
+        </p>
+        <p>
+          Once a token system can encode relationships instead of only
+          results, consistency turns into discovery. It can preserve
+          coherence across more complexity than anyone wants to track by
+          hand, and it can surface combinations that would not have been
+          picked manually.
+        </p>
+        <p>
+          That is the part that feels genuinely exploratory. Change the
+          surface, shift the interaction colour, alter the spacing base, and
+          the system answers back. Sometimes the answer is simply robust.
+          Sometimes it is surprising. That is where emergence starts to
+          matter: not as mystique, but as the practical result of encoding
+          relationships instead of pinning every outcome in advance.
+        </p>
+        <p>
+          That is the shift I care about. Not more tokens. Not cleverness
+          for its own sake. Just better links: static when enough,
+          formula-based when necessary. Colour and spacing make the pattern
+          easy to see, but the same logic applies anywhere the relationship
+          matters more than the stored result: type treatments, motion
+          rules, icon choices, grouped decisions like a surface/on-surface
+          pair. At that point a token system stops being a catalogue of
+          frozen answers and starts behaving more like a design
+          spreadsheet, or at its best, a small design program: one that
+          makes flexibility part of the design instead of a chore that shows
+          up later.
         </p>
       </section>
     </article>

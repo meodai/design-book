@@ -275,6 +275,37 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------- Poline picker (§5) ---------- */
+/* The palette generator that drives every value token. Lives inside the
+   article so the reader sees one interactive thing reshaping the whole
+   example panel. */
+.poline-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0 28px 0;
+  padding: 20px;
+  border: 1px solid var(--article-rule);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.015);
+  max-width: 60ch;
+}
+
+.poline-demo__caption {
+  margin: 0 !important;
+  max-width: none !important;
+  font-size: 0.85em;
+  color: var(--article-muted);
+}
+
+.poline-demo poline-picker {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
 .article-content p,
 .article-content ul,
 .article-content ol {

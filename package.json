@@ -26,7 +26,8 @@
   },
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "culori": "^4.0.2"
+    "culori": "^4.0.2",
+    "poline": "^0.13.1"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.1",
