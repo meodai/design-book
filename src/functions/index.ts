@@ -6,6 +6,7 @@ import { darkenImpl } from './color/darken';
 import { furthestFromImpl } from './color/furthest-from';
 import { lightenImpl } from './color/lighten';
 import { minContrastWithImpl } from './color/min-contrast';
+import { mostVividImpl } from './color/most-vivid';
 import { relativeToImpl } from './color/relative-to';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
@@ -20,6 +21,7 @@ export { relativeTo } from './color/relative-to';
 export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
 export { averageColor } from './color/average-color';
+export { mostVivid } from './color/most-vivid';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';
@@ -51,6 +53,9 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('furthestFrom', (scope: any) => furthestFromImpl(scope));
 	book.registerFunction('averageColor', (scope: any, options?: { colorSpace?: string }) =>
 		averageColorImpl(scope, options?.colorSpace ?? 'lab'),
+	);
+	book.registerFunction('mostVivid', (scope: any, against: string | null, options?: { minContrast?: number }) =>
+		mostVividImpl(scope, against, options?.minContrast ?? 0),
 	);
 	book.registerFunction('spacingScale', (baseValue: string, options?: { multiplier?: number }) =>
 		spacingScaleImpl(baseValue, options?.multiplier ?? 1),

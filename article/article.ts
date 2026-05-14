@@ -8,6 +8,7 @@ import {
   typographyScale,
   bestContrastWith,
   minContrastWith,
+  mostVivid,
   colorMix,
 } from '../src';
 import type {
@@ -102,12 +103,22 @@ function activateProceduralPalette() {
   // during the transition.
   syncPolineValues();
 
-  // Re-point semantic refs to the new palette positions. surface lands at
-  // the lightest step; brand near the dark midsection; interaction at a
-  // distinct point past the middle.
-  colorScope.set('surface',     ref('values.poline100'));
-  colorScope.set('brand',       ref('values.poline500'));
-  colorScope.set('interaction', ref('values.poline700'));
+  // Re-point semantic refs to the new palette. surface lands at the
+  // lightest step. brand and interaction both stop being fixed slots and
+  // become procedural: mostVivid scans the palette and picks the
+  // highest-chroma candidate that still clears a 4.5 WCAG contrast against
+  // the surface. The two will usually coincide — a single readable accent
+  // colour driving both the button background and the links — which is the
+  // usual real-world pattern.
+  colorScope.set('surface', ref('values.poline100'));
+  colorScope.set('brand', mostVivid(values, {
+    against: ref('color.surface'),
+    minContrast: 4.5,
+  }));
+  colorScope.set('interaction', mostVivid(values, {
+    against: ref('color.surface'),
+    minContrast: 4.5,
+  }));
 
   // Drop the descriptive value tokens — the palette is now Poline-driven.
   for (const name of ['gray50', 'gray500', 'gray800', 'gray900', 'blue500', 'red500', 'white']) {
