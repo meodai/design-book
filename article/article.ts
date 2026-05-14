@@ -302,27 +302,41 @@ const popoverRoot = document.getElementById('popover-root')!;
 let activePopover: HTMLElement | null = null;
 let activeChip: HTMLElement | null = null;
 
+function detachPopover(popover: HTMLElement) {
+  popover.remove();
+  if (activePopover === popover) {
+    activePopover = null;
+    activeChip = null;
+  }
+}
+
 function closePopover() {
   if (activePopover) {
-    // hdr-color-input's panel uses the native popover API. Its transition
-    // (display + overlay, ~200ms) can keep the top-layer element briefly
-    // alive after removal, intermittently trapping clicks. Calling .hide()
-    // on the host first asks it to close synchronously before we yank the
-    // wrapper out of the DOM.
+    const currentPopover = activePopover;
+
+    // hdr-color-input exposes close() on the host element and emits a
+    // close event once its internal popover actually shuts down. Use that
+    // path instead of removing the wrapper immediately so the top-layer
+    // overlay cannot get stranded and trap later clicks.
     const picker = activePopover.querySelector('color-input') as
-      | (HTMLElement & { hide?: () => void; hidePopover?: () => void })
+      | (HTMLElement & { close?: () => void })
       | null;
-    if (picker) {
+    if (picker && typeof picker.close === 'function') {
       try {
-        if (typeof picker.hide === 'function') picker.hide();
-        else if (typeof picker.hidePopover === 'function') picker.hidePopover();
+        currentPopover.style.pointerEvents = 'none';
+        picker.close();
+        activePopover = null;
+        activeChip = null;
+        return;
       } catch {
         // ignore — best-effort cleanup
       }
     }
-    activePopover.remove();
-    activePopover = null;
+
+    detachPopover(currentPopover);
+    return;
   }
+
   activeChip = null;
 }
 
@@ -414,10 +428,15 @@ function openColorPicker(chip: HTMLElement, scopeName: string, name: string) {
   const picker = document.createElement('color-input') as HTMLElement & {
     value: string;
     show?: () => void;
+    close?: () => void;
   };
   picker.value = current;
   picker.setAttribute('no-alpha', '');
   wrapper.append(picker);
+
+  picker.addEventListener('close', () => {
+    detachPopover(wrapper);
+  }, { once: true });
 
   popoverRoot.append(wrapper);
   positionPopover(wrapper, chip);
