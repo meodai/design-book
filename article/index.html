@@ -148,12 +148,11 @@
         <p>
           The button label already works like that. The brittle version
           would be <code>color.buttonText = ref('values.white')</code>. The
-          stronger version is <code>bestContrastWith(color.brand, ramp)</code>:
-          not a pinned answer, but a rule.
+          stronger version stores the rule instead of the answer:
         </p>
         <p class="rule-line">
-          <code>color.brand</code> =
-          <button class="token-chip" data-token="color.brand" type="button"></button>
+          <code>color.buttonText</code> =
+          <code>bestContrastWith(</code><button class="token-chip" data-token="color.brand" type="button"></button><code>, ramp)</code>
         </p>
         <p>
           Re-point the brand colour and the label re-decides itself. The
@@ -165,10 +164,12 @@
       <section>
         <h2>3. Choose one of a set</h2>
         <p>
-          The first kind of dynamic connection looks at a pool of candidates
-          and picks one. That is useful whenever the decision is
-          comparative: choose the most readable foreground, or the faintest
-          line that still clears a threshold.
+          We just saw an example of this in section 2 — buttonText scanning
+          the ramp for the highest-contrast step against the brand. That's
+          the first kind of dynamic connection: look at a pool of
+          candidates and pick one. It's useful whenever the decision is
+          comparative: the most readable foreground, the faintest line
+          that still clears a threshold, the closest colour to a target.
         </p>
 
         <h3 data-rewire="onSurface">The most readable foreground</h3>
@@ -318,6 +319,29 @@
             <button class="token-chip" data-token="space.xl" type="button"></button>
           </p>
         </div>
+
+        <h3>Shift a value</h3>
+        <p>
+          The simplest version of this kind of rule takes one input and
+          nudges it. The link's hover state in the example panel is one of
+          those: a darker shade of <code>color.interaction</code> computed
+          on the fly, not stored.
+        </p>
+        <p class="rule-line">
+          <code>color.linkHover</code> =
+          <code>darken(color.interaction,&nbsp;</code><button
+            class="token-chip"
+            data-fn-option="color.linkHover.amount"
+            data-min="0"
+            data-max="0.5"
+            data-step="0.01"
+            type="button"
+          ></button><code>)</code>
+        </p>
+        <p>
+          Move the amount. Every link that uses the hover token shifts at
+          once because there is only ever one decision to re-evaluate.
+        </p>
 
         <h3>Blend two inputs</h3>
         <p>

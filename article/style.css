@@ -117,7 +117,6 @@ html, body {
   padding: var(--space-l);
   border-radius: var(--radius-lg);
   border: 1px solid var(--article-rule);
-  box-shadow: 0 12px 36px -16px rgba(0, 0, 0, 0.18);
   transition: background 0.25s ease, color 0.25s ease, border-radius 0.25s ease;
   display: flex;
   flex-direction: column;
