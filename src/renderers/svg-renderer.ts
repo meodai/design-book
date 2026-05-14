@@ -1,3 +1,4 @@
+import { parse, formatHex } from 'culori';
 import { DesignBook } from '../design-book';
 import type { AnyTokenValue, TokenValue, ReferenceValue, FunctionTokenValue } from '../tokens';
 
@@ -8,6 +9,14 @@ export interface SVGRenderOptions {
   fontSize?: number;
   dotSize?: number;
   strokeWidth?: number;
+  /** When true, the graph shows only "palette-linking" function edges —
+   *  function tokens that iterate a scope (e.g. bestContrastWith,
+   *  mostVivid, closestColor). Value-deriving function tokens like darken,
+   *  colorMix and spacingScale have their edges hidden. Each shown link
+   *  is collapsed to a single dashed edge that points at the candidate
+   *  whose resolved value matches the function's output — i.e. the token
+   *  that was actually picked. */
+  linksOnly?: boolean;
 }
 
 interface TableInfo {
@@ -63,6 +72,52 @@ function isColorToken(book: DesignBook, token: AnyTokenValue): boolean {
   return getTokenBaseType(book, token) === 'color';
 }
 
+function normalizeColor(value: string): string | null {
+  const parsed = parse(value);
+  return parsed ? (formatHex(parsed) ?? null) : null;
+}
+
+/** Function tokens fall into two families: palette-linkers (iterate a
+ *  scope — bestContrastWith, mostVivid, closestColor, …) and value
+ *  derivers (apply a formula to inputs — darken, colorMix, spacingScale).
+ *  Palette-linkers always have a non-empty visualDependencies array. */
+function isPaletteLinker(token: AnyTokenValue): boolean {
+  if (token.type !== 'function') return false;
+  const fn = token as FunctionTokenValue;
+  return (fn.metadata?.visualDependencies?.length ?? 0) > 0;
+}
+
+/** For a palette-linker function token, find the candidate in its
+ *  visualDependencies whose resolved value matches the function's output —
+ *  the token that was actually picked. Returns null if no match. */
+function findResolvedSource(
+  book: DesignBook,
+  qualifiedKey: string,
+  token: AnyTokenValue,
+): string | null {
+  if (!isPaletteLinker(token)) return null;
+  const fn = token as FunctionTokenValue;
+  const visualDeps = fn.metadata?.visualDependencies ?? [];
+
+  let resolvedHex: string | null;
+  try {
+    resolvedHex = normalizeColor(book.resolve(qualifiedKey));
+  } catch {
+    return null;
+  }
+  if (!resolvedHex) return null;
+
+  for (const depKey of visualDeps) {
+    try {
+      const candHex = normalizeColor(book.resolve(depKey));
+      if (candHex && candHex === resolvedHex) return depKey;
+    } catch {
+      // skip unresolvable
+    }
+  }
+  return null;
+}
+
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -80,6 +135,7 @@ export class SVGRenderer {
       fontSize: options?.fontSize ?? 12,
       dotSize: options?.dotSize ?? 5,
       strokeWidth: options?.strokeWidth ?? 1.5,
+      linksOnly: options?.linksOnly ?? false,
     };
   }
 
@@ -234,8 +290,23 @@ export class SVGRenderer {
       for (const [key, fromDot] of dots) {
         if (fromDot.isHeader) continue;
 
-        // Get what this token depends on (its prerequisites / inputs)
-        const prerequisites = graph.getIncoming(key);
+        const token = this.book.getTokenByKey(key);
+        const isFunction = token?.type === 'function';
+
+        // In linksOnly mode the graph collapses to its "analysis" layer:
+        // value-deriving function tokens (darken, colorMix, spacingScale, …)
+        // have their edges hidden; palette-linkers (bestContrastWith,
+        // mostVivid, …) keep theirs, but each is collapsed to a single
+        // dashed edge pointing at the resolved candidate.
+        let prerequisites: string[];
+        if (this.options.linksOnly && isFunction && token) {
+          if (!isPaletteLinker(token)) continue; // hide transform edges
+          const resolvedSource = findResolvedSource(this.book, key, token);
+          prerequisites = resolvedSource ? [resolvedSource] : graph.getIncoming(key);
+        } else {
+          prerequisites = graph.getIncoming(key);
+        }
+
         for (const depKey of prerequisites) {
           const toDot = dots.get(depKey);
           if (!toDot) continue;
@@ -244,9 +315,7 @@ export class SVGRenderer {
           if (processedConnections.has(connId)) continue;
           processedConnections.add(connId);
 
-          const token = this.book.getTokenByKey(key);
-          const isDashed = token?.type === 'function';
-          connections.push({ from: fromDot, to: toDot, isDashed });
+          connections.push({ from: fromDot, to: toDot, isDashed: isFunction });
         }
       }
 

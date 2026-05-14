@@ -1023,7 +1023,7 @@ if (polinePicker) {
 // removed, or rewired (e.g. on §3 onSurface rewire, on §5 Poline activation).
 const depGraphContainer = document.getElementById('dep-graph');
 if (depGraphContainer) {
-  const svgRenderer = new SVGRenderer(book);
+  const svgRenderer = new SVGRenderer(book, { linksOnly: true });
   const renderDepGraph = () => {
     depGraphContainer.innerHTML = svgRenderer.render();
   };
