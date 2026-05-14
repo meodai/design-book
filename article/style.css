@@ -329,7 +329,7 @@ html, body {
 .article-content p,
 .article-content ul,
 .article-content ol {
-  margin: 0 0 16px 0;
+  margin: 0 0 1em 2.1em;
   max-width: 60ch;
   text-wrap: balance;
 }
