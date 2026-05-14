@@ -1,10 +1,11 @@
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 
 type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
-  getFunction(name: string): ((...args: any[]) => string) | undefined;
+  getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
 };
 

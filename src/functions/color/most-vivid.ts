@@ -110,7 +110,7 @@ export interface MostVividOptions {
 }
 
 export function mostVivid(scope: Scope, options?: MostVividOptions): FunctionTokenValue {
-  const args: FunctionArg[] = [scope, options?.against ?? null];
+  const args: FunctionArg[] = options?.against ? [scope, options.against] : [scope];
   const dependencies = options?.against ? extractDependencies([options.against]) : [];
 
   return createFunctionToken('mostVivid', args, {

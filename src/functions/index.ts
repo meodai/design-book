@@ -12,6 +12,7 @@ import { shadeImpl } from './color/shade';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
+import type { Scope } from '../scope';
 
 export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
@@ -29,12 +30,12 @@ export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';
 
 export function registerBuiltinFunctions(book: {
-	registerFunction(name: string, impl: (...args: any[]) => string): void;
+	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
 }): void {
-	book.registerFunction('bestContrastWith', (targetValue: string, scope: any) =>
+	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope) =>
 		bestContrastWithImpl(targetValue, scope),
 	);
-	book.registerFunction('minContrastWith', (targetValue: string, scope: any, options?: { ratio?: number }) =>
+	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number }) =>
 		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5),
 	);
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
@@ -49,15 +50,24 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('relativeTo', (baseColor: string, options?: { colorSpace?: string; modifications?: (null | number | string)[] }) =>
 		relativeToImpl(baseColor, options?.colorSpace ?? 'oklch', options?.modifications ?? [null, null, null]),
 	);
-	book.registerFunction('closestColor', (targetValue: string, scope: any) =>
+	book.registerFunction('closestColor', (targetValue: string, scope: Scope) =>
 		closestColorImpl(targetValue, scope),
 	);
-	book.registerFunction('furthestFrom', (scope: any) => furthestFromImpl(scope));
-	book.registerFunction('averageColor', (scope: any, options?: { colorSpace?: string }) =>
+	book.registerFunction('furthestFrom', (scope: Scope) => furthestFromImpl(scope));
+	book.registerFunction('averageColor', (scope: Scope, options?: { colorSpace?: string }) =>
 		averageColorImpl(scope, options?.colorSpace ?? 'lab'),
 	);
-	book.registerFunction('mostVivid', (scope: any, against: string | null, options?: { minContrast?: number }) =>
-		mostVividImpl(scope, against, options?.minContrast ?? 0),
+	book.registerFunction(
+		'mostVivid',
+		(
+			scope: Scope,
+			againstOrOptions?: string | { minContrast?: number },
+			maybeOptions?: { minContrast?: number },
+		) => {
+			const against = typeof againstOrOptions === 'string' ? againstOrOptions : null;
+			const options = typeof againstOrOptions === 'string' ? maybeOptions : againstOrOptions;
+			return mostVividImpl(scope, against, options?.minContrast ?? 0);
+		},
 	);
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
 		shadeImpl(colorValue, options?.amount ?? 0.1),

@@ -52,7 +52,9 @@ stopWatching();
 // Render
 const css = new Renderer(book, 'css-variables').render();
 const json = new Renderer(book, 'json').render();
+const jsonObject = new Renderer(book, 'json').renderJsonObject();
 const w3 = new Renderer(book, 'w3-design-tokens').render();
+const w3Object = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
 const svg = new SVGRenderer(book).render();
 ```
 
@@ -158,6 +160,8 @@ References become `var()`, functions become CSS-native where possible (`color-mi
 
 All values fully resolved.
 
+If you want structured data instead of a JSON string, use `renderJsonObject()`.
+
 ### W3 Design Tokens
 
 ```json
@@ -177,6 +181,8 @@ All values fully resolved.
 ```
 
 Follows the [W3 Design Tokens spec](https://www.designtokens.org/tr/drafts/format/): structured color/dimension/duration values, `$description` support, references as `{scope.token}`.
+
+If you want the structured token object directly, use `renderW3DesignTokensObject()`.
 
 ## Events
 

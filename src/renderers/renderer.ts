@@ -4,7 +4,31 @@ import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
-export type FunctionRenderer = (args: FunctionArg[], options?: any) => string;
+export type FunctionRendererOptions = Record<string, unknown>;
+export type FunctionRenderer = (args: FunctionArg[], options?: FunctionRendererOptions) => string;
+
+export interface W3ColorValue {
+  colorSpace: string;
+  components: number[];
+  alpha: number;
+  hex: string;
+}
+
+export interface W3DimensionValue {
+  value: number;
+  unit: string;
+}
+
+export type W3TokenValue = string | number | W3ColorValue | W3DimensionValue;
+
+export interface W3TokenEntry {
+  $value: W3TokenValue;
+  $type?: string;
+  $description?: string;
+}
+
+export type ResolvedTokenMap = Record<string, string>;
+export type W3DesignTokensMap = Record<string, Record<string, W3TokenEntry>>;
 
 const toRgb = converter('rgb');
 
@@ -93,7 +117,11 @@ export class Renderer {
   }
 
   private renderJson(): string {
-    const result: Record<string, string> = {};
+    return JSON.stringify(this.renderJsonObject(), null, 2);
+  }
+
+  renderJsonObject(): ResolvedTokenMap {
+    const result: ResolvedTokenMap = {};
 
     for (const scope of this.book.getAllScopes()) {
       for (const key of scope.getAllKeys()) {
@@ -102,11 +130,15 @@ export class Renderer {
       }
     }
 
-    return JSON.stringify(result, null, 2);
+    return result;
   }
 
   private renderW3DesignTokens(): string {
-    const result: Record<string, any> = {};
+    return JSON.stringify(this.renderW3DesignTokensObject(), null, 2);
+  }
+
+  renderW3DesignTokensObject(): W3DesignTokensMap {
+    const result: W3DesignTokensMap = {};
 
     for (const scope of this.book.getAllScopes()) {
       if (!result[scope.name]) {
@@ -117,7 +149,7 @@ export class Renderer {
         const token = scope.get(key);
         if (!token) continue;
 
-        const entry: Record<string, any> = {};
+        const entry: W3TokenEntry = { $value: '' };
 
         if (token.type === 'reference') {
           const refToken = token as ReferenceValue;
@@ -149,7 +181,7 @@ export class Renderer {
       }
     }
 
-    return JSON.stringify(result, null, 2);
+    return result;
   }
 
   /** Map internal type to W3 $type string */
@@ -179,7 +211,7 @@ export class Renderer {
   }
 
   /** Format a resolved value into the W3 structured format */
-  private formatW3Value(internalType: string, resolvedStr: string, token: AnyTokenValue): any {
+  private formatW3Value(internalType: string, resolvedStr: string, token: AnyTokenValue): W3TokenValue {
     if (internalType === 'color') {
       // W3 color: { colorSpace, components, alpha, hex }
       const parsed = parse(resolvedStr);

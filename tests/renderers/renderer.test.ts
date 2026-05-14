@@ -115,6 +115,14 @@ describe('Renderer', () => {
       expect(output['brand.primary']).toBe('#0066cc');
       expect(output['ui.bg']).toBe('#0066cc');
     });
+
+    it('exposes the resolved map without forcing JSON parsing', () => {
+      const book = createTestBook();
+      const renderer = new Renderer(book, 'json');
+      const output = renderer.renderJsonObject();
+      expect(output['brand.primary']).toBe('#0066cc');
+      expect(output['ui.bg']).toBe('#0066cc');
+    });
   });
 
   describe('w3-design-tokens format', () => {
@@ -165,6 +173,14 @@ describe('Renderer', () => {
       const renderer = new Renderer(book, 'w3-design-tokens');
       const output = JSON.parse(renderer.render());
       expect(output.brand.primary.$description).toBe('Main brand color');
+    });
+
+    it('exposes structured W3 tokens without forcing JSON parsing', () => {
+      const book = createTestBook();
+      const renderer = new Renderer(book, 'w3-design-tokens');
+      const output = renderer.renderW3DesignTokensObject();
+      expect(output.brand.primary.$type).toBe('color');
+      expect(output.ui.bg.$value).toBe('{brand.primary}');
     });
   });
 

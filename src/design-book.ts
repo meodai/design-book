@@ -52,6 +52,8 @@ export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
   detail: DesignBookEventMap[K];
 };
 
+export type FunctionImplementation<Args extends unknown[] = unknown[]> = (...args: Args) => string;
+
 type EventCallback<K extends keyof DesignBookEventMap> = (event: DesignBookEvent<K>) => void;
 
 export class DesignBook {
@@ -62,7 +64,7 @@ export class DesignBook {
   private scopeManager: ScopeManager;
   private graph: DependencyGraph;
   private listeners: Map<string, Set<Function>> = new Map();
-  private functions: Map<string, Function> = new Map();
+  private functions: Map<string, FunctionImplementation> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
 
   private _propagating = false;
@@ -195,13 +197,13 @@ export class DesignBook {
 
   // --- Function registry ---
 
-  registerFunction(name: string, impl: (...args: any[]) => string): void {
-    this.functions.set(name, impl);
+  registerFunction<Args extends unknown[]>(name: string, impl: FunctionImplementation<Args>): void {
+    this.functions.set(name, impl as FunctionImplementation);
   }
 
-  getFunction(name: string): ((...args: any[]) => string) | undefined {
+  getFunction(name: string): FunctionImplementation | undefined {
     const fn = this.functions.get(name);
-    return typeof fn === 'function' ? fn as (...args: any[]) => string : undefined;
+    return typeof fn === 'function' ? fn : undefined;
   }
 
   // --- Events ---

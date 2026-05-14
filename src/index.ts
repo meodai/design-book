@@ -6,6 +6,7 @@ export type {
   ChangeDetail,
   DesignBookEvent,
   DesignBookEventMap,
+  FunctionImplementation,
   ScopeAddedDetail,
   ScopeRemovedDetail,
   TokenChangedDetail,
@@ -58,6 +59,16 @@ export {
 
 // Renderers
 export { Renderer } from './renderers/renderer';
-export type { RenderFormat, FunctionRenderer } from './renderers/renderer';
+export type {
+  RenderFormat,
+  FunctionRenderer,
+  FunctionRendererOptions,
+  ResolvedTokenMap,
+  W3ColorValue,
+  W3DesignTokensMap,
+  W3DimensionValue,
+  W3TokenEntry,
+  W3TokenValue,
+} from './renderers/renderer';
 export { SVGRenderer } from './renderers/svg-renderer';
 export { registerBuiltinFunctionRenderers } from './renderers/function-renderers';
