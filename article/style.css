@@ -57,8 +57,9 @@
   --article-accent:     #1d4eb8;
   --article-surface:    #ffffff;
 
-  --chip-bg:        rgba(0, 0, 0, 0.04);
-  --chip-bg-hover:  rgba(0, 0, 0, 0.08);
+  --chip-bg:        var(--article-link);
+  --chip-onBg:      var(--article-surface);
+  --chip-bg-hover:  var(--article-muted);
   --chip-border:    rgba(0, 0, 0, 0.18);
 }
 
@@ -161,13 +162,19 @@ html, body {
 }
 
 .example-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-xs);
   width: 100%;
-  height: auto;
-  display: block;
+  height: 110px;
+  transition: gap 0.25s ease;
 }
 
-.example-chart rect {
-  transition: fill 0.25s ease;
+.example-chart-bar {
+  flex: 1;
+  height: var(--h);
+  border-radius: 2px;
+  transition: background 0.25s ease, height 0.25s ease;
 }
 
 .example-actions {
@@ -462,7 +469,7 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 8px;
+  padding: 2px 10px 2px 6px;
   margin: 0 2px;
   background: var(--chip-bg);
   border: 1px solid var(--chip-border);
@@ -470,7 +477,7 @@ html, body {
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.4;
-  color: inherit;
+  color: var(--chip-onBg);
   cursor: pointer;
   vertical-align: baseline;
   transition: background 0.12s ease, transform 0.12s ease,
@@ -498,7 +505,7 @@ html, body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--chip-onBg);
   flex-shrink: 0;
 }
 
