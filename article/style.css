@@ -218,27 +218,28 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--article-accent);
-  margin: 0 0 12px 0;
+  margin: 0 0 1em 2.2rem;
 }
 
 .article-content h1,
 .article-content h2,
 .article-content h3 {
   font-family: var(--font-article-display);
+  margin-top: 1.5em;
 }
 
 .article-content h1 {
   font-size: 64px;
   line-height: 1.05;
-  margin: 0 0 24px 0;
+  margin-bottom: 2.2rem;
   letter-spacing: -0.02em;
   font-weight: 400;
+  margin-top: 0;
 }
 
 .article-content h2 {
   font-size: 40px;
   line-height: 1.15;
-  margin: 72px 0 20px 0;
   letter-spacing: -0.01em;
   font-weight: 400;
 }
@@ -246,7 +247,6 @@ html, body {
 .article-content h3 {
   font-size: 26px;
   line-height: 1.25;
-  margin: 40px 0 10px 0;
   font-weight: 400;
 }
 
@@ -367,7 +367,7 @@ html, body {
 .article-content p,
 .article-content ul,
 .article-content ol {
-  margin: 0 0 1em 2.1em;
+  margin: 0 0 1em 2.2rem;
   max-width: 60ch;
   text-wrap: balance;
 }
