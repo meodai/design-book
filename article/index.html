@@ -57,44 +57,10 @@
         <p>
           Most token systems already have the familiar split: raw values in
           one place, semantic names in another. A small pool of source
-          values is enough.
+          values like <code>values.gray800</code>,
+          <code>values.gray50</code>, and <code>values.blue500</code> is
+          enough.
         </p>
-        <ul class="token-list">
-          <li>
-            <code>values.gray800</code> =
-            <button class="token-chip" data-token="values.gray800" type="button"></button>
-          </li>
-          <li>
-            <code>values.gray50</code> =
-            <button class="token-chip" data-token="values.gray50" type="button"></button>
-          </li>
-          <li>
-            <code>values.blue500</code> =
-            <button class="token-chip" data-token="values.blue500" type="button"></button>
-          </li>
-          <li>
-            <code>type.base</code> =
-            <button
-              class="token-chip"
-              data-token="type.base"
-              data-min="14"
-              data-max="28"
-              data-step="1"
-              type="button"
-            ></button>
-          </li>
-          <li>
-            <code>radius.base</code> =
-            <button
-              class="token-chip"
-              data-token="radius.base"
-              data-min="0"
-              data-max="20"
-              data-step="1"
-              type="button"
-            ></button>
-          </li>
-        </ul>
         <p>
           Those inputs become useful once semantic tokens give them a job:
         </p>
@@ -113,11 +79,6 @@
             <code>color.onSurface</code> =
             <button class="token-chip" data-token="color.onSurface" type="button"></button>
             <span class="aside">— paired with <code>color.surface</code>; the text colour that goes on it</span>
-          </li>
-          <li>
-            <code>color.text</code> =
-            <button class="token-chip" data-token="color.text" type="button"></button>
-            <span class="aside">— points at <code>color.onSurface</code> (references can chain)</span>
           </li>
         </ul>
         <p>
@@ -141,9 +102,9 @@
         <p>
           That is where the spreadsheet analogy helps. A token can behave
           like a cell with a fixed link, or like a cell with a simple
-          formula. The connection can stay static when that is enough. But
-          when the relationship is the point, the connection should be
-          allowed to choose or transform.
+          formula. The fixed link remains the default. The point is simply
+          to allow formulas when the relationship is the thing you actually
+          care about.
         </p>
         <p>
           The button label already works like that. The brittle version
@@ -164,12 +125,10 @@
       <section>
         <h2>3. Choose one of a set</h2>
         <p>
-          We just saw an example of this in section 2 — buttonText scanning
-          the ramp for the highest-contrast step against the brand. That's
-          the first kind of dynamic connection: look at a pool of
-          candidates and pick one. It's useful whenever the decision is
-          comparative: the most readable foreground, the faintest line
-          that still clears a threshold, the closest colour to a target.
+          One kind of dynamic connection looks at a pool of candidates and
+          picks one. It is useful whenever the decision is comparative: the
+          most readable foreground, or the faintest line that still clears
+          a threshold.
         </p>
 
         <h3 data-rewire="onSurface">The most readable foreground</h3>
@@ -385,24 +344,22 @@
           instead of fossilizing old assumptions.
         </p>
         <p>
-          It also changes what a token system can be. Once it can encode
-          relationships instead of only results, it can preserve coherence
-          across more complexity than anyone wants to track by hand, and it
-          can surface combinations that would not have been picked manually.
-          That is where consistency turns into discovery.
-        </p>
-        <p>
-          Colour and spacing make the pattern easy to see, but the same
-          logic applies anywhere the relationship matters more than the
-          stored result: type treatments, motion rules, icon choices,
-          grouped decisions like a surface/on-surface pair.
+          Once a token system can encode relationships instead of only
+          results, consistency turns into discovery. It can preserve
+          coherence across more complexity than anyone wants to track by
+          hand, and it can surface combinations that would not have been
+          picked manually.
         </p>
         <p>
           That is the shift I care about. Not more tokens. Not cleverness
           for its own sake. Just better links: static when enough,
-          formula-based when necessary. At that point a token system stops
-          being a catalogue of frozen answers and starts behaving more like
-          a design spreadsheet, or at its best, a small design program.
+          formula-based when necessary. Colour and spacing make the pattern
+          easy to see, but the same logic applies anywhere the relationship
+          matters more than the stored result: type treatments, motion
+          rules, icon choices, grouped decisions like a surface/on-surface
+          pair. At that point a token system stops being a catalogue of
+          frozen answers and starts behaving more like a design
+          spreadsheet, or at its best, a small design program.
         </p>
       </section>
     </article>
