@@ -102,7 +102,7 @@ export function mostVividImpl(
 
 export interface MostVividOptions {
   /** Optional target colour the result must contrast with. */
-  against?: TokenValue | ReferenceValue;
+  against?: TokenValue | ReferenceValue | FunctionTokenValue;
   /** Minimum WCAG contrast ratio against `against`. Defaults to 0 (off). */
   minContrast?: number;
   description?: string;

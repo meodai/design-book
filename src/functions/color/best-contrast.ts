@@ -74,7 +74,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope): string 
 }
 
 export function bestContrastWith(
-  targetValue: TokenValue | ReferenceValue,
+  targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
   options?: { description?: string; [key: string]: any }
 ): FunctionTokenValue {

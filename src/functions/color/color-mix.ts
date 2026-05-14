@@ -40,8 +40,8 @@ export function colorMixImpl(
 }
 
 export function colorMix(
-  color1: TokenValue | ReferenceValue,
-  color2: TokenValue | ReferenceValue,
+  color1: TokenValue | ReferenceValue | FunctionTokenValue,
+  color2: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; colorSpace?: string; description?: string }
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 0.5;

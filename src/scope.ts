@@ -1,4 +1,4 @@
-import { isReferenceValue, isTokenValue } from './tokens';
+import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 
@@ -121,23 +121,7 @@ export class Scope {
     }
 
     if (token.type === 'function') {
-      const fn = token as FunctionTokenValue;
-      const resolvedArgs = fn.args.map((arg: FunctionArg) => {
-        if (isReferenceValue(arg)) {
-          return this.book.resolve((arg as ReferenceValue).key);
-        }
-        if (isTokenValue(arg)) {
-          const tv = arg as TokenValue;
-          if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
-          return String(tv.rawValue);
-        }
-        return arg;
-      });
-      const implementation = this.book.getFunction(fn.name);
-      if (!implementation) {
-        throw new Error(`Function "${fn.name}" is not registered`);
-      }
-      return implementation(...resolvedArgs, fn.options);
+      return this.resolveFunctionToken(token as FunctionTokenValue);
     }
 
     const tv = token as TokenValue;
@@ -146,5 +130,31 @@ export class Scope {
     }
 
     return String(tv.rawValue);
+  }
+
+  /** Resolve a function token, recursing into any nested function-token
+   *  arguments. Function tokens don't live in a scope as named entries —
+   *  they're inlined as args — so they're invoked directly through the
+   *  book's function registry rather than via `book.resolve`. */
+  private resolveFunctionToken(fn: FunctionTokenValue): string {
+    const resolvedArgs = fn.args.map((arg: FunctionArg) => {
+      if (isReferenceValue(arg)) {
+        return this.book.resolve((arg as ReferenceValue).key);
+      }
+      if (isFunctionTokenValue(arg)) {
+        return this.resolveFunctionToken(arg);
+      }
+      if (isTokenValue(arg)) {
+        const tv = arg as TokenValue;
+        if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
+        return String(tv.rawValue);
+      }
+      return arg;
+    });
+    const implementation = this.book.getFunction(fn.name);
+    if (!implementation) {
+      throw new Error(`Function "${fn.name}" is not registered`);
+    }
+    return implementation(...resolvedArgs, fn.options);
   }
 }

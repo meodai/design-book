@@ -13,7 +13,7 @@ export function spacingScaleImpl(baseValue: string, multiplier: number): string 
 }
 
 export function spacingScale(
-  baseValue: TokenValue | ReferenceValue,
+  baseValue: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { multiplier?: number; description?: string }
 ): FunctionTokenValue {
   const multiplier = options?.multiplier ?? 1;

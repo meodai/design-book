@@ -70,7 +70,7 @@ export function relativeToImpl(
 }
 
 export function relativeTo(
-  baseColor: TokenValue | ReferenceValue,
+  baseColor: TokenValue | ReferenceValue | FunctionTokenValue,
   colorSpace: string,
   modifications: (null | number | string)[],
   options?: { description?: string }

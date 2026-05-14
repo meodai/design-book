@@ -9,7 +9,7 @@ export function timingImpl(duration: string, easing: string, delay: number): str
 }
 
 export function timing(
-  duration: TokenValue | ReferenceValue,
+  duration: TokenValue | ReferenceValue | FunctionTokenValue,
   easing: string,
   options?: { delay?: number; description?: string }
 ): FunctionTokenValue {

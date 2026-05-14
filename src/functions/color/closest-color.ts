@@ -79,7 +79,7 @@ export function closestColorImpl(targetValue: string, scope: Scope): string {
 }
 
 export function closestColor(
-  targetColor: TokenValue | ReferenceValue,
+  targetColor: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
   options?: { description?: string; [key: string]: any }
 ): FunctionTokenValue {

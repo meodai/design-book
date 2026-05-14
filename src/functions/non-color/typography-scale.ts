@@ -15,7 +15,7 @@ export function typographyScaleImpl(baseValue: string, ratio: number, step: numb
 }
 
 export function typographyScale(
-  baseSize: TokenValue | ReferenceValue,
+  baseSize: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; step?: number; description?: string }
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 1.25;

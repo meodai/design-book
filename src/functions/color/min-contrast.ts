@@ -90,7 +90,7 @@ export function minContrastWithImpl(
 }
 
 export function minContrastWith(
-  targetValue: TokenValue | ReferenceValue,
+  targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
   options?: MinContrastOptions
 ): FunctionTokenValue {

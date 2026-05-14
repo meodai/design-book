@@ -38,7 +38,7 @@ export function darkenImpl(colorValue: string, amount: number): string {
 }
 
 export function darken(
-  color: TokenValue | ReferenceValue,
+  color: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
   const amount = options?.amount ?? 0.1;

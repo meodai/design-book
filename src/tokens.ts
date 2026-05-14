@@ -33,6 +33,7 @@ export interface ScopeFunctionArg {
 export type FunctionArg =
   | TokenValue
   | ReferenceValue
+  | FunctionTokenValue
   | ScopeFunctionArg
   | string
   | number;
@@ -43,6 +44,10 @@ export function isReferenceValue(arg: unknown): arg is ReferenceValue {
 
 export function isTokenValue(arg: unknown): arg is TokenValue {
   return typeof arg === 'object' && arg !== null && 'rawValue' in arg;
+}
+
+export function isFunctionTokenValue(arg: unknown): arg is FunctionTokenValue {
+  return typeof arg === 'object' && arg !== null && 'type' in arg && (arg as { type?: string }).type === 'function';
 }
 
 export interface FunctionTokenValue {
@@ -167,6 +172,10 @@ export function extractDependencies(args: FunctionArg[]): string[] {
   for (const arg of args) {
     if (isReferenceValue(arg)) {
       deps.push(arg.key);
+    } else if (isFunctionTokenValue(arg)) {
+      // Nested function token — its dependencies are transitively this
+      // function's dependencies, so the graph propagates correctly.
+      for (const dep of extractDependencies(arg.args)) deps.push(dep);
     }
   }
   return deps;
@@ -175,8 +184,13 @@ export function extractDependencies(args: FunctionArg[]): string[] {
 export function extractVisualDependencies(args: FunctionArg[]): string[] {
   const deps: string[] = [];
   for (const arg of args) {
-    if (typeof arg === 'object' && arg !== null && typeof arg.getAllKeys === 'function') {
-      for (const key of arg.getAllKeys()) {
+    if (isFunctionTokenValue(arg)) {
+      // Nested function tokens can themselves iterate scopes (e.g. a
+      // mostVivid call nested inside another function). Pull their visual
+      // dependencies up too.
+      for (const dep of extractVisualDependencies(arg.args)) deps.push(dep);
+    } else if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
+      for (const key of (arg as ScopeFunctionArg).getAllKeys()) {
         deps.push(key);
       }
     }
