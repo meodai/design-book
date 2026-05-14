@@ -1,6 +1,6 @@
 import {
   DesignBook, color, ref, px, rem, ms,
-  bestContrastWith, minContrastWith, colorMix, relativeTo,
+  bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid,
   spacingScale, typographyScale,
   Renderer, SVGRenderer,
 } from '../src/index';
@@ -60,7 +60,12 @@ function bootDesignSystem() {
   const card = book.addScope('card');
   card.set('surface', ref('brand.neutral-light'));
   card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
-  card.set('interactive', ref('brand.primary'));
+  // mostVivid picks the highest-chroma colour in `brand` that still meets a
+  // 4.5 contrast against the card surface — readable accent, auto-selected.
+  card.set('interactive', mostVivid(brand, {
+    against: ref('card.surface'),
+    minContrast: 4.5,
+  }));
   card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));
   card.set('border', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.15 }));
   card.set('on-surface-weak', colorMix(ref('card.on-surface'), ref('card.surface'), { ratio: 0.4 }));
@@ -648,7 +653,7 @@ function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
 const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
   'lighten', 'darken', 'relativeTo',
-  'closestColor', 'furthestFrom', 'averageColor',
+  'closestColor', 'furthestFrom', 'averageColor', 'mostVivid',
   'spacingScale', 'typographyScale', 'timing',
 ];
 

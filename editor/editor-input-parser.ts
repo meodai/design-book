@@ -2,7 +2,7 @@ import {
   color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, relativeTo,
-  closestColor, furthestFrom, averageColor,
+  closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, Scope } from '../src/index';
@@ -284,6 +284,38 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     if (args.length < 1) throw new Error('averageColor requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
     return averageColor(scope);
+  },
+
+  // mostVivid(scope, options?) where options can be { against: ref(...), minContrast: N }
+  // Has a richer options shape than the JSON-only parseOptionsArg can handle
+  // (the `against` field is a ref/token), so the options are parsed inline.
+  mostVivid(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('mostVivid requires 1 argument');
+    const scope = getScopeArg(parseArg(args[0], book));
+
+    if (args.length === 1) return mostVivid(scope);
+
+    const optsStr = args.slice(1).join(',').trim().replace(/^\{|\}$/g, '').trim();
+    const pairs = splitArgs(optsStr);
+    const options: { against?: AnyTokenValue; minContrast?: number; description?: string } = {};
+
+    for (const pair of pairs) {
+      const colonIdx = pair.indexOf(':');
+      if (colonIdx === -1) continue;
+      const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+      const valueStr = pair.slice(colonIdx + 1).trim();
+
+      if (key === 'against') {
+        options.against = getTokenArg(parseArg(valueStr, book));
+      } else if (key === 'minContrast') {
+        options.minContrast = parseFloat(valueStr);
+      } else if (key === 'description') {
+        options.description = valueStr.replace(/^['"]|['"]$/g, '');
+      }
+    }
+
+    return mostVivid(scope, options);
   },
 
   // spacingScale(base, options?)
