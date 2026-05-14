@@ -900,6 +900,15 @@ document.getElementById('reset')?.addEventListener('click', () => {
   // are back and the section's intersection observer can re-fire on the
   // next scroll into view.
   deactivateProceduralPalette();
+
+  // Reset the invert-lightness toggle and the Poline state behind it.
+  polineState.invertedLightness = false;
+  const invertToggle = document.getElementById('poline-invert') as HTMLInputElement | null;
+  if (invertToggle) invertToggle.checked = false;
+  const picker = document.getElementById('poline') as
+    | (HTMLElement & { setPoline?: (p: Poline) => void })
+    | null;
+  if (picker && typeof picker.setPoline === 'function') picker.setPoline(polineState);
 });
 
 // Close the popover when the chip it belongs to scrolls off-screen, so a
@@ -973,6 +982,22 @@ if (polinePicker) {
     if (!proceduralActivated) activateProceduralPalette();
     else syncPolineValues();
   });
+
+  // Invert-lightness toggle. Flipping it mirrors the lightness axis of every
+  // anchor — useful for stress-testing "what if the palette ran from dark
+  // to light instead of light to dark?"
+  const invertToggle = document.getElementById('poline-invert') as HTMLInputElement | null;
+  if (invertToggle) {
+    invertToggle.addEventListener('change', () => {
+      polineState.invertedLightness = invertToggle.checked;
+      // setPoline triggers an SVG + lightness-background refresh on the picker.
+      if (typeof polinePicker.setPoline === 'function') {
+        polinePicker.setPoline(polineState);
+      }
+      if (!proceduralActivated) activateProceduralPalette();
+      else syncPolineValues();
+    });
+  }
 
   // Scroll-triggered activation: when the picker enters the reading area,
   // swap the descriptive value tokens for the Poline-driven palette.

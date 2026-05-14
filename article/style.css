@@ -306,6 +306,26 @@ html, body {
   margin: 0 auto;
 }
 
+.poline-demo__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--article-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.poline-demo__toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--article-accent);
+}
+
 .article-content p,
 .article-content ul,
 .article-content ol {
