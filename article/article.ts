@@ -54,12 +54,12 @@ values.set('white',    color('#ffffff'));
 // chart bars, button label, body text, ramp anchors — moves together.
 const polineState = new Poline({
   anchorColors: [
-    [270, 0.55, 0.99],
-    [88,  0.94, 0.93],
+    [270, 0.76, 0.94],
+    [91,  0.31, 0.42],
   ],
-  numPoints: 8,
-  positionFunctionX: positionFunctions.linearPosition,
-  positionFunctionY: positionFunctions.linearPosition,
+  numPoints: 6,
+  positionFunctionX: positionFunctions.sinusoidalPosition,
+  positionFunctionY: positionFunctions.quadraticPosition,
   positionFunctionZ: positionFunctions.linearPosition,
 });
 
