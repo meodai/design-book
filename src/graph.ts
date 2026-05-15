@@ -89,6 +89,19 @@ export class Graph {
     return visited;
   }
 
+  /** Return the graph as an adjacency list — each node mapped to the keys
+   *  it points to. When `upstream` is true, each node maps to its
+   *  prerequisites (incoming edges) instead. Useful for graph-analysis or
+   *  custom visualisers that don't want to walk the outgoing/incoming maps
+   *  by hand. */
+  getAdjacencyList(upstream: boolean = false): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    for (const node of this.getAllNodes()) {
+      result[node] = upstream ? this.getIncoming(node) : this.getOutgoing(node);
+    }
+    return result;
+  }
+
   bfsTraversal(start: string, upstream: boolean = false): string[] {
     const visited: string[] = [];
     const seen = new Set<string>();
