@@ -1,6 +1,7 @@
 {
   "name": "design-book",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "A reactive TypeScript design-token framework. Tokens with relationships, derived values, and procedural rules that re-evaluate when their inputs change. Renders to CSS, JSON, and W3 Design Tokens.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,6 +14,28 @@
   "files": [
     "dist"
   ],
+  "sideEffects": false,
+  "keywords": [
+    "design-tokens",
+    "design-system",
+    "tokens",
+    "css-variables",
+    "w3-design-tokens",
+    "color",
+    "contrast",
+    "wcag",
+    "procedural",
+    "typescript"
+  ],
+  "author": "Elastiq (https://elastiq.ch/)",
+  "homepage": "https://meodai.github.io/design-book/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meodai/design-book.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meodai/design-book/issues"
+  },
   "scripts": {
     "dev": "vite --mode editor --host",
     "build": "vite build",
@@ -26,8 +49,7 @@
   },
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "culori": "^4.0.2",
-    "poline": "^0.13.1"
+    "culori": "^4.0.2"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.1",
@@ -39,6 +61,7 @@
     "@types/culori": "^4.0.1",
     "codemirror": "^6.0.2",
     "hdr-color-input": "^0.3.6",
+    "poline": "^0.13.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
