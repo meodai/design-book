@@ -250,25 +250,6 @@ html, body {
   font-weight: 400;
 }
 
-/* When a scroll-triggered rewire fires, the heading sprouts a tiny live
-   badge so the reader can see the moment something happened. */
-[data-rewire].rewire-fired::after {
-  content: "live";
-  display: inline-block;
-  margin-left: 10px;
-  padding: 2px 7px;
-  font-family: var(--font-mono);
-  font-size: 0.55em;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #fff;
-  background: var(--article-accent);
-  border-radius: 999px;
-  vertical-align: middle;
-  opacity: 0;
-  animation: rewire-fade-in 0.5s 0.15s forwards;
-}
 
 @keyframes rewire-fade-in {
   from { opacity: 0; transform: translateY(-2px); }
@@ -400,13 +381,22 @@ html, body {
   max-width: 55ch;
 }
 
-.article-content p,
-.article-content ul,
-.article-content ol {
-  margin: 0 0 1em 2.2rem;
-  max-width: 60ch;
-  text-wrap: balance;
+.article-content{
+  p, ul, ol {
+    margin: 0 0 1em 2.2rem;
+    max-width: 60ch;
+    text-wrap: balance;
+  }
+  .scale-demo__row {
+    max-width: 100%;
+  }
+  .rule-line {
+    margin-left: 0;
+    padding-left: 2.2rem;
+  }
 }
+
+
 
 .article-content .lede {
   font-size: 1.5rem;
@@ -483,6 +473,7 @@ html, body {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .rule-line code {

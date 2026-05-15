@@ -335,6 +335,7 @@ function renderChip(chip: HTMLElement) {
   if (!info) return;
   const scope = book.getScope(info.scopeName);
   if (!scope) return;
+  const displayDecimals = getDisplayDecimals(chip);
 
   chip.innerHTML = '';
   chip.classList.remove('token-chip--color', 'token-chip--num', 'token-chip--ref');
@@ -346,7 +347,9 @@ function renderChip(chip: HTMLElement) {
     chip.classList.add('token-chip--num');
     const span = document.createElement('span');
     span.className = 'chip-value';
-    span.textContent = String(value ?? '');
+    span.textContent = typeof value === 'number'
+      ? formatNumber(value, displayDecimals)
+      : String(value ?? '');
     chip.append(span);
     chip.title = `${info.scopeName}.${info.name} option “${info.optionName}” = ${value}`;
     return;
@@ -631,6 +634,7 @@ function buildFnOptionUI(
   const max = Number(chip.dataset.max ?? '1');
   const step = Number(chip.dataset.step ?? '0.01');
   const currentVal = Number((tok.options as Record<string, unknown> | undefined)?.[info.optionName] ?? 0);
+  const displayDecimals = getDisplayDecimals(chip);
 
   const wrap = document.createElement('div');
   wrap.className = 'slider-wrap';
@@ -650,7 +654,7 @@ function buildFnOptionUI(
     range.max = String(snapValues.length - 1);
     range.step = '1';
     range.value = String(currentIndex);
-    display.textContent = formatNumber(snapValues[currentIndex]);
+    display.textContent = formatNumber(snapValues[currentIndex], displayDecimals);
 
     const note = document.createElement('div');
     note.className = 'popover-note';
@@ -661,7 +665,7 @@ function buildFnOptionUI(
     range.max = String(max);
     range.step = String(step);
     range.value = String(currentVal);
-    display.textContent = formatNumber(currentVal);
+    display.textContent = formatNumber(currentVal, displayDecimals);
   }
 
   wrap.append(range, display);
@@ -671,7 +675,7 @@ function buildFnOptionUI(
     const v = snapValues
       ? snapValues[Math.max(0, Math.min(snapValues.length - 1, Number(range.value)))]
       : Number(range.value);
-    display.textContent = formatNumber(v);
+    display.textContent = formatNumber(v, displayDecimals);
     const fresh = scope.get(info.name) as FunctionTokenValue;
     const newOptions = { ...(fresh.options ?? {}), [info.optionName]: v };
     scope.set(info.name, { ...fresh, options: newOptions });
@@ -829,7 +833,18 @@ function buildRefUI(pop: HTMLElement, scopeName: string, name: string) {
   pop.append(list);
 }
 
-function formatNumber(n: number): string {
+function getDisplayDecimals(chip: HTMLElement): number | undefined {
+  const raw = chip.dataset.displayDecimals;
+  if (raw === undefined) return undefined;
+
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0) return undefined;
+
+  return Math.floor(value);
+}
+
+function formatNumber(n: number, decimals?: number): string {
+  if (decimals !== undefined) return n.toFixed(decimals);
   if (Number.isInteger(n)) return String(n);
   return n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
 }
