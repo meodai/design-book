@@ -185,4 +185,38 @@ describe('Graph', () => {
       expect(g.hasPath('a', 'b')).toBe(false);
     });
   });
+
+  describe('getAdjacencyList', () => {
+    it('returns each node mapped to its outgoing neighbours', () => {
+      const g = new Graph();
+      g.addEdge('a', 'b');
+      g.addEdge('a', 'c');
+      g.addEdge('b', 'd');
+
+      const list = g.getAdjacencyList();
+      expect(list.a.sort()).toEqual(['b', 'c']);
+      expect(list.b).toEqual(['d']);
+      expect(list.c).toEqual([]);
+      expect(list.d).toEqual([]);
+    });
+
+    it('returns incoming neighbours when upstream is true', () => {
+      const g = new Graph();
+      g.addEdge('a', 'b');
+      g.addEdge('a', 'c');
+      g.addEdge('b', 'd');
+
+      const list = g.getAdjacencyList(true);
+      expect(list.a).toEqual([]);
+      expect(list.b).toEqual(['a']);
+      expect(list.c).toEqual(['a']);
+      expect(list.d).toEqual(['b']);
+    });
+
+    it('includes orphan nodes with empty arrays', () => {
+      const g = new Graph();
+      g.addNode('lonely');
+      expect(g.getAdjacencyList()).toEqual({ lonely: [] });
+    });
+  });
 });
