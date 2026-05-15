@@ -4,11 +4,12 @@ import {
   extractDependencies,
   extractVisualDependencies,
   getTokenProcessors,
+  normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
-export function closestColorImpl(targetValue: string, scope: Scope): string {
+export function closestColorImpl(targetValue: string, scope: Scope, not: string[] = []): string {
   const targetParsed = parse(targetValue);
   if (!targetParsed) {
     return '#00000000';
@@ -23,10 +24,12 @@ export function closestColorImpl(targetValue: string, scope: Scope): string {
   const tg = (targetRgb as any).g ?? 0;
   const tb = (targetRgb as any).b ?? 0;
 
+  const excluded = new Set(not);
   let closestHex: string | null = null;
   let closestDistance = Infinity;
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -81,12 +84,19 @@ export function closestColorImpl(targetValue: string, scope: Scope): string {
 export function closestColor(
   targetColor: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
-  options?: { description?: string; [key: string]: any }
+  options?: {
+    /** Keys to exclude from the candidate pool. */
+    not?: ReadonlyArray<string | ReferenceValue>;
+    description?: string;
+    [key: string]: any;
+  },
 ): FunctionTokenValue {
   return createFunctionToken(
     'closestColor',
     [targetColor, scope],
     {
+      description: options?.description,
+      options: { not: normalizeNotKeys(options?.not) },
       metadata: {
         dependencies: extractDependencies([targetColor]),
         visualDependencies: extractVisualDependencies([targetColor, scope]),

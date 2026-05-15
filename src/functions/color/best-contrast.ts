@@ -4,12 +4,13 @@ import {
   extractDependencies,
   extractVisualDependencies,
   getTokenProcessors,
+  normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 
-export function bestContrastWithImpl(targetValue: string, scope: Scope): string {
+export function bestContrastWithImpl(targetValue: string, scope: Scope, not: string[] = []): string {
   const targetColor = parse(targetValue);
   if (!targetColor) {
     throw new FunctionError(
@@ -18,10 +19,12 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope): string 
     );
   }
 
+  const excluded = new Set(not);
   let bestHex: string | null = null;
   let bestRatio = -1;
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -76,12 +79,19 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope): string 
 export function bestContrastWith(
   targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
-  options?: { description?: string; [key: string]: any }
+  options?: {
+    /** Keys to exclude from the candidate pool. */
+    not?: ReadonlyArray<string | ReferenceValue>;
+    description?: string;
+    [key: string]: any;
+  },
 ): FunctionTokenValue {
   return createFunctionToken(
     'bestContrastWith',
     [targetValue, scope],
     {
+      description: options?.description,
+      options: { not: normalizeNotKeys(options?.not) },
       metadata: {
         dependencies: extractDependencies([targetValue]),
         visualDependencies: extractVisualDependencies([targetValue, scope]),

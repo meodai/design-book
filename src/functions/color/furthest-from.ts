@@ -1,15 +1,17 @@
 import { parse, formatHex, converter, differenceEuclidean } from 'culori';
-import { createFunctionToken, extractVisualDependencies, getTokenProcessors } from '../../tokens';
-import type { FunctionTokenValue, TokenValue } from '../../tokens';
+import { createFunctionToken, extractVisualDependencies, getTokenProcessors, normalizeNotKeys } from '../../tokens';
+import type { FunctionTokenValue, ReferenceValue, TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
 const toLab = converter('lab');
 const deltaE = differenceEuclidean('lab');
 
-export function furthestFromImpl(scope: Scope): string {
+export function furthestFromImpl(scope: Scope, not: string[] = []): string {
+  const excluded = new Set(not);
   const colors: Array<{ hex: string; lab: any }> = [];
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -79,12 +81,19 @@ export function furthestFromImpl(scope: Scope): string {
 
 export function furthestFrom(
   scope: Scope,
-  options?: { description?: string; [key: string]: any }
+  options?: {
+    /** Keys to exclude from the candidate pool. */
+    not?: ReadonlyArray<string | ReferenceValue>;
+    description?: string;
+    [key: string]: any;
+  },
 ): FunctionTokenValue {
   return createFunctionToken(
     'furthestFrom',
     [scope],
     {
+      description: options?.description,
+      options: { not: normalizeNotKeys(options?.not) },
       metadata: {
         dependencies: [],
         visualDependencies: extractVisualDependencies([scope]),

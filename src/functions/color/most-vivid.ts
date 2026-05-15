@@ -4,6 +4,7 @@ import {
   extractDependencies,
   extractVisualDependencies,
   getTokenProcessors,
+  normalizeNotKeys,
 } from '../../tokens';
 import type {
   FunctionArg,
@@ -31,12 +32,15 @@ export function mostVividImpl(
   scope: Scope,
   against: string | null,
   minContrast: number,
+  not: string[] = [],
 ): string {
   const targetColor = against ? parse(against) : null;
+  const excluded = new Set(not);
 
   const candidates: Array<{ hex: string; chroma: number; contrast: number }> = [];
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -105,6 +109,10 @@ export interface MostVividOptions {
   against?: TokenValue | ReferenceValue | FunctionTokenValue;
   /** Minimum WCAG contrast ratio against `against`. Defaults to 0 (off). */
   minContrast?: number;
+  /** Keys to exclude from the candidate pool. Pass `ref('scope.token')`
+   *  or a literal `'scope.token'` string. Useful for keeping role-loaded
+   *  tokens like `values.error` out of accent-colour picking. */
+  not?: ReadonlyArray<string | ReferenceValue>;
   description?: string;
   [key: string]: unknown;
 }
@@ -115,7 +123,10 @@ export function mostVivid(scope: Scope, options?: MostVividOptions): FunctionTok
 
   return createFunctionToken('mostVivid', args, {
     description: options?.description,
-    options: { minContrast: options?.minContrast ?? 0 },
+    options: {
+      minContrast: options?.minContrast ?? 0,
+      not: normalizeNotKeys(options?.not),
+    },
     metadata: {
       dependencies,
       visualDependencies: extractVisualDependencies([scope]),

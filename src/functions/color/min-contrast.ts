@@ -4,6 +4,7 @@ import {
   extractDependencies,
   extractVisualDependencies,
   getTokenProcessors,
+  normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
@@ -11,6 +12,8 @@ import { FunctionError } from '../../errors';
 
 export interface MinContrastOptions {
   ratio?: number;
+  /** Keys to exclude from the candidate pool. */
+  not?: ReadonlyArray<string | ReferenceValue>;
   description?: string;
   [key: string]: any;
 }
@@ -18,7 +21,8 @@ export interface MinContrastOptions {
 export function minContrastWithImpl(
   targetValue: string,
   scope: Scope,
-  ratio: number
+  ratio: number,
+  not: string[] = [],
 ): string {
   const targetColor = parse(targetValue);
   if (!targetColor) {
@@ -28,9 +32,11 @@ export function minContrastWithImpl(
     );
   }
 
+  const excluded = new Set(not);
   const candidates: Array<{ hex: string; contrast: number }> = [];
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -94,7 +100,7 @@ export function minContrastWith(
   scope: Scope,
   options?: MinContrastOptions
 ): FunctionTokenValue {
-  const { ratio = 4.5, description, ...rest } = options ?? {};
+  const { ratio = 4.5, not, description, ...rest } = options ?? {};
 
   return createFunctionToken(
     'minContrastWith',
@@ -102,7 +108,7 @@ export function minContrastWith(
     {
       description,
       ...rest,
-      options: { ratio },
+      options: { ratio, not: normalizeNotKeys(not) },
       metadata: {
         dependencies: extractDependencies([targetValue]),
         visualDependencies: extractVisualDependencies([targetValue, scope]),

@@ -113,13 +113,18 @@ function activateProceduralPalette() {
   // colour driving both the button background and the links — which is the
   // usual real-world pattern.
   colorScope.set('surface', ref('values.poline100'));
+  // `not` keeps the procedural accent from landing on role-loaded values
+  // like values.red500 — those have their own semantic meaning (error /
+  // alert) and shouldn't be reused as the brand / link colour.
   colorScope.set('brand', mostVivid(values, {
     against: ref('color.surface'),
     minContrast: 4.5,
+    not: [ref('values.red500')],
   }));
   colorScope.set('interaction', mostVivid(values, {
     against: ref('color.surface'),
     minContrast: 4.5,
+    not: [ref('values.red500')],
   }));
 
   // Drop the descriptive value tokens — the palette is now Poline-driven.

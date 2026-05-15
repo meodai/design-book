@@ -181,6 +181,16 @@ export function extractDependencies(args: FunctionArg[]): string[] {
   return deps;
 }
 
+/** Normalises a `not` option into an array of fully-qualified token keys.
+ *  Accepts strings (already qualified keys) or `ReferenceValue` objects
+ *  produced by `ref('scope.token')`. Used by scope-iterating analysis
+ *  functions (bestContrastWith, mostVivid, …) to exclude candidates from
+ *  the search pool. */
+export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): string[] {
+  if (!not || not.length === 0) return [];
+  return not.map((n) => (typeof n === 'string' ? n : (n as ReferenceValue).key));
+}
+
 export function extractVisualDependencies(args: FunctionArg[]): string[] {
   const deps: string[] = [];
   for (const arg of args) {

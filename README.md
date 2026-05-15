@@ -91,6 +91,28 @@ mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally 
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Pass `against` (a target colour) and `minContrast` to require the result to clear a WCAG threshold against that target — useful for picking an accent / link colour out of a generated palette without it turning unreadable. Falls back to the highest-contrast candidate if nothing meets the threshold, same as `minContrastWith`.
 
+### Excluding candidates with `not`
+
+Every scope-iterating function above accepts a `not` option — an array of
+fully-qualified token keys (or `ref(...)` calls) that should be skipped during
+the search. Useful when a value carries a role you don't want to reuse
+elsewhere — `values.error` shouldn't be the accent colour even if it happens
+to have the highest chroma.
+
+```typescript
+ui.set('accent', mostVivid(palette, {
+  against: ref('ui.surface'),
+  minContrast: 4.5,
+  not: [ref('palette.error'), ref('palette.success')],
+}));
+
+// `not` is also available on bestContrastWith, minContrastWith,
+// closestColor, furthestFrom and averageColor.
+```
+
+Plain strings work too — `not: ['palette.error']` is equivalent to
+`not: [ref('palette.error')]`.
+
 ### Color transforms
 
 ```typescript

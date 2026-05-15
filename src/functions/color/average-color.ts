@@ -1,15 +1,17 @@
 import { parse, formatHex, converter } from 'culori';
-import { createFunctionToken, extractVisualDependencies, getTokenProcessors } from '../../tokens';
-import type { FunctionTokenValue, TokenValue } from '../../tokens';
+import { createFunctionToken, extractVisualDependencies, getTokenProcessors, normalizeNotKeys } from '../../tokens';
+import type { FunctionTokenValue, ReferenceValue, TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
-export function averageColorImpl(scope: Scope, colorSpace: string): string {
+export function averageColorImpl(scope: Scope, colorSpace: string, not: string[] = []): string {
   const toSpace = converter(colorSpace as any);
   const toRgb = converter('rgb');
 
+  const excluded = new Set(not);
   const converted: any[] = [];
 
   for (const key of scope.getAllKeys()) {
+    if (excluded.has(`${scope.name}.${key}`)) continue;
     const token = scope.get(key);
     if (!token) continue;
 
@@ -76,7 +78,13 @@ export function averageColorImpl(scope: Scope, colorSpace: string): string {
 
 export function averageColor(
   scope: Scope,
-  options?: { colorSpace?: string; description?: string; [key: string]: any }
+  options?: {
+    colorSpace?: string;
+    /** Keys to exclude from the candidate pool. */
+    not?: ReadonlyArray<string | ReferenceValue>;
+    description?: string;
+    [key: string]: any;
+  },
 ): FunctionTokenValue {
   const colorSpace = options?.colorSpace ?? 'lab';
 
@@ -84,7 +92,8 @@ export function averageColor(
     'averageColor',
     [scope],
     {
-      options: { colorSpace },
+      description: options?.description,
+      options: { colorSpace, not: normalizeNotKeys(options?.not) },
       metadata: {
         dependencies: [],
         visualDependencies: extractVisualDependencies([scope]),

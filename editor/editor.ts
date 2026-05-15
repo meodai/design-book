@@ -62,9 +62,14 @@ function bootDesignSystem() {
   card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
   // mostVivid picks the highest-chroma colour in `brand` that still meets a
   // 4.5 contrast against the card surface — readable accent, auto-selected.
+  // `not` keeps role-loaded tokens like brand.error / brand.success from
+  // being mistaken for the accent (red happens to have higher OKLCH chroma
+  // than blue, so without the exclusion the interactive colour would land
+  // on the error red).
   card.set('interactive', mostVivid(brand, {
     against: ref('card.surface'),
     minContrast: 4.5,
+    not: [ref('brand.error'), ref('brand.success')],
   }));
   card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));
   // shade adapts to the surface's lightness — darkens light surfaces,
@@ -273,8 +278,17 @@ function getTokenDisplayValue(scope: Scope, tokenName: string): string {
       }
     }
     // Preserve options across edit-cycle round-trips so ratios, steps, etc.
-    // aren't reset to defaults on re-parse
-    const optionKeys = fn.options ? Object.keys(fn.options).filter(k => k !== 'description') : [];
+    // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
+    // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
+    const optionKeys = fn.options
+      ? Object.keys(fn.options).filter((k) => {
+          if (k === 'description') return false;
+          const v = fn.options[k];
+          if (v === undefined || v === null) return false;
+          if (Array.isArray(v) && v.length === 0) return false;
+          return true;
+        })
+      : [];
     if (optionKeys.length > 0) {
       const optionPairs = optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`);
       argStrs.push(`{ ${optionPairs.join(', ')} }`);

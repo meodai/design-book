@@ -295,9 +295,10 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return averageColor(scope);
   },
 
-  // mostVivid(scope, options?) where options can be { against: ref(...), minContrast: N }
-  // Has a richer options shape than the JSON-only parseOptionsArg can handle
-  // (the `against` field is a ref/token), so the options are parsed inline.
+  // mostVivid(scope, ...) — accepts either
+  //   mostVivid(scope, { against: ref(...), minContrast: N, not: [...] })
+  //   mostVivid(scope, againstRef, { minContrast: N, not: [...] })   // serialised form
+  // Items in `not` can be `ref('scope.token')` or a literal `"scope.token"`.
   mostVivid(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('mostVivid requires 1 argument');
@@ -305,26 +306,56 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
 
     if (args.length === 1) return mostVivid(scope);
 
-    const optsStr = args.slice(1).join(',').trim().replace(/^\{|\}$/g, '').trim();
-    const pairs = splitArgs(optsStr);
-    const options: { against?: AnyTokenValue; minContrast?: number; description?: string } = {};
+    const options: {
+      against?: AnyTokenValue;
+      minContrast?: number;
+      not?: Array<AnyTokenValue | string>;
+      description?: string;
+    } = {};
 
-    for (const pair of pairs) {
-      const colonIdx = pair.indexOf(':');
-      if (colonIdx === -1) continue;
-      const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
-      const valueStr = pair.slice(colonIdx + 1).trim();
+    // The second arg can be a positional `against` (a ref/token) — that's
+    // what the serializer in editor.ts emits, since fn.args is [scope,
+    // againstRef]. Detect it by leading char and route to options.against.
+    let optionsStartIdx = 1;
+    const secondArg = args[1].trim();
+    if (secondArg && !secondArg.startsWith('{')) {
+      options.against = getTokenArg(parseArg(secondArg, book));
+      optionsStartIdx = 2;
+    }
 
-      if (key === 'against') {
-        options.against = getTokenArg(parseArg(valueStr, book));
-      } else if (key === 'minContrast') {
-        options.minContrast = parseFloat(valueStr);
-      } else if (key === 'description') {
-        options.description = valueStr.replace(/^['"]|['"]$/g, '');
+    if (args.length > optionsStartIdx) {
+      const optsStr = args.slice(optionsStartIdx).join(',').trim().replace(/^\{|\}$/g, '').trim();
+      const pairs = splitArgs(optsStr);
+
+      for (const pair of pairs) {
+        const colonIdx = pair.indexOf(':');
+        if (colonIdx === -1) continue;
+        const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+        const valueStr = pair.slice(colonIdx + 1).trim();
+
+        if (key === 'against') {
+          options.against = getTokenArg(parseArg(valueStr, book));
+        } else if (key === 'minContrast') {
+          options.minContrast = parseFloat(valueStr);
+        } else if (key === 'not') {
+          // Array literal: [ref('a.b'), 'c.d', "e.f"]. Refs become ReferenceValue;
+          // quoted strings stay as bare keys.
+          const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
+          options.not = arrStr
+            ? splitArgs(arrStr).map((item) => {
+                const trimmed = item.trim();
+                const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
+                if (strMatch) return strMatch[1];
+                return getTokenArg(parseArg(trimmed, book));
+              })
+            : [];
+        } else if (key === 'description') {
+          options.description = valueStr.replace(/^['"]|['"]$/g, '');
+        }
       }
     }
 
-    return mostVivid(scope, options);
+    return mostVivid(scope, options as any);
   },
 
   // spacingScale(base, options?)
