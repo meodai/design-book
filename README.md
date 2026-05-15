@@ -113,6 +113,91 @@ typographyScale(base, { ratio, step })          // Modular scale
 timing(duration, 'ease-out', { delay })         // Timing string
 ```
 
+## Custom Functions
+
+You can register your own functions and use them as procedural tokens the
+same way the built-ins work. Two pieces:
+
+1. **An implementation** — a plain function that receives the *already
+   resolved* arguments (strings for refs, scope objects for `ScopeFunctionArg`
+   inputs), plus an optional `options` object as the last argument, and
+   returns a string.
+2. **A constructor that wraps it as a `FunctionTokenValue`** — call
+   `createFunctionToken('name', args, { options, metadata })`. The
+   `metadata.dependencies` array tells the graph which refs the token reads
+   from so changes propagate; `metadata.visualDependencies` lists scope keys
+   it iterates (for analysis functions like `bestContrastWith`).
+
+```typescript
+import {
+  DesignBook, color, ref, px,
+  createFunctionToken, extractDependencies,
+} from 'design-book';
+import type { TokenValue, ReferenceValue, FunctionTokenValue } from 'design-book';
+
+// 1. Implementation. Receives the resolved colour as a string and the options.
+function multiplyAlphaImpl(colorValue: string, alpha: number): string {
+  // (Use any parser you like — culori, chroma-js, your own. Returns CSS.)
+  return colorValue.replace(/#([0-9a-f]{6})$/i, (_, hex) => {
+    const hexA = Math.round(alpha * 255).toString(16).padStart(2, '0');
+    return `#${hex}${hexA}`;
+  });
+}
+
+// 2. Constructor. Wraps the impl as a function token.
+function multiplyAlpha(
+  baseColor: TokenValue | ReferenceValue | FunctionTokenValue,
+  options?: { alpha?: number },
+): FunctionTokenValue {
+  return createFunctionToken('multiplyAlpha', [baseColor], {
+    options: { alpha: options?.alpha ?? 1 },
+    metadata: {
+      dependencies: extractDependencies([baseColor]),
+      visualDependencies: [],
+      returnType: 'color',
+    },
+  });
+}
+
+// 3. Register the impl on every book that should know about it.
+const book = new DesignBook('with-custom-fns');
+book.registerFunction(
+  'multiplyAlpha',
+  (colorValue: string, options?: { alpha?: number }) =>
+    multiplyAlphaImpl(colorValue, options?.alpha ?? 1),
+);
+
+// 4. Use it just like a built-in. Custom functions can nest inside other
+//    function tokens (built-in or custom) too.
+const brand = book.addScope('brand');
+brand.set('primary', color('#0066cc'));
+const ui = book.addScope('ui');
+ui.set('overlay', multiplyAlpha(ref('brand.primary'), { alpha: 0.5 }));
+
+book.resolve('ui.overlay'); // '#0066cc80'
+```
+
+The same pattern handles scope-iterating analysers — pass the scope as an
+arg and populate `metadata.visualDependencies` via
+`extractVisualDependencies([scope])` so the dependency graph knows which
+keys the function reads from.
+
+If you want your custom function to render as native CSS (e.g. as a
+`color-mix` expression instead of the resolved hex), register a function
+renderer on the `Renderer`:
+
+```typescript
+import { Renderer } from 'design-book';
+
+const renderer = new Renderer(book, 'css-variables');
+renderer.registerFunctionRenderer('multiplyAlpha', (args, options) => {
+  // `args` are the unresolved FunctionArg values; emit any CSS expression.
+  return `rgb(from ${argToCss(args[0])} r g b / ${(options?.alpha as number) ?? 1})`;
+});
+```
+
+Without a renderer, the CSS output falls back to the resolved string.
+
 ## Scopes and Inheritance
 
 ```typescript
