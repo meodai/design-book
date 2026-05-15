@@ -2,7 +2,7 @@ import {
   DesignBook, color, ref, px, rem, ms,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade,
   spacingScale, typographyScale,
-  Renderer, SVGRenderer,
+  Renderer, SVGRenderer, TableViewRenderer,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
 import type { Scope } from '../src/index';
@@ -85,7 +85,7 @@ function bootDesignSystem() {
 
 // --- State ---
 
-let activeFormat: RenderFormat | 'svg' | 'log' | 'example' = 'example';
+let activeFormat: RenderFormat | 'svg' | 'log' | 'example' | 'table' = 'example';
 
 // Track CodeMirror editor instances per scope name
 const editorViews = new Map<string, EditorView>();
@@ -169,15 +169,24 @@ book.on('scopeAdded', (e) => {
 // --- Rendering ---
 
 const visualizationEl = document.getElementById('visualization')!;
+const tableView = document.getElementById('table-view')!;
 
 function renderActiveTab() {
   outputEl.style.display = 'none';
   visualizationEl.style.display = 'none';
   eventLog.style.display = 'none';
   exampleView.style.display = 'none';
+  tableView.style.display = 'none';
 
   if (activeFormat === 'log') {
     eventLog.style.display = '';
+  } else if (activeFormat === 'table') {
+    tableView.style.display = '';
+    try {
+      tableView.innerHTML = new TableViewRenderer(book).render();
+    } catch (err) {
+      tableView.innerHTML = `<p style="color:#dc3545">Table render error: ${(err as Error).message}</p>`;
+    }
   } else if (activeFormat === 'example') {
     exampleView.style.display = '';
     try {
@@ -1027,7 +1036,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
     tab.classList.add('active');
-    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg' | 'log' | 'example';
+    activeFormat = (tab as HTMLElement).dataset.format as RenderFormat | 'svg' | 'log' | 'example' | 'table';
     renderActiveTab();
   });
 });
