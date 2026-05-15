@@ -352,8 +352,8 @@ html, body {
 .bezier-svg {
   display: block;
   width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
+  max-width: 80%;
+  margin-left: -1.5rem;
   touch-action: none;
   user-select: none;
 }
