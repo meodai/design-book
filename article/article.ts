@@ -1123,26 +1123,32 @@ if (bezierSvg) {
     }).join('');
 
     bezierSvg!.innerHTML = `
-      <!-- Reference frame -->
-      <rect x="${PAD}" y="${PAD}" width="${SVG_W - 2 * PAD}" height="${SVG_H - 2 * PAD}"
-            fill="none" stroke="var(--article-rule)" stroke-width="1" />
-      <!-- Control lines -->
-      <line x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}"
-            stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3" />
-      <line x1="${p3x}" y1="${p3y}" x2="${p2x}" y2="${p2y}"
-            stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3" />
-      <!-- Curve -->
-      <path d="M ${p0x} ${p0y} C ${p1x} ${p1y}, ${p2x} ${p2y}, ${p3x} ${p3y}"
-            fill="none" stroke="var(--article-accent)" stroke-width="2" />
-      <!-- Step dots -->
-      ${dots}
-      <!-- Handles -->
-      <circle data-handle="p1" cx="${p1x}" cy="${p1y}" r="7"
-              fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
-              style="cursor: grab;" />
-      <circle data-handle="p2" cx="${p2x}" cy="${p2y}" r="7"
-              fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
-              style="cursor: grab;" />
+      <g vector-effect="non-scaling-stroke">
+        <!-- Reference frame -->
+        <rect x="${PAD}" y="${PAD}" width="${SVG_W - 2 * PAD}" height="${SVG_H - 2 * PAD}"
+              fill="none" stroke="var(--article-rule)" stroke-width="1"
+              vector-effect="non-scaling-stroke" />
+        <!-- Control lines -->
+        <line x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}"
+              stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3"
+              vector-effect="non-scaling-stroke" />
+        <line x1="${p3x}" y1="${p3y}" x2="${p2x}" y2="${p2y}"
+              stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3"
+              vector-effect="non-scaling-stroke" />
+        <!-- Curve -->
+        <path d="M ${p0x} ${p0y} C ${p1x} ${p1y}, ${p2x} ${p2y}, ${p3x} ${p3y}"
+              fill="none" stroke="var(--article-accent)" stroke-width="2"
+              vector-effect="non-scaling-stroke" />
+        <!-- Step dots -->
+        ${dots}
+        <!-- Handles -->
+        <circle data-handle="p1" cx="${p1x}" cy="${p1y}" r="7"
+                fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
+                vector-effect="non-scaling-stroke" style="cursor: grab;" />
+        <circle data-handle="p2" cx="${p2x}" cy="${p2y}" r="7"
+                fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
+                vector-effect="non-scaling-stroke" style="cursor: grab;" />
+      </g>
     `;
   }
 
