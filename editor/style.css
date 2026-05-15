@@ -69,9 +69,39 @@ body {
 h1 {
   font-size: 1rem;
   font-weight: 300;
-  margin-bottom: 1.5rem;
+  margin: 0 0 0.75rem 0;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.intro {
+  max-width: 64ch;
+  margin-bottom: 2rem;
+}
+
+.intro p {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 0.5rem 0;
+  color: color-mix(in oklab, var(--c-surface-on), transparent 15%);
+}
+
+.intro__links {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.8rem;
+}
+
+.intro__links a {
+  color: var(--c-surface-on);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--c-surface-on), transparent 60%);
+}
+
+.intro__links a:hover {
+  text-decoration-color: var(--c-surface-on);
 }
 
 h3 {
