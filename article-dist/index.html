@@ -24,8 +24,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-BvOq2dzf.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-B2huIsIX.css">
+  <script type="module" crossorigin src="/assets/index-Dw1CW_tz.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BwCqC3mm.css">
 </head>
 <body>
   <div class="layout">
@@ -385,6 +385,17 @@
             <input type="checkbox" id="poline-invert">
             <span>Invert lightness</span>
           </label>
+        </div>
+
+        <div class="bezier-demo" aria-label="Bezier curve editor for the spacing scale">
+          <p class="bezier-demo__caption">
+            Each <code>space.*</code> token reads its multiplier from this
+            curve. Drag the two handles to reshape the scale — gap, padding
+            and the chart bars' spacing in the panel all follow.
+          </p>
+          <svg id="bezier-svg" class="bezier-svg" viewBox="0 0 200 150" role="img" aria-label="Cubic bezier curve controlling the spacing scale">
+            <!-- rendered by article.ts -->
+          </svg>
         </div>
         <p>
           The names <code>values.gray800</code>, <code>values.red500</code>

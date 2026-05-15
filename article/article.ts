@@ -1034,6 +1034,150 @@ if (depGraphContainer) {
 }
 
 // ---------------------------------------------------------------------------
+// Bezier curve editor (§5) — drives the spacing scale's multipliers
+// ---------------------------------------------------------------------------
+//
+// Each `space.*` token is a `spacingScale(ref('space.base'), { multiplier })`
+// function token. The bezier editor below maps step-positions along a
+// cubic-bezier curve from (0,0) to (1,1), and writes the curve's y-value
+// at each step (scaled into [MIN_MULT, MAX_MULT]) into the corresponding
+// token's `multiplier` option. Drag the handles, the curve mutates, every
+// spacing token updates, the example panel reshapes.
+
+const bezierState = {
+  p1: [0.42, 0.0] as [number, number],
+  p2: [0.58, 1.0] as [number, number],
+};
+
+const BEZIER_STEPS: Array<[name: string, t: number]> = [
+  ['xs', 0.00],
+  ['s',  0.25],
+  ['m',  0.50],
+  ['l',  0.75],
+  ['xl', 1.00],
+];
+const BEZIER_MIN_MULT = 0.25;
+const BEZIER_MAX_MULT = 3;
+
+function cubicBezierY(t: number, p1y: number, p2y: number): number {
+  const u = 1 - t;
+  return 3 * u * u * t * p1y + 3 * u * t * t * p2y + t * t * t;
+}
+
+function cubicBezierPoint(t: number, p1: [number, number], p2: [number, number]): [number, number] {
+  const u = 1 - t;
+  const x = 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t;
+  const y = 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t;
+  return [x, y];
+}
+
+function syncSpaceFromCurve() {
+  for (const [name, t] of BEZIER_STEPS) {
+    const y = cubicBezierY(t, bezierState.p1[1], bezierState.p2[1]);
+    const multiplier = BEZIER_MIN_MULT + (BEZIER_MAX_MULT - BEZIER_MIN_MULT) * y;
+    const current = space.get(name);
+    if (current?.type !== 'function') continue;
+    const fn = current as FunctionTokenValue;
+    space.set(name, {
+      ...fn,
+      options: { ...(fn.options ?? {}), multiplier },
+    });
+  }
+}
+
+const bezierSvg = document.getElementById('bezier-svg') as SVGSVGElement | null;
+if (bezierSvg) {
+  const SVG_W = 200;
+  const SVG_H = 150;
+  const PAD = 15;
+
+  function bezierToSvg(x: number, y: number): [number, number] {
+    return [
+      PAD + x * (SVG_W - 2 * PAD),
+      SVG_H - PAD - y * (SVG_H - 2 * PAD),
+    ];
+  }
+
+  function svgEventToBezier(e: PointerEvent): [number, number] {
+    const rect = bezierSvg!.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * SVG_W;
+    const svgY = ((e.clientY - rect.top) / rect.height) * SVG_H;
+    return [
+      Math.max(0, Math.min(1, (svgX - PAD) / (SVG_W - 2 * PAD))),
+      Math.max(0, Math.min(1, (SVG_H - PAD - svgY) / (SVG_H - 2 * PAD))),
+    ];
+  }
+
+  function renderBezier() {
+    const [p0x, p0y] = bezierToSvg(0, 0);
+    const [p3x, p3y] = bezierToSvg(1, 1);
+    const [p1x, p1y] = bezierToSvg(bezierState.p1[0], bezierState.p1[1]);
+    const [p2x, p2y] = bezierToSvg(bezierState.p2[0], bezierState.p2[1]);
+
+    // Sample dots — one per spacing step, drawn on the curve so the reader
+    // can see which step maps where.
+    const dots = BEZIER_STEPS.map(([, t]) => {
+      const [bx, by] = cubicBezierPoint(t, bezierState.p1, bezierState.p2);
+      const [sx, sy] = bezierToSvg(bx, by);
+      return `<circle cx="${sx}" cy="${sy}" r="3" fill="var(--article-text)" />`;
+    }).join('');
+
+    bezierSvg!.innerHTML = `
+      <!-- Reference frame -->
+      <rect x="${PAD}" y="${PAD}" width="${SVG_W - 2 * PAD}" height="${SVG_H - 2 * PAD}"
+            fill="none" stroke="var(--article-rule)" stroke-width="1" />
+      <!-- Control lines -->
+      <line x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}"
+            stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3" />
+      <line x1="${p3x}" y1="${p3y}" x2="${p2x}" y2="${p2y}"
+            stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3" />
+      <!-- Curve -->
+      <path d="M ${p0x} ${p0y} C ${p1x} ${p1y}, ${p2x} ${p2y}, ${p3x} ${p3y}"
+            fill="none" stroke="var(--article-accent)" stroke-width="2" />
+      <!-- Step dots -->
+      ${dots}
+      <!-- Handles -->
+      <circle data-handle="p1" cx="${p1x}" cy="${p1y}" r="7"
+              fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
+              style="cursor: grab;" />
+      <circle data-handle="p2" cx="${p2x}" cy="${p2y}" r="7"
+              fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
+              style="cursor: grab;" />
+    `;
+  }
+
+  let draggingHandle: 'p1' | 'p2' | null = null;
+
+  bezierSvg.addEventListener('pointerdown', (e) => {
+    const target = e.target as SVGElement | null;
+    const handle = target?.getAttribute?.('data-handle');
+    if (handle !== 'p1' && handle !== 'p2') return;
+    draggingHandle = handle;
+    bezierSvg.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  bezierSvg.addEventListener('pointermove', (e) => {
+    if (!draggingHandle) return;
+    const [bx, by] = svgEventToBezier(e);
+    bezierState[draggingHandle] = [bx, by];
+    renderBezier();
+    syncSpaceFromCurve();
+  });
+
+  const stopDrag = (e: PointerEvent) => {
+    if (!draggingHandle) return;
+    bezierSvg.releasePointerCapture(e.pointerId);
+    draggingHandle = null;
+  };
+  bezierSvg.addEventListener('pointerup', stopDrag);
+  bezierSvg.addEventListener('pointercancel', stopDrag);
+
+  renderBezier();
+  syncSpaceFromCurve();
+}
+
+// ---------------------------------------------------------------------------
 // 6. Boot
 // ---------------------------------------------------------------------------
 

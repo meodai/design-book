@@ -326,6 +326,39 @@ html, body {
   accent-color: var(--article-accent);
 }
 
+/* ---------- Bezier editor (§5) ---------- */
+.bezier-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 28px 0;
+  padding: 20px;
+  border: 1px solid var(--article-rule);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.015);
+  max-width: 60ch;
+}
+
+.bezier-demo__caption {
+  margin: 0 !important;
+  max-width: none !important;
+  font-size: 0.85em;
+  color: var(--article-muted);
+}
+
+.bezier-svg {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.bezier-svg circle[data-handle]:hover {
+  fill: var(--article-accent);
+}
+
 /* ---------- Dependency graph (under the live example) ---------- */
 .dep-graph-figure {
   margin: 0;
