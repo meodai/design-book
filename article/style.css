@@ -14,7 +14,7 @@
 :root {
   /* Dynamic vars — overwritten at runtime by article.ts. Defaults below
      just keep the example panel sensible while JS boots. */
-  --color-surface:    #fafafa;
+  --color-surface:       #fafafa;
   --color-text:          #1a1a1a;
   --color-brand:         #202126;
   --color-interaction:   #1d4eb8;
@@ -49,13 +49,13 @@
   --font-mono:            ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-article:         "Libertinus Sans", ui-sans-serif, system-ui, sans-serif;
   --font-article-display: "Libertinus Serif", ui-serif, Georgia, serif;
-  --article-text:       #1a1a1a;
+  --article-text:       #1d1c1c;
   --article-muted:      rgba(0, 0, 0, 0.6);
   --article-rule:       rgba(0, 0, 0, 0.08);
-  --article-link:       #1d4eb8;
+  --article-link:       #2d60a5;
   --article-link-hover: #133380;
-  --article-accent:     #1d4eb8;
-  --article-surface:    #ffffff;
+  --article-accent:     #2d60a5;
+  --article-surface:    #fcf6ee;
 
   --chip-bg:        var(--article-link);
   --chip-onBg:      var(--article-surface);
@@ -468,7 +468,6 @@ html, body {
   font-size: 14px;
   background: rgba(0, 0, 0, 0.04);
   padding: 12px 16px;
-  border-radius: 6px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -486,7 +485,6 @@ html, body {
   padding: 1rem 0;
   max-width: 34rem;
   border: 1px solid var(--article-rule);
-  border-radius: 10px;
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.035));
 }
@@ -542,7 +540,6 @@ html, body {
   padding: 1rem 0;
   max-width: 42rem;
   border: 1px solid var(--article-rule);
-  border-radius: 10px;
   background: rgba(0, 0, 0, 0.025);
 }
 
