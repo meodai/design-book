@@ -3,7 +3,7 @@ import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
-import type { AnyTokenValue, ReferenceValue, FunctionTokenValue } from './tokens';
+import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
@@ -53,6 +53,46 @@ export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
 };
 
 export type FunctionImplementation<Args extends unknown[] = unknown[]> = (...args: Args) => string;
+
+/** Bundled info about a token returned by `book.inspect(key)`. */
+export interface TokenInspection {
+  /** Fully-qualified key, e.g. `"color.brand"`. */
+  key: string;
+  /** Resolved string value (`#hex`, `16px`, …). Undefined if resolution fails. */
+  value: string | undefined;
+  /** The underlying token type — `"color"`, `"dimension"`, `"reference"`, `"function"`, etc. */
+  tokenType: string;
+  /** Graph prerequisites of this token. */
+  dependencies: string[];
+  /** Graph dependents of this token. */
+  dependents: string[];
+  /** True when the active value comes from a parent scope via inheritance. */
+  isInherited: boolean;
+  /** Fully-qualified key of the source token when the value is inherited. */
+  source?: string;
+  /** Free-text description, when one was set on the token. */
+  description?: string;
+
+  // Reference-token specifics
+  /** Target key when the token is a reference. */
+  refKey?: string;
+
+  // Function-token specifics
+  /** Function name when the token is a function. */
+  function?: string;
+  /** Function args (refs / tokens / scopes) when the token is a function. */
+  args?: FunctionArg[];
+  /** Function options when the token is a function. */
+  options?: Record<string, unknown>;
+  /** Declared return type when the token is a function (e.g. `"color"`). */
+  returnType?: string;
+
+  // Value-token specifics
+  /** Raw stored value for value tokens (number for dimensions, hex for colors, …). */
+  rawValue?: unknown;
+  /** Unit (e.g. `"px"`) when the value token is a dimension. */
+  unit?: string;
+}
 
 type EventCallback<K extends keyof DesignBookEventMap> = (event: DesignBookEvent<K>) => void;
 
@@ -193,6 +233,57 @@ export class DesignBook {
 
   getDependencyGraph(): DependencyGraph {
     return this.graph;
+  }
+
+  /** Inspect a token in one call — bundle the resolved value, the underlying
+   *  token shape, and the dependency-graph context around it. Replaces the
+   *  three-step pattern of `resolve` + `getTokenByKey` + `graph.getIncoming`.
+   *  Returns null when the key isn't registered. */
+  inspect(key: string): TokenInspection | null {
+    const token = this.getTokenByKey(key);
+    if (!token) return null;
+
+    let value: string | undefined;
+    try {
+      value = this.resolve(key);
+    } catch {
+      value = undefined;
+    }
+
+    const dotIndex = key.indexOf('.');
+    const scopeName = dotIndex === -1 ? '' : key.substring(0, dotIndex);
+    const tokenName = dotIndex === -1 ? key : key.substring(dotIndex + 1);
+    const scope = scopeName ? this.scopeManager.getScope(scopeName) : undefined;
+    const source = scope?.getSourceKey(tokenName);
+
+    const inspection: TokenInspection = {
+      key,
+      value,
+      tokenType: token.type,
+      dependencies: this.graph.getIncoming(key),
+      dependents: this.graph.getOutgoing(key),
+      isInherited: source !== undefined && source !== key,
+      source,
+    };
+
+    if (token.type === 'reference') {
+      inspection.refKey = (token as ReferenceValue).key;
+    } else if (token.type === 'function') {
+      const fn = token as FunctionTokenValue;
+      inspection.function = fn.name;
+      inspection.args = fn.args;
+      inspection.options = fn.options;
+      inspection.returnType = fn.metadata?.returnType;
+    } else {
+      const tv = token as TokenValue;
+      inspection.rawValue = tv.rawValue;
+      if (tv.metadata?.unit) inspection.unit = tv.metadata.unit as string;
+    }
+
+    const description = (token as { description?: string }).description;
+    if (description) inspection.description = description;
+
+    return inspection;
   }
 
   // --- Function registry ---

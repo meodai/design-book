@@ -10,6 +10,7 @@ export type {
   ScopeAddedDetail,
   ScopeRemovedDetail,
   TokenChangedDetail,
+  TokenInspection,
 } from './design-book';
 export { Scope } from './scope';
 
@@ -71,4 +72,6 @@ export type {
   W3TokenValue,
 } from './renderers/renderer';
 export { SVGRenderer } from './renderers/svg-renderer';
+export { TableViewRenderer } from './renderers/table-view-renderer';
+export type { TableViewRenderOptions } from './renderers/table-view-renderer';
 export { registerBuiltinFunctionRenderers } from './renderers/function-renderers';

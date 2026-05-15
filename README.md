@@ -291,6 +291,23 @@ Follows the [W3 Design Tokens spec](https://www.designtokens.org/tr/drafts/forma
 
 If you want the structured token object directly, use `renderW3DesignTokensObject()`.
 
+### Table view
+
+For documentation pages or admin UIs, `TableViewRenderer` outputs an HTML
+`<table>` with one row per token — qualified key, type, resolved value
+(with an optional inline colour swatch), and the dependency list.
+
+```typescript
+import { TableViewRenderer } from 'design-book';
+
+const html = new TableViewRenderer(book).render();
+// <table class="design-book-table">…</table>
+```
+
+Options: `className` (root element class), `inlineColorSwatches`
+(default `true`), `showInheritance` (default `true` — annotates inherited
+rows with the source key).
+
 ## Events
 
 ```typescript
@@ -318,6 +335,33 @@ book.isInherited('dark.primary');  // true when the active value comes from a pa
 
 This is useful when you want to distinguish local overrides from inherited values without inspecting scope internals.
 
+### `book.inspect(key)`
+
+Bundles everything you usually want about a token into one call — the
+resolved value, the underlying token shape (value / ref / function), the
+graph dependencies + dependents, and any inheritance source. Replaces the
+three-call pattern of `resolve` + `getTokenByKey` + `graph.getIncoming`.
+
+```typescript
+book.inspect('ui.hover');
+// {
+//   key: 'ui.hover',
+//   value: '#0057ad',
+//   tokenType: 'function',
+//   function: 'darken',
+//   args: [<refToken>],
+//   options: { amount: 0.15 },
+//   returnType: 'color',
+//   dependencies: ['brand.primary'],
+//   dependents: ['card.border'],
+//   isInherited: false,
+// }
+```
+
+Returns `null` if the key isn't registered. Reference and value tokens
+populate the corresponding extra fields (`refKey` for refs; `rawValue`
+and `unit` for value tokens).
+
 ## Batch Mode
 
 ```typescript
@@ -337,6 +381,8 @@ graph.getPrerequisitesFor('ui.text');       // What this token depends on
 graph.getEvaluationOrderFor('ui.text');     // Resolution order
 graph.findShortestPath('brand.primary', 'ui.text');
 graph.hasCycles();
+graph.getAdjacencyList();                   // { 'brand.primary': ['ui.text', 'ui.hover'], … }
+graph.getAdjacencyList(true);               // upstream: incoming edges per node
 ```
 
 For inherited tokens, prerequisites reflect the active source token. If `dark.primary` is inherited from `light.primary`, `graph.getPrerequisitesFor('dark.primary')` includes `light.primary`.
