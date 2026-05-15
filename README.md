@@ -500,6 +500,23 @@ If you regenerate the primitive palette, the semantic and component layers recom
 
 Design Book is strongest in that middle layer: not generating colors, but turning a generated palette into a maintainable, explainable system.
 
+## Using with Claude Code
+
+The package ships with a [Claude Code skill file](./skills/design-book.md) at `skills/design-book.md`. It teaches Claude how to migrate or retrofit a static design system onto Design Book — discovering tokens, classifying them into the value / reference / procedural layers, generating the equivalent Design Book code, and verifying the result.
+
+It includes a Figma-specific path (via the Figma Dev Mode MCP server when available, the Figma REST API otherwise) that maps Figma variables, collections and modes to Design Book scopes, refs and `extends`-inheritance.
+
+To use it, copy the file into a Claude Code project:
+
+```bash
+mkdir -p .claude/skills
+cp node_modules/design-book/skills/design-book.md .claude/skills/
+```
+
+Then prompts like *"migrate this Tailwind config to design-book"*, *"import these Figma variables"*, or *"retrofit our CSS variables onto design-book"* will trigger the workflow.
+
+You can also read it as a plain migration guide — it doesn't require Claude Code to be useful.
+
 ## License
 
 [AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [david@elastq.ch](mailto:david@elastq.ch).
