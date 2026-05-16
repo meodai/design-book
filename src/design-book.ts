@@ -4,10 +4,19 @@ import { Scope } from './scope';
 import { TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { Ramp } from 'dittotones';
+import { RampEngine } from './functions/color/ramp';
+import { getTailwindRamps } from './data/tailwind-ramps';
 
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
   description?: string;
+  /** Reference ramps for the dittotones engine. Defaults to bundled Tailwind. */
+  colorRamps?: Map<string, Ramp>;
+  /** Pass-through to dittotones. Default: true. */
+  preserveHueOffsets?: boolean;
+  /** Pass-through to dittotones. Default: true. */
+  gamutMap?: boolean;
 }
 
 export interface TokenChangedDetail {
@@ -110,10 +119,22 @@ export class DesignBook {
   private _propagating = false;
   private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any }> = [];
 
+  private _rampEngine?: RampEngine;
+  private _rampOptions: {
+    colorRamps?: Map<string, Ramp>;
+    preserveHueOffsets?: boolean;
+    gamutMap?: boolean;
+  };
+
   constructor(name: string, options?: DesignBookOptions) {
     this.name = name;
     this.description = options?.description;
     this._mode = options?.mode ?? 'auto';
+    this._rampOptions = {
+      colorRamps: options?.colorRamps,
+      preserveHueOffsets: options?.preserveHueOffsets,
+      gamutMap: options?.gamutMap,
+    };
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
     registerBuiltinFunctions(this);
@@ -295,6 +316,17 @@ export class DesignBook {
   getFunction(name: string): FunctionImplementation | undefined {
     const fn = this.functions.get(name);
     return typeof fn === 'function' ? fn : undefined;
+  }
+
+  getRampEngine(): RampEngine {
+    if (!this._rampEngine) {
+      this._rampEngine = new RampEngine({
+        ramps: this._rampOptions.colorRamps ?? getTailwindRamps(),
+        preserveHueOffsets: this._rampOptions.preserveHueOffsets,
+        gamutMap: this._rampOptions.gamutMap,
+      });
+    }
+    return this._rampEngine;
   }
 
   // --- Events ---

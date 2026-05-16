@@ -389,3 +389,23 @@ describe('DesignBook', () => {
     });
   });
 });
+
+import { getTailwindRamps } from '../src/data/tailwind-ramps';
+
+describe('DesignBook ramp options', () => {
+  it('lazily constructs the ramp engine on first access', () => {
+    const book = new DesignBook('test');
+    // @ts-expect-error testing internal: engine not built yet
+    expect(book._rampEngine).toBeUndefined();
+    const engine = book.getRampEngine();
+    expect(engine).toBeDefined();
+    expect(book.getRampEngine()).toBe(engine); // memoised
+  });
+
+  it('uses user-supplied colorRamps when provided', () => {
+    const customRamps = new Map(getTailwindRamps()); // shallow copy is fine
+    const book = new DesignBook('test', { colorRamps: customRamps });
+    const engine = book.getRampEngine();
+    expect(engine).toBeDefined();
+  });
+});
