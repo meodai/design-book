@@ -292,6 +292,98 @@ const PALETTE_CONTRAST_SURFACES = [
   reroll?.addEventListener("click", () => { idx++; render(); });
 })();
 
+// ── nextLarger / nextSmaller ───────────────────────────────────────
+function nextLargerLocal(target, scope, minDistance = 0) {
+  let best = null;
+  for (const v of scope) {
+    if (v <= target + minDistance) continue;
+    if (best === null || v < best) best = v;
+  }
+  return best;
+}
+function nextSmallerLocal(target, scope, minDistance = 0) {
+  let best = null;
+  for (const v of scope) {
+    if (v >= target - minDistance) continue;
+    if (best === null || v > best) best = v;
+  }
+  return best;
+}
+
+(function demoStep () {
+  const scale = [4, 8, 12, 16, 24, 32, 48]; // px
+  const scaleEl = document.getElementById("step-scale");
+  if (!scaleEl) return;
+
+  const targetSlider = document.getElementById("step-target");
+  const targetVal   = document.getElementById("step-target-val");
+  const minSlider   = document.getElementById("step-min");
+  const minVal      = document.getElementById("step-min-val");
+  const targetOut   = document.getElementById("step-target-out");
+  const largerOut   = document.getElementById("step-larger");
+  const smallerOut  = document.getElementById("step-smaller");
+  const largerCell  = largerOut.parentElement;
+  const smallerCell = smallerOut.parentElement;
+
+  // Build the bars once
+  const max = Math.max(...scale);
+  scaleEl.innerHTML = scale.map((v, i) => `
+    <span class="bar" data-i="${i}" style="height:${(v / max) * 100}%">
+      <span class="lbl">${v}px</span>
+    </span>
+  `).join("");
+
+  scaleEl.querySelectorAll(".bar").forEach((bar) => {
+    bar.addEventListener("click", () => {
+      targetSlider.value = bar.dataset.i;
+      targetSlider.dispatchEvent(new Event("input"));
+    });
+  });
+
+  function render () {
+    const targetIdx = Number(targetSlider.value);
+    const target = scale[targetIdx];
+    const minD = Number(minSlider.value);
+
+    targetVal.textContent = `${target}px`;
+    minVal.textContent = `${minD}px`;
+    targetOut.textContent = `${target}px`;
+
+    const larger  = nextLargerLocal(target, scale, minD);
+    const smaller = nextSmallerLocal(target, scale, minD);
+
+    if (larger === null) {
+      largerOut.textContent = "no match";
+      largerCell.classList.add("error");
+    } else {
+      largerOut.textContent = `${larger}px`;
+      largerCell.classList.remove("error");
+    }
+
+    if (smaller === null) {
+      smallerOut.textContent = "no match";
+      smallerCell.classList.add("error");
+    } else {
+      smallerOut.textContent = `${smaller}px`;
+      smallerCell.classList.remove("error");
+    }
+
+    // colour the bars
+    scaleEl.querySelectorAll(".bar").forEach((bar, i) => {
+      const v = scale[i];
+      bar.classList.remove("target", "larger", "smaller", "dim");
+      if (v === target) bar.classList.add("target");
+      else if (v === larger) bar.classList.add("larger");
+      else if (v === smaller) bar.classList.add("smaller");
+      else bar.classList.add("dim");
+    });
+  }
+
+  targetSlider.addEventListener("input", render);
+  minSlider.addEventListener("input", render);
+  render();
+})();
+
 // ── VI. mostVivid ──────────────────────────────────────────────────
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");

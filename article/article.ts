@@ -12,6 +12,8 @@ import {
   minContrastWith,
   mostVivid,
   colorMix,
+  nextLarger,
+  nextSmaller,
 } from '../src';
 import type {
   FunctionTokenValue,
@@ -198,6 +200,12 @@ space.set('s',  spacingScale(ref('space.base'), { multiplier: 0.5 }));
 space.set('m',  spacingScale(ref('space.base'), { multiplier: 1 }));
 space.set('l',  spacingScale(ref('space.base'), { multiplier: 1.75 }));
 space.set('xl', spacingScale(ref('space.base'), { multiplier: 3 }));
+
+// Step UP from m — the next bigger member of the scale, whatever it is.
+// Add a new step later and emphasis follows automatically.
+space.set('emphasis', nextLarger(ref('space.m'), space));
+// Step DOWN from m — the tighter sibling.
+space.set('tight',    nextSmaller(ref('space.m'), space));
 
 const type = book.addScope('type');
 type.set('base', px(18));

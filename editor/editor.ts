@@ -2,6 +2,7 @@ import {
   DesignBook, color, ref, px, rem, ms,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade,
   spacingScale, typographyScale,
+  nextLarger, nextSmaller,
   Renderer, SVGRenderer, TableViewRenderer,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
@@ -35,6 +36,16 @@ function bootDesignSystem() {
   brand.set('space-md', px(16));
   brand.set('font-base', rem(1));
 
+  // Dedicated dimensional scope — feeds nextLarger / nextSmaller.
+  // All members share a unit so the selector can iterate it cleanly.
+  const space = book.addScope('space');
+  space.set('xs', px(4));
+  space.set('s',  px(8));
+  space.set('m',  px(12));
+  space.set('l',  px(16));
+  space.set('xl', px(24));
+  space.set('2xl', px(40));
+
   // Semantic scope
   const semantic = book.addScope('semantic');
   semantic.set('background', ref('brand.neutral-light'));
@@ -48,6 +59,10 @@ function bootDesignSystem() {
   ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
   ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
   ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
+  // Step UP from m → l (16px). Add minDistance to skip steps that are too close.
+  ui.set('gap-emphasis', nextLarger(ref('space.m'), space));
+  // Step DOWN from l → m (12px). Useful for derived "tighter" tokens.
+  ui.set('gap-tight', nextSmaller(ref('space.l'), space));
 
   // Dark theme extending brand
   const dark = book.addScope('dark', { extends: 'brand' });
@@ -679,6 +694,7 @@ const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
   'lighten', 'darken', 'shade', 'relativeTo',
   'closestColor', 'furthestFrom', 'averageColor', 'mostVivid',
+  'nextLarger', 'nextSmaller',
   'spacingScale', 'typographyScale', 'timing',
 ];
 

@@ -9,6 +9,8 @@ import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
 import { relativeToImpl } from './color/relative-to';
 import { shadeImpl } from './color/shade';
+import { nextLargerImpl } from './non-color/next-larger';
+import { nextSmallerImpl } from './non-color/next-smaller';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
@@ -28,6 +30,8 @@ export { shade } from './color/shade';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';
+export { nextLarger } from './non-color/next-larger';
+export { nextSmaller } from './non-color/next-smaller';
 
 export function registerBuiltinFunctions(book: {
 	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
@@ -82,5 +86,15 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction('timing', (duration: string, easing: string, options?: { delay?: number }) =>
 		timingImpl(duration, easing, options?.delay ?? 0),
+	);
+	book.registerFunction(
+		'nextLarger',
+		(targetValue: string, scope: Scope, options?: { minDistance?: number; not?: string[] }) =>
+			nextLargerImpl(targetValue, scope, options?.minDistance ?? 0, options?.not ?? []),
+	);
+	book.registerFunction(
+		'nextSmaller',
+		(targetValue: string, scope: Scope, options?: { minDistance?: number; not?: string[] }) =>
+			nextSmallerImpl(targetValue, scope, options?.minDistance ?? 0, options?.not ?? []),
 	);
 }

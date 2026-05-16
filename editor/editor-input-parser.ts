@@ -4,6 +4,7 @@ import {
   lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
+  nextLarger, nextSmaller,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, Scope } from '../src/index';
 import { parse } from 'culori';
@@ -374,6 +375,26 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const base = getTokenArg(parseArg(args[0], book));
     const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
     return typographyScale(base, options);
+  },
+
+  // nextLarger(target, scope, options?)
+  nextLarger(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('nextLarger requires 2 arguments');
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return nextLarger(target, scope, options);
+  },
+
+  // nextSmaller(target, scope, options?)
+  nextSmaller(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('nextSmaller requires 2 arguments');
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return nextSmaller(target, scope, options);
   },
 
   // timing(duration, easing, options?)

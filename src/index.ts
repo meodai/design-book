@@ -55,6 +55,7 @@ export {
   colorMix, lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
+  nextLarger, nextSmaller,
   registerBuiltinFunctions,
 } from './functions';
 

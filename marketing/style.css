@@ -555,6 +555,117 @@ h1, h2, h3 {
 }
 .reroll:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
 
+/* — nextLarger / nextSmaller — */
+.step-stage {
+  padding: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.step-scale {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 80px;
+}
+.step-scale .bar {
+  flex: 1;
+  background: var(--rule);
+  border-radius: 2px;
+  position: relative;
+  transition: background .15s, transform .15s;
+  cursor: pointer;
+}
+.step-scale .bar .lbl {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.step-scale .bar.target { background: var(--text); }
+.step-scale .bar.target .lbl { color: var(--text); font-weight: bold; }
+.step-scale .bar.larger,
+.step-scale .bar.smaller {
+  background: var(--accent);
+}
+.step-scale .bar.dim { opacity: 0.4; }
+
+.step-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 18px;
+}
+.step-controls label {
+  display: grid;
+  grid-template-columns: 90px 1fr 60px;
+  align-items: center;
+  gap: 10px;
+}
+.step-lbl {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.step-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+}
+.step-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.step-readout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.step-cell {
+  background: var(--surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.step-cell:nth-child(2) { background: var(--surface-2); }
+.step-key {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.step-result {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--text);
+}
+.step-cell.error .step-result {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+@media (max-width: 899px) {
+  .step-controls { grid-template-columns: 1fr; }
+  .step-controls label { grid-template-columns: 80px 1fr 50px; }
+}
+
 /* — mostVivid — */
 .vivid-stage {
   display: grid;

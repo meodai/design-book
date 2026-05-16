@@ -107,7 +107,7 @@ ui.set('accent', mostVivid(palette, {
 }));
 
 // `not` is also available on bestContrastWith, minContrastWith,
-// closestColor, furthestFrom and averageColor.
+// closestColor, furthestFrom, averageColor, nextLarger and nextSmaller.
 ```
 
 Plain strings work too — `not: ['palette.error']` is equivalent to
@@ -127,7 +127,35 @@ relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
 
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
 
-### Non-color
+### Dimension analysis (require a scope to search)
+
+```typescript
+nextLarger(target, scope, { minDistance, not })   // Next-up step in a scale
+nextSmaller(target, scope, { minDistance, not })  // Next-down step in a scale
+```
+
+Same selector idea as `closestColor` / `furthestFrom`, but for dimensional
+scopes (spacing, type, motion). Pass the target value and a scope of
+dimensional tokens; the function returns the strictly-larger (or strictly-
+smaller) neighbour. `minDistance` skips members that are too close — handy
+when adjacent steps are nearly the same. All members of the scope must share
+a unit (mixed units throw); the unit can be anything — `px`, `rem`, `em`,
+`ms`, etc.
+
+```typescript
+// scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }
+
+ui.set('gap',     nextLarger(ref('space.m'), space));               // → 16px
+ui.set('gap',     nextLarger(ref('space.m'), space, { minDistance: 6 })); // → 24px
+ui.set('breath',  nextSmaller(ref('space.l'), space));              // → 12px
+
+motion.set('exit', nextSmaller(ref('motion.slow'), motion));        // → 200ms
+```
+
+Throws at resolve time if no member qualifies (no larger/smaller value, or
+none clears `minDistance`).
+
+### Non-color generators
 
 ```typescript
 spacingScale(base, { multiplier })              // Multiply dimension

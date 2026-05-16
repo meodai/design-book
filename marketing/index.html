@@ -266,6 +266,71 @@ neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</sp
     </div>
   </article>
 
+  <!-- nextLarger / nextSmaller -->
+  <article class="fn" id="next-step">
+    <header class="fn-head">
+      <h3>nextLarger · nextSmaller</h3>
+      <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          The same selector idea, on dimensional scopes. Given a
+          spacing, type or motion scale, step to the next member up
+          or down — regardless of unit. Pass <code>minDistance</code>
+          to skip near-noise: useful when adjacent steps in the scale
+          are very close.
+        </p>
+        <p class="use">
+          Use for derived gaps, emphasis paddings, slower/faster
+          motion variants, anywhere a token wants to be “one step
+          away” from another without hardcoding the next key.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
+        <div class="step-stage">
+          <div class="step-scale" id="step-scale" aria-label="Spacing scale"></div>
+          <div class="step-controls">
+            <label>
+              <span class="step-lbl">target</span>
+              <input type="range" id="step-target" min="0" max="6" step="1" value="3" />
+              <span class="step-val" id="step-target-val">12px</span>
+            </label>
+            <label>
+              <span class="step-lbl">minDistance</span>
+              <input type="range" id="step-min" min="0" max="20" step="1" value="0" />
+              <span class="step-val" id="step-min-val">0px</span>
+            </label>
+          </div>
+          <div class="step-readout">
+            <div class="step-cell">
+              <span class="step-key">nextSmaller</span>
+              <span class="step-result" id="step-smaller">—</span>
+            </div>
+            <div class="step-cell">
+              <span class="step-key">target</span>
+              <span class="step-result" id="step-target-out">12px</span>
+            </div>
+            <div class="step-cell">
+              <span class="step-key">nextLarger</span>
+              <span class="step-result" id="step-larger">—</span>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// scope.space = { xs:4 s:8 m:12 l:16 xl:24 2xl:32 3xl:48 }</span>
+ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'space.m'</span>),
+  <span class="c-fn">scope</span>(<span class="c-str">'space'</span>),
+  { <span class="c-key">minDistance</span>: <span class="c-num">6</span> },
+))</code></pre>
+    </div>
+  </article>
+
   <!-- mostVivid -->
   <article class="fn" id="vivid">
     <header class="fn-head">
