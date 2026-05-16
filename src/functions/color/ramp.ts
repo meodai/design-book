@@ -91,3 +91,20 @@ export function ramp(
     },
   );
 }
+
+const DEFAULT_SHADES = ['50','100','200','300','400','500','600','700','800','900','950'] as const;
+
+export function rampStops(
+  seed: TokenValue | ReferenceValue | FunctionTokenValue,
+  options: { prefix: string; shades?: ReadonlyArray<string>; description?: string },
+): Record<string, FunctionTokenValue> {
+  if (typeof options?.prefix !== 'string' || options.prefix.length === 0) {
+    throw new FunctionError('rampStops: "prefix" option is required and must be a non-empty string', 'rampStops');
+  }
+  const shades = options.shades ?? DEFAULT_SHADES;
+  const out: Record<string, FunctionTokenValue> = {};
+  for (const shade of shades) {
+    out[`${options.prefix}${shade}`] = ramp(seed, { shade, description: options.description });
+  }
+  return out;
+}

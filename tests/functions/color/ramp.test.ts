@@ -104,3 +104,47 @@ describe('ramp()', () => {
     spy.mockRestore();
   });
 });
+
+import { rampStops } from '../../../src/functions/color/ramp';
+
+describe('rampStops()', () => {
+  it('expands to the 11 default Tailwind shades with the given prefix', () => {
+    const stops = rampStops(ref('color.brand'), { prefix: 'brand' });
+    expect(Object.keys(stops).sort()).toEqual(
+      ['brand100','brand200','brand300','brand400','brand50','brand500','brand600','brand700','brand800','brand900','brand950'].sort()
+    );
+  });
+
+  it('each value is a ramp() function token with the right shade in options', () => {
+    const stops = rampStops(ref('color.brand'), { prefix: 'b' });
+    expect(stops.b500.name).toBe('ramp');
+    expect(stops.b500.options).toEqual({ shade: '500' });
+  });
+
+  it('honours a custom shades array', () => {
+    const stops = rampStops(ref('color.brand'), {
+      prefix: 'b',
+      shades: ['100', '500', '900'],
+    });
+    expect(Object.keys(stops).sort()).toEqual(['b100', 'b500', 'b900']);
+  });
+
+  it('integrates with DesignBook — full scale resolves with one generate call', async () => {
+    const { DittoTones } = await import('dittotones');
+    const spy = vi.spyOn(DittoTones.prototype, 'generate');
+
+    const book = new DesignBook('test');
+    const palette = book.addScope('color');
+    palette.set('brand', color('#3b82f6'));
+    const stops = rampStops(ref('color.brand'), { prefix: 'brand' });
+    for (const [key, value] of Object.entries(stops)) {
+      palette.set(key, value);
+    }
+    for (const key of Object.keys(stops)) {
+      const v = book.resolve(`color.${key}`);
+      expect(v).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+});
