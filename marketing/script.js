@@ -289,7 +289,6 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 // — closestColor with picker —
 (function demoClosest () {
   const swatchHost = document.getElementById("closest-target-swatch");
-  const hexEl = document.getElementById("closest-target-hex");
   const stage = document.getElementById("closest-ranked");
 
   const picker = document.createElement("color-input");
@@ -300,7 +299,6 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   picker.id = "closest-target-swatch";
 
   function render (target) {
-    hexEl.textContent = target;
     const ranked = closestColor(target, PALETTE_BRAND).slice(0, 7);
     stage.innerHTML = ranked.map((r, i) => `
       <div class="rank${i === 0 ? " winner" : ""}" style="background:${r.color}" title="ΔE ${r.d.toFixed(3)}">

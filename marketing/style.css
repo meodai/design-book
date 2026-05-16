@@ -84,6 +84,10 @@ h1, h2, h3 {
   padding-bottom: 2px;
 }
 .top-nav a:hover { color: var(--accent); border-color: var(--accent); }
+.top-nav a[aria-current="page"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 
 /* ── Hero ───────────────────────────────────────────────────────── */
 .hero {
@@ -414,34 +418,10 @@ h1, h2, h3 {
   border-radius: 4px;
 }
 .closest-picker {
-  display: block;
-  width: 64px;
-  height: 64px;
+  /* Let the web component use its natural size so the hex inside
+     doesn't wrap. Border / hover handled by the component. */
+  display: inline-flex;
   cursor: pointer;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.closest-picker:hover { border-color: var(--accent); }
-.closest-target .lbl::after {
-  content: "click to change";
-  display: block;
-  font-size: 10px;
-  opacity: 0.7;
-  margin-top: 4px;
-  font-style: italic;
-}
-.closest-target .lbl {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-.closest-target .lbl code {
-  display: block;
-  font-size: 13px;
-  color: var(--text);
-  margin-top: 4px;
 }
 .closest-arrow {
   font-family: var(--font-display);

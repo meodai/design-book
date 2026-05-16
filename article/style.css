@@ -72,6 +72,40 @@
   box-sizing: border-box;
 }
 
+/* Top navigation — matches the marketing / editor pages. */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px clamp(20px, 4vw, 40px);
+  max-width: 88rem;
+  margin: 0 auto;
+}
+.top-mark {
+  font-family: var(--font-article-display);
+  font-size: 20px;
+  color: var(--article-text);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+.top-nav {
+  display: flex;
+  gap: 22px;
+  font-family: var(--font-article);
+  font-size: 15px;
+}
+.top-nav a {
+  color: var(--article-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--article-rule);
+  padding-bottom: 2px;
+}
+.top-nav a:hover { color: var(--article-accent); border-color: var(--article-accent); }
+.top-nav a[aria-current="page"] {
+  color: var(--article-accent);
+  border-color: var(--article-accent);
+}
+
 html, body {
   margin: 0;
   padding: 0;

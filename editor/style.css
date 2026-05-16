@@ -73,6 +73,38 @@ body {
   padding: 2rem;
 }
 
+/* Top navigation — matches the marketing / article pages. */
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.top-mark {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--c-surface-on);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+.top-nav {
+  display: flex;
+  gap: 22px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+.top-nav a {
+  color: var(--c-surface-on);
+  text-decoration: none;
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: 2px;
+}
+.top-nav a:hover { color: var(--c-accent); border-color: var(--c-accent); }
+.top-nav a[aria-current="page"] {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
 h1 {
   font-family: var(--font-display);
   font-size: clamp(28px, 3.4vw, 40px);
