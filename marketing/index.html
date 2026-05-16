@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Design Book — Tokens with relationships</title>
-  <meta name="description" content="A reactive design-token framework. Six color-selecting functions that compute over your palette — things CSS can't do natively." />
+  <title>Design Book — Rules behind a design system</title>
+  <meta name="description" content="A reactive engine for the decisions inside a design system. Express rules, not values; render the result to any target." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,14 +26,15 @@
 </header>
 
 <section class="hero">
-  <p class="kicker">A reactive design-token framework</p>
-  <h1>Tokens with relationships.</h1>
+  <p class="kicker">A reactive engine for design decisions</p>
+  <h1>The rules behind a design system, not the values.</h1>
   <p class="deck">
-    Most design tokens hold a value. The interesting ones hold
-    <em>a rule</em>. Design Book lets your palette answer questions —
-    which color reads best on this surface, which is closest to this
-    brand, which is the perceptual average of those five — and
-    recompute the moment the inputs change.
+    Design systems are normally stored as fixed answers — a hex picked
+    here, a spacing chosen there. Design Book stores
+    <em>how the answer is decided</em>: the highest-contrast text on
+    a surface, the next bigger gap in a scale, the most vivid color
+    that still reads. Change an input and every dependent re-decides
+    itself.
   </p>
 
   <div class="install">
@@ -46,25 +47,48 @@
   </p>
 </section>
 
-<section class="premise">
-  <h2>The premise</h2>
-  <p>
-    CSS can already <em>modify</em> a color — <code>color-mix</code>,
-    <code>oklch(from …)</code>, <code>calc()</code>, custom
-    properties. That part is solved. What CSS cannot do — and will
-    not, for a long time — is <em>select</em> a value from a set you
-    defined.
-  </p>
-  <p>
-    Design Book treats your palette as a structured collection that
-    can be queried. Six functions iterate the set and return a single
-    member: the most readable, the most distant, the most chromatic,
-    the closest match. When you add a color, the answers update.
-    Swap a brand — every dependent token reflows.
-  </p>
+<!-- ─── The graph: hero visual ────────────────────────────────────── -->
+<section class="graph" aria-labelledby="graph-title">
+  <div class="graph-text">
+    <h2 id="graph-title">A token is a node. A rule is an edge.</h2>
+    <p>
+      Every relationship in a Design Book system — references,
+      computed values, scope-iterating selectors — is a tracked edge
+      in a graph. The library knows what depends on what, recomputes
+      only the affected nodes when an input changes, and refuses
+      cycles at write time.
+    </p>
+    <p>
+      The diagram on the right is the actual graph for the book that
+      powers this page, rendered with the built-in
+      <code>SVGRenderer</code>. Try the controls — every visible edge
+      and node updates from the same source of truth.
+    </p>
+    <div class="graph-controls">
+      <label>
+        <span>brand</span>
+        <input type="color" id="graph-brand" value="#c8391a" />
+      </label>
+      <label>
+        <span>surface</span>
+        <input type="color" id="graph-surface" value="#f5efe2" />
+      </label>
+      <button type="button" id="graph-invert">Invert surface</button>
+    </div>
+  </div>
+  <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
 </section>
 
+<!-- ─── Selector functions (trimmed prose) ──────────────────────── -->
 <main class="sections">
+
+  <header class="sections-head">
+    <h2>Kinds of decision</h2>
+    <p>
+      Eight built-in selectors. Each one takes a scope of candidates
+      and returns the member that fits a rule.
+    </p>
+  </header>
 
   <!-- bestContrastWith -->
   <article class="fn" id="best-contrast">
@@ -72,30 +96,16 @@
       <h3>bestContrastWith</h3>
       <code class="sig">bestContrastWith( target, scope, { not? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          Find the most readable color from a palette for any given
-          background. The function walks every member of the scope,
-          measures WCAG contrast, returns the winner. Bind it to a
-          surface token; the result tracks whatever the surface
-          becomes.
-        </p>
-        <p class="use">
-          Use for accessible UI text, dynamic badges, themable
-          buttons, chart labels.
-        </p>
+        <p>The most readable color in a palette against any background. WCAG-measured.</p>
       </div>
-
       <figure class="demo">
-        <figcaption>A single palette · six surfaces · text auto-picked.</figcaption>
+        <figcaption>One palette · six surfaces · text auto-picked.</figcaption>
         <div class="contrast-row" id="demo-contrast"></div>
         <div class="contrast-palette" id="demo-contrast-palette" aria-label="Palette in use"></div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// label auto-selects its readable color</span>
-ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</span>(
+      <pre class="code"><code>ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
   <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
 ))</code></pre>
@@ -108,22 +118,10 @@ ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</
       <h3>closestColor</h3>
       <code class="sig">closestColor( target, scope, { not? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          Match an external color — a brand request, a Figma frame,
-          a freshly sampled hue — to its nearest neighbour in your
-          token set. Distance is measured in OKLab, so matches are
-          perceptual, not RGB-shaped.
-        </p>
-        <p class="use">
-          Use for normalising third-party colors into your palette,
-          generating tinted assets, snapping eyedropper input to a
-          system color.
-        </p>
+        <p>Snap any incoming color to its nearest neighbour in the palette. Distance is perceptual (OKLab).</p>
       </div>
-
       <figure class="demo">
         <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
         <div class="closest-stage">
@@ -135,9 +133,7 @@ ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</
           <div class="closest-ranked" id="closest-ranked"></div>
         </div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// snap an incoming color to a palette member</span>
-brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</span>(
+      <pre class="code"><code>brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</span>(
   <span class="c-fn">color</span>(<span class="c-str">'#7f4dc4'</span>),
   <span class="c-fn">scope</span>(<span class="c-str">'palette'</span>),
 ))</code></pre>
@@ -150,28 +146,16 @@ brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</sp
       <h3>furthestFrom</h3>
       <code class="sig">furthestFrom( scope, { not? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          The companion of <em>closest</em>. Given a scope, find the
-          member that sits perceptually farthest from a chosen
-          anchor. Maximum visual distance, by construction.
-        </p>
-        <p class="use">
-          Use for accent picking, “opposite” tokens, chart series
-          that mustn't read as siblings.
-        </p>
+        <p>The companion of closest. Maximum perceptual distance from an anchor.</p>
       </div>
-
       <figure class="demo">
         <figcaption>Hover any swatch · the furthest member is marked.</figcaption>
         <div class="furthest-stage" id="furthest-stage"></div>
         <div class="furthest-readout" id="furthest-readout"></div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// pick an accent guaranteed to read as “other”</span>
-ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</span>(
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</span>(
   <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
 ))</code></pre>
     </div>
@@ -183,22 +167,12 @@ ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</spa
       <h3>minContrastWith</h3>
       <code class="sig">minContrastWith( target, scope, { threshold?, not? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          The opposite optimisation. Find the palette member with the
-          <em>lowest</em> contrast against a background that still
-          clears a configurable threshold. Subtle, but legible.
-        </p>
-        <p class="use">
-          Use for captions, helper text, disabled states, borders that
-          exist but don't shout.
-        </p>
+        <p>The lowest contrast that still clears a threshold. Subtle, but legible.</p>
       </div>
-
       <figure class="demo">
-        <figcaption>Same surface, same palette — two thresholds, two answers.</figcaption>
+        <figcaption>Same surface, same palette — three thresholds, three answers.</figcaption>
         <div class="min-stage">
           <div class="min-card">
             <div class="min-label">threshold 3.0</div>
@@ -214,9 +188,7 @@ ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</spa
           </div>
         </div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// the quietest member that still clears AA</span>
-ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith</span>(
+      <pre class="code"><code>ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
   <span class="c-fn">scope</span>(<span class="c-str">'neutral'</span>),
   { <span class="c-key">threshold</span>: <span class="c-num">4.5</span> },
@@ -230,21 +202,10 @@ ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith<
       <h3>averageColor</h3>
       <code class="sig">averageColor( scope, { space? = 'oklab' } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          Reduce a palette to its perceptual mean. Averaging happens
-          in OKLab by default — the result is the color that
-          <em>feels</em> like the centre of mass, not the math of RGB
-          sludge.
-        </p>
-        <p class="use">
-          Use for background tints, neutral derivations, brand-aware
-          greys, fallback colors.
-        </p>
+        <p>Reduce a palette to its perceptual mean.</p>
       </div>
-
       <figure class="demo">
         <figcaption>Six inputs · one perceptual mean. Re-roll to see it recompute.</figcaption>
         <div class="avg-stage">
@@ -257,11 +218,8 @@ ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith<
         </div>
         <button class="reroll" type="button" id="reroll-avg">Re-roll palette</button>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// the perceptual centre of a palette</span>
-neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</span>(
+      <pre class="code"><code>neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</span>(
   <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-  { <span class="c-key">space</span>: <span class="c-str">'oklab'</span> },
 ))</code></pre>
     </div>
   </article>
@@ -272,23 +230,10 @@ neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</sp
       <h3>nextLarger · nextSmaller</h3>
       <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          The same selector idea, on dimensional scopes. Given a
-          spacing, type or motion scale, step to the next member up
-          or down — regardless of unit. Pass <code>minDistance</code>
-          to skip near-noise: useful when adjacent steps in the scale
-          are very close.
-        </p>
-        <p class="use">
-          Use for derived gaps, emphasis paddings, slower/faster
-          motion variants, anywhere a token wants to be “one step
-          away” from another without hardcoding the next key.
-        </p>
+        <p>Selectors for dimensional scales. Step to the next member up or down — works in any unit.</p>
       </div>
-
       <figure class="demo">
         <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
         <div class="step-stage">
@@ -321,9 +266,7 @@ neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</sp
           </div>
         </div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// scope.space = { xs:4 s:8 m:12 l:16 xl:24 2xl:32 3xl:48 }</span>
-ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
+      <pre class="code"><code>ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'space.m'</span>),
   <span class="c-fn">scope</span>(<span class="c-str">'space'</span>),
   { <span class="c-key">minDistance</span>: <span class="c-num">6</span> },
@@ -335,30 +278,17 @@ ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
   <article class="fn" id="vivid">
     <header class="fn-head">
       <h3>mostVivid</h3>
-      <code class="sig">mostVivid( scope, { not? } )</code>
+      <code class="sig">mostVivid( scope, { against?, minContrast?, not? } )</code>
     </header>
-
     <div class="fn-body">
       <div class="fn-prose">
-        <p>
-          Pick the highest-chroma member of a scope. Vividness is
-          measured in OKLCh — independent of lightness — so a
-          fluorescent yellow and a deep violet compete on the same
-          axis.
-        </p>
-        <p class="use">
-          Use for hero accents, focus indicators, spot colors, status
-          signals.
-        </p>
+        <p>Highest-chroma member. Optionally constrained to clear a contrast target against a surface.</p>
       </div>
-
       <figure class="demo">
         <figcaption>Same palette, sorted by chroma — winner marked.</figcaption>
         <div class="vivid-stage" id="vivid-stage"></div>
       </figure>
-
-      <pre class="code"><code><span class="c-dim">// the highest-chroma member of a set</span>
-ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
   <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
 ))</code></pre>
     </div>
@@ -366,27 +296,152 @@ ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
 
 </main>
 
-<section class="coda">
-  <h2>Also included</h2>
+<!-- ─── One source, many outputs ─────────────────────────────────── -->
+<section class="renderers">
+  <header class="renderers-head">
+    <h2>One source, many outputs.</h2>
+    <p>
+      The same book renders to whatever target you need. CSS variables
+      and JSON ship in the box; the
+      <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
+      format too. Custom renderers are a registration call — twenty
+      lines of TypeScript turn the graph into Tailwind config, Swift
+      extensions, SwiftUI, Kotlin, a JSON dialect of your choice.
+    </p>
+  </header>
+
+  <div class="renderer-tabs" role="tablist">
+    <button class="r-tab is-active" data-target="r-css"      type="button">CSS variables</button>
+    <button class="r-tab"           data-target="r-json"     type="button">JSON</button>
+    <button class="r-tab"           data-target="r-w3"       type="button">W3 Design Tokens</button>
+    <button class="r-tab"           data-target="r-tailwind" type="button">Tailwind <em>(custom)</em></button>
+  </div>
+
+  <div class="renderer-panes">
+    <pre class="r-pane is-active" id="r-css"></pre>
+    <pre class="r-pane"           id="r-json"></pre>
+    <pre class="r-pane"           id="r-w3"></pre>
+    <pre class="r-pane"           id="r-tailwind"></pre>
+  </div>
+
+  <details class="renderer-source">
+    <summary>The custom Tailwind renderer in full</summary>
+    <pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
+<span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
+  <span class="c-fn">const</span> ui = book.<span class="c-fn">getScope</span>(<span class="c-str">'ui'</span>);
+  <span class="c-fn">const</span> values = book.<span class="c-fn">getScope</span>(<span class="c-str">'values'</span>);
+  <span class="c-fn">const</span> colors = {};
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> values.<span class="c-fn">getAllKeys</span>())  colors[k]     = values.<span class="c-fn">resolve</span>(k);
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> ui.<span class="c-fn">getAllKeys</span>())      colors[<span class="c-str">`ui-${</span>k<span class="c-str">}`</span>] = ui.<span class="c-fn">resolve</span>(k);
+  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: { colors: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(colors, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } } }`</span>;
+}</code></pre>
+  </details>
+</section>
+
+<!-- ─── Bring your own everything ─────────────────────────────────── -->
+<section class="extend">
+  <header class="extend-head">
+    <h2>Bring your own rules. Bring your own libraries.</h2>
+    <p>
+      The built-in selectors are a starting set. Anything that fits the
+      shape <code>(scope, options) → string</code> can be registered as
+      a function token — full participation in the graph, dependency
+      tracking, reactive recomputation.
+    </p>
+  </header>
+
+  <div class="extend-grid">
+    <article class="extend-card">
+      <h3>A custom function</h3>
+      <p>
+        Register a new selector — <code>darkestReadable</code> — that
+        picks the darkest scope member still clearing AA against a
+        surface. Twelve lines.
+      </p>
+      <pre class="code"><code><span class="c-fn">function</span> <span class="c-key">darkestReadableImpl</span>(against, scope, ratio = <span class="c-num">4.5</span>) {
+  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestL = <span class="c-num">2</span>;
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> key <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+    <span class="c-fn">const</span> hex = scope.<span class="c-fn">resolve</span>(key);
+    <span class="c-fn">if</span> (<span class="c-fn">wcagContrast</span>(against, hex) &lt; ratio) <span class="c-fn">continue</span>;
+    <span class="c-fn">const</span> L = <span class="c-fn">oklch</span>(hex).l;
+    <span class="c-fn">if</span> (L &lt; bestL) { bestL = L; best = hex; }
+  }
+  <span class="c-fn">return</span> best;
+}
+book.<span class="c-fn">registerFunction</span>(<span class="c-str">'darkestReadable'</span>, darkestReadableImpl);</code></pre>
+      <p class="extend-result" id="extend-fn-result">
+        <span class="extend-result-label">darkestReadable( ui.surface, values )</span>
+        <span class="extend-result-swatch" id="extend-fn-swatch"></span>
+        <code id="extend-fn-hex">—</code>
+      </p>
+    </article>
+
+    <article class="extend-card">
+      <h3>Integration with a library</h3>
+      <p>
+        <a href="https://meodai.github.io/poline/" target="_blank" rel="noopener">Poline</a>
+        generates a perceptual ramp from two anchor colors. Pipe it
+        straight into a scope; selectors work on it just like any
+        other palette.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
+  anchorColors: [[<span class="c-num">14</span>,<span class="c-num">17</span>,<span class="c-num">14</span>], [<span class="c-num">200</span>,<span class="c-num">57</span>,<span class="c-num">26</span>]],
+  numPoints: <span class="c-num">7</span>,
+});
+<span class="c-fn">const</span> ramp = book.<span class="c-fn">addScope</span>(<span class="c-str">'ramp'</span>);
+poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp,
+));</code></pre>
+      <div class="extend-result poline" id="extend-poline-result">
+        <div class="poline-strip" id="extend-poline-strip"></div>
+        <p class="extend-result-line">
+          <span class="extend-result-label">minContrastWith( ui.surface, ramp ) → </span>
+          <span class="extend-result-swatch" id="extend-poline-swatch"></span>
+          <code id="extend-poline-hex">—</code>
+        </p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ─── Reactivity in one paragraph ───────────────────────────────── -->
+<section class="reactivity">
+  <h2>Reactive by default.</h2>
   <p>
-    Eight modifier functions. CSS can already do most of these
-    natively — we ship them so a single token graph can describe a
-    whole system without falling back to strings.
+    The graph is live. Mutate a token in a scope and every dependent
+    re-resolves on the next tick — or all at once if you batch.
+    Subscribe to a key with <code>watch(key, fn)</code> and the
+    library will call you back with the new value and the chain of
+    changes that produced it. Cycles are caught at write time, not
+    at render.
+  </p>
+</section>
+
+<!-- ─── Modifiers (reframed) ─────────────────────────────────────── -->
+<section class="coda">
+  <h2>Value transforms.</h2>
+  <p>
+    Ten one-shot operations that take an input and apply a formula.
+    Useful for the small decisions — a hover shade, a scale step, a
+    timing curve — without leaving the graph.
   </p>
   <ul class="coda-list">
     <li><b>colorMix</b> <span>Blend two colors in any space.</span></li>
     <li><b>lighten</b> <span>Increase OKLCh lightness.</span></li>
     <li><b>darken</b> <span>Decrease OKLCh lightness.</span></li>
     <li><b>shade</b> <span>Mix toward black, perceptually.</span></li>
-    <li><b>relativeTo</b> <span>Modify a color in a chosen channel.</span></li>
+    <li><b>relativeTo</b> <span>Modify a color per channel.</span></li>
     <li><b>spacingScale</b> <span>Modular spacing steps.</span></li>
     <li><b>typographyScale</b> <span>Type ramps from a ratio.</span></li>
     <li><b>timing</b> <span>Animation curves &amp; multiples.</span></li>
   </ul>
 </section>
 
+<!-- ─── Outro ─────────────────────────────────────────────────────── -->
 <section class="outro">
-  <h2>Define the rules. Let the system do the picking.</h2>
+  <h2>Express the rules. Let the system resolve them.</h2>
   <div class="install big">
     <code><span class="prompt">$</span> npm i design-book</code>
     <button class="copy" type="button" data-copy="npm i design-book">Copy</button>

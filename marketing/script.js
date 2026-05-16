@@ -1,7 +1,5 @@
 // ════════════════════════════════════════════════════════════════════
-// Design Book — Marketing page demos
-// Real implementations of the six selector functions, run live in the
-// browser. Colors are computed with culori; logic mirrors the library.
+// Design Book — Marketing page
 // ════════════════════════════════════════════════════════════════════
 
 import {
@@ -9,154 +7,274 @@ import {
   formatHex,
   converter,
   wcagContrast,
-  differenceEuclidean,
 } from "https://esm.sh/culori@4?bundle";
 
 import "hdr-color-input";
 
-const toOklab  = converter("oklab");
-const toOklch  = converter("oklch");
+import {
+  DesignBook,
+  SVGRenderer,
+  Renderer,
+  color,
+  ref,
+} from "../src/index";
+
+import { Poline } from "poline";
+
+import { buildBook } from "./demo-book.js";
+
+const toOklab = converter("oklab");
+const toOklch = converter("oklch");
 
 const hex = (c) => formatHex(c);
 const lab = (c) => toOklab(parse(c));
 const lch = (c) => toOklch(parse(c));
 
-// — Distance in OKLab (perceptual) —
 function deltaE(a, b) {
   const A = lab(a), B = lab(b);
   return Math.hypot(A.l - B.l, A.a - B.a, A.b - B.b);
 }
+function contrast(a, b) { return wcagContrast(a, b); }
 
-// — Contrast: WCAG 2.1 ratio —
-function contrast(a, b) {
-  return wcagContrast(a, b);
+// ── Footer year ────────────────────────────────────────────────────
+{
+  const y = document.getElementById("year");
+  if (y) y.textContent = new Date().getFullYear();
 }
 
-// — bestContrastWith implementation —
-function bestContrastWith(target, scope, { not = [] } = {}) {
-  let best = null, bestRatio = -Infinity;
-  for (const c of scope) {
-    if (not.includes(c)) continue;
-    const r = contrast(target, c);
-    if (r > bestRatio) { bestRatio = r; best = c; }
-  }
-  return { color: best, ratio: bestRatio };
-}
+// ── Inline selector implementations (drive the small plates) ───────
+// These mirror the library's selectors so the per-section demos stay
+// self-contained. The big sections (graph, renderers, extend) use the
+// real DesignBook directly.
 
-// — minContrastWith implementation —
-function minContrastWith(target, scope, { threshold = 0, not = [] } = {}) {
-  let best = null, bestRatio = Infinity;
-  for (const c of scope) {
-    if (not.includes(c)) continue;
-    const r = contrast(target, c);
-    if (r >= threshold && r < bestRatio) { bestRatio = r; best = c; }
-  }
-  return { color: best, ratio: bestRatio };
+function bestContrastWith (target, scope) {
+  let best = null, bestR = -Infinity;
+  for (const c of scope) { const r = contrast(target, c); if (r > bestR) { bestR = r; best = c; } }
+  return { color: best, ratio: bestR };
 }
-
-// — closestColor implementation (OKLab) —
-function closestColor(target, scope, { not = [] } = {}) {
-  const ranked = scope
-    .filter((c) => !not.includes(c))
+function minContrastWith (target, scope, { threshold = 0 } = {}) {
+  let best = null, bestR = Infinity;
+  for (const c of scope) { const r = contrast(target, c); if (r >= threshold && r < bestR) { bestR = r; best = c; } }
+  return { color: best, ratio: bestR };
+}
+function closestColor (target, scope) {
+  return scope
     .map((c) => ({ color: c, d: deltaE(target, c) }))
     .sort((a, b) => a.d - b.d);
-  return ranked;
 }
-
-// — furthestFrom implementation —
-function furthestFrom(anchor, scope) {
+function furthestFrom (anchor, scope) {
   let best = null, bestD = -Infinity;
-  for (const c of scope) {
-    if (c === anchor) continue;
-    const d = deltaE(anchor, c);
-    if (d > bestD) { bestD = d; best = c; }
-  }
+  for (const c of scope) { if (c === anchor) continue; const d = deltaE(anchor, c); if (d > bestD) { bestD = d; best = c; } }
   return { color: best, d: bestD };
 }
-
-// — averageColor implementation (OKLab) —
-function averageColor(scope) {
+function averageColor (scope) {
   let l = 0, a = 0, b = 0, n = 0;
-  for (const c of scope) {
-    const L = lab(c);
-    l += L.l; a += L.a; b += L.b; n++;
-  }
+  for (const c of scope) { const L = lab(c); l += L.l; a += L.a; b += L.b; n++; }
   return hex({ mode: "oklab", l: l / n, a: a / n, b: b / n });
 }
-
-// — mostVivid implementation (highest chroma in OKLCh) —
-function mostVivid(scope) {
+function mostVivid (scope) {
   let best = null, bestC = -Infinity;
-  for (const c of scope) {
-    const C = lch(c).c;
-    if (C > bestC) { bestC = C; best = c; }
-  }
+  for (const c of scope) { const C = lch(c).c; if (C > bestC) { bestC = C; best = c; } }
   return { color: best, chroma: bestC };
 }
 
-// ── Palettes ────────────────────────────────────────────────────────
-// A single primary palette used across most demos so the page reads
-// as one cohesive document. A few demos use specific sets.
-
+// ── Shared palettes for plates ─────────────────────────────────────
 const PALETTE_BRAND = [
-  "#14110d", // ink
-  "#c8391a", // vermilion
-  "#d49623", // saffron
-  "#4f6033", // moss
-  "#1c3a9a", // lapis
-  "#7a3c8e", // plum
-  "#dcd2b8", // bone
-  "#1d6b6a", // teal
+  "#14110d", "#c8391a", "#d49623", "#4f6033",
+  "#1c3a9a", "#7a3c8e", "#dcd2b8", "#1d6b6a",
 ];
-
 const PALETTE_CONTRAST_SURFACES = [
-  "#14110d", // ink
-  "#ece5d3", // paper
-  "#c8391a", // vermilion
-  "#1c3a9a", // lapis
-  "#4f6033", // moss
-  "#d49623", // saffron
+  "#14110d", "#ece5d3", "#c8391a", "#1c3a9a", "#4f6033", "#d49623",
 ];
 
-// ── Year in footer ──────────────────────────────────────────────────
-(function setYear () {
-  const yEl = document.getElementById("year");
-  if (yEl) yEl.textContent = new Date().getFullYear();
+// ══════════════════════════════════════════════════════════════════════
+//  THE LIVE GRAPH — hero visual
+// ══════════════════════════════════════════════════════════════════════
+const book = buildBook();
+let activeRamp = null;   // poline-generated ramp scope (populated below)
+
+(function graphSection () {
+  const viz       = document.getElementById("graph-viz");
+  const brandIn   = document.getElementById("graph-brand");
+  const surfaceIn = document.getElementById("graph-surface");
+  const invert    = document.getElementById("graph-invert");
+  if (!viz) return;
+
+  function paint () {
+    const renderer = new SVGRenderer(book, {
+      gap: 36,
+      padding: 30,
+      fontSize: 13,
+      dotSize: 5,
+      strokeWidth: 1.5,
+    });
+    viz.innerHTML = renderer.render();
+    // Renderers also feed the next section
+    paintRenderers();
+  }
+
+  // Brand: rewrite values.vermilion so dependents shift.
+  brandIn.addEventListener("input", () => {
+    book.getScope("values").set("vermilion", color(brandIn.value));
+    paint();
+  });
+  // Surface: rewrite values.paper so the ui.surface→ui.text/accent chain shifts.
+  surfaceIn.addEventListener("input", () => {
+    book.getScope("values").set("paper", color(surfaceIn.value));
+    paint();
+  });
+  invert.addEventListener("click", () => {
+    const current = book.getScope("ui").resolve("surface");
+    const next = lch(current).l > 0.5 ? "#14110d" : "#f5efe2";
+    book.getScope("values").set("paper", color(next));
+    surfaceIn.value = next;
+    paint();
+  });
+
+  paint();
 })();
 
-// ── I. bestContrastWith ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+//  RENDERER COMPARISON
+// ══════════════════════════════════════════════════════════════════════
+function tailwindRenderer (b) {
+  const ui     = b.getScope("ui");
+  const values = b.getScope("values");
+  const colors = {};
+  for (const k of values.getAllKeys()) colors[k] = values.resolve(k);
+  for (const k of ui.getAllKeys()) {
+    try { colors[`ui-${k}`] = ui.resolve(k); }
+    catch { /* skip unresolvable */ }
+  }
+  return `module.exports = {
+  theme: {
+    extend: {
+      colors: ${JSON.stringify(colors, null, 8).replace(/\n/g, "\n      ")}
+    }
+  }
+};`;
+}
+
+function paintRenderers () {
+  const css  = document.getElementById("r-css");
+  const json = document.getElementById("r-json");
+  const w3   = document.getElementById("r-w3");
+  const tw   = document.getElementById("r-tailwind");
+  if (!css) return;
+
+  try { css.textContent  = new Renderer(book, "css-variables").render(); }
+  catch (e) { css.textContent = `/* ${e.message} */`; }
+  try { json.textContent = new Renderer(book, "json").render(); }
+  catch (e) { json.textContent = `// ${e.message}`; }
+  try { w3.textContent   = new Renderer(book, "w3-design-tokens").render(); }
+  catch (e) { w3.textContent  = `// ${e.message}`; }
+  try { tw.textContent   = tailwindRenderer(book); }
+  catch (e) { tw.textContent  = `// ${e.message}`; }
+}
+
+// Tabs
+document.querySelectorAll(".r-tab").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".r-tab").forEach((b) => b.classList.remove("is-active"));
+    document.querySelectorAll(".r-pane").forEach((p) => p.classList.remove("is-active"));
+    btn.classList.add("is-active");
+    document.getElementById(btn.dataset.target)?.classList.add("is-active");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  EXTEND — custom function + poline integration
+// ══════════════════════════════════════════════════════════════════════
+(function extendCustomFn () {
+  // A small custom selector: the darkest member that still clears AA
+  // against `against`. Not a registered function on the book — just a
+  // self-contained illustration that mirrors the in-graph version.
+  function darkestReadable (againstHex, scope, ratio = 4.5) {
+    let best = null, bestL = 2;
+    for (const c of scope) {
+      if (contrast(againstHex, c) < ratio) continue;
+      const L = lch(c).l;
+      if (L < bestL) { bestL = L; best = c; }
+    }
+    return best;
+  }
+
+  const surface = book.getScope("ui").resolve("surface");
+  const values  = [...book.getScope("values").getAllKeys()]
+    .map((k) => book.getScope("values").resolve(k));
+  const winner  = darkestReadable(surface, values, 4.5) ?? values[0];
+
+  document.getElementById("extend-fn-swatch").style.background = winner;
+  document.getElementById("extend-fn-hex").textContent = winner;
+})();
+
+(function extendPoline () {
+  const strip = document.getElementById("extend-poline-strip");
+  const swatchOut = document.getElementById("extend-poline-swatch");
+  const hexOut = document.getElementById("extend-poline-hex");
+  if (!strip) return;
+
+  let cssColors = [];
+  try {
+    // Build a Poline ramp from ink → vermilion → paper and snap a token to it.
+    // Poline's anchorColors use HSL triples [h, s, l] in 0..360 / 0..100 / 0..100.
+    const poline = new Poline({
+      anchorColors: [[20, 30, 10], [12, 85, 45], [40, 30, 92]],
+      numPoints: 7,
+    });
+    cssColors = poline.colorsCSS;
+  } catch (e) {
+    strip.innerHTML = `<span style="background:#c8391a;grid-column:1/-1">poline error: ${e.message}</span>`;
+    return;
+  }
+
+  strip.innerHTML = cssColors
+    .map((c) => `<span style="background:${c}"></span>`)
+    .join("");
+
+  // Convert poline css colors (hsl strings) to hex for contrast math.
+  const hexes = cssColors.map((c) => hex(parse(c))).filter(Boolean);
+  const surface = book.getScope("ui").resolve("surface");
+  const { color: pick } = minContrastWith(surface, hexes, { threshold: 1.5 });
+  if (pick) {
+    swatchOut.style.background = pick;
+    hexOut.textContent = pick;
+  } else if (hexes.length) {
+    // Fallback: show the first member so the demo doesn't read as broken.
+    swatchOut.style.background = hexes[0];
+    hexOut.textContent = hexes[0];
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  Existing function plate demos (unchanged behaviour)
+// ══════════════════════════════════════════════════════════════════════
+
+// — bestContrastWith —
 (function demoContrast () {
   const row = document.getElementById("demo-contrast");
   const pal = document.getElementById("demo-contrast-palette");
   if (!row) return;
 
-  const surfaces = PALETTE_CONTRAST_SURFACES;
-  const palette  = PALETTE_BRAND;
-
-  row.innerHTML = surfaces.map((surface) => {
-    const { color: text, ratio } = bestContrastWith(surface, palette);
+  row.innerHTML = PALETTE_CONTRAST_SURFACES.map((surface) => {
+    const { color: text, ratio } = bestContrastWith(surface, PALETTE_BRAND);
     return `
       <div class="contrast-tile" style="background:${surface};color:${text}">
         <span class="ctop">surface ${surface}</span>
         <span class="cbig">Aa</span>
         <span class="cbottom">${text} · ${ratio.toFixed(1)}:1</span>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
-  pal.innerHTML = palette.map((c) =>
-    `<span style="background:${c}" title="${c}"></span>`
-  ).join("");
+  pal.innerHTML = PALETTE_BRAND.map((c) => `<span style="background:${c}" title="${c}"></span>`).join("");
 })();
 
-// ── II. closestColor (interactive) ──────────────────────────────────
+// — closestColor with picker —
 (function demoClosest () {
-  const palette = PALETTE_BRAND;
   const swatchHost = document.getElementById("closest-target-swatch");
   const hexEl = document.getElementById("closest-target-hex");
   const stage = document.getElementById("closest-ranked");
 
-  // Replace static swatch with an hdr-color-input — click to open picker.
   const picker = document.createElement("color-input");
   picker.value = "#7f4dc4";
   picker.setAttribute("no-alpha", "");
@@ -166,34 +284,23 @@ const PALETTE_CONTRAST_SURFACES = [
 
   function render (target) {
     hexEl.textContent = target;
-    const ranked = closestColor(target, palette).slice(0, 7);
+    const ranked = closestColor(target, PALETTE_BRAND).slice(0, 7);
     stage.innerHTML = ranked.map((r, i) => `
-      <div class="rank${i === 0 ? " winner" : ""}"
-           style="background:${r.color}"
-           title="ΔE ${r.d.toFixed(3)}">
-        <span class="num">${i + 1}</span>
-        <span>${r.color}</span>
-      </div>
-    `).join("");
+      <div class="rank${i === 0 ? " winner" : ""}" style="background:${r.color}" title="ΔE ${r.d.toFixed(3)}">
+        <span class="num">${i + 1}</span><span>${r.color}</span>
+      </div>`).join("");
   }
-
-  picker.addEventListener("change", () => {
-    if (!picker.value) return;
-    try { render(picker.value); }
-    catch (e) { /* invalid color — ignore */ }
-  });
-
+  picker.addEventListener("change", () => { if (picker.value) render(picker.value); });
   render(picker.value);
 })();
 
-// ── III. furthestFrom ───────────────────────────────────────────────
+// — furthestFrom —
 (function demoFurthest () {
   const stage = document.getElementById("furthest-stage");
   const readout = document.getElementById("furthest-readout");
   if (!stage) return;
-
   const palette = PALETTE_BRAND.slice(0, 7);
-  let anchor = palette[1]; // vermilion to start
+  let anchor = palette[1];
 
   function render () {
     const { color: far, d } = furthestFrom(anchor, palette);
@@ -201,42 +308,21 @@ const PALETTE_CONTRAST_SURFACES = [
       const cls = [];
       if (c === anchor) cls.push("anchor");
       if (c === far)    cls.push("furthest");
-      return `
-        <div class="swatch-fr ${cls.join(" ")}"
-             data-c="${c}"
-             style="background:${c}">
-          <span class="hex">${c}</span>
-        </div>
-      `;
+      return `<div class="swatch-fr ${cls.join(" ")}" data-c="${c}" style="background:${c}">
+        <span class="hex">${c}</span></div>`;
     }).join("");
-
-    readout.innerHTML = `
-      <span>anchor <b>${anchor}</b></span>
-      <span>furthest <b>${far}</b></span>
-      <span>ΔE <b>${d.toFixed(3)}</b></span>
-    `;
-
-    // attach hover handlers
+    readout.innerHTML = `<span>anchor <b>${anchor}</b></span><span>furthest <b>${far}</b></span><span>ΔE <b>${d.toFixed(3)}</b></span>`;
     stage.querySelectorAll(".swatch-fr").forEach((el) => {
-      el.addEventListener("mouseenter", () => {
-        anchor = el.dataset.c;
-        render();
-      });
+      el.addEventListener("mouseenter", () => { anchor = el.dataset.c; render(); });
     });
   }
   render();
 })();
 
-// ── IV. minContrastWith ─────────────────────────────────────────────
+// — minContrastWith —
 (function demoMin () {
-  const surface = "#ece5d3";       // paper
-  // A ramp of neutrals from light → dark so each threshold finds a
-  // distinct quietest member.
-  const ramp = [
-    "#ece5d3", "#d5cdb5", "#beb497", "#9c907a",
-    "#766b5b", "#564f44", "#3a342c", "#14110d",
-  ];
-
+  const surface = "#ece5d3";
+  const ramp = ["#ece5d3", "#d5cdb5", "#beb497", "#9c907a", "#766b5b", "#564f44", "#3a342c", "#14110d"];
   function paint (id, threshold) {
     const el = document.getElementById(id);
     const { color, ratio } = minContrastWith(surface, ramp, { threshold });
@@ -251,39 +337,28 @@ const PALETTE_CONTRAST_SURFACES = [
     el.querySelector(".min-text").style.color = color;
     el.querySelector(".min-text").innerHTML =
       `Aa — Body, caption, label.<br>
-       <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">
-         ${color} · ${ratio.toFixed(1)}:1
-       </span>`;
+       <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">${color} · ${ratio.toFixed(1)}:1</span>`;
   }
-
-  paint("min-sample-3",  3);
-  paint("min-sample-45", 4.5);
-  paint("min-sample-7",  7);
+  paint("min-sample-3", 3); paint("min-sample-45", 4.5); paint("min-sample-7", 7);
 })();
 
-// ── V. averageColor ────────────────────────────────────────────────
+// — averageColor —
 (function demoAverage () {
   const reroll = document.getElementById("reroll-avg");
   const inputsEl = document.getElementById("avg-inputs");
   const swatch = document.getElementById("avg-swatch");
   const hexEl = document.getElementById("avg-hex");
-
-  // a curated set of pleasing palettes to cycle through
   const SETS = [
     ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#1d6b6a"],
     ["#f2c14e","#f78154","#b4436c","#4d9078","#1d3557","#fef9ef"],
     ["#0b3954","#087e8b","#bfd7ea","#ff5a5f","#c81d25","#fff8f0"],
     ["#264653","#2a9d8f","#e9c46a","#f4a261","#e76f51","#dad7cd"],
     ["#003049","#d62828","#f77f00","#fcbf49","#eae2b7","#7fb069"],
-    ["#1a535c","#4ecdc4","#f7fff7","#ff6b6b","#ffe66d","#7a4f9e"],
   ];
-
   let idx = 0;
   function render () {
     const palette = SETS[idx % SETS.length];
-    inputsEl.innerHTML = palette
-      .map((c) => `<span style="background:${c}"></span>`)
-      .join("");
+    inputsEl.innerHTML = palette.map((c) => `<span style="background:${c}"></span>`).join("");
     const avg = averageColor(palette);
     swatch.style.background = avg;
     hexEl.textContent = avg;
@@ -292,135 +367,80 @@ const PALETTE_CONTRAST_SURFACES = [
   reroll?.addEventListener("click", () => { idx++; render(); });
 })();
 
-// ── nextLarger / nextSmaller ───────────────────────────────────────
-function nextLargerLocal(target, scope, minDistance = 0) {
+// — nextLarger / nextSmaller —
+function nextLargerLocal (target, scope, minD = 0) {
   let best = null;
-  for (const v of scope) {
-    if (v <= target + minDistance) continue;
-    if (best === null || v < best) best = v;
-  }
+  for (const v of scope) { if (v <= target + minD) continue; if (best === null || v < best) best = v; }
   return best;
 }
-function nextSmallerLocal(target, scope, minDistance = 0) {
+function nextSmallerLocal (target, scope, minD = 0) {
   let best = null;
-  for (const v of scope) {
-    if (v >= target - minDistance) continue;
-    if (best === null || v > best) best = v;
-  }
+  for (const v of scope) { if (v >= target - minD) continue; if (best === null || v > best) best = v; }
   return best;
 }
-
 (function demoStep () {
-  const scale = [4, 8, 12, 16, 24, 32, 48]; // px
+  const scale = [4, 8, 12, 16, 24, 32, 48];
   const scaleEl = document.getElementById("step-scale");
   if (!scaleEl) return;
-
-  const targetSlider = document.getElementById("step-target");
-  const targetVal   = document.getElementById("step-target-val");
-  const minSlider   = document.getElementById("step-min");
-  const minVal      = document.getElementById("step-min-val");
-  const targetOut   = document.getElementById("step-target-out");
-  const largerOut   = document.getElementById("step-larger");
-  const smallerOut  = document.getElementById("step-smaller");
-  const largerCell  = largerOut.parentElement;
-  const smallerCell = smallerOut.parentElement;
-
-  // Build the bars once
+  const tSlider = document.getElementById("step-target");
+  const tVal = document.getElementById("step-target-val");
+  const mSlider = document.getElementById("step-min");
+  const mVal = document.getElementById("step-min-val");
+  const targetOut = document.getElementById("step-target-out");
+  const largerOut = document.getElementById("step-larger");
+  const smallerOut = document.getElementById("step-smaller");
   const max = Math.max(...scale);
-  scaleEl.innerHTML = scale.map((v, i) => `
-    <span class="bar" data-i="${i}" style="height:${(v / max) * 100}%">
-      <span class="lbl">${v}px</span>
-    </span>
-  `).join("");
 
-  scaleEl.querySelectorAll(".bar").forEach((bar) => {
-    bar.addEventListener("click", () => {
-      targetSlider.value = bar.dataset.i;
-      targetSlider.dispatchEvent(new Event("input"));
-    });
-  });
+  scaleEl.innerHTML = scale.map((v, i) =>
+    `<span class="bar" data-i="${i}" style="height:${(v / max) * 100}%"><span class="lbl">${v}px</span></span>`
+  ).join("");
+  scaleEl.querySelectorAll(".bar").forEach((b) =>
+    b.addEventListener("click", () => { tSlider.value = b.dataset.i; tSlider.dispatchEvent(new Event("input")); }));
 
   function render () {
-    const targetIdx = Number(targetSlider.value);
-    const target = scale[targetIdx];
-    const minD = Number(minSlider.value);
-
-    targetVal.textContent = `${target}px`;
-    minVal.textContent = `${minD}px`;
-    targetOut.textContent = `${target}px`;
-
-    const larger  = nextLargerLocal(target, scale, minD);
-    const smaller = nextSmallerLocal(target, scale, minD);
-
-    if (larger === null) {
-      largerOut.textContent = "no match";
-      largerCell.classList.add("error");
-    } else {
-      largerOut.textContent = `${larger}px`;
-      largerCell.classList.remove("error");
-    }
-
-    if (smaller === null) {
-      smallerOut.textContent = "no match";
-      smallerCell.classList.add("error");
-    } else {
-      smallerOut.textContent = `${smaller}px`;
-      smallerCell.classList.remove("error");
-    }
-
-    // colour the bars
+    const t = scale[Number(tSlider.value)];
+    const md = Number(mSlider.value);
+    tVal.textContent = `${t}px`; mVal.textContent = `${md}px`; targetOut.textContent = `${t}px`;
+    const larger = nextLargerLocal(t, scale, md);
+    const smaller = nextSmallerLocal(t, scale, md);
+    largerOut.textContent  = larger  === null ? "no match" : `${larger}px`;
+    smallerOut.textContent = smaller === null ? "no match" : `${smaller}px`;
+    largerOut.parentElement.classList.toggle("error", larger === null);
+    smallerOut.parentElement.classList.toggle("error", smaller === null);
     scaleEl.querySelectorAll(".bar").forEach((bar, i) => {
       const v = scale[i];
-      bar.classList.remove("target", "larger", "smaller", "dim");
-      if (v === target) bar.classList.add("target");
+      bar.classList.remove("target","larger","smaller","dim");
+      if (v === t) bar.classList.add("target");
       else if (v === larger) bar.classList.add("larger");
       else if (v === smaller) bar.classList.add("smaller");
       else bar.classList.add("dim");
     });
   }
-
-  targetSlider.addEventListener("input", render);
-  minSlider.addEventListener("input", render);
+  tSlider.addEventListener("input", render);
+  mSlider.addEventListener("input", render);
   render();
 })();
 
-// ── VI. mostVivid ──────────────────────────────────────────────────
+// — mostVivid —
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");
   if (!stage) return;
-
-  // A palette that mixes a few clearly vivid colors with neutrals
-  const palette = [
-    "#c8391a", "#d49623", "#1c3a9a", "#4f6033",
-    "#7a3c8e", "#dcd2b8", "#1d6b6a", "#14110d",
-  ];
-
+  const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
   const { color: crown } = mostVivid(palette);
-
   stage.innerHTML = palette.map((c) => {
     const C = lch(c).c || 0;
-    return `
-      <div class="vtile ${c === crown ? "crown" : ""}" style="background:${c}">
-        <span class="chroma">${C.toFixed(2)}</span>
-        <span>${c}</span>
-      </div>
-    `;
+    return `<div class="vtile ${c === crown ? "crown" : ""}" style="background:${c}">
+      <span class="chroma">${C.toFixed(2)}</span><span>${c}</span></div>`;
   }).join("");
 })();
 
-// ── Copy buttons ────────────────────────────────────────────────────
-document.querySelectorAll(".install-copy").forEach((btn) => {
+// — copy buttons —
+document.querySelectorAll(".install-copy, .copy").forEach((btn) => {
   btn.addEventListener("click", async () => {
-    const text = btn.dataset.copy;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch { /* ignore */ }
+    try { await navigator.clipboard.writeText(btn.dataset.copy); } catch {}
     const orig = btn.textContent;
     btn.textContent = "Copied ✓";
     btn.classList.add("copied");
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.classList.remove("copied");
-    }, 1400);
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove("copied"); }, 1400);
   });
 });
