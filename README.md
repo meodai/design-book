@@ -1,14 +1,14 @@
 # Design Book
 
-A reactive TypeScript design system framework. Define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or [W3 Design Tokens](https://www.designtokens.org/tr/drafts/format/).
+A reactive TypeScript constraint system for design decisions. Define how token values are chosen, resolved, and rendered to CSS, JSON, or [W3 Design Tokens](https://www.designtokens.org/tr/drafts/format/).
 
 ## Philosophy
 
-Design systems are usually built as collections of fixed values — a color picked here, a spacing value decided there, each choice made in isolation and checked against every other. Design Book takes a different approach: instead of encoding *results*, you encode *relationships*.
+Design systems are usually stored as fixed answers — a color picked here, a spacing value decided there, each one maintained by hand. Design Book takes a different approach: instead of storing values, you define how values are chosen.
 
-A text color isn't `#ffffff` — it's "the highest-contrast color from this palette against this background." A hover state isn't a manually darkened hex — it's "primary mixed 15% toward black." Change the primary color once, and every relationship updates: contrast pairs recalculate, derived tones shift, spacing scales recompute. The system maintains coherence across complexity you couldn't track by hand.
+A text color isn't `#ffffff` — it's "the highest-contrast color from this palette against this background." A hover state isn't a second hex to maintain — it's "primary mixed 15% toward black." An accent isn't a one-off pick — it's "the most vivid color that still clears contrast, excluding the tokens reserved for error and success."
 
-This idea — that relationships matter more than individual choices — means your design decisions become transparent, auditable, and reactive. You can see *why* a color was chosen, not just *what* it is. And when the inputs change, the logic holds.
+That makes Design Book feel less like a bag of transforms and more like a small reactive query engine for design decisions: selection, constraints, search, and resolution over a token system. You don't maintain tokens anymore — you maintain rules. When inputs change, the system re-runs those decisions, updates dependents, and lets you inspect why a value won.
 
 ## Install
 
@@ -34,7 +34,7 @@ brand.set('neutral', color('#1a1a1a'));
 brand.set('white', color('#ffffff'));
 brand.set('space', px(16));
 
-// Derived tokens with references and functions
+// Tokens chosen by references, selection, and transforms
 const ui = book.addScope('ui');
 ui.set('background', ref('brand.white'));
 ui.set('text', bestContrastWith(ref('ui.background'), brand));
@@ -78,7 +78,9 @@ string('Arial, sans-serif')  // String values
 
 ## Built-in Functions
 
-### Color analysis (require a scope to search)
+Some functions are straightforward transforms. The distinctive ones search a scope and select the value that best satisfies a rule.
+
+### Color selection (require a scope to search)
 
 ```typescript
 bestContrastWith(target, scope)             // Highest WCAG contrast
@@ -127,7 +129,7 @@ relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
 
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
 
-### Dimension analysis (require a scope to search)
+### Dimension selection (require a scope to search)
 
 ```typescript
 nextLarger(target, scope, { minDistance, not })   // Next-up step in a scale
