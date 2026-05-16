@@ -86,6 +86,15 @@ describe('ramp()', () => {
     expect(() => book.resolve('color.bad')).toThrow(/unknown shade/);
   });
 
+  it('throws FunctionError when the seed cannot be parsed as a color', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('color');
+    // Use a string token whose rawValue isn't a parseable color
+    palette.set('brand', { type: 'string', rawValue: 'not-a-color' } as any);
+    palette.set('bad', ramp(ref('color.brand'), { shade: '500' }));
+    expect(() => book.resolve('color.bad')).toThrow(/cannot generate scale/);
+  });
+
   it('resolves a full Tailwind-style scale with one dittotones.generate call', async () => {
     const { DittoTones } = await import('dittotones');
     const spy = vi.spyOn(DittoTones.prototype, 'generate');

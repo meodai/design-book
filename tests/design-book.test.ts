@@ -403,9 +403,27 @@ describe('DesignBook ramp options', () => {
   });
 
   it('uses user-supplied colorRamps when provided', () => {
-    const customRamps = new Map(getTailwindRamps()); // shallow copy is fine
-    const book = new DesignBook('test', { colorRamps: customRamps });
+    // Build a synthetic single-ramp named 'mono'. If the engine actually uses our
+    // custom ramps (not the default Tailwind set), dittotones will report 'mono'
+    // as the matched source — that's the observable proof.
+    const { converter, parse } = require('culori');
+    const toOklch = converter('oklch');
+    const white = toOklch(parse('#ffffff'));
+    const black = toOklch(parse('#000000'));
+    const customRamps = new Map([
+      ['mono', {
+        '50': white, '100': white, '200': white, '300': white, '400': white,
+        '500': white, '600': black, '700': black, '800': black, '900': black, '950': black,
+      }],
+    ]);
+    const book = new DesignBook('test', { colorRamps: customRamps as any });
     const engine = book.getRampEngine();
-    expect(engine).toBeDefined();
+    const result = engine.generate('#ff0000');
+    // The scale should be generated and contain all expected shades
+    expect(result.scale['500']).toBeDefined();
+    expect(typeof result.scale['500'].l).toBe('number');
+    // The engine must have used our custom 'mono' ramp, not any default Tailwind ramp
+    expect(result.sources.length).toBeGreaterThan(0);
+    expect(result.sources[0].name).toBe('mono');
   });
 });

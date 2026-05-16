@@ -33,4 +33,11 @@ describe('tailwind-ramps', () => {
     const b = getTailwindRamps();
     expect(a).toBe(b);
   });
+
+  it('matches canonical Tailwind v3.4 values for spot-checked entries', () => {
+    expect(tailwindRampsHex.rose['400']).toBe('#fb7185');
+    expect(tailwindRampsHex.blue['500']).toBe('#3b82f6');
+    expect(tailwindRampsHex.slate['950']).toBe('#020617');
+    expect(tailwindRampsHex.amber['600']).toBe('#d97706');
+  });
 });
