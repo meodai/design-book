@@ -20,7 +20,7 @@ export class RampEngine {
       preserveHueOffsets: opts.preserveHueOffsets ?? true,
       gamutMap: opts.gamutMap ?? true,
     });
-    this.cacheSize = opts.cacheSize ?? 32;
+    this.cacheSize = Math.max(1, opts.cacheSize ?? 32);
   }
 
   generate(seed: string): GenerateResult {
