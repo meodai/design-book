@@ -1155,6 +1155,13 @@ h1, h2, h3 {
   background: var(--surface);
   padding: 16px 18px;
   display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.coda-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
   gap: 4px;
 }
@@ -1164,11 +1171,19 @@ h1, h2, h3 {
   font-size: 14px;
   color: var(--text);
 }
-.coda-list span {
+.coda-text span {
   font-size: 14px;
   color: var(--muted);
   line-height: 1.4;
 }
+.coda-icon {
+  flex: 0 0 auto;
+  color: var(--text);
+  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+}
+.coda-icon svg { display: block; }
 
 /* ── Outro ──────────────────────────────────────────────────────── */
 .outro {
