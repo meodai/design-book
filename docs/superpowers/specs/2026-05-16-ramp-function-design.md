@@ -163,6 +163,7 @@ Shade keys per ramp: `50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950`.
 ## Open questions
 
 None blocking. Future iterations could add:
+
 - A `ramp-stops` autocomplete in the editor.
 - Additional bundled ramps (Radix, Material).
 - Per-call engine option overrides via cached engine pool.
