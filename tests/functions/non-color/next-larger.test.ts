@@ -86,6 +86,25 @@ describe('nextLarger', () => {
     expect(() => book.resolve('ui.gap')).toThrow(/unit mismatch/);
   });
 
+  it('does not recurse when paired with nextSmaller in the same scope', async () => {
+    // Two selector tokens in the same scope used to mutually recurse —
+    // emphasis iterates space, hits `tight`, resolves it, which iterates
+    // space and hits `emphasis`, etc. This test guards that fix.
+    const { nextSmaller } = await import('../../../src/functions/non-color/next-smaller');
+    const book = new DesignBook('test');
+    const space = book.addScope('space');
+    space.set('xs', px(4));
+    space.set('s',  px(8));
+    space.set('m',  px(12));
+    space.set('l',  px(16));
+    space.set('xl', px(24));
+    space.set('emphasis', nextLarger(ref('space.m'), space));
+    space.set('tight',    nextSmaller(ref('space.m'), space));
+
+    expect(book.resolve('space.emphasis')).toBe('16px');
+    expect(book.resolve('space.tight')).toBe('8px');
+  });
+
   it('respects the not option', () => {
     const book = new DesignBook('test');
     const space = book.addScope('space');

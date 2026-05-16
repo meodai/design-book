@@ -12,6 +12,16 @@ interface Parsed {
   unit: string;
 }
 
+/** A function token "iterates" a scope when that scope is one of its args
+ *  (direct identity match). Used to break recursion when two scope-iterating
+ *  selectors share a scope. */
+function iteratesScope(fn: FunctionTokenValue, scope: Scope): boolean {
+  for (const arg of fn.args) {
+    if (arg === scope) return true;
+  }
+  return false;
+}
+
 function parseDimension(value: string, label: string): Parsed {
   const match = value.match(/^(-?[\d.]+)(.*)$/);
   if (!match) {
@@ -38,6 +48,13 @@ export function nextSmallerImpl(
 
   for (const key of scope.getAllKeys()) {
     if (excluded.has(`${scope.name}.${key}`)) continue;
+
+    // Skip function tokens that iterate this same scope — resolving
+    // them would recurse back through us. The graph's cycle detection
+    // only covers declared refs, not scope-iterating selectors.
+    const tok = scope.get(key);
+    if (tok && tok.type === 'function' && iteratesScope(tok as FunctionTokenValue, scope)) continue;
+
     let resolved: string;
     try {
       resolved = scope.resolve(key);
