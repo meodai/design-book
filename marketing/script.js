@@ -456,7 +456,6 @@ function nextSmallerLocal (target, scope, minD = 0) {
 // ══════════════════════════════════════════════════════════════════════
 (function rampSection () {
   const seedInput = document.getElementById("ramp-seed-input");
-  const seedHex   = document.getElementById("ramp-seed-hex");
   const barsEl    = document.getElementById("ramp-bars");
   if (!seedInput || !barsEl) return;
 
@@ -489,7 +488,6 @@ function nextSmallerLocal (target, scope, minD = 0) {
 
   function paint () {
     const seed = seedInput.value || INITIAL_SEED;
-    seedHex.textContent = seed;
     try {
       brand.set("primary", color(seed));
     } catch {

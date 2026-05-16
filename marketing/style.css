@@ -197,8 +197,7 @@ h1, h2, h3 {
   font-size: 12px;
   color: var(--muted);
 }
-.graph-controls input[type="color"],
-.graph-controls color-input {
+.graph-controls input[type="color"] {
   width: 36px;
   height: 36px;
   border: 1px solid var(--rule);
@@ -206,8 +205,15 @@ h1, h2, h3 {
   padding: 0;
   background: none;
   cursor: pointer;
-  display: inline-block;
-  overflow: hidden;
+}
+.graph-controls color-input {
+  /* Let the web component use its natural width so the hex it renders
+     isn't truncated. Vertical alignment via inline-flex on the label. */
+  display: inline-flex;
+  cursor: pointer;
+}
+.graph-controls label {
+  align-items: center;
 }
 .graph-controls button {
   font-family: var(--font-mono);
