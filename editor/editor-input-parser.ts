@@ -1,7 +1,7 @@
 import {
   color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
-  lighten, darken, shade, relativeTo,
+  lighten, darken, shade, relativeTo, ramp,
   closestColor, furthestFrom, averageColor, mostVivid,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
@@ -252,6 +252,18 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const color = getTokenArg(parseArg(args[0], book));
     const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
     return shade(color, options);
+  },
+
+  // ramp(seed, { shade: '500' })
+  ramp(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error("ramp requires a seed and a { shade: '...' } option");
+    const seed = getTokenArg(parseArg(args[0], book));
+    const options = parseOptionsArg(args.slice(1).join(','));
+    if (!options || typeof (options as any).shade !== 'string') {
+      throw new Error("ramp requires a { shade: '...' } option");
+    }
+    return ramp(seed, options as { shade: string });
   },
 
   // relativeTo(color, colorSpace, modifications, options?)

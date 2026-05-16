@@ -1,6 +1,6 @@
 import {
   DesignBook, color, ref, px, rem, ms,
-  bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade,
+  bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
   spacingScale, typographyScale,
   nextLarger, nextSmaller,
   Renderer, SVGRenderer, TableViewRenderer,
@@ -45,6 +45,7 @@ function bootDesignSystem() {
   space.set('l',  px(16));
   space.set('xl', px(24));
   space.set('2xl', px(40));
+
 
   // Semantic scope
   const semantic = book.addScope('semantic');
@@ -692,7 +693,7 @@ function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
 
 const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
-  'lighten', 'darken', 'shade', 'relativeTo',
+  'lighten', 'darken', 'shade', 'relativeTo', 'ramp',
   'closestColor', 'furthestFrom', 'averageColor', 'mostVivid',
   'nextLarger', 'nextSmaller',
   'spacingScale', 'typographyScale', 'timing',
