@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-Dmwx0WLN.js"></script>
+  <script type="module" crossorigin src="/assets/index-DSExZwex.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-DNj9Ot3l.css">
 </head>
 <body>
@@ -225,6 +225,27 @@
           <em>lowest</em> step that still clears the threshold. The token is
           not saying "use this grey." It is saying "pick the weakest
           boundary that still reads as a boundary."
+        </p>
+
+        <h3>One step up, one step down</h3>
+        <p>
+          The same "pick from a set" pattern works on dimensional scopes —
+          spacing, type, motion. Given a scale and a starting member,
+          <code>nextLarger</code> and <code>nextSmaller</code> return the
+          adjacent step. The unit can be anything (<code>px</code>,
+          <code>rem</code>, <code>ms</code>); the function only requires
+          that every member of the scope share one.
+        </p>
+        <p class="rule-line">
+          <code>space.emphasis</code> =
+          <code>nextLarger(space.m, space)</code>
+        </p>
+        <p>
+          Add a sixth spacing step and <code>space.emphasis</code> may move
+          to it without any code change. Pass <code>{ minDistance: 6 }</code>
+          to skip neighbours that are too close — useful when the scale has
+          fine-grained steps and the derived token should still read as a
+          jump, not a nudge.
         </p>
       </section>
 

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Book — Tokens with relationships</title>
+  <meta name="description" content="A reactive design-token framework. Six color-selecting functions that compute over your palette — things CSS can't do natively." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap"
+    rel="stylesheet"
+  />
+  <script type="module" crossorigin src="/assets/index-B49lm5P4.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CM1R79Xk.css">
+</head>
+<body>
+
+<header class="top">
+  <a href="/" class="top-mark">Design Book</a>
+  <nav class="top-nav">
+    <a href="https://github.com/meodai/design-book">GitHub</a>
+    <a href="https://meodai.github.io/design-book/">Editor</a>
+    <a href="https://meodai.github.io/design-book/article/">Article</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <p class="kicker">A reactive design-token framework</p>
+  <h1>Tokens with relationships.</h1>
+  <p class="deck">
+    Most design tokens hold a value. The interesting ones hold
+    <em>a rule</em>. Design Book lets your palette answer questions —
+    which color reads best on this surface, which is closest to this
+    brand, which is the perceptual average of those five — and
+    recompute the moment the inputs change.
+  </p>
+
+  <div class="install">
+    <code><span class="prompt">$</span> npm i design-book</code>
+    <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+  </div>
+  <p class="install-note">
+    TypeScript · ESM · one dependency
+    (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>).
+  </p>
+</section>
+
+<section class="premise">
+  <h2>The premise</h2>
+  <p>
+    CSS can already <em>modify</em> a color — <code>color-mix</code>,
+    <code>oklch(from …)</code>, <code>calc()</code>, custom
+    properties. That part is solved. What CSS cannot do — and will
+    not, for a long time — is <em>select</em> a value from a set you
+    defined.
+  </p>
+  <p>
+    Design Book treats your palette as a structured collection that
+    can be queried. Six functions iterate the set and return a single
+    member: the most readable, the most distant, the most chromatic,
+    the closest match. When you add a color, the answers update.
+    Swap a brand — every dependent token reflows.
+  </p>
+</section>
+
+<main class="sections">
+
+  <!-- bestContrastWith -->
+  <article class="fn" id="best-contrast">
+    <header class="fn-head">
+      <h3>bestContrastWith</h3>
+      <code class="sig">bestContrastWith( target, scope, { not? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          Find the most readable color from a palette for any given
+          background. The function walks every member of the scope,
+          measures WCAG contrast, returns the winner. Bind it to a
+          surface token; the result tracks whatever the surface
+          becomes.
+        </p>
+        <p class="use">
+          Use for accessible UI text, dynamic badges, themable
+          buttons, chart labels.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>A single palette · six surfaces · text auto-picked.</figcaption>
+        <div class="contrast-row" id="demo-contrast"></div>
+        <div class="contrast-palette" id="demo-contrast-palette" aria-label="Palette in use"></div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// label auto-selects its readable color</span>
+ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- closestColor -->
+  <article class="fn" id="closest">
+    <header class="fn-head">
+      <h3>closestColor</h3>
+      <code class="sig">closestColor( target, scope, { not? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          Match an external color — a brand request, a Figma frame,
+          a freshly sampled hue — to its nearest neighbour in your
+          token set. Distance is measured in OKLab, so matches are
+          perceptual, not RGB-shaped.
+        </p>
+        <p class="use">
+          Use for normalising third-party colors into your palette,
+          generating tinted assets, snapping eyedropper input to a
+          system color.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
+        <div class="closest-stage">
+          <div class="closest-target">
+            <span class="swatch" id="closest-target-swatch"></span>
+            <span class="lbl">Target<br /><code id="closest-target-hex"></code></span>
+          </div>
+          <div class="closest-arrow" aria-hidden="true">→</div>
+          <div class="closest-ranked" id="closest-ranked"></div>
+        </div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// snap an incoming color to a palette member</span>
+brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</span>(
+  <span class="c-fn">color</span>(<span class="c-str">'#7f4dc4'</span>),
+  <span class="c-fn">scope</span>(<span class="c-str">'palette'</span>),
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- furthestFrom -->
+  <article class="fn" id="furthest">
+    <header class="fn-head">
+      <h3>furthestFrom</h3>
+      <code class="sig">furthestFrom( scope, { not? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          The companion of <em>closest</em>. Given a scope, find the
+          member that sits perceptually farthest from a chosen
+          anchor. Maximum visual distance, by construction.
+        </p>
+        <p class="use">
+          Use for accent picking, “opposite” tokens, chart series
+          that mustn't read as siblings.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Hover any swatch · the furthest member is marked.</figcaption>
+        <div class="furthest-stage" id="furthest-stage"></div>
+        <div class="furthest-readout" id="furthest-readout"></div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// pick an accent guaranteed to read as “other”</span>
+ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</span>(
+  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- minContrastWith -->
+  <article class="fn" id="min-contrast">
+    <header class="fn-head">
+      <h3>minContrastWith</h3>
+      <code class="sig">minContrastWith( target, scope, { threshold?, not? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          The opposite optimisation. Find the palette member with the
+          <em>lowest</em> contrast against a background that still
+          clears a configurable threshold. Subtle, but legible.
+        </p>
+        <p class="use">
+          Use for captions, helper text, disabled states, borders that
+          exist but don't shout.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Same surface, same palette — two thresholds, two answers.</figcaption>
+        <div class="min-stage">
+          <div class="min-card">
+            <div class="min-label">threshold 3.0</div>
+            <div class="min-sample" id="min-sample-3"><span class="min-text"></span></div>
+          </div>
+          <div class="min-card">
+            <div class="min-label">threshold 4.5 — AA</div>
+            <div class="min-sample" id="min-sample-45"><span class="min-text"></span></div>
+          </div>
+          <div class="min-card">
+            <div class="min-label">threshold 7.0 — AAA</div>
+            <div class="min-sample" id="min-sample-7"><span class="min-text"></span></div>
+          </div>
+        </div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// the quietest member that still clears AA</span>
+ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  <span class="c-fn">scope</span>(<span class="c-str">'neutral'</span>),
+  { <span class="c-key">threshold</span>: <span class="c-num">4.5</span> },
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- averageColor -->
+  <article class="fn" id="average">
+    <header class="fn-head">
+      <h3>averageColor</h3>
+      <code class="sig">averageColor( scope, { space? = 'oklab' } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          Reduce a palette to its perceptual mean. Averaging happens
+          in OKLab by default — the result is the color that
+          <em>feels</em> like the centre of mass, not the math of RGB
+          sludge.
+        </p>
+        <p class="use">
+          Use for background tints, neutral derivations, brand-aware
+          greys, fallback colors.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Six inputs · one perceptual mean. Re-roll to see it recompute.</figcaption>
+        <div class="avg-stage">
+          <div class="avg-inputs" id="avg-inputs"></div>
+          <div class="avg-arrow" aria-hidden="true">→</div>
+          <div class="avg-output">
+            <span class="swatch" id="avg-swatch"></span>
+            <span class="lbl">average<br /><code id="avg-hex"></code></span>
+          </div>
+        </div>
+        <button class="reroll" type="button" id="reroll-avg">Re-roll palette</button>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// the perceptual centre of a palette</span>
+neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</span>(
+  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
+  { <span class="c-key">space</span>: <span class="c-str">'oklab'</span> },
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- nextLarger / nextSmaller -->
+  <article class="fn" id="next-step">
+    <header class="fn-head">
+      <h3>nextLarger · nextSmaller</h3>
+      <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          The same selector idea, on dimensional scopes. Given a
+          spacing, type or motion scale, step to the next member up
+          or down — regardless of unit. Pass <code>minDistance</code>
+          to skip near-noise: useful when adjacent steps in the scale
+          are very close.
+        </p>
+        <p class="use">
+          Use for derived gaps, emphasis paddings, slower/faster
+          motion variants, anywhere a token wants to be “one step
+          away” from another without hardcoding the next key.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
+        <div class="step-stage">
+          <div class="step-scale" id="step-scale" aria-label="Spacing scale"></div>
+          <div class="step-controls">
+            <label>
+              <span class="step-lbl">target</span>
+              <input type="range" id="step-target" min="0" max="6" step="1" value="3" />
+              <span class="step-val" id="step-target-val">12px</span>
+            </label>
+            <label>
+              <span class="step-lbl">minDistance</span>
+              <input type="range" id="step-min" min="0" max="20" step="1" value="0" />
+              <span class="step-val" id="step-min-val">0px</span>
+            </label>
+          </div>
+          <div class="step-readout">
+            <div class="step-cell">
+              <span class="step-key">nextSmaller</span>
+              <span class="step-result" id="step-smaller">—</span>
+            </div>
+            <div class="step-cell">
+              <span class="step-key">target</span>
+              <span class="step-result" id="step-target-out">12px</span>
+            </div>
+            <div class="step-cell">
+              <span class="step-key">nextLarger</span>
+              <span class="step-result" id="step-larger">—</span>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// scope.space = { xs:4 s:8 m:12 l:16 xl:24 2xl:32 3xl:48 }</span>
+ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'space.m'</span>),
+  <span class="c-fn">scope</span>(<span class="c-str">'space'</span>),
+  { <span class="c-key">minDistance</span>: <span class="c-num">6</span> },
+))</code></pre>
+    </div>
+  </article>
+
+  <!-- mostVivid -->
+  <article class="fn" id="vivid">
+    <header class="fn-head">
+      <h3>mostVivid</h3>
+      <code class="sig">mostVivid( scope, { not? } )</code>
+    </header>
+
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>
+          Pick the highest-chroma member of a scope. Vividness is
+          measured in OKLCh — independent of lightness — so a
+          fluorescent yellow and a deep violet compete on the same
+          axis.
+        </p>
+        <p class="use">
+          Use for hero accents, focus indicators, spot colors, status
+          signals.
+        </p>
+      </div>
+
+      <figure class="demo">
+        <figcaption>Same palette, sorted by chroma — winner marked.</figcaption>
+        <div class="vivid-stage" id="vivid-stage"></div>
+      </figure>
+
+      <pre class="code"><code><span class="c-dim">// the highest-chroma member of a set</span>
+ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
+  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
+))</code></pre>
+    </div>
+  </article>
+
+</main>
+
+<section class="coda">
+  <h2>Also included</h2>
+  <p>
+    Eight modifier functions. CSS can already do most of these
+    natively — we ship them so a single token graph can describe a
+    whole system without falling back to strings.
+  </p>
+  <ul class="coda-list">
+    <li><b>colorMix</b> <span>Blend two colors in any space.</span></li>
+    <li><b>lighten</b> <span>Increase OKLCh lightness.</span></li>
+    <li><b>darken</b> <span>Decrease OKLCh lightness.</span></li>
+    <li><b>shade</b> <span>Mix toward black, perceptually.</span></li>
+    <li><b>relativeTo</b> <span>Modify a color in a chosen channel.</span></li>
+    <li><b>spacingScale</b> <span>Modular spacing steps.</span></li>
+    <li><b>typographyScale</b> <span>Type ramps from a ratio.</span></li>
+    <li><b>timing</b> <span>Animation curves &amp; multiples.</span></li>
+  </ul>
+</section>
+
+<section class="outro">
+  <h2>Define the rules. Let the system do the picking.</h2>
+  <div class="install big">
+    <code><span class="prompt">$</span> npm i design-book</code>
+    <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+  </div>
+  <ul class="outro-links">
+    <li><a href="https://github.com/meodai/design-book" target="_blank" rel="noopener">GitHub</a></li>
+    <li><a href="https://meodai.github.io/design-book/" target="_blank" rel="noopener">Editor</a></li>
+    <li><a href="https://meodai.github.io/design-book/article/" target="_blank" rel="noopener">Article</a></li>
+    <li><a href="https://www.npmjs.com/package/design-book" target="_blank" rel="noopener">npm</a></li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <span>Design Book — © <span id="year">2026</span> Elastiq</span>
+  <span>AGPL-3.0</span>
+</footer>
+
+</body>
+</html>
