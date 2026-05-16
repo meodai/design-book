@@ -28,6 +28,17 @@ export default defineConfig(({ mode }) => {
     };
   }
 
+  if (mode === 'marketing') {
+    return {
+      root: 'marketing',
+      base: process.env.BASE_PATH ?? '/',
+      server: { host: true },
+      build: {
+        outDir: '../marketing-dist',
+      },
+    };
+  }
+
   return {
     plugins: [dts({ rollupTypes: true })],
     build: {

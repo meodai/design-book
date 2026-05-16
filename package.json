@@ -43,6 +43,8 @@
     "build:editor": "vite build --mode editor",
     "dev:article": "vite --mode article --host",
     "build:article": "vite build --mode article --emptyOutDir",
+    "dev:marketing": "vite --mode marketing --host",
+    "build:marketing": "vite build --mode marketing --emptyOutDir",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
