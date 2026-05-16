@@ -27,6 +27,13 @@
   --c-border: color-mix(in lab, var(--c-surface-on) 20%, var(--c-surface));
   --c-surface-subtle: color-mix(in lab, var(--c-surface-on) 5%, var(--c-surface));
 
+  /* Page surface — distinct from --c-surface so editor panels stay white
+     (cards-on-cream) and match the marketing / article aesthetic. */
+  --c-page-surface: light-dark(#fcf6ee, var(--c-black));
+  --c-accent: #2d60a5;
+  --font-sans:    "Libertinus Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Libertinus Serif", ui-serif, Georgia, serif;
+
   --s-line: 1px;
   --s-line--fat: 2px;
 
@@ -61,17 +68,19 @@ select {
 }
 
 body {
-  background: var(--c-surface);
+  background: var(--c-page-surface);
   color: var(--c-surface-on);
   padding: 2rem;
 }
 
 h1 {
-  font-size: 1rem;
-  font-weight: 300;
-  margin: 0 0 0.75rem 0;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.4em 0;
+  text-transform: none;
 }
 
 .intro {
@@ -80,28 +89,31 @@ h1 {
 }
 
 .intro p {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  margin: 0 0 0.5rem 0;
-  color: color-mix(in oklab, var(--c-surface-on), transparent 15%);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 0.6rem 0;
+  color: var(--c-surface-on);
 }
 
 .intro__links {
   display: flex;
   gap: 1.25rem;
-  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  margin-top: 0.4rem;
 }
 
 .intro__links a {
-  color: var(--c-surface-on);
+  color: var(--c-accent);
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  text-decoration-color: color-mix(in oklab, var(--c-surface-on), transparent 60%);
+  text-decoration-color: color-mix(in oklab, var(--c-accent), transparent 60%);
 }
 
 .intro__links a:hover {
-  text-decoration-color: var(--c-surface-on);
+  text-decoration-color: var(--c-accent);
 }
 
 h3 {
