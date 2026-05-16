@@ -218,8 +218,13 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   try {
     // Build a Poline ramp from ink → vermilion → paper and snap a token to it.
     // Poline's anchorColors use HSL triples [h, s, l] in 0..360 / 0..100 / 0..100.
+    // Poline anchor format: [hueDeg, saturation 0-1, lightness 0-1].
     const poline = new Poline({
-      anchorColors: [[20, 30, 10], [12, 85, 45], [40, 30, 92]],
+      anchorColors: [
+        [20, 0.30, 0.08],   // near-black warm
+        [12, 0.85, 0.45],   // vermilion
+        [42, 0.40, 0.92],   // paper
+      ],
       numPoints: 7,
     });
     cssColors = poline.colorsCSS;
