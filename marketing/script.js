@@ -101,6 +101,13 @@ let activeRamp = null;   // poline-generated ramp scope (populated below)
   const invert    = document.getElementById("graph-invert");
   if (!viz) return;
 
+  // <color-input> sets its .value asynchronously after upgrade — seed
+  // the property from the attribute so reads work on first paint.
+  const INITIAL_BRAND   = brandIn.getAttribute("value")   || "#c8391a";
+  const INITIAL_SURFACE = surfaceIn.getAttribute("value") || "#f5efe2";
+  brandIn.value   = INITIAL_BRAND;
+  surfaceIn.value = INITIAL_SURFACE;
+
   function paint () {
     const renderer = new SVGRenderer(book, {
       gap: 36,
@@ -114,16 +121,20 @@ let activeRamp = null;   // poline-generated ramp scope (populated below)
     paintRenderers();
   }
 
-  // Brand: rewrite values.vermilion so dependents shift.
-  brandIn.addEventListener("input", () => {
-    book.getScope("values").set("vermilion", color(brandIn.value));
-    paint();
-  });
-  // Surface: rewrite values.paper so the ui.surface→ui.text/accent chain shifts.
-  surfaceIn.addEventListener("input", () => {
-    book.getScope("values").set("paper", color(surfaceIn.value));
-    paint();
-  });
+  function onBrandChange () {
+    const v = brandIn.value || INITIAL_BRAND;
+    try { book.getScope("values").set("vermilion", color(v)); paint(); } catch {}
+  }
+  function onSurfaceChange () {
+    const v = surfaceIn.value || INITIAL_SURFACE;
+    try { book.getScope("values").set("paper", color(v)); paint(); } catch {}
+  }
+
+  brandIn.addEventListener("change", onBrandChange);
+  brandIn.addEventListener("input", onBrandChange);
+  surfaceIn.addEventListener("change", onSurfaceChange);
+  surfaceIn.addEventListener("input", onSurfaceChange);
+
   invert.addEventListener("click", () => {
     const current = book.getScope("ui").resolve("surface");
     const next = lch(current).l > 0.5 ? "#14110d" : "#f5efe2";
