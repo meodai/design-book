@@ -5,7 +5,8 @@ import { TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { Ramp } from 'dittotones';
-import { RampEngine } from './functions/color/ramp';
+import { RampEngine, rampImpl } from './functions/color/ramp';
+import { FunctionError } from './errors';
 import { getTailwindRamps } from './data/tailwind-ramps';
 
 export interface DesignBookOptions {
@@ -138,6 +139,12 @@ export class DesignBook {
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
     registerBuiltinFunctions(this);
+    this.registerFunction('ramp', (seedValue: string, options?: { shade: string }) => {
+      if (!options?.shade) {
+        throw new FunctionError('ramp: missing required "shade" option', 'ramp');
+      }
+      return rampImpl(seedValue, options.shade, this.getRampEngine());
+    });
   }
 
   // --- Mode ---
