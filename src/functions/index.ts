@@ -27,6 +27,7 @@ export { furthestFrom } from './color/furthest-from';
 export { averageColor } from './color/average-color';
 export { mostVivid } from './color/most-vivid';
 export { shade } from './color/shade';
+export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';

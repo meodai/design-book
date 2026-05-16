@@ -54,6 +54,7 @@ export {
   bestContrastWith, minContrastWith,
   colorMix, lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, averageColor, mostVivid,
+  ramp, rampStops,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   registerBuiltinFunctions,
