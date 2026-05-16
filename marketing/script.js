@@ -17,6 +17,7 @@ import {
   Renderer,
   color,
   ref,
+  ramp,
 } from "../src/index";
 
 import { Poline } from "poline";
@@ -437,6 +438,65 @@ function nextSmallerLocal (target, scope, minD = 0) {
     return `<div class="vtile ${c === crown ? "crown" : ""}" style="background:${c}">
       <span class="chroma">${C.toFixed(2)}</span><span>${c}</span></div>`;
   }).join("");
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  RAMP — one color in, eleven stops out
+// ══════════════════════════════════════════════════════════════════════
+(function rampSection () {
+  const seedInput = document.getElementById("ramp-seed-input");
+  const seedHex   = document.getElementById("ramp-seed-hex");
+  const barsEl    = document.getElementById("ramp-bars");
+  if (!seedInput || !barsEl) return;
+
+  const SHADES = ["50","100","200","300","400","500","600","700","800","900","950"];
+  const INITIAL_SEED = seedInput.getAttribute("value") || "#0066cc";
+
+  // The <color-input> custom element initialises its `.value` property
+  // asynchronously after upgrade — read the `value` attribute as the
+  // source of truth here, and assign the property so the element
+  // reflects it on first paint.
+  seedInput.value = INITIAL_SEED;
+
+  // Tiny isolated book — keeps this demo independent of the hero book.
+  const rampBook = new DesignBook("ramp-demo");
+  const brand    = rampBook.addScope("brand");
+  brand.set("primary", color(INITIAL_SEED));
+  const palette  = rampBook.addScope("palette");
+  for (const shade of SHADES) {
+    palette.set(shade, ramp(ref("brand.primary"), { shade }));
+  }
+
+  // Render the bar skeleton once.
+  for (const shade of SHADES) {
+    const bar = document.createElement("div");
+    bar.className = "ramp-bar";
+    bar.dataset.shade = shade;
+    bar.innerHTML = `<span class="shade">${shade}</span><span class="hex"></span>`;
+    barsEl.appendChild(bar);
+  }
+
+  function paint () {
+    const seed = seedInput.value || INITIAL_SEED;
+    seedHex.textContent = seed;
+    try {
+      brand.set("primary", color(seed));
+    } catch {
+      return; // bad input, leave the bars on their last good state
+    }
+    for (const shade of SHADES) {
+      const stopHex = rampBook.resolve(`palette.${shade}`);
+      const bar = barsEl.querySelector(`[data-shade="${shade}"]`);
+      bar.style.background = stopHex;
+      bar.querySelector(".hex").textContent = stopHex;
+      const L = lch(stopHex)?.l ?? 0.5;
+      bar.style.color = L > 0.6 ? "#1a1a1a" : "#fcf6ee";
+    }
+  }
+
+  seedInput.addEventListener("change", paint);
+  seedInput.addEventListener("input", paint);
+  paint();
 })();
 
 // — copy buttons —

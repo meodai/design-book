@@ -24,21 +24,27 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # Editor → site/ (root)
-      - run: npm run build:editor
+      # Marketing → site/ (root)
+      - run: npm run build:marketing
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+
+      # Editor → site/editor/
+      - run: npm run build:editor
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/editor/
 
       # Article → site/article/
       - run: npm run build:article
         env:
           BASE_PATH: /${{ github.event.repository.name }}/article/
 
-      # Combine both builds into one upload directory.
+      # Combine all three builds into one upload directory.
       - name: Assemble site
         run: |
           mkdir -p site
-          cp -r editor-dist/. site/
+          cp -r marketing-dist/. site/
+          cp -r editor-dist site/editor
           cp -r article-dist site/article
 
       - uses: actions/upload-pages-artifact@v3

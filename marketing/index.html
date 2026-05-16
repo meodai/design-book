@@ -20,7 +20,7 @@
   <a href="/" class="top-mark">Design Book</a>
   <nav class="top-nav">
     <a href="https://github.com/meodai/design-book">GitHub</a>
-    <a href="https://meodai.github.io/design-book/">Editor</a>
+    <a href="https://meodai.github.io/design-book/editor/">Editor</a>
     <a href="https://meodai.github.io/design-book/article/">Article</a>
   </nav>
 </header>
@@ -295,6 +295,38 @@
   </article>
 
 </main>
+
+<!-- ─── ramp: single color → full tonal scale ────────────────────── -->
+<section class="ramp-feature" aria-labelledby="ramp-title">
+  <div class="ramp-feature-body">
+    <div class="ramp-feature-text">
+      <h2 id="ramp-title">One color in. A full scale out.</h2>
+      <p>
+        Pick a brand color. <code>ramp()</code> returns the matching stop
+        from a Tailwind-style tonal scale — perceptually tuned via
+        <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
+        which transfers the lightness and chroma curves of established
+        palettes onto any hue. Eleven stops, one call each, all reactive.
+      </p>
+      <pre class="code ramp-code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
+
+<span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>);
+<span class="c-fn">for</span> (<span class="c-fn">const</span> shade <span class="c-fn">of</span> [<span class="c-str">'50'</span>,<span class="c-str">'100'</span>,...,<span class="c-str">'950'</span>]) {
+  palette.<span class="c-fn">set</span>(shade, <span class="c-fn">ramp</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), { <span class="c-key">shade</span> }));
+}</code></pre>
+    </div>
+
+    <div class="ramp-stage">
+      <div class="ramp-seed">
+        <color-input id="ramp-seed-input" value="#0066cc" no-alpha></color-input>
+        <code id="ramp-seed-hex">#0066cc</code>
+        <span class="ramp-seed-lbl">brand.primary</span>
+      </div>
+      <div class="ramp-arrow" aria-hidden="true">→</div>
+      <div class="ramp-bars" id="ramp-bars"></div>
+    </div>
+  </div>
+</section>
 
 <!-- ─── One source, many outputs ─────────────────────────────────── -->
 <section class="renderers">
