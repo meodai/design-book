@@ -780,9 +780,6 @@ ui.set('primary-light', relativeTo(ref('brand.primary'), 'oklch', ["+0.2", null,
 // Minimum contrast (AA-compliant but not maximized)
 ui.set('subtle-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
 
-// Average color from a scope
-ui.set('brand-neutral', averageColor(brand, { colorSpace: 'oklch' }));
-
 // Spacing with multipliers
 ui.set('large-spacing', spacingScale(ref('brand.space-md'), ui, { multiplier: 2 }));
 
@@ -1245,33 +1242,6 @@ export function furthestFrom(
 
 - Uses CIELAB Delta E (Euclidean distance in LAB space) for perceptual accuracy.
 - Returns the hex value of the most distant color.
-
-##### `averageColor(scope, options?)`
-
-Calculates the perceptual average of all color tokens in a scope. Useful for generating a representative color for a palette or for neutral tones derived from brand colors.
-
-```typescript
-export function averageColor(
-  scope: Scope,
-  options?: {
-    colorSpace?: string;  // Color space for averaging (default 'lab'). LAB is recommended for perceptual uniformity.
-    description?: string;
-    [key: string]: any;
-  }
-): FunctionTokenValue
-```
-
-- Converts all color tokens in the scope to the target color space, averages each channel, and converts back to hex.
-- Ignores non-color tokens and unresolvable references.
-- If the scope has no valid color tokens, throws a `FunctionError`.
-
-```typescript
-// Get the average brand color for a neutral derived tone
-ui.set('brand-neutral', averageColor(brand, {
-  colorSpace: 'oklch',
-  description: 'Average of all brand colors in oklch space'
-}));
-```
 
 ### Non-Color Functions
 

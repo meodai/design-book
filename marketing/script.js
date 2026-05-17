@@ -68,11 +68,6 @@ function furthestFrom (anchor, scope) {
   for (const c of scope) { if (c === anchor) continue; const d = deltaE(anchor, c); if (d > bestD) { bestD = d; best = c; } }
   return { color: best, d: bestD };
 }
-function averageColor (scope) {
-  let l = 0, a = 0, b = 0, n = 0;
-  for (const c of scope) { const L = lab(c); l += L.l; a += L.a; b += L.b; n++; }
-  return hex({ mode: "oklab", l: l / n, a: a / n, b: b / n });
-}
 function mostVivid (scope) {
   let best = null, bestC = -Infinity;
   for (const c of scope) { const C = lch(c).c; if (C > bestC) { bestC = C; best = c; } }
@@ -355,31 +350,6 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
        <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">${color} · ${ratio.toFixed(1)}:1</span>`;
   }
   paint("min-sample-3", 3); paint("min-sample-45", 4.5); paint("min-sample-7", 7);
-})();
-
-// — averageColor —
-(function demoAverage () {
-  const reroll = document.getElementById("reroll-avg");
-  const inputsEl = document.getElementById("avg-inputs");
-  const swatch = document.getElementById("avg-swatch");
-  const hexEl = document.getElementById("avg-hex");
-  const SETS = [
-    ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#1d6b6a"],
-    ["#f2c14e","#f78154","#b4436c","#4d9078","#1d3557","#fef9ef"],
-    ["#0b3954","#087e8b","#bfd7ea","#ff5a5f","#c81d25","#fff8f0"],
-    ["#264653","#2a9d8f","#e9c46a","#f4a261","#e76f51","#dad7cd"],
-    ["#003049","#d62828","#f77f00","#fcbf49","#eae2b7","#7fb069"],
-  ];
-  let idx = 0;
-  function render () {
-    const palette = SETS[idx % SETS.length];
-    inputsEl.innerHTML = palette.map((c) => `<span style="background:${c}"></span>`).join("");
-    const avg = averageColor(palette);
-    swatch.style.background = avg;
-    hexEl.textContent = avg;
-  }
-  render();
-  reroll?.addEventListener("click", () => { idx++; render(); });
 })();
 
 // — nextLarger / nextSmaller —

@@ -1,4 +1,3 @@
-import { averageColorImpl } from './color/average-color';
 import { bestContrastWithImpl } from './color/best-contrast';
 import { closestColorImpl } from './color/closest-color';
 import { colorMixImpl } from './color/color-mix';
@@ -24,7 +23,6 @@ export { darken } from './color/darken';
 export { relativeTo } from './color/relative-to';
 export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
-export { averageColor } from './color/average-color';
 export { mostVivid } from './color/most-vivid';
 export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
@@ -60,9 +58,6 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction('furthestFrom', (scope: Scope, options?: { not?: string[] }) =>
 		furthestFromImpl(scope, options?.not ?? []),
-	);
-	book.registerFunction('averageColor', (scope: Scope, options?: { colorSpace?: string; not?: string[] }) =>
-		averageColorImpl(scope, options?.colorSpace ?? 'lab', options?.not ?? []),
 	);
 	book.registerFunction(
 		'mostVivid',

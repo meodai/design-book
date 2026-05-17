@@ -55,7 +55,7 @@ Each function exports a **constructor** (returns `FunctionTokenValue` via `creat
 
 At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the registry and calls `implementation(...resolvedArgs, fn.options)`.
 
-**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `averageColor`
+**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`
 
 **Without scope** (pure transforms): `colorMix`, `lighten`, `darken`, `relativeTo`, `spacingScale`, `typographyScale`, `timing`
 

@@ -5,7 +5,6 @@ import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { minContrastWith } from '../src/functions/color/min-contrast';
 import { closestColor } from '../src/functions/color/closest-color';
 import { furthestFrom } from '../src/functions/color/furthest-from';
-import { averageColor } from '../src/functions/color/average-color';
 import { mostVivid } from '../src/functions/color/most-vivid';
 
 describe('"not" option excludes keys from the candidate pool', () => {
@@ -110,21 +109,4 @@ describe('"not" option excludes keys from the candidate pool', () => {
     expect(book.resolve('ui.outNotOutlier')).not.toBe('#ffffff');
   });
 
-  it('averageColor skips excluded keys', () => {
-    const book = new DesignBook('test');
-    const palette = book.addScope('palette');
-    palette.set('black',   color('#000000'));
-    palette.set('white',   color('#ffffff'));
-    palette.set('outlier', color('#ff0000'));
-
-    const ui = book.addScope('ui');
-    ui.set('avgAll',        averageColor(palette));
-    ui.set('avgNotOutlier', averageColor(palette, { not: [ref('palette.outlier')] }));
-
-    // Excluding the red outlier should pull the average toward the
-    // black/white mid-gray (no red bias).
-    const all = book.resolve('ui.avgAll');
-    const skipped = book.resolve('ui.avgNotOutlier');
-    expect(all).not.toBe(skipped);
-  });
 });

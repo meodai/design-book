@@ -87,7 +87,6 @@ bestContrastWith(target, scope)             // Highest WCAG contrast
 minContrastWith(target, scope, { ratio })   // Meets minimum ratio (default 4.5)
 closestColor(target, scope)                 // Perceptually closest
 furthestFrom(scope)                         // Most distant from others
-averageColor(scope, { colorSpace })         // Average of all colors
 mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally gated by readability
 ```
 
@@ -109,7 +108,7 @@ ui.set('accent', mostVivid(palette, {
 }));
 
 // `not` is also available on bestContrastWith, minContrastWith,
-// closestColor, furthestFrom, averageColor, nextLarger and nextSmaller.
+// closestColor, furthestFrom, nextLarger and nextSmaller.
 ```
 
 Plain strings work too — `not: ['palette.error']` is equivalent to

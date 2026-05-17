@@ -2,7 +2,7 @@ import {
   color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
-  closestColor, furthestFrom, averageColor, mostVivid,
+  closestColor, furthestFrom, mostVivid,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
 } from '../src/index';
@@ -298,14 +298,6 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     if (args.length < 1) throw new Error('furthestFrom requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
     return furthestFrom(scope);
-  },
-
-  // averageColor(scope, options?)
-  averageColor(argsStr, book, currentScope) {
-    const args = splitArgs(argsStr);
-    if (args.length < 1) throw new Error('averageColor requires 1 argument');
-    const scope = getScopeArg(parseArg(args[0], book));
-    return averageColor(scope);
   },
 
   // mostVivid(scope, ...) — accepts either

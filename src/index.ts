@@ -53,7 +53,7 @@ export { DependencyGraph } from './dependency-graph';
 export {
   bestContrastWith, minContrastWith,
   colorMix, lighten, darken, shade, relativeTo,
-  closestColor, furthestFrom, averageColor, mostVivid,
+  closestColor, furthestFrom, mostVivid,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,

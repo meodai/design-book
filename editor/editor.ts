@@ -694,7 +694,7 @@ function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
 const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
   'lighten', 'darken', 'shade', 'relativeTo', 'ramp',
-  'closestColor', 'furthestFrom', 'averageColor', 'mostVivid',
+  'closestColor', 'furthestFrom', 'mostVivid',
   'nextLarger', 'nextSmaller',
   'spacingScale', 'typographyScale', 'timing',
 ];
@@ -779,7 +779,7 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       // Only suggest scope names for functions that take a scope argument
       const SCOPE_ARG_FUNCTIONS = [
         'bestContrastWith', 'minContrastWith', 'closestColor',
-        'furthestFrom', 'averageColor',
+        'furthestFrom',
       ];
       if (SCOPE_ARG_FUNCTIONS.includes(funcArgMatch[1])) {
         for (const scope of book.getAllScopes()) {

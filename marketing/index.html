@@ -195,34 +195,6 @@
     </div>
   </article>
 
-  <!-- averageColor -->
-  <article class="fn" id="average">
-    <header class="fn-head">
-      <h3>averageColor</h3>
-      <code class="sig">averageColor( scope, { space? = 'oklab' } )</code>
-    </header>
-    <div class="fn-body">
-      <div class="fn-prose">
-        <p>Reduce a palette to its perceptual mean.</p>
-      </div>
-      <figure class="demo">
-        <figcaption>Six inputs · one perceptual mean. Re-roll to see it recompute.</figcaption>
-        <div class="avg-stage">
-          <div class="avg-inputs" id="avg-inputs"></div>
-          <div class="avg-arrow" aria-hidden="true">→</div>
-          <div class="avg-output">
-            <span class="swatch" id="avg-swatch"></span>
-            <span class="lbl">average<br /><code id="avg-hex"></code></span>
-          </div>
-        </div>
-        <button class="reroll" type="button" id="reroll-avg">Re-roll palette</button>
-      </figure>
-      <pre class="code"><code>neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</span>(
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-))</code></pre>
-    </div>
-  </article>
-
   <!-- nextLarger / nextSmaller -->
   <article class="fn" id="next-step">
     <header class="fn-head">
