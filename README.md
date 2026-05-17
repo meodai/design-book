@@ -88,6 +88,7 @@ minContrastWith(target, scope, { ratio })   // Meets minimum ratio (default 4.5)
 closestColor(target, scope)                 // Perceptually closest
 furthestFrom(scope)                         // Most distant from others
 mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally gated by readability
+leastVivid(scope, { against, minContrast }) // Lowest OKLCH chroma — the muted counterpart
 ```
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Pass `against` (a target colour) and `minContrast` to require the result to clear a WCAG threshold against that target — useful for picking an accent / link colour out of a generated palette without it turning unreadable. Falls back to the highest-contrast candidate if nothing meets the threshold, same as `minContrastWith`.

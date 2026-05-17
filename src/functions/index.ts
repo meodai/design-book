@@ -3,6 +3,7 @@ import { closestColorImpl } from './color/closest-color';
 import { colorMixImpl } from './color/color-mix';
 import { darkenImpl } from './color/darken';
 import { furthestFromImpl } from './color/furthest-from';
+import { leastVividImpl } from './color/least-vivid';
 import { lightenImpl } from './color/lighten';
 import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
@@ -24,6 +25,7 @@ export { relativeTo } from './color/relative-to';
 export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
 export { mostVivid } from './color/most-vivid';
+export { leastVivid } from './color/least-vivid';
 export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
@@ -69,6 +71,18 @@ export function registerBuiltinFunctions(book: {
 			const against = typeof againstOrOptions === 'string' ? againstOrOptions : null;
 			const options = typeof againstOrOptions === 'string' ? maybeOptions : againstOrOptions;
 			return mostVividImpl(scope, against, options?.minContrast ?? 0, options?.not ?? []);
+		},
+	);
+	book.registerFunction(
+		'leastVivid',
+		(
+			scope: Scope,
+			againstOrOptions?: string | { minContrast?: number; not?: string[] },
+			maybeOptions?: { minContrast?: number; not?: string[] },
+		) => {
+			const against = typeof againstOrOptions === 'string' ? againstOrOptions : null;
+			const options = typeof againstOrOptions === 'string' ? maybeOptions : againstOrOptions;
+			return leastVividImpl(scope, against, options?.minContrast ?? 0, options?.not ?? []);
 		},
 	);
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>

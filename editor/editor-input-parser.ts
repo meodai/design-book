@@ -2,7 +2,7 @@ import {
   color, ref, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
-  closestColor, furthestFrom, mostVivid,
+  closestColor, furthestFrom, mostVivid, leastVivid,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
 } from '../src/index';
@@ -361,6 +361,63 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     }
 
     return mostVivid(scope, options as any);
+  },
+
+  // leastVivid(scope, ...) — same dual-form as mostVivid:
+  //   leastVivid(scope, { against: ref(...), minContrast: N, not: [...] })
+  //   leastVivid(scope, againstRef, { minContrast: N, not: [...] })   // serialised form
+  leastVivid(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('leastVivid requires 1 argument');
+    const scope = getScopeArg(parseArg(args[0], book));
+
+    if (args.length === 1) return leastVivid(scope);
+
+    const options: {
+      against?: AnyTokenValue;
+      minContrast?: number;
+      not?: Array<AnyTokenValue | string>;
+      description?: string;
+    } = {};
+
+    let optionsStartIdx = 1;
+    const secondArg = args[1].trim();
+    if (secondArg && !secondArg.startsWith('{')) {
+      options.against = getTokenArg(parseArg(secondArg, book));
+      optionsStartIdx = 2;
+    }
+
+    if (args.length > optionsStartIdx) {
+      const optsStr = args.slice(optionsStartIdx).join(',').trim().replace(/^\{|\}$/g, '').trim();
+      const pairs = splitArgs(optsStr);
+
+      for (const pair of pairs) {
+        const colonIdx = pair.indexOf(':');
+        if (colonIdx === -1) continue;
+        const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+        const valueStr = pair.slice(colonIdx + 1).trim();
+
+        if (key === 'against') {
+          options.against = getTokenArg(parseArg(valueStr, book));
+        } else if (key === 'minContrast') {
+          options.minContrast = parseFloat(valueStr);
+        } else if (key === 'not') {
+          const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
+          options.not = arrStr
+            ? splitArgs(arrStr).map((item) => {
+                const trimmed = item.trim();
+                const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
+                if (strMatch) return strMatch[1];
+                return getTokenArg(parseArg(trimmed, book));
+              })
+            : [];
+        } else if (key === 'description') {
+          options.description = valueStr.replace(/^['"]|['"]$/g, '');
+        }
+      }
+    }
+
+    return leastVivid(scope, options as any);
   },
 
   // spacingScale(base, options?)

@@ -6,6 +6,7 @@ import { minContrastWith } from '../src/functions/color/min-contrast';
 import { closestColor } from '../src/functions/color/closest-color';
 import { furthestFrom } from '../src/functions/color/furthest-from';
 import { mostVivid } from '../src/functions/color/most-vivid';
+import { leastVivid } from '../src/functions/color/least-vivid';
 
 describe('"not" option excludes keys from the candidate pool', () => {
   it('mostVivid skips excluded keys', () => {
@@ -109,4 +110,18 @@ describe('"not" option excludes keys from the candidate pool', () => {
     expect(book.resolve('ui.outNotOutlier')).not.toBe('#ffffff');
   });
 
+  it('leastVivid skips excluded keys', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    palette.set('gray',   color('#808080')); // lowest chroma (~0)
+    palette.set('pastel', color('#f7c8c5')); // low chroma
+    palette.set('vivid',  color('#ff0000'));
+
+    const ui = book.addScope('ui');
+    ui.set('mute',        leastVivid(palette));
+    ui.set('muteNotGray', leastVivid(palette, { not: [ref('palette.gray')] }));
+
+    expect(book.resolve('ui.mute')).toBe('#808080');         // gray wins by chroma
+    expect(book.resolve('ui.muteNotGray')).toBe('#f7c8c5');  // pastel wins once gray is excluded
+  });
 });
