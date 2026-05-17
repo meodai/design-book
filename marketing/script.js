@@ -73,6 +73,11 @@ function mostVivid (scope) {
   for (const c of scope) { const C = lch(c).c; if (C > bestC) { bestC = C; best = c; } }
   return { color: best, chroma: bestC };
 }
+function leastVivid (scope) {
+  let best = null, bestC = Infinity;
+  for (const c of scope) { const C = lch(c).c; if (C < bestC) { bestC = C; best = c; } }
+  return { color: best, chroma: bestC };
+}
 
 // ── Shared palettes for plates ─────────────────────────────────────
 const PALETTE_BRAND = [
@@ -406,15 +411,19 @@ function nextSmallerLocal (target, scope, minD = 0) {
   render();
 })();
 
-// — mostVivid —
+// — mostVivid / leastVivid —
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");
   if (!stage) return;
   const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
   const { color: crown } = mostVivid(palette);
-  stage.innerHTML = palette.map((c) => {
+  const { color: floor } = leastVivid(palette);
+  // Sort by chroma so the highlighted tiles sit at opposite ends of the row.
+  const sorted = [...palette].sort((a, b) => (lch(b).c || 0) - (lch(a).c || 0));
+  stage.innerHTML = sorted.map((c) => {
     const C = lch(c).c || 0;
-    return `<div class="vtile ${c === crown ? "crown" : ""}" style="background:${c}">
+    const mark = c === crown ? "crown" : c === floor ? "floor" : "";
+    return `<div class="vtile ${mark}" style="background:${c}">
       <span class="chroma">${C.toFixed(2)}</span><span>${c}</span></div>`;
   }).join("");
 })();

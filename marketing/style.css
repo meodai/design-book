@@ -691,22 +691,33 @@ h1, h2, h3 {
   color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
 }
-.vivid-stage .vtile.crown {
+.vivid-stage .vtile.crown,
+.vivid-stage .vtile.floor {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   z-index: 2;
 }
-.vivid-stage .vtile.crown::before {
-  content: "most vivid";
+.vivid-stage .vtile.floor {
+  outline-color: var(--text);
+}
+.vivid-stage .vtile.crown::before,
+.vivid-stage .vtile.floor::before {
   position: absolute;
   top: 6px; left: 6px;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.06em;
-  background: var(--accent);
   color: var(--surface);
   padding: 2px 6px;
   border-radius: 2px;
+}
+.vivid-stage .vtile.crown::before {
+  content: "most vivid";
+  background: var(--accent);
+}
+.vivid-stage .vtile.floor::before {
+  content: "least vivid";
+  background: var(--text);
 }
 .vivid-stage .vtile .chroma {
   font-family: var(--font-display);

@@ -12,8 +12,8 @@
     href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap"
     rel="stylesheet"
   />
-  <script type="module" crossorigin src="/assets/index-nVEqCy8L.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BFR88Jnh.css">
+  <script type="module" crossorigin src="/assets/index-BnMlINry.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-5_cIgbEl.css">
 </head>
 <body>
 
@@ -196,34 +196,6 @@
     </div>
   </article>
 
-  <!-- averageColor -->
-  <article class="fn" id="average">
-    <header class="fn-head">
-      <h3>averageColor</h3>
-      <code class="sig">averageColor( scope, { space? = 'oklab' } )</code>
-    </header>
-    <div class="fn-body">
-      <div class="fn-prose">
-        <p>Reduce a palette to its perceptual mean.</p>
-      </div>
-      <figure class="demo">
-        <figcaption>Six inputs · one perceptual mean. Re-roll to see it recompute.</figcaption>
-        <div class="avg-stage">
-          <div class="avg-inputs" id="avg-inputs"></div>
-          <div class="avg-arrow" aria-hidden="true">→</div>
-          <div class="avg-output">
-            <span class="swatch" id="avg-swatch"></span>
-            <span class="lbl">average<br /><code id="avg-hex"></code></span>
-          </div>
-        </div>
-        <button class="reroll" type="button" id="reroll-avg">Re-roll palette</button>
-      </figure>
-      <pre class="code"><code>neutral.set(<span class="c-str">'bg'</span>, <span class="c-fn">averageColor</span>(
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-))</code></pre>
-    </div>
-  </article>
-
   <!-- nextLarger / nextSmaller -->
   <article class="fn" id="next-step">
     <header class="fn-head">
@@ -274,23 +246,23 @@
     </div>
   </article>
 
-  <!-- mostVivid -->
+  <!-- mostVivid / leastVivid -->
   <article class="fn" id="vivid">
     <header class="fn-head">
-      <h3>mostVivid</h3>
+      <h3>mostVivid · leastVivid</h3>
       <code class="sig">mostVivid( scope, { against?, minContrast?, not? } )</code>
+      <code class="sig">leastVivid( scope, { against?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-prose">
-        <p>Highest-chroma member. Optionally constrained to clear a contrast target against a surface.</p>
+        <p>Both ends of the chroma axis. <code>mostVivid</code> picks the loudest member of a palette — the obvious accent. <code>leastVivid</code> picks the most muted — the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target.</p>
       </div>
       <figure class="demo">
-        <figcaption>Same palette, sorted by chroma — winner marked.</figcaption>
+        <figcaption>Same palette, sorted by chroma — both ends marked.</figcaption>
         <div class="vivid-stage" id="vivid-stage"></div>
       </figure>
-      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-))</code></pre>
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))</code></pre>
     </div>
   </article>
 

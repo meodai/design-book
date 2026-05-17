@@ -245,23 +245,23 @@
     </div>
   </article>
 
-  <!-- mostVivid -->
+  <!-- mostVivid / leastVivid -->
   <article class="fn" id="vivid">
     <header class="fn-head">
-      <h3>mostVivid</h3>
+      <h3>mostVivid · leastVivid</h3>
       <code class="sig">mostVivid( scope, { against?, minContrast?, not? } )</code>
+      <code class="sig">leastVivid( scope, { against?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-prose">
-        <p>Highest-chroma member. Optionally constrained to clear a contrast target against a surface.</p>
+        <p>Both ends of the chroma axis. <code>mostVivid</code> picks the loudest member of a palette — the obvious accent. <code>leastVivid</code> picks the most muted — the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target.</p>
       </div>
       <figure class="demo">
-        <figcaption>Same palette, sorted by chroma — winner marked.</figcaption>
+        <figcaption>Same palette, sorted by chroma — both ends marked.</figcaption>
         <div class="vivid-stage" id="vivid-stage"></div>
       </figure>
-      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">mostVivid</span>(
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-))</code></pre>
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))</code></pre>
     </div>
   </article>
 
