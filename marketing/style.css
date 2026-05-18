@@ -35,6 +35,29 @@ html, body {
 
 ::selection { background: var(--accent); color: var(--surface); }
 
+/* ── Page scrollbar (cream surface, muted thumb) ─────────────────── */
+html {
+  scrollbar-color: rgba(0, 0, 0, 0.28) var(--surface);
+}
+html::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+html::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+html::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border: 3px solid var(--surface);
+  border-radius: 8px;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+html::-webkit-scrollbar-corner {
+  background: var(--surface);
+}
+
 a {
   color: var(--accent);
   text-decoration: underline;
@@ -337,6 +360,36 @@ h1, h2, h3 {
 .code .c-fn  { color: #88aee0; }
 .code .c-key { color: #c5b3e0; }
 .code .c-num { color: #e8b96d; }
+
+/* — Dark scrollbars for code blocks & renderer panes — */
+.code,
+.r-pane {
+  scrollbar-color: rgba(240, 233, 218, 0.28) #1d1c1c;
+  scrollbar-width: thin;
+}
+.code::-webkit-scrollbar,
+.r-pane::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.code::-webkit-scrollbar-track,
+.r-pane::-webkit-scrollbar-track {
+  background: #1d1c1c;
+}
+.code::-webkit-scrollbar-thumb,
+.r-pane::-webkit-scrollbar-thumb {
+  background: rgba(240, 233, 218, 0.22);
+  border: 2px solid #1d1c1c;
+  border-radius: 6px;
+}
+.code::-webkit-scrollbar-thumb:hover,
+.r-pane::-webkit-scrollbar-thumb:hover {
+  background: rgba(240, 233, 218, 0.4);
+}
+.code::-webkit-scrollbar-corner,
+.r-pane::-webkit-scrollbar-corner {
+  background: #1d1c1c;
+}
 
 /* ── Demo: shared ──────────────────────────────────────────────── */
 .demo { margin: 0; }
