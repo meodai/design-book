@@ -117,6 +117,7 @@ const outputEl = document.getElementById('output')!;
 const eventLog = document.getElementById('event-log')!;
 const svgContainer = document.getElementById('svg-container')!;
 const showConnectionsCb = document.getElementById('show-connections') as HTMLInputElement;
+const linksOnlyCb = document.getElementById('links-only') as HTMLInputElement;
 const exampleView = document.getElementById('example-view')!;
 const exampleStage = document.getElementById('example-stage')!;
 const exampleStyle = document.getElementById('example-style') as HTMLStyleElement;
@@ -223,6 +224,7 @@ function renderActiveTab() {
     try {
       const svgRenderer = new SVGRenderer(book, {
         showConnections: showConnectionsCb.checked,
+        linksOnly: linksOnlyCb.checked,
       });
       svgContainer.innerHTML = svgRenderer.render();
     } catch (err) {
@@ -1061,6 +1063,10 @@ document.querySelectorAll('.tab').forEach((tab) => {
 // --- Show connections toggle ---
 
 showConnectionsCb.addEventListener('change', () => {
+  if (activeFormat === 'svg') renderActiveTab();
+});
+
+linksOnlyCb.addEventListener('change', () => {
   if (activeFormat === 'svg') renderActiveTab();
 });
 
