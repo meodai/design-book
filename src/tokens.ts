@@ -200,8 +200,9 @@ export function extractVisualDependencies(args: FunctionArg[]): string[] {
       // dependencies up too.
       for (const dep of extractVisualDependencies(arg.args)) deps.push(dep);
     } else if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
-      for (const key of (arg as ScopeFunctionArg).getAllKeys()) {
-        deps.push(key);
+      const scopeArg = arg as ScopeFunctionArg;
+      for (const key of scopeArg.getAllKeys()) {
+        deps.push(`${scopeArg.name}.${key}`);
       }
     }
   }

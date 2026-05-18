@@ -135,7 +135,7 @@ export class SVGRenderer {
       fontSize: options?.fontSize ?? 12,
       dotSize: options?.dotSize ?? 5,
       strokeWidth: options?.strokeWidth ?? 1.5,
-      linksOnly: options?.linksOnly ?? false,
+      linksOnly: options?.linksOnly ?? true,
     };
   }
 
@@ -293,20 +293,26 @@ export class SVGRenderer {
         const token = this.book.getTokenByKey(key);
         const isFunction = token?.type === 'function';
 
-        // In linksOnly mode the graph collapses to its "analysis" layer:
-        // value-deriving function tokens (darken, colorMix, spacingScale, …)
-        // have their edges hidden; palette-linkers (bestContrastWith,
-        // mostVivid, …) keep theirs, but each is collapsed to a single
-        // dashed edge pointing at the resolved candidate.
-        let prerequisites: string[];
-        if (this.options.linksOnly && isFunction && token) {
-          if (!isPaletteLinker(token)) continue; // hide transform edges
+        // Palette-linker function tokens (bestContrastWith, mostVivid, …)
+        // collapse to a single solid edge from the chosen candidate back to
+        // the function token — the rest of the palette is implied.
+        if (isFunction && token && isPaletteLinker(token)) {
           const resolvedSource = findResolvedSource(this.book, key, token);
-          prerequisites = resolvedSource ? [resolvedSource] : graph.getIncoming(key);
-        } else {
-          prerequisites = graph.getIncoming(key);
+          const resolvedDot = resolvedSource ? dots.get(resolvedSource) : undefined;
+          if (resolvedDot) {
+            const connId = `${resolvedSource}->${key}`;
+            if (!processedConnections.has(connId)) {
+              processedConnections.add(connId);
+              connections.push({ from: resolvedDot, to: fromDot, isDashed: false });
+            }
+          }
+          continue;
         }
 
+        // linksOnly hides value-deriving function edges entirely.
+        if (this.options.linksOnly && isFunction) continue;
+
+        const prerequisites = graph.getIncoming(key);
         for (const depKey of prerequisites) {
           const toDot = dots.get(depKey);
           if (!toDot) continue;
