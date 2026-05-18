@@ -39,6 +39,7 @@ interface DotInfo {
   y: number;
   color: string;
   isHeader: boolean;
+  isDimension: boolean;
   isLeft: boolean; // true if table is on left half — dot faces inward (right edge)
 }
 
@@ -227,6 +228,7 @@ export class SVGRenderer {
         y: table.y + offsetY + rowHeight / 2,
         color: '#000000',
         isHeader: true,
+        isDimension: false,
         isLeft: table.onLeft,
       });
 
@@ -236,7 +238,9 @@ export class SVGRenderer {
         const token = scope.get(tokenName);
         if (!token) continue;
 
-        const isColor = isColorToken(this.book, token);
+        const baseType = getTokenBaseType(this.book, token);
+        const isColor = baseType === 'color';
+        const isDimension = baseType === 'dimension';
         const color = isColor
           ? getResolvedColor(this.book, table.scopeName, tokenName)
           : '#888888';
@@ -250,6 +254,7 @@ export class SVGRenderer {
           y: table.y + offsetY + (i + 1) * rowHeight + rowHeight / 2,
           color,
           isHeader: false,
+          isDimension,
           isLeft: table.onLeft,
         });
       }
@@ -386,10 +391,11 @@ export class SVGRenderer {
     // Render dots
     lines.push('<g class="dots">');
     for (const [, dot] of dots) {
-      if (dot.isHeader) {
-        // Rotated square for scope headers
-        const size = dotSize;
-        lines.push(`  <rect x="${dot.x - size}" y="${dot.y - size}" width="${size * 2}" height="${size * 2}" fill="var(--on-surface)" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}" transform="rotate(45 ${dot.x} ${dot.y})"/>`);
+      if (dot.isHeader) continue;
+      if (dot.isDimension) {
+        // Rotated square (diamond) for dimension tokens
+        const size = dotSize * 0.7;
+        lines.push(`  <rect x="${dot.x - size}" y="${dot.y - size}" width="${size * 2}" height="${size * 2}" fill="${dot.color}" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}" transform="rotate(45 ${dot.x} ${dot.y})"/>`);
       } else {
         // Circle for tokens
         lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="${dot.color}" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}"/>`);
