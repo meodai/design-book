@@ -33,6 +33,12 @@ export class Scope {
     this.referenceResolver = new ReferenceResolver(book);
   }
 
+  /** Name of the scope this one extends, or `undefined` if it doesn't
+   *  inherit from another scope. */
+  get extendsScope(): string | undefined {
+    return this.extendsName;
+  }
+
   /** Optional marker that lets renderers re-aggregate the scope's tokens
    *  into a composite output (e.g. a CSS class for a typography style or
    *  a W3 `$type: 'typography'` token). Inherits through `extends` unless

@@ -281,6 +281,7 @@ export class SVGRenderer {
     lines.push('.palette-table__row--header { fill: var(--on-surface); }');
     lines.push('text { font-family: var(--font); font-weight: 300; }');
     lines.push('.palette-table__label { fill: var(--on-surface); }');
+    lines.push('.palette-table__label--inherited { opacity: 0.4; }');
     lines.push('.palette-table__label--header { font-weight: 400; fill: var(--surface); }');
     lines.push('.connections-bg { opacity: 0.6; }');
     lines.push('.connections { opacity: 0.8; }');
@@ -294,6 +295,18 @@ export class SVGRenderer {
     // OG pattern: iterate each token, get its visual dependencies (what it depends on),
     // draw FROM the token TO each dependency. Color = token's color.
     // isLeft means the table is on the left half → dot is on right edge → curve goes RIGHT (+amp)
+    // Track which scope headers participate in inheritance — those get a
+    // visible dot at the header so the connection has an anchor.
+    const inheritingScopes = new Set<string>();
+    for (const table of tables) {
+      const scope = this.book.getScope(table.scopeName);
+      const parentName = scope?.extendsScope;
+      if (!parentName) continue;
+      if (!dots.has(`__header__${parentName}`)) continue;
+      inheritingScopes.add(table.scopeName);
+      inheritingScopes.add(parentName);
+    }
+
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
       const processedConnections = new Set<string>();
@@ -301,8 +314,30 @@ export class SVGRenderer {
       type Conn = { from: DotInfo; to: DotInfo; isDashed: boolean };
       const connections: Conn[] = [];
 
+      // Scope inheritance (B extends A) collapses to a single header-to-
+      // header edge — drawing one per inherited token would be visual
+      // clutter when the relationship is "the whole scope comes from A".
+      for (const table of tables) {
+        const scope = this.book.getScope(table.scopeName);
+        const parentName = scope?.extendsScope;
+        if (!parentName) continue;
+        const fromKey = `__header__${table.scopeName}`;
+        const toKey = `__header__${parentName}`;
+        const fromDot = dots.get(fromKey);
+        const toDot = dots.get(toKey);
+        if (!fromDot || !toDot) continue;
+        const connId = `${fromKey}->${toKey}`;
+        if (processedConnections.has(connId)) continue;
+        processedConnections.add(connId);
+        connections.push({ from: fromDot, to: toDot, isDashed: false });
+      }
+
       for (const [key, fromDot] of dots) {
         if (fromDot.isHeader) continue;
+
+        // Inherited tokens get their lineage shown via the header-to-header
+        // edge above — skip them here to avoid duplicating the relationship.
+        if (this.book.isInherited(key)) continue;
 
         const token = this.book.getTokenByKey(key);
         const isFunction = token?.type === 'function';
@@ -385,13 +420,18 @@ export class SVGRenderer {
       lines.push(`  <text class="palette-table__label palette-table__label--header" x="${headerTextX}" y="${headerTextY}" font-size="${fontSize}">${escapeXml(table.scopeName)}</text>`);
 
       // Data rows
+      const scope = this.book.getScope(table.scopeName);
       for (let i = 0; i < table.keys.length; i++) {
         const tokenName = table.keys[i];
         const ry = ty + (i + 1) * rowHeight;
         lines.push(`  <rect class="palette-table__row" x="${tx}" y="${ry}" width="${table.width}" height="${rowHeight}"/>`);
         const textX = tx + tablePadding;
         const textY = ry + rowHeight / 2 + fontSize / 3;
-        lines.push(`  <text class="palette-table__label" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(tokenName)}</text>`);
+        const isInherited = scope?.isInherited(tokenName) ?? false;
+        const labelClass = isInherited
+          ? 'palette-table__label palette-table__label--inherited'
+          : 'palette-table__label';
+        lines.push(`  <text class="${labelClass}" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(tokenName)}</text>`);
       }
 
       lines.push('</g>');
@@ -400,7 +440,13 @@ export class SVGRenderer {
     // Render dots
     lines.push('<g class="dots">');
     for (const [, dot] of dots) {
-      if (dot.isHeader) continue;
+      if (dot.isHeader) {
+        // Headers only render a dot when they participate in scope
+        // inheritance — that's the anchor for the header-to-header edge.
+        if (!inheritingScopes.has(dot.scopeName)) continue;
+        lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="var(--on-surface)" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}"/>`);
+        continue;
+      }
       if (dot.isDimension) {
         // Rotated square (diamond) for dimension tokens
         const size = dotSize * 0.7;
