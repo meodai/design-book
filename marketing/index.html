@@ -306,8 +306,9 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
       The same book renders to whatever target you need. CSS variables
       and JSON ship in the box; the
       <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
-      format too. Custom renderers are a registration call — twenty
-      lines of TypeScript turn the graph into Tailwind config, Swift
+      format too. Custom renderers register through one call —
+      <code>book.registerRenderer(name, fn)</code> — and twenty lines
+      of TypeScript turn the graph into Tailwind config, Swift
       extensions, SwiftUI, Kotlin, a JSON dialect of your choice.
     </p>
   </header>
@@ -336,7 +337,11 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
   <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> values.<span class="c-fn">getAllKeys</span>())  colors[k]     = values.<span class="c-fn">resolve</span>(k);
   <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> ui.<span class="c-fn">getAllKeys</span>())      colors[<span class="c-str">`ui-${</span>k<span class="c-str">}`</span>] = ui.<span class="c-fn">resolve</span>(k);
   <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: { colors: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(colors, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } } }`</span>;
-}</code></pre>
+}
+
+<span class="c-dim">// Register it under any name — it's now a peer of the built-ins.</span>
+book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</span>, tailwindRenderer);
+<span class="c-fn">const</span> config = book.<span class="c-fn">render</span>(<span class="c-str">'tailwind'</span>);</code></pre>
   </details>
 </section>
 

@@ -174,15 +174,19 @@ function paintRenderers () {
   const tw   = document.getElementById("r-tailwind");
   if (!css) return;
 
-  try { css.textContent  = new Renderer(book, "css-variables").render(); }
+  // The renderer is registered once at startup (see below); here we just
+  // ask the book for each output by name — built-ins and custom alike.
+  try { css.textContent  = book.render("css-variables"); }
   catch (e) { css.textContent = `/* ${e.message} */`; }
-  try { json.textContent = new Renderer(book, "json").render(); }
+  try { json.textContent = book.render("json"); }
   catch (e) { json.textContent = `// ${e.message}`; }
-  try { w3.textContent   = new Renderer(book, "w3-design-tokens").render(); }
+  try { w3.textContent   = book.render("w3-design-tokens"); }
   catch (e) { w3.textContent  = `// ${e.message}`; }
-  try { tw.textContent   = tailwindRenderer(book); }
+  try { tw.textContent   = book.render("tailwind"); }
   catch (e) { tw.textContent  = `// ${e.message}`; }
 }
+
+book.registerRenderer("tailwind", tailwindRenderer);
 
 // Tabs
 document.querySelectorAll(".r-tab").forEach((btn) => {

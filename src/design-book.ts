@@ -8,6 +8,12 @@ import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
 import { getTailwindRamps } from './data/tailwind-ramps';
+import { registerBuiltinRenderers } from './renderers/builtin';
+
+/** A renderer is any function from a book (and optional options) to a
+ *  string. Register one with `book.registerRenderer(name, fn)` and invoke
+ *  it with `book.render(name, options?)`. */
+export type RendererFn = (book: DesignBook, options?: unknown) => string;
 
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
@@ -115,6 +121,7 @@ export class DesignBook {
   private graph: DependencyGraph;
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
+  private renderers: Map<string, RendererFn> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
 
   private _propagating = false;
@@ -145,6 +152,7 @@ export class DesignBook {
       }
       return rampImpl(seedValue, options.shade, this.getRampEngine());
     });
+    registerBuiltinRenderers(this);
   }
 
   // --- Mode ---
@@ -323,6 +331,36 @@ export class DesignBook {
   getFunction(name: string): FunctionImplementation | undefined {
     const fn = this.functions.get(name);
     return typeof fn === 'function' ? fn : undefined;
+  }
+
+  // --- Renderer registry ---
+
+  /** Register a named renderer. A renderer is any function from
+   *  `(book, options?)` to a string. Built-in names ('css-variables',
+   *  'json', 'w3-design-tokens', 'svg') are pre-registered; registering
+   *  the same name again replaces the previous renderer. */
+  registerRenderer(name: string, renderer: RendererFn): void {
+    this.renderers.set(name, renderer);
+  }
+
+  /** Invoke a registered renderer by name. Throws if no renderer is
+   *  registered under that name. */
+  render(name: string, options?: unknown): string {
+    const renderer = this.renderers.get(name);
+    if (!renderer) {
+      throw new TokenError(`Renderer "${name}" is not registered`, name);
+    }
+    return renderer(this, options);
+  }
+
+  /** Names of all currently registered renderers. */
+  getRendererNames(): string[] {
+    return Array.from(this.renderers.keys());
+  }
+
+  /** Look up a registered renderer function by name. */
+  getRenderer(name: string): RendererFn | undefined {
+    return this.renderers.get(name);
   }
 
   getRampEngine(): RampEngine {

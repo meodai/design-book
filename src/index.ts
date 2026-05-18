@@ -7,6 +7,7 @@ export type {
   DesignBookEvent,
   DesignBookEventMap,
   FunctionImplementation,
+  RendererFn,
   ScopeAddedDetail,
   ScopeRemovedDetail,
   TokenChangedDetail,
@@ -77,3 +78,4 @@ export { SVGRenderer } from './renderers/svg-renderer';
 export { TableViewRenderer } from './renderers/table-view-renderer';
 export type { TableViewRenderOptions } from './renderers/table-view-renderer';
 export { registerBuiltinFunctionRenderers } from './renderers/function-renderers';
+export { registerBuiltinRenderers } from './renderers/builtin';

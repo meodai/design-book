@@ -49,13 +49,16 @@ const stopWatching = book.watch('ui.text', (newValue, detail) => {
 brand.set('white', color('#f5f5f5')); // triggers re-computation
 stopWatching();
 
-// Render
-const css = new Renderer(book, 'css-variables').render();
-const json = new Renderer(book, 'json').render();
+// Render — every output is just `book.render(name, options?)`.
+// Built-in names: 'css-variables', 'json', 'w3-design-tokens', 'svg'.
+const css  = book.render('css-variables');
+const json = book.render('json');
+const w3   = book.render('w3-design-tokens');
+const svg  = book.render('svg', { showConnections: true });
+
+// The renderer classes are still exported for callers that want them.
 const jsonObject = new Renderer(book, 'json').renderJsonObject();
-const w3 = new Renderer(book, 'w3-design-tokens').render();
-const w3Object = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
-const svg = new SVGRenderer(book).render();
+const w3Object   = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
 ```
 
 ## Token Constructors
@@ -271,6 +274,32 @@ dark.resolve('text'); // '#1a1a1a'
 Inherited tokens remain part of the dependency graph. If `dark.primary` currently resolves from `light.primary`, anything depending on `dark.primary` will continue to update when `light.primary` changes.
 
 ## Rendering
+
+A renderer is any function with the shape `(book, options?) => string`. Built-in names — `css-variables`, `json`, `w3-design-tokens`, `svg` — are pre-registered on every `DesignBook`, so:
+
+```typescript
+book.render('css-variables');
+book.render('svg', { linksOnly: true });
+```
+
+Custom renderers register under any name you choose. The book hands the renderer the live graph; the renderer decides what to emit.
+
+```typescript
+function tailwindRenderer(book) {
+  const colors = {};
+  for (const scope of book.getAllScopes()) {
+    for (const key of scope.getAllKeys()) {
+      colors[`${scope.name}-${key}`] = book.resolve(`${scope.name}.${key}`);
+    }
+  }
+  return `module.exports = { theme: { extend: { colors: ${JSON.stringify(colors, null, 2)} } } };`;
+}
+
+book.registerRenderer('tailwind', tailwindRenderer);
+const config = book.render('tailwind');
+```
+
+Other useful methods: `book.getRendererNames()`, `book.getRenderer(name)`. Registering the same name twice replaces the previous renderer.
 
 ### CSS Variables
 
