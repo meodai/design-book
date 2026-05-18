@@ -58,8 +58,10 @@ export {
   ramp, rampStops,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
+  random,
   registerBuiltinFunctions,
 } from './functions';
+export type { RandomOptions, RandomType } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

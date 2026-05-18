@@ -85,7 +85,7 @@
   <header class="sections-head">
     <h2>Kinds of decision</h2>
     <p>
-      Eight built-in selectors. Each one takes a scope of candidates
+      Nine built-in selectors. Each one takes a scope of candidates
       and returns the member that fits a rule.
     </p>
   </header>
@@ -262,6 +262,24 @@
       </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))
 ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))</code></pre>
+    </div>
+  </article>
+
+  <!-- random -->
+  <article class="fn" id="random">
+    <header class="fn-head">
+      <h3>random</h3>
+      <code class="sig">random( scope, { type, seed?, not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-prose">
+        <p>Picks a token from a scope at random — but with a memory. Each declaration captures its own seed at construction, so the value stays put across re-resolves; pass <code>seed</code> explicitly when you want the same pick on every machine. <code>type</code> filters the pool: <code>'color'</code>, <code>'dimension'</code>, or <code>'string'</code>.</p>
+      </div>
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,
+  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
+
+ui.set(<span class="c-str">'promo-bg'</span>,
+  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
     </div>
   </article>
 

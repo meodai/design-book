@@ -14,6 +14,8 @@ import { nextSmallerImpl } from './non-color/next-smaller';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
+import { randomImpl } from './generic/random';
+import type { RandomType } from './generic/random';
 import type { Scope } from '../scope';
 
 export { bestContrastWith } from './color/best-contrast';
@@ -33,6 +35,8 @@ export { typographyScale } from './non-color/typography-scale';
 export { timing } from './non-color/timing';
 export { nextLarger } from './non-color/next-larger';
 export { nextSmaller } from './non-color/next-smaller';
+export { random } from './generic/random';
+export type { RandomOptions, RandomType } from './generic/random';
 
 export function registerBuiltinFunctions(book: {
 	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
@@ -106,5 +110,14 @@ export function registerBuiltinFunctions(book: {
 		'nextSmaller',
 		(targetValue: string, scope: Scope, options?: { minDistance?: number; not?: string[] }) =>
 			nextSmallerImpl(targetValue, scope, options?.minDistance ?? 0, options?.not ?? []),
+	);
+	book.registerFunction(
+		'random',
+		(scope: Scope, options?: { type: RandomType; seed: number | string; not?: string[] }) => {
+			if (!options) {
+				throw new Error('random: options are required');
+			}
+			return randomImpl(scope, options.type, options.seed, options.not ?? []);
+		},
 	);
 }

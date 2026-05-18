@@ -168,6 +168,21 @@ typographyScale(base, { ratio, step })          // Modular scale
 timing(duration, 'ease-out', { delay })         // Timing string
 ```
 
+### Random (any type)
+
+```typescript
+random(scope, { type })                                 // type: 'color' | 'dimension' | 'string'
+random(scope, { type: 'color', seed: 'spring-2026' })   // reproducible
+random(scope, { type: 'color', not: ['brand.primary'] })// with exclusions
+```
+
+Picks a token from a scope, filtered by base type. If `seed` is omitted, a
+fresh seed is generated at construction time and persisted on the token —
+the pick stays stable across re-resolves but varies across declarations.
+Pass `seed` explicitly for cross-session / cross-machine reproducibility.
+Hashed internally with djb2 and run through a Mulberry32 PRNG. Throws at
+resolve time if zero candidates match `type`.
+
 ## Custom Functions
 
 You can register your own functions and use them as procedural tokens the
