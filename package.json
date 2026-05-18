@@ -1,6 +1,6 @@
 {
   "name": "design-book",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A reactive TypeScript design-token framework. Tokens with relationships, derived values, and procedural rules that re-evaluate when their inputs change. Renders to CSS, JSON, and W3 Design Tokens.",
   "type": "module",
   "main": "./dist/index.js",
