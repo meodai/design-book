@@ -360,9 +360,6 @@ h1, h2, h3 {
 .graph-controls button:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
 
 .graph-viz {
-  background: var(--surface-2);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
   padding: 18px;
   min-height: 420px;
   overflow: auto;
