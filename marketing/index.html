@@ -457,14 +457,21 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
 
   <details class="renderer-source">
     <summary>The custom Tailwind renderer in full</summary>
-    <pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
+<pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
 <span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
-  <span class="c-fn">const</span> ui = book.<span class="c-fn">getScope</span>(<span class="c-str">'ui'</span>);
-  <span class="c-fn">const</span> values = book.<span class="c-fn">getScope</span>(<span class="c-str">'values'</span>);
-  <span class="c-fn">const</span> colors = {};
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> values.<span class="c-fn">getAllKeys</span>())  colors[k]     = values.<span class="c-fn">resolve</span>(k);
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> ui.<span class="c-fn">getAllKeys</span>())      colors[<span class="c-str">`ui-${</span>k<span class="c-str">}`</span>] = ui.<span class="c-fn">resolve</span>(k);
-  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: { colors: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(colors, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } } }`</span>;
+  <span class="c-fn">const</span> colors = {}, spacing = {};
+  <span class="c-fn">const</span> isColor     = (s) =&gt; <span class="c-fn">parse</span>(s) != <span class="c-num">null</span>;
+  <span class="c-fn">const</span> isDimension = (s) =&gt; <span class="c-str">/^-?\d+(\.\d+)?[a-z%]+$/i</span>.<span class="c-fn">test</span>(s);
+
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> scope <span class="c-fn">of</span> book.<span class="c-fn">getAllScopes</span>()) {
+    <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+      <span class="c-fn">const</span> v = scope.<span class="c-fn">resolve</span>(k);
+      <span class="c-fn">const</span> key = <span class="c-str">`${</span>scope.name<span class="c-str">}-${</span>k<span class="c-str">}`</span>;
+      <span class="c-fn">if</span> (<span class="c-fn">isColor</span>(v))     colors[key]  = v;
+      <span class="c-fn">else if</span> (<span class="c-fn">isDimension</span>(v)) spacing[key] = v;
+    }
+  }
+  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ colors, spacing }, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } }`</span>;
 }
 
 <span class="c-dim">// Register it under any name — it's now a peer of the built-ins.</span>

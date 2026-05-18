@@ -95,19 +95,39 @@ const book = buildBook();
 let activeRamp = null;   // poline-generated ramp scope (populated below)
 
 // Custom renderer — must register before the first paintRenderers() call.
+// Routes each resolved value into the right Tailwind theme section by type.
 function tailwindRenderer (b) {
   const ui     = b.getScope("ui");
   const values = b.getScope("values");
-  const colors = {};
-  for (const k of values.getAllKeys()) colors[k] = values.resolve(k);
+  const colors  = {};
+  const spacing = {};
+
+  const isColor     = (s) => parse(s) != null;
+  const isDimension = (s) => /^-?\d+(\.\d+)?[a-z%]+$/i.test(s);
+
+  function route (key, value) {
+    if (isColor(value))     colors[key]  = value;
+    else if (isDimension(value)) spacing[key] = value;
+  }
+
+  for (const k of values.getAllKeys()) route(k, values.resolve(k));
   for (const k of ui.getAllKeys()) {
-    try { colors[`ui-${k}`] = ui.resolve(k); }
+    try { route(`ui-${k}`, ui.resolve(k)); }
     catch { /* skip unresolvable */ }
   }
+
+  const sections = [];
+  if (Object.keys(colors).length) {
+    sections.push(`colors: ${JSON.stringify(colors, null, 8).replace(/\n/g, "\n      ")}`);
+  }
+  if (Object.keys(spacing).length) {
+    sections.push(`spacing: ${JSON.stringify(spacing, null, 8).replace(/\n/g, "\n      ")}`);
+  }
+
   return `module.exports = {
   theme: {
     extend: {
-      colors: ${JSON.stringify(colors, null, 8).replace(/\n/g, "\n      ")}
+      ${sections.join(",\n      ")}
     }
   }
 };`;
