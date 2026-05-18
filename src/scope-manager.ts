@@ -10,7 +10,7 @@ export class ScopeManager {
     this.book = book;
   }
 
-  addScope(name: string, options?: { extends?: string; description?: string }): Scope {
+  addScope(name: string, options?: { extends?: string; description?: string; compose?: string }): Scope {
     if (this.scopes.has(name)) {
       throw new ScopeError(`Scope "${name}" already exists`, name);
     }

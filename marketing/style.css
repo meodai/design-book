@@ -991,6 +991,78 @@ h1, h2, h3 {
   .ramp-bars { width: 100%; max-width: 320px; }
 }
 
+/* ── Typography: a style is a scope ─────────────────────────────── */
+.typo-feature {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(60px, 8vw, 100px) var(--gutter);
+  border-top: 1px solid var(--rule);
+}
+.typo-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .typo-feature-body {
+    grid-template-columns: 5fr 7fr;
+  }
+  .typo-stage { align-self: start; }
+}
+.typo-feature-text { max-width: 56ch; }
+.typo-feature-text h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0 0 0.5em;
+}
+.typo-feature-text > p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 24px;
+}
+.typo-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.typo-stage {
+  display: grid;
+  gap: clamp(12px, 1.6vw, 20px);
+  padding: clamp(28px, 4vw, 44px);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+.typo-stage figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.typo-sample {
+  font-family: var(--font-display);
+  color: var(--text);
+  margin: 0;
+}
+.typo-sample--heading {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.typo-sample--hero {
+  font-size: clamp(44px, 6.5vw, 72px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
 /* ── Renderer comparison ────────────────────────────────────────── */
 .renderers {
   max-width: var(--max);

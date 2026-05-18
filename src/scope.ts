@@ -12,6 +12,8 @@ type BookWithScope = BookLike & {
 export class Scope {
   readonly name: string;
   readonly description?: string;
+  /** Stored compose marker; the public getter walks the extends chain. */
+  private _compose?: string;
   private extendsName?: string;
   private tokens: Map<string, AnyTokenValue>;
   private referenceResolver: ReferenceResolver;
@@ -20,14 +22,28 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string }
+    options?: { extends?: string; description?: string; compose?: string }
   ) {
     this.name = name;
     this.book = book;
     this.description = options?.description;
     this.extendsName = options?.extends;
+    this._compose = options?.compose;
     this.tokens = new Map();
     this.referenceResolver = new ReferenceResolver(book);
+  }
+
+  /** Optional marker that lets renderers re-aggregate the scope's tokens
+   *  into a composite output (e.g. a CSS class for a typography style or
+   *  a W3 `$type: 'typography'` token). Inherits through `extends` unless
+   *  the scope sets its own marker. Returns `undefined` if no scope in
+   *  the chain is composed. */
+  get compose(): string | undefined {
+    if (this._compose) return this._compose;
+    if (this.extendsName) {
+      return this.book.getScope(this.extendsName)?.compose;
+    }
+    return undefined;
   }
 
   get(name: string): AnyTokenValue | undefined {

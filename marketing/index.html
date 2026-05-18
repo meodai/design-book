@@ -326,6 +326,42 @@ ui.set(<span class="c-str">'promo-bg'</span>,
   </div>
 </section>
 
+<!-- ─── Typography: a style is a scope ─────────────────────────── -->
+<section class="typo-feature" aria-labelledby="typo-title">
+  <div class="typo-feature-body">
+    <div class="typo-feature-text">
+      <h2 id="typo-title">A style is a scope.</h2>
+      <p>
+        A type style is a collection of properties — family, size,
+        weight, line-height, tracking. Design Book treats it as a
+        <em>scope</em> with a <code>compose: 'typography'</code> marker,
+        so every property stays a real, ref-able token in the graph.
+        Renderers re-aggregate the scope at output time — a CSS class
+        for the browser, a <code>$type: 'typography'</code> composite
+        for the W3 Design Tokens spec.
+      </p>
+      <pre class="code"><code>book.<span class="c-fn">addTypography</span>(<span class="c-str">'heading-lg'</span>, {
+  <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
+  <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
+  <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
+  <span class="c-key">lineHeight</span>:    <span class="c-str">'1'</span>,
+  <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
+});
+
+<span class="c-dim">// Variant via extends — inherits the compose marker.</span>
+book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</span>,
+  { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
+  { <span class="c-key">extends</span>: <span class="c-str">'heading-lg'</span> });</code></pre>
+    </div>
+
+    <figure class="typo-stage">
+      <div class="typo-sample typo-sample--heading">A style is a scope.</div>
+      <div class="typo-sample typo-sample--hero">Variants extend.</div>
+      <figcaption>Same book. Two scopes. One inherits the other.</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ─── One source, many outputs ─────────────────────────────────── -->
 <section class="renderers">
   <header class="renderers-head">

@@ -67,6 +67,7 @@ export type { RandomOptions, RandomType } from './functions';
 export { Renderer } from './renderers/renderer';
 export type {
   RenderFormat,
+  RendererOptions,
   FunctionRenderer,
   FunctionRendererOptions,
   ResolvedTokenMap,

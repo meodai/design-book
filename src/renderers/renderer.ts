@@ -7,6 +7,13 @@ export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRendererOptions = Record<string, unknown>;
 export type FunctionRenderer = (args: FunctionArg[], options?: FunctionRendererOptions) => string;
 
+export interface RendererOptions {
+  /** Prefix added in front of CSS class names emitted for typography
+   *  (or other composed) scopes. Defaults to an empty string, so a
+   *  `heading-lg` scope renders as `.heading-lg { … }`. */
+  classPrefix?: string;
+}
+
 export interface W3ColorValue {
   colorSpace: string;
   components: number[];
@@ -32,9 +39,19 @@ export type W3DesignTokensMap = Record<string, Record<string, W3TokenEntry>>;
 
 const toRgb = converter('rgb');
 
+/** Normalise a token key for use in CSS identifiers. Replaces `.` and
+ *  `_` with `-`, splits camelCase boundaries (`fontFamily` →
+ *  `font-family`), and lowercases the result. */
 function keyToHyphen(key: string): string {
-  return key.replace(/[._]/g, '-');
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/[._]/g, '-')
+    .toLowerCase();
 }
+
+/** Alias for keyToHyphen — readability when emitting CSS property names
+ *  (where the camelCase → kebab conversion is the main point). */
+const camelToKebab = keyToHyphen;
 
 function resolveTokenValue(book: DesignBook, scopeName: string, tokenName: string): string {
   return book.resolve(`${scopeName}.${tokenName}`);
@@ -57,11 +74,15 @@ function getTokenType(token: AnyTokenValue, book: DesignBook): string {
 export class Renderer {
   protected book: DesignBook;
   protected format: RenderFormat;
+  protected options: Required<RendererOptions>;
   private functionRenderers: Map<string, FunctionRenderer> = new Map();
 
-  constructor(book: DesignBook, format: RenderFormat = 'css-variables') {
+  constructor(book: DesignBook, format: RenderFormat = 'css-variables', options?: RendererOptions) {
     this.book = book;
     this.format = format;
+    this.options = {
+      classPrefix: options?.classPrefix ?? '',
+    };
     registerBuiltinFunctionRenderers(this);
   }
 
@@ -113,6 +134,25 @@ export class Renderer {
     }
 
     lines.push('}');
+
+    // For each composed-as-typography scope, emit a class block that
+    // re-aggregates the scope's tokens into CSS properties. Each property
+    // points back at the corresponding `--scope-key` custom property.
+    for (const scope of this.book.getAllScopes()) {
+      if (scope.compose !== 'typography') continue;
+      const keys = scope.getAllKeys();
+      if (keys.length === 0) continue;
+
+      lines.push('');
+      lines.push(`.${this.options.classPrefix}${scope.name} {`);
+      for (const key of keys) {
+        const cssProp = camelToKebab(key);
+        const varName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+        lines.push(`  ${cssProp}: var(${varName});`);
+      }
+      lines.push('}');
+    }
+
     return lines.join('\n');
   }
 
@@ -141,6 +181,26 @@ export class Renderer {
     const result: W3DesignTokensMap = {};
 
     for (const scope of this.book.getAllScopes()) {
+      // Typography-composed scopes collapse to a single composite entry
+      // under a shared `typography` group, matching the W3 spec example
+      // of `typography.heading-1`.
+      if (scope.compose === 'typography') {
+        const composite: Record<string, string> = {};
+        for (const key of scope.getAllKeys()) {
+          composite[key] = resolveTokenValue(this.book, scope.name, key);
+        }
+        if (!result['typography']) {
+          result['typography'] = {};
+        }
+        const entry: W3TokenEntry = {
+          $value: composite as unknown as W3TokenValue,
+          $type: 'typography',
+        };
+        if (scope.description) entry.$description = scope.description;
+        result['typography'][scope.name] = entry;
+        continue;
+      }
+
       if (!result[scope.name]) {
         result[scope.name] = {};
       }
