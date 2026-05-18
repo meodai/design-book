@@ -971,12 +971,107 @@ h1, h2, h3 {
 }
 
 /* ── ramp: single-color → tonal scale demo ──────────────────────── */
-.ramp-feature {
+.ramp-feature,
+.mix-feature {
   max-width: var(--max);
   margin: 0 auto;
   padding: clamp(60px, 8vw, 100px) var(--gutter);
   border-top: 1px solid var(--rule);
 }
+
+/* — colorMix demo — */
+.mix-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .mix-feature-body { grid-template-columns: 5fr 7fr; }
+}
+.mix-feature-text { max-width: 56ch; }
+.mix-feature-text h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0 0 0.5em;
+}
+.mix-feature-text > p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 24px;
+}
+.mix-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.mix-stage {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2vw, 24px);
+  padding: clamp(20px, 3vw, 32px);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+.mix-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(12px, 2vw, 20px);
+}
+.mix-row hdr-color-input {
+  --hdr-color-input-size: 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  display: block;
+}
+.mix-strip {
+  display: flex;
+  gap: 6px;
+  height: 64px;
+  min-width: 0;
+}
+.mix-strip span {
+  flex: 1 1 0;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+}
+.mix-space {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.mix-space select {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 6px 28px 6px 10px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 10px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.mix-space select:hover { border-color: var(--text); }
+.mix-space select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ramp-feature-body {
   display: grid;
   gap: clamp(20px, 2.4vw, 32px);

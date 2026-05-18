@@ -340,6 +340,52 @@ ui.set(<span class="c-str">'promo-bg'</span>,
   </div>
 </section>
 
+<!-- ─── colorMix: two colors, pick the interpolation path ────────── -->
+<section class="mix-feature" aria-labelledby="mix-title">
+  <div class="mix-feature-body">
+    <div class="mix-feature-text">
+      <h2 id="mix-title">Two colors. Pick the path.</h2>
+      <p>
+        <code>colorMix()</code> interpolates between two colors. The space
+        you pick changes the path: <code>rgb</code> goes straight through
+        whatever sits between the endpoints in cube coordinates;
+        <code>lab</code> and <code>oklab</code> follow perceptual lines;
+        <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate
+        around hue. Same endpoints — wildly different middles.
+      </p>
+      <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.surface'</span>),
+  { <span class="c-key">ratio</span>: <span class="c-num">0.5</span>, <span class="c-key">colorSpace</span>: <span class="c-str">'oklch'</span> }
+));</code></pre>
+    </div>
+
+    <div class="mix-stage">
+      <div class="mix-row">
+        <color-input id="mix-a" value="hsl(11 78% 45%)" colorspace="hsl" no-alpha></color-input>
+        <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
+        <color-input id="mix-b" value="hsl(210 100% 40%)" colorspace="hsl" no-alpha></color-input>
+      </div>
+      <label class="mix-space">
+        <span>interpolated in</span>
+        <select id="mix-space-sel">
+          <option value="oklch">oklch</option>
+          <option value="oklab">oklab</option>
+          <option value="lch">lch</option>
+          <option value="lab" selected>lab</option>
+          <option value="hsl">hsl</option>
+          <option value="okhsl">okhsl</option>
+          <option value="hsv">hsv</option>
+          <option value="hwb">hwb</option>
+          <option value="rgb">rgb</option>
+          <option value="lrgb">lrgb (linear)</option>
+          <option value="cubehelix">cubehelix</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</section>
+
 <!-- ─── Typography: a style is a scope ─────────────────────────── -->
 <section class="typo-feature" aria-labelledby="typo-title">
   <div class="typo-feature-body">

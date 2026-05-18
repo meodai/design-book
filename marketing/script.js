@@ -7,6 +7,7 @@ import {
   formatHex,
   converter,
   wcagContrast,
+  interpolate,
 } from "https://esm.sh/culori@4?bundle";
 
 import "hdr-color-input";
@@ -596,6 +597,50 @@ function nextSmallerLocal (target, scope, minD = 0) {
     render();
   });
   render();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  COLOR MIX — two endpoints, pick the path
+// ══════════════════════════════════════════════════════════════════════
+(function mixSection () {
+  const aIn    = document.getElementById("mix-a");
+  const bIn    = document.getElementById("mix-b");
+  const strip  = document.getElementById("mix-strip");
+  const spaceS = document.getElementById("mix-space-sel");
+  if (!aIn || !bIn || !strip || !spaceS) return;
+
+  const INITIAL_A = aIn.getAttribute("value") || "#c8391a";
+  const INITIAL_B = bIn.getAttribute("value") || "#0066cc";
+  aIn.value = INITIAL_A;
+  bIn.value = INITIAL_B;
+
+  const STOPS = 5;
+
+  function paint () {
+    const a = aIn.value || INITIAL_A;
+    const b = bIn.value || INITIAL_B;
+    const space = spaceS.value;
+    let mixer;
+    try {
+      mixer = interpolate([a, b], space);
+    } catch {
+      mixer = interpolate([a, b], "lab");
+    }
+    const cells = [];
+    for (let i = 0; i < STOPS; i++) {
+      const t = i / (STOPS - 1);
+      const hex = formatHex(mixer(t)) ?? a;
+      cells.push(`<span style="background:${hex}" title="${hex}"></span>`);
+    }
+    strip.innerHTML = cells.join("");
+  }
+
+  aIn.addEventListener("input", paint);
+  aIn.addEventListener("change", paint);
+  bIn.addEventListener("input", paint);
+  bIn.addEventListener("change", paint);
+  spaceS.addEventListener("change", paint);
+  paint();
 })();
 
 // ══════════════════════════════════════════════════════════════════════
