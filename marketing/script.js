@@ -15,7 +15,11 @@ import "hdr-color-input";
 // to HSL so the picker UI opens in that space.
 {
   const applyHsl = (el) => {
-    if (!el.hasAttribute("colorspace")) el.setAttribute("colorspace", "hsl");
+    if (el.hasAttribute("colorspace")) return;
+    el.setAttribute("colorspace", "hsl");
+    customElements.whenDefined("color-input").then(() => {
+      try { el.colorspace = "hsl"; } catch {}
+    });
   };
   document.querySelectorAll("color-input").forEach(applyHsl);
   new MutationObserver((records) => {
@@ -414,7 +418,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const stage = document.getElementById("closest-ranked");
 
   const picker = document.createElement("color-input");
-  picker.value = "#7f4dc4";
+  picker.setAttribute("colorspace", "hsl");
+  picker.setAttribute("value", "hsl(266 51% 53%)");
   picker.setAttribute("no-alpha", "");
   picker.className = "closest-picker";
   swatchHost.replaceWith(picker);
