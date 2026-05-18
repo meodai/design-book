@@ -779,6 +779,95 @@ h1, h2, h3 {
   color: rgba(255, 255, 255, 0.95);
 }
 
+/* — random — */
+.random-caption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.random-seed-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.random-seed-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 3px;
+  width: 14ch;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.random-seed-input:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+.random-shuffle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--text);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.random-shuffle:hover {
+  background: var(--text);
+  color: var(--surface);
+}
+.random-stage {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.random-stage .rtile {
+  aspect-ratio: 3 / 5;
+  position: relative;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  transition: outline-color 0.18s ease;
+}
+.random-stage .rtile.picked {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+.random-stage .rtile.picked::before {
+  content: "picked";
+  position: absolute;
+  top: 6px; left: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--surface);
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+@media (max-width: 899px) {
+  .random-stage { grid-template-columns: repeat(4, 1fr); }
+}
+
 /* ── ramp: single-color → tonal scale demo ──────────────────────── */
 .ramp-feature {
   max-width: var(--max);

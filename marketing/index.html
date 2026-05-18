@@ -275,6 +275,16 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
       <div class="fn-prose">
         <p>Picks a token from a scope at random — but with a memory. Each declaration captures its own seed at construction, so the value stays put across re-resolves; pass <code>seed</code> explicitly when you want the same pick on every machine. <code>type</code> filters the pool: <code>'color'</code>, <code>'dimension'</code>, or <code>'string'</code>.</p>
       </div>
+      <figure class="demo">
+        <figcaption class="random-caption">
+          <label class="random-seed-lbl">
+            seed
+            <input id="random-seed" class="random-seed-input" type="text" value="spring-2026" spellcheck="false">
+          </label>
+          <button id="random-shuffle" class="random-shuffle" type="button">shuffle</button>
+        </figcaption>
+        <div class="random-stage" id="random-stage"></div>
+      </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,
   <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
 
