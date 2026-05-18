@@ -26,25 +26,43 @@
 </header>
 
 <section class="hero">
-  <p class="kicker">A reactive engine for design decisions</p>
-  <h1>The rules behind a design system, not the values.</h1>
-  <p class="deck">
-    Design systems are normally stored as fixed answers — a hex picked
-    here, a spacing chosen there. Design Book stores
-    <em>how the answer is decided</em>: the highest-contrast text on
-    a surface, the next bigger gap in a scale, the most vivid color
-    that still reads. Change an input and every dependent re-decides
-    itself.
-  </p>
+  <div class="hero-text">
+    <p class="kicker">A reactive engine for design decisions</p>
+    <h1>The rules behind a design system, not the values.</h1>
+    <p class="deck">
+      Design systems are normally stored as fixed answers — a hex picked
+      here, a spacing chosen there. Design Book stores
+      <em>how the answer is decided</em>: the highest-contrast text on
+      a surface, the next bigger gap in a scale, the most vivid color
+      that still reads. Change an input and every dependent re-decides
+      itself.
+    </p>
 
-  <div class="install">
-    <code><span class="prompt">$</span> npm i design-book</code>
-    <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+    <div class="install">
+      <code><span class="prompt">$</span> npm i design-book</code>
+      <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+    </div>
+    <p class="install-note">
+      TypeScript · ESM · one dependency
+      (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>).
+    </p>
   </div>
-  <p class="install-note">
-    TypeScript · ESM · one dependency
-    (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>).
-  </p>
+  <div class="hero-illustration" id="hero-illustration">
+    <svg viewBox="-200 -200 400 400" aria-hidden="true">
+      <g class="hi-ring" id="hi-ring"></g>
+    </svg>
+    <color-input class="hi-center" id="hi-center" value="#1d1c1c" no-alpha></color-input>
+    <div class="hi-pill">
+      <select class="hi-fn" id="hi-fn" aria-label="Selector function">
+        <option value="bestContrastWith">bestContrastWith</option>
+        <option value="minContrastWith">minContrastWith</option>
+        <option value="closestColor">closestColor</option>
+        <option value="furthestFrom">furthestFrom</option>
+        <option value="mostVivid">mostVivid</option>
+        <option value="leastVivid">leastVivid</option>
+      </select>
+    </div>
+  </div>
 </section>
 
 <!-- ─── The graph: hero visual ────────────────────────────────────── -->

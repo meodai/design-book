@@ -11,6 +11,24 @@ import {
 
 import "hdr-color-input";
 
+// Default every <color-input> on the page (declarative + dynamically created)
+// to HSL so the picker UI opens in that space.
+{
+  const applyHsl = (el) => {
+    if (!el.hasAttribute("colorspace")) el.setAttribute("colorspace", "hsl");
+  };
+  document.querySelectorAll("color-input").forEach(applyHsl);
+  new MutationObserver((records) => {
+    for (const r of records) {
+      for (const node of r.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.tagName === "COLOR-INPUT") applyHsl(node);
+        node.querySelectorAll?.("color-input").forEach(applyHsl);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
 import {
   DesignBook,
   SVGRenderer,
@@ -87,6 +105,83 @@ const PALETTE_BRAND = [
 const PALETTE_CONTRAST_SURFACES = [
   "#14110d", "#ece5d3", "#c8391a", "#1c3a9a", "#4f6033", "#d49623",
 ];
+
+// ══════════════════════════════════════════════════════════════════════
+//  HERO ILLUSTRATION — selector ring
+// ══════════════════════════════════════════════════════════════════════
+(function heroIllustration () {
+  const root     = document.getElementById("hero-illustration");
+  const ringEl   = document.getElementById("hi-ring");
+  const fnSel    = document.getElementById("hi-fn");
+  const centerEl = document.getElementById("hi-center");
+  if (!root || !ringEl || !fnSel || !centerEl) return;
+
+  const PALETTE = [
+    "#c8391a", "#d49623", "#4f6033", "#1c3a9a",
+    "#7a3c8e", "#dcd2b8", "#1d6b6a", "#14110d",
+    "#e85b3e", "#3b6dd3", "#2f8a7a", "#a04a8e",
+  ];
+  const INITIAL_CENTER = centerEl.getAttribute("value") || "#1d1c1c";
+  centerEl.value = INITIAL_CENTER;
+  let CENTER = INITIAL_CENTER;
+  const RADIUS = 150;
+  const N = PALETTE.length;
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  const positions = PALETTE.map((_, i) => {
+    const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+    return { x: Math.cos(a) * RADIUS, y: Math.sin(a) * RADIUS };
+  });
+
+  const curve = document.createElementNS(SVG_NS, "path");
+  curve.setAttribute("class", "hi-curve");
+  ringEl.appendChild(curve);
+
+  const dots = PALETTE.map((c, i) => {
+    const dot = document.createElementNS(SVG_NS, "circle");
+    dot.setAttribute("class", "hi-dot");
+    dot.setAttribute("cx", positions[i].x);
+    dot.setAttribute("cy", positions[i].y);
+    dot.setAttribute("r", 11);
+    dot.setAttribute("fill", c);
+    ringEl.appendChild(dot);
+    return dot;
+  });
+
+  const selectors = {
+    bestContrastWith: (palette) => palette.indexOf(bestContrastWith(CENTER, palette).color),
+    minContrastWith:  (palette) => palette.indexOf(minContrastWith(CENTER, palette, { threshold: 1.5 }).color),
+    closestColor:     (palette) => palette.indexOf((closestColor(CENTER, palette).find((r) => r.d > 0.1) ?? closestColor(CENTER, palette)[0]).color),
+    furthestFrom:     (palette) => palette.indexOf(furthestFrom(CENTER, palette).color),
+    mostVivid:        (palette) => palette.indexOf(mostVivid(palette).color),
+    leastVivid:       (palette) => palette.indexOf(leastVivid(palette).color),
+  };
+
+  function update () {
+    const fn = selectors[fnSel.value] || selectors.bestContrastWith;
+    const winnerIdx = fn(PALETTE);
+
+    dots.forEach((d, i) => {
+      d.classList.toggle("is-winner", i === winnerIdx);
+      d.setAttribute("r", i === winnerIdx ? 14 : 11);
+    });
+
+    const p = positions[winnerIdx];
+    curve.setAttribute("d", `M 0 0 L ${p.x} ${p.y}`);
+  }
+
+  function onCenterChange () {
+    const v = centerEl.value;
+    if (!v) return;
+    CENTER = v;
+    update();
+  }
+
+  fnSel.addEventListener("change", update);
+  centerEl.addEventListener("change", onCenterChange);
+  centerEl.addEventListener("input", onCenterChange);
+  update();
+})();
 
 // ══════════════════════════════════════════════════════════════════════
 //  THE LIVE GRAPH — hero visual

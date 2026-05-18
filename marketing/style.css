@@ -117,6 +117,111 @@ h1, h2, h3 {
   max-width: var(--max);
   margin: 0 auto;
   padding: clamp(40px, 8vw, 90px) var(--gutter) clamp(40px, 6vw, 70px);
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+}
+
+.hero-illustration {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+.hero-illustration svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.hi-ring {
+  transform-origin: 0 0;
+  animation: hi-spin 60s linear infinite;
+}
+@keyframes hi-spin {
+  to { transform: rotate(360deg); }
+}
+.hi-ring .hi-dot {
+  transition: r 220ms ease, stroke-width 220ms ease;
+}
+.hi-ring .hi-dot.is-winner {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.hi-ring .hi-curve {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.55;
+}
+.hi-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--rule);
+  cursor: pointer;
+  z-index: 1;
+}
+.hi-center::part(trigger) {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+}
+.hi-center::part(chip) {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.hi-center::part(output) { display: none; }
+.hi-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, 24px);
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+}
+.hi-fn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 6px 28px 6px 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text) 50%),
+    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+.hi-fn:hover { border-color: var(--text); }
+.hi-fn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 899px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-illustration { max-width: 420px; margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hi-ring { animation: none; }
 }
 
 .kicker {
