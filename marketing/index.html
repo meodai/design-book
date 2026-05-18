@@ -362,6 +362,70 @@ book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</s
   </div>
 </section>
 
+<!-- ─── Inheritance: only the changes are bright ──────────────────── -->
+<section class="extends-feature" aria-labelledby="extends-title">
+  <div class="extends-feature-body">
+    <div class="extends-feature-text">
+      <h2 id="extends-title">Inherit. Override what changes.</h2>
+      <p>
+        A scope can extend another. Every token cascades through unless
+        you redefine it locally — and the dependency graph still knows.
+        Change a parent token, every dependent in every descendant
+        recomputes. The editor dims inherited rows so the decision is
+        visible at a glance — only the changes are bright.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
+light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#ff8800'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#888888'</span>));
+
+<span class="c-dim">// dark inherits everything, then overrides two tokens.</span>
+<span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, { <span class="c-key">extends</span>: <span class="c-str">'light'</span> });
+dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
+dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));</code></pre>
+    </div>
+
+    <figure class="extends-stage">
+      <div class="extends-pane">
+        <div class="extends-pane-head">
+          <span class="extends-pane-name">dark</span>
+          <span class="extends-pane-meta">extends <code>light</code></span>
+        </div>
+        <div class="extends-rows">
+          <div class="ext-row ext-row--override">
+            <span class="ext-key">bg</span>
+            <span class="ext-swatch" style="background:#1a1a1a"></span>
+            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>)</span>
+          </div>
+          <div class="ext-row ext-row--override">
+            <span class="ext-key">text</span>
+            <span class="ext-swatch" style="background:#f5f5f5"></span>
+            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>)</span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">primary</span>
+            <span class="ext-swatch" style="background:#0066cc"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #0066cc</span></span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">accent</span>
+            <span class="ext-swatch" style="background:#ff8800"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #ff8800</span></span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">muted</span>
+            <span class="ext-swatch" style="background:#888888"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #888888</span></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ─── One source, many outputs ─────────────────────────────────── -->
 <section class="renderers">
   <header class="renderers-head">

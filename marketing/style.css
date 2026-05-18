@@ -1063,6 +1063,122 @@ h1, h2, h3 {
   letter-spacing: -0.02em;
 }
 
+/* ── Inheritance: scope-extends visualization ──────────────────── */
+.extends-feature {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(60px, 8vw, 100px) var(--gutter);
+  border-top: 1px solid var(--rule);
+}
+.extends-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .extends-feature-body {
+    grid-template-columns: 5fr 7fr;
+  }
+  .extends-stage { align-self: start; }
+}
+.extends-feature-text { max-width: 56ch; }
+.extends-feature-text h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0 0 0.5em;
+}
+.extends-feature-text > p {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0 0 24px;
+}
+.extends-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.extends-stage {
+  display: grid;
+  gap: 12px;
+}
+.extends-stage figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.extends-pane {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  box-shadow: 0 1px 0 var(--rule);
+}
+.extends-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.extends-pane-name {
+  font-weight: 500;
+  color: var(--text);
+}
+.extends-pane-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+.extends-pane-meta code {
+  background: transparent;
+  padding: 0;
+  color: var(--text);
+}
+.extends-rows {
+  padding: 4px 0;
+}
+.ext-row {
+  display: grid;
+  grid-template-columns: 9ch 22px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+}
+.ext-row--override {
+  opacity: 1;
+}
+.ext-row--inherited {
+  opacity: 0.4;
+}
+.ext-key {
+  color: var(--text);
+}
+.ext-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  justify-self: center;
+}
+.ext-val {
+  color: var(--text);
+}
+.ext-resolved {
+  font-style: italic;
+  margin-left: 6px;
+  color: var(--muted);
+}
+
 /* ── Renderer comparison ────────────────────────────────────────── */
 .renderers {
   max-width: var(--max);
