@@ -33,6 +33,22 @@ export function minContrastWithImpl(
   }
 
   const excluded = new Set(not);
+
+  // `not` may also reference tokens outside the iterated scope (e.g. another
+  // scope's selector). Pre-resolve those to hex so candidates whose value
+  // matches one are excluded — lets `not: [ref('ui.accent')]` keep this
+  // selector from landing on whatever accent currently picks.
+  const excludedHexes = new Set<string>();
+  const localPrefix = `${scope.name}.`;
+  for (const k of not) {
+    if (k.startsWith(localPrefix)) continue;
+    try {
+      const parsed = parse(scope.resolveKey(k));
+      const hex = parsed ? formatHex(parsed) : null;
+      if (hex) excludedHexes.add(hex);
+    } catch { /* unresolvable — skip */ }
+  }
+
   const candidates: Array<{ hex: string; contrast: number }> = [];
 
   for (const key of scope.getAllKeys()) {
@@ -67,6 +83,7 @@ export function minContrastWithImpl(
     }
 
     if (!colorHex) continue;
+    if (excludedHexes.has(colorHex)) continue;
 
     const candidateColor = parse(colorHex);
     if (!candidateColor) continue;
@@ -101,6 +118,7 @@ export function minContrastWith(
   options?: MinContrastOptions
 ): FunctionTokenValue {
   const { ratio = 4.5, not, description, ...rest } = options ?? {};
+  const notKeys = normalizeNotKeys(not);
 
   return createFunctionToken(
     'minContrastWith',
@@ -108,9 +126,12 @@ export function minContrastWith(
     {
       description,
       ...rest,
-      options: { ratio, not: normalizeNotKeys(not) },
+      options: { ratio, not: notKeys },
       metadata: {
-        dependencies: extractDependencies([targetValue]),
+        // `not` keys are real dependencies — when the token they reference
+        // changes, this selector must re-evaluate (its candidate pool may
+        // gain or lose a value-based exclusion).
+        dependencies: [...extractDependencies([targetValue]), ...notKeys],
         visualDependencies: extractVisualDependencies([targetValue, scope]),
         returnType: 'color',
       },

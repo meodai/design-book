@@ -44,7 +44,7 @@ import {
 
 import { Poline } from "poline";
 
-import { buildBook } from "./demo-book.js";
+import { buildBook, applyRampToValues } from "./demo-book.js";
 
 const toOklab = converter("oklab");
 const toOklch = converter("oklch");
@@ -234,18 +234,17 @@ function tailwindRenderer (b) {
 book.registerRenderer("tailwind", tailwindRenderer);
 
 (function graphSection () {
-  const viz       = document.getElementById("graph-viz");
-  const brandIn   = document.getElementById("graph-brand");
-  const surfaceIn = document.getElementById("graph-surface");
-  const invert    = document.getElementById("graph-invert");
+  const viz     = document.getElementById("graph-viz");
+  const brandIn = document.getElementById("graph-brand");
+  const invert  = document.getElementById("graph-invert");
   if (!viz) return;
 
   // <color-input> sets its .value asynchronously after upgrade — seed
   // the property from the attribute so reads work on first paint.
-  const INITIAL_BRAND   = brandIn.getAttribute("value")   || "#c8391a";
-  const INITIAL_SURFACE = surfaceIn.getAttribute("value") || "#f5efe2";
-  brandIn.value   = INITIAL_BRAND;
-  surfaceIn.value = INITIAL_SURFACE;
+  const INITIAL_BRAND = brandIn.getAttribute("value") || "#c8391a";
+  brandIn.value = INITIAL_BRAND;
+
+  let flipped = false;
 
   function paint () {
     const renderer = new SVGRenderer(book, {
@@ -262,23 +261,15 @@ book.registerRenderer("tailwind", tailwindRenderer);
 
   function onBrandChange () {
     const v = brandIn.value || INITIAL_BRAND;
-    try { book.getScope("values").set("vermilion", color(v)); paint(); } catch {}
-  }
-  function onSurfaceChange () {
-    const v = surfaceIn.value || INITIAL_SURFACE;
-    try { book.getScope("values").set("paper", color(v)); paint(); } catch {}
+    try { book.getScope("brand").set("primary", color(v)); paint(); } catch {}
   }
 
   brandIn.addEventListener("change", onBrandChange);
   brandIn.addEventListener("input", onBrandChange);
-  surfaceIn.addEventListener("change", onSurfaceChange);
-  surfaceIn.addEventListener("input", onSurfaceChange);
 
   invert.addEventListener("click", () => {
-    const current = book.getScope("ui").resolve("surface");
-    const next = lch(current).l > 0.5 ? "#14110d" : "#f5efe2";
-    book.getScope("values").set("paper", color(next));
-    surfaceIn.value = next;
+    flipped = !flipped;
+    applyRampToValues(book, { flipped });
     paint();
   });
 

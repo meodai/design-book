@@ -6,28 +6,41 @@
 import {
   DesignBook,
   color, ref, px,
+  ramp,
+  relativeTo,
   bestContrastWith,
   minContrastWith,
-  mostVivid,
   nextLarger,
   nextSmaller,
   darken,
-  shade,
 } from '../src/index';
+
+/** Ordered top-to-bottom in the values table — flipping reverses this list. */
+export const RAMP_SHADES = ['50', '200', '400', '600', '800', '900'];
+
+/** Build the values scope as a ramp derived from `brand.primary`, with a
+ *  complementary token off the 400 stop. `flipped=true` reverses the
+ *  shade-to-token mapping so dark and light ends swap. */
+export function applyRampToValues (book, { flipped = false } = {}) {
+  const values = book.getScope('values');
+  const order = flipped ? [...RAMP_SHADES].reverse() : RAMP_SHADES;
+  for (let i = 0; i < RAMP_SHADES.length; i++) {
+    values.set(`shade-${RAMP_SHADES[i]}`, ramp(ref('brand.primary'), { shade: order[i] }));
+  }
+  // Complement: rotate hue 180° in OKLCH off the (current) 400 stop.
+  values.set('complement', relativeTo(ref('values.shade-400'), 'oklch', [null, null, '+180']));
+}
 
 export function buildBook () {
   const book = new DesignBook('marketing-demo');
 
-  // — A small set of curated values. The "raw palette" of the system. —
-  const values = book.addScope('values');
-  values.set('ink',       color('#14110d'));
-  values.set('paper',     color('#f5efe2'));
-  values.set('vermilion', color('#c8391a'));
-  values.set('lapis',     color('#1c3a9a'));
-  values.set('saffron',   color('#d49623'));
-  values.set('moss',      color('#4f6033'));
-  values.set('plum',      color('#7a3c8e'));
-  values.set('teal',      color('#1d6b6a'));
+  // — Seed: a single brand color that the whole palette is derived from. —
+  const brand = book.addScope('brand');
+  brand.set('primary', color('#c8391a'));
+
+  // — Derived palette: a ramp + its complement. —
+  book.addScope('values');
+  applyRampToValues(book);
 
   // — A dimensional scale. Used by nextLarger / nextSmaller. —
   const space = book.addScope('space');
@@ -40,13 +53,15 @@ export function buildBook () {
 
   // — Decisions on top of values. The interesting layer. —
   const ui = book.addScope('ui');
-  ui.set('surface', ref('values.paper'));
+  const values = book.getScope('values');
+  ui.set('surface', ref('values.shade-50'));
   ui.set('text',    bestContrastWith(ref('ui.surface'), values));
-  ui.set('accent',  mostVivid(values, {
-    against:     ref('ui.surface'),
-    minContrast: 4.5,
+  ui.set('accent',   ref('values.complement'));
+  ui.set('onAccent', bestContrastWith(ref('ui.accent'), values));
+  ui.set('subtle',  minContrastWith(ref('ui.surface'), values, {
+    ratio: 3,
+    not:   [ref('ui.accent')],
   }));
-  ui.set('subtle',  minContrastWith(ref('ui.surface'), values, { ratio: 3 }));
   ui.set('hover',   darken(ref('ui.accent'), { amount: 0.12 }));
   ui.set('gap',     nextLarger(ref('space.m'), space));
   ui.set('breath',  nextSmaller(ref('space.m'), space));

@@ -108,6 +108,13 @@ export class Scope {
     this.referenceResolver.updateAllReferencesTo(key, dependentKeys);
   }
 
+  /** Resolve any fully-qualified token key (in this scope or another) by
+   *  delegating to the owning book. Useful for selectors that need to
+   *  cross-resolve `not` references during candidate iteration. */
+  resolveKey(qualifiedKey: string): string {
+    return this.book.resolve(qualifiedKey);
+  }
+
   getAllKeys(): string[] {
     const localKeys = Array.from(this.tokens.keys());
     if (!this.extendsName) return localKeys;
