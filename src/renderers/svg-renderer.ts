@@ -90,7 +90,9 @@ function isPaletteLinker(token: AnyTokenValue): boolean {
 
 /** For a palette-linker function token, find the candidate in its
  *  visualDependencies whose resolved value matches the function's output —
- *  the token that was actually picked. Returns null if no match. */
+ *  the token that was actually picked. Returns null if no match. Handles
+ *  both color outputs (matched via normalized hex) and non-color outputs
+ *  like dimensions (matched via raw resolved string). */
 function findResolvedSource(
   book: DesignBook,
   qualifiedKey: string,
@@ -100,20 +102,27 @@ function findResolvedSource(
   const fn = token as FunctionTokenValue;
   const visualDeps = fn.metadata?.visualDependencies ?? [];
 
-  let resolvedHex: string | null;
+  let resolved: string;
   try {
-    resolvedHex = normalizeColor(book.resolve(qualifiedKey));
+    resolved = book.resolve(qualifiedKey);
   } catch {
     return null;
   }
-  if (!resolvedHex) return null;
+  const resolvedHex = normalizeColor(resolved);
 
   for (const depKey of visualDeps) {
+    let candResolved: string;
     try {
-      const candHex = normalizeColor(book.resolve(depKey));
-      if (candHex && candHex === resolvedHex) return depKey;
+      candResolved = book.resolve(depKey);
     } catch {
-      // skip unresolvable
+      continue;
+    }
+
+    if (resolvedHex) {
+      const candHex = normalizeColor(candResolved);
+      if (candHex && candHex === resolvedHex) return depKey;
+    } else if (candResolved === resolved) {
+      return depKey;
     }
   }
   return null;
