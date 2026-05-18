@@ -1,5 +1,5 @@
 import {
-  DesignBook, color, ref, px, rem, ms,
+  DesignBook, color, ref, px, rem, ms, string,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
   spacingScale, typographyScale,
   nextLarger, nextSmaller,
@@ -64,6 +64,23 @@ function bootDesignSystem() {
   ui.set('gap-emphasis', nextLarger(ref('space.m'), space));
   // Step DOWN from l → m (12px). Useful for derived "tighter" tokens.
   ui.set('gap-tight', nextSmaller(ref('space.l'), space));
+
+  // Font families — plain string tokens reused by typography scopes.
+  const fonts = book.addScope('fonts');
+  fonts.set('sans', string('"Inter", system-ui, sans-serif'));
+  fonts.set('serif', string('"Source Serif Pro", Georgia, serif'));
+
+  // Typography style — a *scope* tagged with compose: 'typography'.
+  // Each property stays a real token (refs participate in the graph), and
+  // renderers re-aggregate the scope into a CSS class or a W3 typography
+  // composite at output time.
+  book.addTypography('display', {
+    fontFamily:    ref('fonts.serif'),
+    fontSize:      ref('ui.heading-lg'),
+    fontWeight:    '700',
+    lineHeight:    '1.15',
+    letterSpacing: '-0.02em',
+  });
 
   // Dark theme extending brand
   const dark = book.addScope('dark', { extends: 'brand' });

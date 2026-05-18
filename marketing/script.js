@@ -94,6 +94,26 @@ const PALETTE_CONTRAST_SURFACES = [
 const book = buildBook();
 let activeRamp = null;   // poline-generated ramp scope (populated below)
 
+// Custom renderer — must register before the first paintRenderers() call.
+function tailwindRenderer (b) {
+  const ui     = b.getScope("ui");
+  const values = b.getScope("values");
+  const colors = {};
+  for (const k of values.getAllKeys()) colors[k] = values.resolve(k);
+  for (const k of ui.getAllKeys()) {
+    try { colors[`ui-${k}`] = ui.resolve(k); }
+    catch { /* skip unresolvable */ }
+  }
+  return `module.exports = {
+  theme: {
+    extend: {
+      colors: ${JSON.stringify(colors, null, 8).replace(/\n/g, "\n      ")}
+    }
+  }
+};`;
+}
+book.registerRenderer("tailwind", tailwindRenderer);
+
 (function graphSection () {
   const viz       = document.getElementById("graph-viz");
   const brandIn   = document.getElementById("graph-brand");
@@ -149,23 +169,8 @@ let activeRamp = null;   // poline-generated ramp scope (populated below)
 // ══════════════════════════════════════════════════════════════════════
 //  RENDERER COMPARISON
 // ══════════════════════════════════════════════════════════════════════
-function tailwindRenderer (b) {
-  const ui     = b.getScope("ui");
-  const values = b.getScope("values");
-  const colors = {};
-  for (const k of values.getAllKeys()) colors[k] = values.resolve(k);
-  for (const k of ui.getAllKeys()) {
-    try { colors[`ui-${k}`] = ui.resolve(k); }
-    catch { /* skip unresolvable */ }
-  }
-  return `module.exports = {
-  theme: {
-    extend: {
-      colors: ${JSON.stringify(colors, null, 8).replace(/\n/g, "\n      ")}
-    }
-  }
-};`;
-}
+// (tailwindRenderer is defined and registered above, before the first
+// paintRenderers() call fires inside the hero IIFE.)
 
 function paintRenderers () {
   const css  = document.getElementById("r-css");
@@ -185,8 +190,6 @@ function paintRenderers () {
   try { tw.textContent   = book.render("tailwind"); }
   catch (e) { tw.textContent  = `// ${e.message}`; }
 }
-
-book.registerRenderer("tailwind", tailwindRenderer);
 
 // Tabs
 document.querySelectorAll(".r-tab").forEach((btn) => {
