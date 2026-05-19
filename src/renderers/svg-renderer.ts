@@ -17,6 +17,11 @@ export interface SVGRenderOptions {
    *  whose resolved value matches the function's output — i.e. the token
    *  that was actually picked. */
   linksOnly?: boolean;
+  /** When true, the rendered SVG is interactive: hovering a token row
+   *  dims unrelated connections and labels the related ones with the
+   *  function name (or "ref"/"extends") that produced the edge. Driven
+   *  entirely by inline CSS via `:has()` — no JavaScript needed. */
+  interactive?: boolean;
 }
 
 interface TableInfo {
@@ -132,6 +137,13 @@ function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/** Token keys go into CSS attribute selectors like
+ *  `[data-token-key="..."]`. The only characters that can break that out
+ *  of the quoted string in practice are double quotes and backslashes. */
+function escapeCssAttr(str: string): string {
+  return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 export class SVGRenderer {
   private book: DesignBook;
   private options: Required<SVGRenderOptions>;
@@ -146,6 +158,7 @@ export class SVGRenderer {
       dotSize: options?.dotSize ?? 5,
       strokeWidth: options?.strokeWidth ?? 1.5,
       linksOnly: options?.linksOnly ?? true,
+      interactive: options?.interactive ?? false,
     };
   }
 
@@ -271,7 +284,8 @@ export class SVGRenderer {
 
     // Start building SVG
     const lines: string[] = [];
-    lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}">`);
+    const rootClass = this.options.interactive ? ' class="interactive"' : '';
+    lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="${svgWidth}" height="${svgHeight}"${rootClass}>`);
 
     // Embedded styles — inherit CSS custom properties from the editor when embedded in HTML
     lines.push('<style>');
@@ -280,15 +294,43 @@ export class SVGRenderer {
     lines.push('.palette-table__row { fill: none; stroke: var(--on-surface); stroke-width: 0.5; }');
     lines.push('.palette-table__row--header { fill: var(--on-surface); }');
     lines.push('text { font-family: var(--font); font-weight: 300; }');
-    lines.push('.palette-table__label { fill: var(--on-surface); }');
+    lines.push('.palette-table__label { fill: var(--on-surface); pointer-events: none; }');
     lines.push('.palette-table__label--inherited { opacity: 0.4; }');
     lines.push('.palette-table__label--header { font-weight: 400; fill: var(--surface); }');
-    lines.push('.connections-bg { opacity: 0.6; }');
-    lines.push('.connections { opacity: 0.8; }');
-    lines.push('.dots circle { transition: r 0.15s ease, stroke-width 0.15s ease; }');
-    lines.push('.dots circle:hover { stroke-width: 2; }');
-    lines.push('.dots rect { transition: stroke-width 0.15s ease; }');
-    lines.push('.dots rect:hover { stroke-width: 2; }');
+    lines.push('.conn-bg { opacity: 0.6; }');
+    lines.push('.conn-fg { opacity: 0.8; }');
+    lines.push('.dots circle { transition: r 0.15s ease, stroke-width 0.15s ease; pointer-events: none; }');
+    lines.push('.dots rect { pointer-events: none; }');
+
+    if (this.options.interactive) {
+      // Row rects act as hover hit-areas — make them interactive and
+      // pick up a soft highlight on hover. `pointer-events: all` forces
+      // SVG to hit-test the rect's bounding box even when fill is none,
+      // otherwise only the thin stroke would register.
+      lines.push('svg.interactive .palette-table__row[data-token-key] { cursor: pointer; pointer-events: all; }');
+      lines.push('svg.interactive .palette-table__row[data-token-key]:not(.palette-table__row--header):hover { fill: var(--on-surface); fill-opacity: 0.06; }');
+      lines.push('svg.interactive .palette-table__row--header[data-token-key]:hover { fill-opacity: 0.85; }');
+      // Connections shouldn't intercept hover — they're decorative and
+      // would steal the event when they pass over a row.
+      lines.push('svg.interactive .connection { pointer-events: none; transition: opacity 120ms ease; }');
+      // Labels: hidden by default, paint-order halo for readability when shown.
+      lines.push('svg.interactive .conn-label { fill: var(--on-surface); font-size: 10px; text-anchor: middle; paint-order: stroke fill; stroke: var(--surface); stroke-width: 3; pointer-events: none; opacity: 0; transition: opacity 120ms ease; }');
+      // When any token-key is being hovered, dim every connection by default…
+      lines.push('svg.interactive:has([data-token-key]:hover) .connection { opacity: 0.08; }');
+      // …then restore opacity & reveal the label for connections involving it.
+      const hoverableKeys = new Set<string>();
+      for (const [, dot] of dots) hoverableKeys.add(dot.qualifiedKey);
+      for (const k of hoverableKeys) {
+        const sel = escapeCssAttr(k);
+        lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-to="${sel}"] { opacity: 1; }`);
+        lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-to="${sel}"] { opacity: 1; }`);
+      }
+    } else {
+      lines.push('.dots circle:hover { stroke-width: 2; }');
+      lines.push('.dots rect:hover { stroke-width: 2; }');
+      lines.push('.conn-label { display: none; }');
+    }
+
     lines.push('</style>');
 
     // Render connections
@@ -307,11 +349,16 @@ export class SVGRenderer {
       inheritingScopes.add(parentName);
     }
 
+    // Labels for connections render in a final pass after tables and dots
+    // so they always sit on top — see emission near the end of render().
+    type PendingLabel = { x: number; y: number; text: string; from: string; to: string };
+    const pendingLabels: PendingLabel[] = [];
+
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
       const processedConnections = new Set<string>();
 
-      type Conn = { from: DotInfo; to: DotInfo; isDashed: boolean };
+      type Conn = { from: DotInfo; to: DotInfo; isDashed: boolean; label: string };
       const connections: Conn[] = [];
 
       // Scope inheritance (B extends A) collapses to a single header-to-
@@ -329,7 +376,7 @@ export class SVGRenderer {
         const connId = `${fromKey}->${toKey}`;
         if (processedConnections.has(connId)) continue;
         processedConnections.add(connId);
-        connections.push({ from: fromDot, to: toDot, isDashed: false });
+        connections.push({ from: fromDot, to: toDot, isDashed: false, label: 'extends' });
       }
 
       for (const [key, fromDot] of dots) {
@@ -352,7 +399,8 @@ export class SVGRenderer {
             const connId = `${resolvedSource}->${key}`;
             if (!processedConnections.has(connId)) {
               processedConnections.add(connId);
-              connections.push({ from: resolvedDot, to: fromDot, isDashed: false });
+              const fnName = (token as FunctionTokenValue).name;
+              connections.push({ from: resolvedDot, to: fromDot, isDashed: false, label: fnName });
             }
           }
           continue;
@@ -360,6 +408,10 @@ export class SVGRenderer {
 
         // linksOnly hides value-deriving function edges entirely.
         if (this.options.linksOnly && isFunction) continue;
+
+        const label = isFunction && token
+          ? (token as FunctionTokenValue).name
+          : (token?.type === 'reference' ? 'ref' : '');
 
         const prerequisites = graph.getIncoming(key);
         for (const depKey of prerequisites) {
@@ -370,13 +422,15 @@ export class SVGRenderer {
           if (processedConnections.has(connId)) continue;
           processedConnections.add(connId);
 
-          connections.push({ from: fromDot, to: toDot, isDashed: isFunction });
+          connections.push({ from: fromDot, to: toDot, isDashed: isFunction, label });
         }
       }
 
-      // Background pass (black, thicker)
-      lines.push('<g class="connections-bg">');
-      for (const { from, to, isDashed } of connections) {
+      // Each connection becomes a <g class="connection"> grouping its
+      // background outline and colored path. Labels render in a separate
+      // pass after tables/dots so they always sit on top.
+      lines.push('<g class="connections-group">');
+      for (const { from, to, isDashed, label } of connections) {
         const yDiff = Math.abs(from.y - to.y);
         const amp = 40 + yDiff * 0.3;
         // isLeft = table on left half, dot on right edge → curve goes RIGHT (+amp)
@@ -385,20 +439,28 @@ export class SVGRenderer {
         const cp2x = to.x + (to.isLeft ? amp : -amp);
 
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
-      }
-      lines.push('</g>');
+        const fromAttr = ` data-from="${escapeXml(from.qualifiedKey)}"`;
+        const toAttr   = ` data-to="${escapeXml(to.qualifiedKey)}"`;
+        const pathD = `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;
 
-      // Color pass
-      lines.push('<g class="connections">');
-      for (const { from, to, isDashed } of connections) {
-        const yDiff = Math.abs(from.y - to.y);
-        const amp = 40 + yDiff * 0.3;
-        const cp1x = from.x + (from.isLeft ? amp : -amp);
-        const cp2x = to.x + (to.isLeft ? amp : -amp);
+        lines.push(`  <g class="connection"${fromAttr}${toAttr}>`);
+        lines.push(`    <path class="conn-bg" d="${pathD}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
+        lines.push(`    <path class="conn-fg" d="${pathD}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        lines.push('  </g>');
 
-        const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
-        lines.push(`  <path d="M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        if (label) {
+          // Cubic-bezier midpoint (t=0.5) for label placement. y collapses
+          // to a simple chord-midpoint since cp1/cp2 share endpoint y's.
+          const labelX = 0.125 * (from.x + to.x) + 0.375 * (cp1x + cp2x);
+          const labelY = 0.5 * (from.y + to.y);
+          pendingLabels.push({
+            x: labelX,
+            y: labelY,
+            text: label,
+            from: from.qualifiedKey,
+            to: to.qualifiedKey,
+          });
+        }
       }
       lines.push('</g>');
     }
@@ -414,7 +476,11 @@ export class SVGRenderer {
       lines.push(`  <rect class="palette-table" x="${tx}" y="${ty}" width="${table.width}" height="${table.height}" rx="2"/>`);
 
       // Header row
-      lines.push(`  <rect class="palette-table__row palette-table__row--header" x="${tx}" y="${ty}" width="${table.width}" height="${rowHeight}" rx="2"/>`);
+      const headerKey = `__header__${table.scopeName}`;
+      const headerHover = this.options.interactive
+        ? ` data-token-key="${escapeXml(headerKey)}"`
+        : '';
+      lines.push(`  <rect class="palette-table__row palette-table__row--header" x="${tx}" y="${ty}" width="${table.width}" height="${rowHeight}" rx="2"${headerHover}/>`);
       const headerTextX = tx + tablePadding;
       const headerTextY = ty + rowHeight / 2 + fontSize / 3;
       lines.push(`  <text class="palette-table__label palette-table__label--header" x="${headerTextX}" y="${headerTextY}" font-size="${fontSize}">${escapeXml(table.scopeName)}</text>`);
@@ -424,7 +490,11 @@ export class SVGRenderer {
       for (let i = 0; i < table.keys.length; i++) {
         const tokenName = table.keys[i];
         const ry = ty + (i + 1) * rowHeight;
-        lines.push(`  <rect class="palette-table__row" x="${tx}" y="${ry}" width="${table.width}" height="${rowHeight}"/>`);
+        const tokenKey = `${table.scopeName}.${tokenName}`;
+        const hoverAttr = this.options.interactive
+          ? ` data-token-key="${escapeXml(tokenKey)}"`
+          : '';
+        lines.push(`  <rect class="palette-table__row" x="${tx}" y="${ry}" width="${table.width}" height="${rowHeight}"${hoverAttr}/>`);
         const textX = tx + tablePadding;
         const textY = ry + rowHeight / 2 + fontSize / 3;
         const isInherited = scope?.isInherited(tokenName) ?? false;
@@ -457,6 +527,19 @@ export class SVGRenderer {
       }
     }
     lines.push('</g>');
+
+    // Connection labels — last in document order so they sit above
+    // every table, row, and dot once revealed on hover.
+    if (pendingLabels.length > 0) {
+      lines.push('<g class="conn-labels">');
+      const labelFontSize = Math.max(10, fontSize - 2);
+      for (const { x, y, text, from, to } of pendingLabels) {
+        const fromAttr = ` data-from="${escapeXml(from)}"`;
+        const toAttr   = ` data-to="${escapeXml(to)}"`;
+        lines.push(`  <text class="conn-label" x="${x.toFixed(2)}" y="${y.toFixed(2)}" font-size="${labelFontSize}"${fromAttr}${toAttr}>${escapeXml(text)}</text>`);
+      }
+      lines.push('</g>');
+    }
 
     lines.push('</svg>');
 

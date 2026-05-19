@@ -254,6 +254,7 @@ book.registerRenderer("tailwind", tailwindRenderer);
       fontSize: 13,
       dotSize: 5,
       strokeWidth: 1.5,
+      interactive: true,
     });
     viz.innerHTML = renderer.render();
     // Renderers also feed the next section

@@ -242,6 +242,7 @@ function renderActiveTab() {
       const svgRenderer = new SVGRenderer(book, {
         showConnections: showConnectionsCb.checked,
         linksOnly: linksOnlyCb.checked,
+        interactive: true,
       });
       svgContainer.innerHTML = svgRenderer.render();
     } catch (err) {
