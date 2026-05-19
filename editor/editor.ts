@@ -32,8 +32,6 @@ function bootDesignSystem() {
   brand.set('neutral-light', color('#ffffff'));
   brand.set('success', color('#28a745'));
   brand.set('error', color('#dc3545'));
-  brand.set('space-sm', px(8));
-  brand.set('space-md', px(16));
   brand.set('font-base', rem(1));
 
   // Dedicated dimensional scope — feeds nextLarger / nextSmaller.
@@ -45,6 +43,10 @@ function bootDesignSystem() {
   space.set('l',  px(16));
   space.set('xl', px(24));
   space.set('2xl', px(40));
+
+  // Brand re-uses the canonical spacing scale instead of redefining values.
+  brand.set('space-sm', ref('space.s'));
+  brand.set('space-md', ref('space.l'));
 
 
   // Semantic scope
@@ -82,10 +84,12 @@ function bootDesignSystem() {
     letterSpacing: '-0.02em',
   });
 
-  // Dark theme extending brand
+  // Dark theme extending brand — neutrals flow through the semantic
+  // layer so the inversion is visible as a graph edge instead of a
+  // hand-rewritten hex.
   const dark = book.addScope('dark', { extends: 'brand' });
-  dark.set('neutral-dark', color('#ffffff'));
-  dark.set('neutral-light', color('#1a1a1a'));
+  dark.set('neutral-dark',  ref('semantic.background'));
+  dark.set('neutral-light', ref('semantic.text'));
 
   scopeExtendsMap.set('dark', 'brand');
 
@@ -111,9 +115,11 @@ function bootDesignSystem() {
   card.set('on-surface-weak', colorMix(ref('card.on-surface'), ref('card.surface'), { ratio: 0.4 }));
   card.set('input', colorMix(ref('card.surface'), ref('card.on-surface'), { ratio: 0.06 }));
   card.set('on-input', ref('card.on-surface'));
-  card.set('padding', px(32));
-  card.set('radius', px(12));
-  card.set('gap', px(16));
+  // Card dimensions chain through the brand palette: padding doubles the
+  // brand's md-step, gap mirrors it, radius drops to the sm-step.
+  card.set('padding', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
+  card.set('radius',  ref('brand.space-sm'));
+  card.set('gap',     ref('brand.space-md'));
 }
 
 // --- State ---
