@@ -1,4 +1,4 @@
-import { parse, formatHex } from 'culori';
+import { parse, formatHex, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import type { AnyTokenValue, TokenValue, ReferenceValue, FunctionTokenValue } from '../tokens';
 
@@ -81,6 +81,17 @@ function isColorToken(book: DesignBook, token: AnyTokenValue): boolean {
 function normalizeColor(value: string): string | null {
   const parsed = parse(value);
   return parsed ? (formatHex(parsed) ?? null) : null;
+}
+
+/** Returns the theme variable (`--on-surface` or `--surface`) whose value
+ *  contrasts better with the given fill — used to outline the colored
+ *  edge stroke so the animated dashes stay readable against the curve's
+ *  own colour. */
+function pickActiveOutline(fillValue: string): string {
+  const parsed = parse(fillValue);
+  if (!parsed) return 'var(--on-surface)';
+  const L = wcagLuminance(parsed);
+  return L > 0.45 ? 'var(--on-surface)' : 'var(--surface)';
 }
 
 /** Function tokens fall into two families: palette-linkers (iterate a
@@ -324,7 +335,23 @@ export class SVGRenderer {
         const sel = escapeCssAttr(k);
         lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-to="${sel}"] { opacity: 1; }`);
         lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-to="${sel}"] { opacity: 1; }`);
+        // Swap the outline only on the highlighted connections so the
+        // animated dashes contrast with the colour of each curve.
+        lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-from="${sel}"] .conn-bg, svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-to="${sel}"] .conn-bg { stroke: var(--active-outline); }`);
       }
+      // Animated marching dashes show data-flow direction. The animation
+      // only runs while a token is being hovered, so the chart is calm
+      // when the user isn't probing. data-flow="end" means data flows
+      // along the path's M→C direction; "start" means against it.
+      lines.push('@keyframes db-flow-fwd { to { stroke-dashoffset: -20; } }');
+      lines.push('@keyframes db-flow-rev { to { stroke-dashoffset:  20; } }');
+      lines.push('svg.interactive:has([data-token-key]:hover) .connection[data-flow="end"] .conn-fg { stroke-dasharray: 6 4; animation: db-flow-fwd 0.8s linear infinite; }');
+      lines.push('svg.interactive:has([data-token-key]:hover) .connection[data-flow="start"] .conn-fg { stroke-dasharray: 6 4; animation: db-flow-rev 0.8s linear infinite; }');
+      // Respect prefers-reduced-motion — fall back to a static dashed
+      // marker so direction is still visible without movement.
+      lines.push('@media (prefers-reduced-motion: reduce) {');
+      lines.push('  svg.interactive:has([data-token-key]:hover) .connection .conn-fg { animation: none; }');
+      lines.push('}');
     } else {
       lines.push('.dots circle:hover { stroke-width: 2; }');
       lines.push('.dots rect:hover { stroke-width: 2; }');
@@ -358,7 +385,17 @@ export class SVGRenderer {
       const graph = this.book.getDependencyGraph();
       const processedConnections = new Set<string>();
 
-      type Conn = { from: DotInfo; to: DotInfo; isDashed: boolean; label: string };
+      // `consumerAtStart` says the arrowhead should point at the path's
+      // start endpoint — i.e. data flows against the path's M→C direction.
+      // True for "depends on" paths (owner → dep) and inheritance
+      // (child → parent), false for palette-linkers (candidate → fn).
+      type Conn = {
+        from: DotInfo;
+        to: DotInfo;
+        isDashed: boolean;
+        label: string;
+        consumerAtStart: boolean;
+      };
       const connections: Conn[] = [];
 
       // Scope inheritance (B extends A) collapses to a single header-to-
@@ -376,7 +413,9 @@ export class SVGRenderer {
         const connId = `${fromKey}->${toKey}`;
         if (processedConnections.has(connId)) continue;
         processedConnections.add(connId);
-        connections.push({ from: fromDot, to: toDot, isDashed: false, label: 'extends' });
+        // Path goes child → parent; data flows parent → child, so the
+        // arrow lands at the child (path start).
+        connections.push({ from: fromDot, to: toDot, isDashed: false, label: 'extends', consumerAtStart: true });
       }
 
       for (const [key, fromDot] of dots) {
@@ -400,7 +439,9 @@ export class SVGRenderer {
             if (!processedConnections.has(connId)) {
               processedConnections.add(connId);
               const fnName = (token as FunctionTokenValue).name;
-              connections.push({ from: resolvedDot, to: fromDot, isDashed: false, label: fnName });
+              // Path goes candidate → function token; data flows the
+              // same way, so the arrow lands at the function (path end).
+              connections.push({ from: resolvedDot, to: fromDot, isDashed: false, label: fnName, consumerAtStart: false });
             }
           }
           continue;
@@ -422,7 +463,9 @@ export class SVGRenderer {
           if (processedConnections.has(connId)) continue;
           processedConnections.add(connId);
 
-          connections.push({ from: fromDot, to: toDot, isDashed: isFunction, label });
+          // Path goes owner → dep; data flows dep → owner, so the
+          // arrow lands at the owner (path start).
+          connections.push({ from: fromDot, to: toDot, isDashed: isFunction, label, consumerAtStart: true });
         }
       }
 
@@ -430,7 +473,7 @@ export class SVGRenderer {
       // background outline and colored path. Labels render in a separate
       // pass after tables/dots so they always sit on top.
       lines.push('<g class="connections-group">');
-      for (const { from, to, isDashed, label } of connections) {
+      for (const { from, to, isDashed, label, consumerAtStart } of connections) {
         const yDiff = Math.abs(from.y - to.y);
         const amp = 40 + yDiff * 0.3;
         // isLeft = table on left half, dot on right edge → curve goes RIGHT (+amp)
@@ -441,9 +484,16 @@ export class SVGRenderer {
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
         const fromAttr = ` data-from="${escapeXml(from.qualifiedKey)}"`;
         const toAttr   = ` data-to="${escapeXml(to.qualifiedKey)}"`;
+        const flowAttr = ` data-flow="${consumerAtStart ? 'start' : 'end'}"`;
+        // The "active outline" is what we swap to under :hover so the
+        // animated dashes contrast with the curve's own colour. Computed
+        // per-connection — light colours get a dark outline, dark
+        // colours get a light one.
+        const activeOutline = pickActiveOutline(from.color);
+        const styleAttr = ` style="--active-outline: ${activeOutline}"`;
         const pathD = `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;
 
-        lines.push(`  <g class="connection"${fromAttr}${toAttr}>`);
+        lines.push(`  <g class="connection"${fromAttr}${toAttr}${flowAttr}${styleAttr}>`);
         lines.push(`    <path class="conn-bg" d="${pathD}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
         lines.push(`    <path class="conn-fg" d="${pathD}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
         lines.push('  </g>');

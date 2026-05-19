@@ -112,5 +112,46 @@ describe('SVGRenderer', () => {
       // Default rule dims every connection so per-key rules can restore it.
       expect(svg).toContain('svg.interactive:has([data-token-key]:hover) .connection { opacity: 0.08; }');
     });
+
+    it('marks each connection with the data-flow direction', () => {
+      const book = createTestBook();
+      const svg = new SVGRenderer(book, { interactive: true }).render();
+      // Reference edge: path goes owner (ui.bg) → dep (brand.primary),
+      // data flows against the path, so data-flow="start".
+      expect(svg).toMatch(/<g class="connection"[^>]*data-from="ui\.bg"[^>]*data-flow="start"/);
+    });
+
+    it('animates connection foregrounds on hover, with directional keyframes', () => {
+      const book = createTestBook();
+      const svg = new SVGRenderer(book, { interactive: true }).render();
+      expect(svg).toContain('@keyframes db-flow-fwd');
+      expect(svg).toContain('@keyframes db-flow-rev');
+      expect(svg).toContain('animation: db-flow-fwd');
+      expect(svg).toContain('animation: db-flow-rev');
+    });
+
+    it('honors prefers-reduced-motion by disabling the flow animation', () => {
+      const book = createTestBook();
+      const svg = new SVGRenderer(book, { interactive: true }).render();
+      expect(svg).toContain('@media (prefers-reduced-motion: reduce)');
+      expect(svg).toMatch(/prefers-reduced-motion[\s\S]*animation: none/);
+    });
+
+    it('picks the outline colour per-connection by curve luminance', () => {
+      const book = new DesignBook('test-outline');
+      const palette = book.addScope('palette');
+      palette.set('dark', color('#101010'));
+      palette.set('light', color('#f0f0f0'));
+      const ui = book.addScope('ui');
+      ui.set('uses-dark', ref('palette.dark'));
+      ui.set('uses-light', ref('palette.light'));
+      const svg = new SVGRenderer(book, { interactive: true }).render();
+      // Curves take the owning token's colour, so the dark curve gets a
+      // light outline on hover and vice versa.
+      expect(svg).toMatch(/<g class="connection"[^>]*data-from="ui\.uses-dark"[^>]*style="--active-outline: var\(--surface\)"/);
+      expect(svg).toMatch(/<g class="connection"[^>]*data-from="ui\.uses-light"[^>]*style="--active-outline: var\(--on-surface\)"/);
+      // And the hover rule actually swaps `.conn-bg` to the variable.
+      expect(svg).toContain('.conn-bg, svg.interactive:has([data-token-key="ui.uses-dark"]:hover) .connection[data-to="ui.uses-dark"] .conn-bg { stroke: var(--active-outline); }');
+    });
   });
 });
