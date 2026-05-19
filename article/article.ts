@@ -343,6 +343,18 @@ function getPrimitiveType(scopeName: string, name: string): string | null {
   return tok?.type ?? null;
 }
 
+/** The "role" of a token for swap-target matching: a function token's
+ *  declared return type, otherwise the same as `getPrimitiveType`. Lets
+ *  the popover offer compatible candidates whether the user is editing
+ *  a ref or replacing a function. */
+function getRoleType(scopeName: string, name: string): string | null {
+  const tok = book.getScope(scopeName)?.get(name);
+  if (tok?.type === 'function') {
+    return (tok as FunctionTokenValue).metadata?.returnType ?? null;
+  }
+  return getPrimitiveType(scopeName, name);
+}
+
 function renderChip(chip: HTMLElement) {
   const info = getChipInfo(chip);
   if (!info) return;
@@ -546,10 +558,11 @@ function openPopover(chip: HTMLElement) {
     label.textContent = `${info.scopeName}.${info.name}`;
     pop.append(label);
 
-    if (tok.type === 'reference') {
-      // Reference tokens are decisions about what to point at. Editing one
-      // means re-pointing it at a different token of compatible type, not
-      // changing the destination's value.
+    if (tok.type === 'reference' || tok.type === 'function') {
+      // Reference tokens are decisions about what to point at — re-point at
+      // a different token of compatible type. Function tokens get the same
+      // list UI so the user can swap the formula out for a fixed ref to a
+      // compatible token, with no separate "editing not supported" dead-end.
       buildRefUI(pop, info.scopeName, info.name);
     } else if (tok.type === 'dimension') {
       buildDimensionUI(pop, info.scopeName, info.name, chip);
@@ -801,14 +814,20 @@ function findClosestIndex(values: number[], target: number): number {
 
 function buildRefUI(pop: HTMLElement, scopeName: string, name: string) {
   const scope = book.getScope(scopeName)!;
-  const tok = scope.get(name) as ReferenceValue;
-  const currentTarget = tok.key;
+  const tok = scope.get(name);
+  if (!tok) return;
+  // The popover doubles as the "replace this function with a ref" UI.
+  // A function token has no current target, just a return type.
+  const isReference = tok.type === 'reference';
+  const currentTarget = isReference ? (tok as ReferenceValue).key : null;
   const selfKey = `${scopeName}.${name}`;
-  const targetType = getPrimitiveType(scopeName, name);
+  const targetType = getRoleType(scopeName, name);
 
   const hint = document.createElement('div');
   hint.className = 'popover-note';
-  hint.textContent = `Pick a token to point at. Same-type (${targetType ?? 'unknown'}) only.`;
+  hint.textContent = isReference
+    ? `Pick a token to point at. Same-type (${targetType ?? 'unknown'}) only.`
+    : `Replace this rule with a ref to a ${targetType ?? 'compatible'} token.`;
   pop.append(hint);
 
   const list = document.createElement('div');
@@ -821,7 +840,7 @@ function buildRefUI(pop: HTMLElement, scopeName: string, name: string) {
     for (const [tName] of tokenEntries) {
       const candKey = `${sName}.${tName}`;
       if (candKey === selfKey) continue; // no self-reference
-      if (getPrimitiveType(sName, tName) !== targetType) continue;
+      if (getRoleType(sName, tName) !== targetType) continue;
 
       const row = document.createElement('button');
       row.type = 'button';
