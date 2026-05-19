@@ -377,6 +377,29 @@ function renderChip(chip: HTMLElement) {
     // leave resolved empty
   }
 
+  // `data-display="key"` overrides the default "show the resolved value"
+  // rendering: the chip prints its own scope.token key. Useful when the
+  // surrounding prose is talking about the token itself (e.g. "re-point
+  // color.brand") and showing the ref target would distract.
+  if (chip.dataset.display === 'key') {
+    const ownKey = `${info.scopeName}.${info.name}`;
+    if (primType === 'color') {
+      chip.classList.add('token-chip--color');
+      const swatch = document.createElement('span');
+      swatch.className = 'chip-swatch';
+      swatch.style.background = resolved || 'transparent';
+      chip.append(swatch);
+    } else {
+      chip.classList.add('token-chip--num');
+    }
+    const value = document.createElement('span');
+    value.className = 'chip-value';
+    value.textContent = ownKey;
+    chip.append(value);
+    chip.title = ownKey;
+    return;
+  }
+
   // Reference tokens render as `[swatch] → target.key` so the indirection is
   // visible. The swatch shows the resolved color for context; the arrow + key
   // make it unmistakable that this token points elsewhere rather than holding
