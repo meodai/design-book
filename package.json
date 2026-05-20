@@ -64,7 +64,7 @@
     "@lezer/highlight": "^1.2.3",
     "@types/culori": "^4.0.1",
     "codemirror": "^6.0.2",
-    "hdr-color-input": "^0.3.6",
+    "hdr-color-input": "^0.4.2",
     "poline": "^0.13.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",

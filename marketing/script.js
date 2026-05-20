@@ -13,14 +13,13 @@ import {
 import "hdr-color-input";
 
 // Default every <color-input> on the page (declarative + dynamically created)
-// to HSL so the picker UI opens in that space.
+// to open its picker in HSL while keeping hex as the surfaced value format.
+// `initial-colorspace` only seeds the picker UI at upgrade time; subsequent
+// reads from `.value` stay in whatever format the value attribute used.
 {
   const applyHsl = (el) => {
-    if (el.hasAttribute("colorspace")) return;
-    el.setAttribute("colorspace", "hsl");
-    customElements.whenDefined("color-input").then(() => {
-      try { el.colorspace = "hsl"; } catch {}
-    });
+    if (el.hasAttribute("initial-colorspace")) return;
+    el.setAttribute("initial-colorspace", "hsl");
   };
   document.querySelectorAll("color-input").forEach(applyHsl);
   new MutationObserver((records) => {
@@ -419,8 +418,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const stage = document.getElementById("closest-ranked");
 
   const picker = document.createElement("color-input");
-  picker.setAttribute("colorspace", "hsl");
-  picker.setAttribute("value", "hsl(266 51% 53%)");
+  picker.setAttribute("initial-colorspace", "hsl");
+  picker.setAttribute("value", "#7f4dc4");
   picker.setAttribute("no-alpha", "");
   picker.className = "closest-picker";
   swatchHost.replaceWith(picker);
