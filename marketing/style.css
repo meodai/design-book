@@ -286,6 +286,34 @@ h1, h2, h3 {
 }
 .install-note a { color: inherit; }
 
+/* ── Accessibility pull-quote ────────────────────────────────────── */
+.a11y-quote {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(36px, 6vw, 72px) var(--gutter);
+  border-top: 1px solid var(--rule);
+  text-align: center;
+}
+.a11y-quote > p:first-child {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 auto;
+  max-width: 22ch;
+}
+.a11y-quote em {
+  color: var(--accent);
+  font-style: italic;
+}
+.a11y-quote__note {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 52ch;
+  margin: 16px auto 0;
+}
+
 /* ── Graph (hero visual) ─────────────────────────────────────────── */
 .graph {
   max-width: var(--max);
@@ -540,6 +568,21 @@ h1, h2, h3 {
   opacity: 0.85;
   word-break: break-all;
 }
+.contrast-tile .cbadge {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: currentColor;
+  background: transparent;
+  line-height: 1.4;
+}
+.contrast-tile .cbadge.is-aalg { opacity: 0.7; }
+.contrast-tile .cbadge.is-fail { opacity: 0.5; text-decoration: line-through; }
 .contrast-palette {
   margin-top: 8px;
   display: grid;

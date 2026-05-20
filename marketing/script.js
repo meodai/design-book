@@ -392,12 +392,20 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const pal = document.getElementById("demo-contrast-palette");
   if (!row) return;
 
+  const wcagBadge = (ratio) => {
+    if (ratio >= 7)   return { label: "AAA",  cls: "is-aaa"  };
+    if (ratio >= 4.5) return { label: "AA",   cls: "is-aa"   };
+    if (ratio >= 3)   return { label: "AA·LG", cls: "is-aalg" };
+    return                  { label: "fails", cls: "is-fail" };
+  };
   row.innerHTML = PALETTE_CONTRAST_SURFACES.map((surface) => {
     const { color: text, ratio } = bestContrastWith(surface, PALETTE_BRAND);
+    const badge = wcagBadge(ratio);
     return `
       <div class="contrast-tile" style="background:${surface};color:${text}">
         <span class="ctop">surface ${surface}</span>
         <span class="cbig">Aa</span>
+        <span class="cbadge ${badge.cls}">${badge.label}</span>
         <span class="cbottom">${text} · ${ratio.toFixed(1)}:1</span>
       </div>`;
   }).join("");
