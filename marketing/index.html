@@ -43,8 +43,9 @@
       <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
     </div>
     <p class="install-note">
-      TypeScript · ESM · one dependency
-      (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>).
+      TypeScript · ESM · two dependencies
+      (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>,
+      <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>).
     </p>
   </div>
   <div class="hero-illustration" id="hero-illustration">
@@ -63,18 +64,6 @@
       </select>
     </div>
   </div>
-</section>
-
-<!-- ─── Accessibility pull-quote ───────────────────────────────── -->
-<section class="a11y-quote" aria-label="Accessibility as a byproduct">
-  <p>
-    <em>Change the brand color.</em>
-    Every contrast ratio re-validates.
-  </p>
-  <p class="a11y-quote__note">
-    Compliance isn't a checklist that has to be re-run after every
-    redesign — it's a rule the system already enforces.
-  </p>
 </section>
 
 <!-- ─── The graph: hero visual ────────────────────────────────────── -->
@@ -123,8 +112,9 @@
       <code class="sig">bestContrastWith( target, scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The most readable color in a palette against any background. WCAG-measured.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Change the brand color.</em> Every contrast ratio re-validates.</p>
+        <p class="fn-detail">The most readable color in a palette against any background — WCAG-measured. Compliance becomes a rule the system enforces, not a checklist re-run after every redesign.</p>
       </div>
       <figure class="demo">
         <figcaption>One palette · six surfaces · text auto-picked.</figcaption>
@@ -145,8 +135,9 @@
       <code class="sig">closestColor( target, scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Snap any incoming color to its nearest neighbour in the palette. Distance is perceptual (OKLab).</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Off-palette colors don't sneak in.</em> They snap to the nearest member you actually own.</p>
+        <p class="fn-detail">A perceptual neighbour-search in OKLab — so colors that look the same get treated the same. Useful when content comes from outside the system: imported logos, user uploads, third-party brand kits.</p>
       </div>
       <figure class="demo">
         <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
@@ -172,8 +163,9 @@
       <code class="sig">furthestFrom( scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The companion of closest. Maximum perceptual distance from an anchor.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>The accent that can't be confused with the brand.</em></p>
+        <p class="fn-detail">Maximum perceptual distance from an anchor. Pick the swatch designed for "look here, not there" — and let it re-pick itself when the anchor moves.</p>
       </div>
       <figure class="demo">
         <figcaption>Hover any swatch · the furthest member is marked.</figcaption>
@@ -193,8 +185,9 @@
       <code class="sig">minContrastWith( target, scope, { threshold?, not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The lowest contrast that still clears a threshold. Subtle, but legible.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>As subtle as you can get away with.</em> And still legible.</p>
+        <p class="fn-detail">The lowest contrast that still clears a threshold. Hairlines, captions, dim labels — the quiet stuff that survives the next contrast audit because the audit is built in.</p>
       </div>
       <figure class="demo">
         <figcaption>Same surface, same palette — three thresholds, three answers.</figcaption>
@@ -228,8 +221,9 @@
       <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Selectors for dimensional scales. Step to the next member up or down — works in any unit.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Spacing that knows its own scale.</em></p>
+        <p class="fn-detail">Step to the next member up or down — in px, rem, ms, whatever you've defined. Add a step to the scale and every gap, padding, and duration that referenced it moves with you.</p>
       </div>
       <figure class="demo">
         <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
@@ -275,12 +269,12 @@
   <article class="fn" id="vivid">
     <header class="fn-head">
       <h3>mostVivid · leastVivid</h3>
-      <code class="sig">mostVivid( scope, { against?, minContrast?, not? } )</code>
-      <code class="sig">leastVivid( scope, { against?, minContrast?, not? } )</code>
+      <code class="sig">mostVivid|leastVivid( scope, { against?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Both ends of the chroma axis. <code>mostVivid</code> picks the loudest member of a palette — the obvious accent. <code>leastVivid</code> picks the most muted — the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Your accent is already in your palette.</em></p>
+        <p class="fn-detail">Both ends of the chroma axis. <code>mostVivid</code> finds the loudest member — the obvious accent. <code>leastVivid</code> finds the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target, so the answer can't fall out of compliance.</p>
       </div>
       <figure class="demo">
         <figcaption>Same palette, sorted by chroma — both ends marked.</figcaption>
@@ -298,8 +292,9 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
       <code class="sig">random( scope, { type, seed?, not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Picks a token from a scope at random — but with a memory. Each declaration captures its own seed at construction, so the value stays put across re-resolves; pass <code>seed</code> explicitly when you want the same pick on every machine. <code>type</code> filters the pool: <code>'color'</code>, <code>'dimension'</code>, or <code>'string'</code>.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Randomness, with a memory.</em></p>
+        <p class="fn-detail">Pick from a scope at random — but each declaration captures its own seed, so the value stays put across re-resolves and machines. Reshuffle deliberately per release, per user, per environment. Type filters the pool: color, dimension, or string.</p>
       </div>
       <figure class="demo">
         <figcaption class="random-caption">
@@ -325,7 +320,7 @@ ui.set(<span class="c-str">'promo-bg'</span>,
 <section class="ramp-feature" aria-labelledby="ramp-title">
   <div class="ramp-feature-body">
     <div class="ramp-feature-text">
-      <h2 id="ramp-title">One color in. A full scale out.</h2>
+      <h2 id="ramp-title"><em>One color in.</em> A full scale out.</h2>
       <p>
         Pick a brand color. <code>ramp()</code> returns the matching stop
         from a Tailwind-style tonal scale — perceptually tuned via
@@ -356,7 +351,7 @@ ui.set(<span class="c-str">'promo-bg'</span>,
 <section class="mix-feature" aria-labelledby="mix-title">
   <div class="mix-feature-body">
     <div class="mix-feature-text">
-      <h2 id="mix-title">Two colors. Pick the path.</h2>
+      <h2 id="mix-title"><em>Two colors.</em> Pick the path.</h2>
       <p>
         <code>colorMix()</code> interpolates between two colors. The space
         you pick changes the path: <code>rgb</code> goes straight through
@@ -402,7 +397,7 @@ ui.set(<span class="c-str">'promo-bg'</span>,
 <section class="typo-feature" aria-labelledby="typo-title">
   <div class="typo-feature-body">
     <div class="typo-feature-text">
-      <h2 id="typo-title">A style is a scope.</h2>
+      <h2 id="typo-title">A style is <em>a scope.</em></h2>
       <p>
         A type style is a collection of properties — family, size,
         weight, line-height, tracking. Design Book treats it as a
@@ -438,7 +433,7 @@ book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</s
 <section class="extends-feature" aria-labelledby="extends-title">
   <div class="extends-feature-body">
     <div class="extends-feature-text">
-      <h2 id="extends-title">Inherit. Override what changes.</h2>
+      <h2 id="extends-title"><em>Inherit.</em> Override what changes.</h2>
       <p>
         A scope can extend another. Every token cascades through unless
         you redefine it locally — and the dependency graph still knows.
@@ -501,7 +496,7 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
 <!-- ─── One source, many outputs ─────────────────────────────────── -->
 <section class="renderers">
   <header class="renderers-head">
-    <h2>One source, many outputs.</h2>
+    <h2><em>One source,</em> many outputs.</h2>
     <p>
       The same book renders to whatever target you need. CSS variables
       and JSON ship in the box; the

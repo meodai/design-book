@@ -286,34 +286,6 @@ h1, h2, h3 {
 }
 .install-note a { color: inherit; }
 
-/* ── Accessibility pull-quote ────────────────────────────────────── */
-.a11y-quote {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: clamp(36px, 6vw, 72px) var(--gutter);
-  border-top: 1px solid var(--rule);
-  text-align: center;
-}
-.a11y-quote > p:first-child {
-  font-family: var(--font-display);
-  font-size: clamp(28px, 3.6vw, 44px);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  margin: 0 auto;
-  max-width: 22ch;
-}
-.a11y-quote em {
-  color: var(--accent);
-  font-style: italic;
-}
-.a11y-quote__note {
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--muted);
-  max-width: 52ch;
-  margin: 16px auto 0;
-}
-
 /* ── Graph (hero visual) ─────────────────────────────────────────── */
 .graph {
   max-width: var(--max);
@@ -424,22 +396,34 @@ h1, h2, h3 {
   padding: clamp(48px, 6vw, 80px) var(--gutter);
   border-top: 1px solid var(--rule);
 }
+.fn:first-of-type {
+  border-top: none;
+}
 
 .fn-head {
   margin-bottom: 28px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px 14px;
 }
 .fn-head h3 {
   font-size: clamp(30px, 3.8vw, 44px);
   line-height: 1.1;
-  margin-bottom: 8px;
+  margin: 0;
 }
 .fn-head .sig {
   display: inline-block;
-  font-size: 13px;
+  font-size: 10px;
+  letter-spacing: 0.01em;
   color: var(--muted);
   background: var(--surface-2);
-  padding: 4px 10px;
-  border-radius: 4px;
+  border: 1px solid var(--rule);
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  position: relative;
+  top: -0.6em;
 }
 
 .fn-body {
@@ -450,27 +434,79 @@ h1, h2, h3 {
   .fn-body {
     grid-template-columns: 5fr 7fr;
     grid-template-areas:
-      "prose demo"
+      "pitch demo"
       "code  demo";
     align-items: start;
   }
-  .fn-prose { grid-area: prose; }
+  .fn-pitch { grid-area: pitch; }
   .code     { grid-area: code; align-self: start; }
   .demo     { grid-area: demo; align-self: start; }
 }
 
-.fn-prose {
+.fn-pitch {
   max-width: 50ch;
 }
-.fn-prose p { font-size: 17px; line-height: 1.6; }
-.fn-prose .use {
-  font-size: 14px;
-  color: var(--muted);
-  border-top: 1px solid var(--hair);
-  padding-top: 12px;
-  margin-top: 16px;
+.fn-pitch .fn-claim {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  margin: 0 0 18px;
+  color: var(--text);
 }
-.fn-prose em { color: var(--accent); font-style: italic; }
+.fn-pitch .fn-claim em {
+  color: var(--accent);
+  font-style: italic;
+}
+.fn-pitch .fn-detail {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+.fn-pitch .fn-detail code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--text);
+}
+
+/* — Shared pitch styling for the lower feature sections.
+   Matches .fn-claim / .fn-detail (display heading with italic accent,
+   muted lead paragraph) so the bottom half of the page reads as
+   continuation of the function plates rather than a different rhythm. */
+.ramp-feature-text h2,
+.mix-feature-text h2,
+.typo-feature-text h2,
+.extends-feature-text h2,
+.renderers-head h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 18px;
+  color: var(--text);
+}
+.ramp-feature-text h2 em,
+.mix-feature-text h2 em,
+.typo-feature-text h2 em,
+.extends-feature-text h2 em,
+.renderers-head h2 em {
+  color: var(--accent);
+  font-style: italic;
+}
+.ramp-feature-text > p,
+.mix-feature-text > p,
+.typo-feature-text > p,
+.extends-feature-text > p,
+.renderers-head > p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 0 24px;
+}
 
 /* — Code block — */
 .code {
