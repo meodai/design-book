@@ -1049,6 +1049,104 @@ h1, h2, h3 {
   .random-stage { grid-template-columns: repeat(4, 1fr); }
 }
 
+/* ── nth: pick by index demo ──────────────────────────────────── */
+.nth-caption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.nth-index-lbl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.nth-index-input {
+  width: 60px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--fg);
+  text-align: center;
+}
+.nth-index-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.nth-stage {
+  display: grid;
+  grid-template-columns: repeat(var(--nth-cols, 9), 1fr);
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.nth-stage .ntile {
+  aspect-ratio: 3 / 5;
+  position: relative;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  transition: outline-color 0.18s ease;
+}
+.nth-stage .ntile.picked {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 2;
+}
+.nth-stage .ntile.picked::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 6px; left: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--surface);
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.nth-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.nth-presets button {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.nth-presets button:hover {
+  border-color: var(--fg-dim);
+}
+.nth-presets button.is-active {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+@media (max-width: 899px) {
+  .nth-stage { grid-template-columns: repeat(5, 1fr); }
+}
+
 /* ── ramp: single-color → tonal scale demo ──────────────────────── */
 .ramp-feature,
 .mix-feature {

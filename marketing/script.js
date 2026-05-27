@@ -607,6 +607,62 @@ function nextSmallerLocal (target, scope, minD = 0) {
   render();
 })();
 
+// — nth —
+(function demoNth () {
+  const stage    = document.getElementById("nth-stage");
+  const indexEl  = document.getElementById("nth-index");
+  const presets  = document.getElementById("nth-presets");
+  if (!stage || !indexEl) return;
+
+  // 9-stop ramp, lightest → darkest — typical output of a ramp generator.
+  const ramp = [
+    "#faf3eb", "#ecd7b8", "#d4ab7a",
+    "#b88042", "#96612b", "#744a1f",
+    "#533417", "#352112", "#1a110a",
+  ];
+
+  function resolveIndex (value) {
+    const n = parseFloat(value);
+    if (Number.isNaN(n)) return -1;
+    if (Number.isInteger(n)) {
+      return n < 0 ? ramp.length + n : n;
+    }
+    const clamped = Math.max(0, Math.min(1, n));
+    return Math.round(clamped * (ramp.length - 1));
+  }
+
+  function render () {
+    const picked = resolveIndex(indexEl.value);
+    stage.style.setProperty("--nth-cols", ramp.length);
+    stage.innerHTML = ramp.map((c, i) => {
+      const isPicked = i === picked && picked >= 0 && picked < ramp.length;
+      const label = `nth(${indexEl.value.trim()})`;
+      return `<div class="ntile ${isPicked ? "picked" : ""}" data-label="${label}" style="background:${c}"><span>${c}</span></div>`;
+    }).join("");
+  }
+
+  indexEl.addEventListener("input", () => {
+    if (presets) {
+      presets.querySelectorAll("button").forEach(b =>
+        b.classList.toggle("is-active", b.dataset.value === indexEl.value.trim()));
+    }
+    render();
+  });
+
+  if (presets) {
+    presets.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-value]");
+      if (!btn) return;
+      indexEl.value = btn.dataset.value;
+      presets.querySelectorAll("button").forEach(b => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      render();
+    });
+  }
+
+  render();
+})();
+
 // ══════════════════════════════════════════════════════════════════════
 //  COLOR MIX — two endpoints, pick the path
 // ══════════════════════════════════════════════════════════════════════

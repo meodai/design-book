@@ -100,7 +100,7 @@
   <header class="sections-head">
     <h2>Kinds of decision</h2>
     <p>
-      Nine built-in selectors. Each one takes a scope of candidates
+      Ten built-in selectors. Each one takes a scope of candidates
       and returns the member that fits a rule.
     </p>
   </header>
@@ -311,6 +311,41 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
 
 ui.set(<span class="c-str">'promo-bg'</span>,
   <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
+    </div>
+  </article>
+
+  <!-- nth -->
+  <article class="fn" id="nth">
+    <header class="fn-head">
+      <h3>nth</h3>
+      <code class="sig">nth( scope, index, { not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Pick by position, not by name.</em></p>
+        <p class="fn-detail">When a ramp or scale generates your palette, the order is the meaning — lightest first, darkest last. <code>nth</code> addresses that order directly: integers work like <code>Array.at()</code> (negative wraps from the end), and floats between 0 and 1 select <em>relatively</em> — so <code>0.5</code> is always the midtone, regardless of how many stops were generated.</p>
+      </div>
+      <figure class="demo">
+        <figcaption class="nth-caption">
+          <label class="nth-index-lbl">
+            index
+            <input id="nth-index" class="nth-index-input" type="text" value="0.5" spellcheck="false">
+          </label>
+        </figcaption>
+        <div class="nth-stage" id="nth-stage"></div>
+        <div class="nth-presets" id="nth-presets">
+          <button type="button" data-value="0">0</button>
+          <button type="button" data-value="0.25">0.25</button>
+          <button type="button" data-value="0.5" class="is-active">0.5</button>
+          <button type="button" data-value="0.75">0.75</button>
+          <button type="button" data-value="-1">-1</button>
+        </div>
+      </figure>
+      <pre class="code"><code><span class="c-dim">// ramp generated lightest → darkest</span>
+ui.set(<span class="c-str">'surface'</span>,  <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0</span>))       <span class="c-dim">// lightest</span>
+ui.set(<span class="c-str">'text'</span>,     <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">-1</span>))      <span class="c-dim">// darkest</span>
+ui.set(<span class="c-str">'muted'</span>,    <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.5</span>))    <span class="c-dim">// midtone</span>
+ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.1</span>))    <span class="c-dim">// just off white</span></code></pre>
     </div>
   </article>
 

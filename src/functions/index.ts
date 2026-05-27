@@ -16,6 +16,7 @@ import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
 import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
+import { nthImpl } from './generic/nth';
 import type { Scope } from '../scope';
 
 export { bestContrastWith } from './color/best-contrast';
@@ -37,6 +38,8 @@ export { nextLarger } from './non-color/next-larger';
 export { nextSmaller } from './non-color/next-smaller';
 export { random } from './generic/random';
 export type { RandomOptions, RandomType } from './generic/random';
+export { nth } from './generic/nth';
+export type { NthOptions } from './generic/nth';
 
 export function registerBuiltinFunctions(book: {
 	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
@@ -118,6 +121,15 @@ export function registerBuiltinFunctions(book: {
 				throw new Error('random: options are required');
 			}
 			return randomImpl(scope, options.type, options.seed, options.not ?? []);
+		},
+	);
+	book.registerFunction(
+		'nth',
+		(scope: Scope, options?: { index: number; not?: string[] }) => {
+			if (!options || options.index === undefined) {
+				throw new Error('nth: index option is required');
+			}
+			return nthImpl(scope, options.index, options.not ?? []);
 		},
 	);
 }

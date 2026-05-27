@@ -12,8 +12,8 @@
     href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap"
     rel="stylesheet"
   />
-  <script type="module" crossorigin src="/assets/index-CaoWJt-Y.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-COhBFNfK.css">
+  <script type="module" crossorigin src="/assets/index-DTOilmVT.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-C0P9jvgE.css">
 </head>
 <body>
 
@@ -27,37 +27,56 @@
 </header>
 
 <section class="hero">
-  <p class="kicker">A reactive engine for design decisions</p>
-  <h1>The rules behind a design system, not the values.</h1>
-  <p class="deck">
-    Design systems are normally stored as fixed answers — a hex picked
-    here, a spacing chosen there. Design Book stores
-    <em>how the answer is decided</em>: the highest-contrast text on
-    a surface, the next bigger gap in a scale, the most vivid color
-    that still reads. Change an input and every dependent re-decides
-    itself.
-  </p>
+  <div class="hero-text">
+    <p class="kicker">A reactive engine for design decisions</p>
+    <h1>The rules behind a design system, not the values.</h1>
+    <p class="deck">
+      Design systems are normally stored as fixed answers — a hex picked
+      here, a spacing chosen there. Design Book stores
+      <em>how the answer is decided</em>: the highest-contrast text on
+      a surface, the next bigger gap in a scale, the most vivid color
+      that <em>still passes WCAG</em>. Change an input and every
+      dependent re-decides itself — accessibility included.
+    </p>
 
-  <div class="install">
-    <code><span class="prompt">$</span> npm i design-book</code>
-    <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+    <div class="install">
+      <code><span class="prompt">$</span> npm i design-book</code>
+      <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
+    </div>
+    <p class="install-note">
+      TypeScript · ESM · two dependencies
+      (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>,
+      <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>).
+    </p>
   </div>
-  <p class="install-note">
-    TypeScript · ESM · one dependency
-    (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>).
-  </p>
+  <div class="hero-illustration" id="hero-illustration">
+    <svg viewBox="-200 -200 400 400" aria-hidden="true">
+      <g class="hi-ring" id="hi-ring"></g>
+    </svg>
+    <color-input class="hi-center" id="hi-center" value="#1d1c1c" initial-colorspace="hsl" no-alpha></color-input>
+    <div class="hi-pill">
+      <select class="hi-fn" id="hi-fn" aria-label="Selector function">
+        <option value="bestContrastWith">bestContrastWith</option>
+        <option value="minContrastWith">minContrastWith</option>
+        <option value="closestColor">closestColor</option>
+        <option value="furthestFrom">furthestFrom</option>
+        <option value="mostVivid">mostVivid</option>
+        <option value="leastVivid">leastVivid</option>
+      </select>
+    </div>
+  </div>
 </section>
 
 <!-- ─── The graph: hero visual ────────────────────────────────────── -->
 <section class="graph" aria-labelledby="graph-title">
   <div class="graph-text">
-    <h2 id="graph-title">A token is a node. A rule is an edge.</h2>
+    <h2 id="graph-title">Pull one thread. The system follows.</h2>
     <p>
-      Every relationship in a Design Book system — references,
-      computed values, scope-iterating selectors — is a tracked edge
-      in a graph. The library knows what depends on what, recomputes
-      only the affected nodes when an input changes, and refuses
-      cycles at write time.
+      A token is a node. A rule is an edge. Every relationship in a
+      Design Book — references, computed values, scope-iterating
+      selectors — is a tracked edge in a graph. Change one input and
+      the library knows exactly what to recompute, refusing cycles
+      at write time.
     </p>
     <p>
       The diagram on the right is the actual graph for the book that
@@ -68,13 +87,9 @@
     <div class="graph-controls">
       <label>
         <span>brand</span>
-        <color-input id="graph-brand" value="#c8391a" no-alpha></color-input>
+        <color-input id="graph-brand" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
       </label>
-      <label>
-        <span>surface</span>
-        <color-input id="graph-surface" value="#f5efe2" no-alpha></color-input>
-      </label>
-      <button type="button" id="graph-invert">Invert surface</button>
+      <button type="button" id="graph-invert">Flip ramp</button>
     </div>
   </div>
   <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
@@ -86,7 +101,7 @@
   <header class="sections-head">
     <h2>Kinds of decision</h2>
     <p>
-      Eight built-in selectors. Each one takes a scope of candidates
+      Ten built-in selectors. Each one takes a scope of candidates
       and returns the member that fits a rule.
     </p>
   </header>
@@ -98,8 +113,9 @@
       <code class="sig">bestContrastWith( target, scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The most readable color in a palette against any background. WCAG-measured.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Change the brand color.</em> Every contrast ratio re-validates.</p>
+        <p class="fn-detail">The most readable color in a palette against any background — WCAG-measured. Compliance becomes a rule the system enforces, not a checklist re-run after every redesign.</p>
       </div>
       <figure class="demo">
         <figcaption>One palette · six surfaces · text auto-picked.</figcaption>
@@ -120,8 +136,9 @@
       <code class="sig">closestColor( target, scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Snap any incoming color to its nearest neighbour in the palette. Distance is perceptual (OKLab).</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Off-palette colors don't sneak in.</em> They snap to the nearest member you actually own.</p>
+        <p class="fn-detail">A perceptual neighbour-search in OKLab — so colors that look the same get treated the same. Useful when content comes from outside the system: imported logos, user uploads, third-party brand kits.</p>
       </div>
       <figure class="demo">
         <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
@@ -147,8 +164,9 @@
       <code class="sig">furthestFrom( scope, { not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The companion of closest. Maximum perceptual distance from an anchor.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>The accent that can't be confused with the brand.</em></p>
+        <p class="fn-detail">Maximum perceptual distance from an anchor. Pick the swatch designed for "look here, not there" — and let it re-pick itself when the anchor moves.</p>
       </div>
       <figure class="demo">
         <figcaption>Hover any swatch · the furthest member is marked.</figcaption>
@@ -168,8 +186,9 @@
       <code class="sig">minContrastWith( target, scope, { threshold?, not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>The lowest contrast that still clears a threshold. Subtle, but legible.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>As subtle as you can get away with.</em> And still legible.</p>
+        <p class="fn-detail">The lowest contrast that still clears a threshold. Hairlines, captions, dim labels — the quiet stuff that survives the next contrast audit because the audit is built in.</p>
       </div>
       <figure class="demo">
         <figcaption>Same surface, same palette — three thresholds, three answers.</figcaption>
@@ -203,8 +222,9 @@
       <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Selectors for dimensional scales. Step to the next member up or down — works in any unit.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Spacing that knows its own scale.</em></p>
+        <p class="fn-detail">Step to the next member up or down — in px, rem, ms, whatever you've defined. Add a step to the scale and every gap, padding, and duration that referenced it moves with you.</p>
       </div>
       <figure class="demo">
         <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
@@ -253,8 +273,9 @@
       <code class="sig">mostVivid|leastVivid( scope, { against?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
-      <div class="fn-prose">
-        <p>Both ends of the chroma axis. <code>mostVivid</code> picks the loudest member of a palette — the obvious accent. <code>leastVivid</code> picks the most muted — the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target.</p>
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Your accent is already in your palette.</em></p>
+        <p class="fn-detail">Both ends of the chroma axis. <code>mostVivid</code> finds the loudest member — the obvious accent. <code>leastVivid</code> finds the neutral hiding inside your brand colors. Either can be constrained to clear a contrast target, so the answer can't fall out of compliance.</p>
       </div>
       <figure class="demo">
         <figcaption>Same palette, sorted by chroma — both ends marked.</figcaption>
@@ -265,13 +286,77 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
     </div>
   </article>
 
+  <!-- random -->
+  <article class="fn" id="random">
+    <header class="fn-head">
+      <h3>random</h3>
+      <code class="sig">random( scope, { type, seed?, not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Randomness, with a memory.</em></p>
+        <p class="fn-detail">Pick from a scope at random — but each declaration captures its own seed, so the value stays put across re-resolves and machines. Reshuffle deliberately per release, per user, per environment. Type filters the pool: color, dimension, or string.</p>
+      </div>
+      <figure class="demo">
+        <figcaption class="random-caption">
+          <label class="random-seed-lbl">
+            seed
+            <input id="random-seed" class="random-seed-input" type="text" value="spring-2026" spellcheck="false">
+          </label>
+          <button id="random-shuffle" class="random-shuffle" type="button">shuffle</button>
+        </figcaption>
+        <div class="random-stage" id="random-stage"></div>
+      </figure>
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,
+  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
+
+ui.set(<span class="c-str">'promo-bg'</span>,
+  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
+    </div>
+  </article>
+
+  <!-- nth -->
+  <article class="fn" id="nth">
+    <header class="fn-head">
+      <h3>nth</h3>
+      <code class="sig">nth( scope, index, { not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>Pick by position, not by name.</em></p>
+        <p class="fn-detail">When a ramp or scale generates your palette, the order is the meaning — lightest first, darkest last. <code>nth</code> addresses that order directly: integers work like <code>Array.at()</code> (negative wraps from the end), and floats between 0 and 1 select <em>relatively</em> — so <code>0.5</code> is always the midtone, regardless of how many stops were generated.</p>
+      </div>
+      <figure class="demo">
+        <figcaption class="nth-caption">
+          <label class="nth-index-lbl">
+            index
+            <input id="nth-index" class="nth-index-input" type="text" value="0.5" spellcheck="false">
+          </label>
+        </figcaption>
+        <div class="nth-stage" id="nth-stage"></div>
+        <div class="nth-presets" id="nth-presets">
+          <button type="button" data-value="0">0</button>
+          <button type="button" data-value="0.25">0.25</button>
+          <button type="button" data-value="0.5" class="is-active">0.5</button>
+          <button type="button" data-value="0.75">0.75</button>
+          <button type="button" data-value="-1">-1</button>
+        </div>
+      </figure>
+      <pre class="code"><code><span class="c-dim">// ramp generated lightest → darkest</span>
+ui.set(<span class="c-str">'surface'</span>,  <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0</span>))       <span class="c-dim">// lightest</span>
+ui.set(<span class="c-str">'text'</span>,     <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">-1</span>))      <span class="c-dim">// darkest</span>
+ui.set(<span class="c-str">'muted'</span>,    <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.5</span>))    <span class="c-dim">// midtone</span>
+ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.1</span>))    <span class="c-dim">// just off white</span></code></pre>
+    </div>
+  </article>
+
 </main>
 
 <!-- ─── ramp: single color → full tonal scale ────────────────────── -->
 <section class="ramp-feature" aria-labelledby="ramp-title">
   <div class="ramp-feature-body">
     <div class="ramp-feature-text">
-      <h2 id="ramp-title">One color in. A full scale out.</h2>
+      <h2 id="ramp-title"><em>One color in.</em> A full scale out.</h2>
       <p>
         Pick a brand color. <code>ramp()</code> returns the matching stop
         from a Tailwind-style tonal scale — perceptually tuned via
@@ -289,7 +374,7 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
 
     <div class="ramp-stage">
       <div class="ramp-seed">
-        <color-input id="ramp-seed-input" value="#0066cc" no-alpha></color-input>
+        <color-input id="ramp-seed-input" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
         <span class="ramp-seed-lbl">brand.primary</span>
       </div>
       <div class="ramp-arrow" aria-hidden="true">→</div>
@@ -298,16 +383,163 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
   </div>
 </section>
 
+<!-- ─── colorMix: two colors, pick the interpolation path ────────── -->
+<section class="mix-feature" aria-labelledby="mix-title">
+  <div class="mix-feature-body">
+    <div class="mix-feature-text">
+      <h2 id="mix-title"><em>Two colors.</em> Pick the path.</h2>
+      <p>
+        <code>colorMix()</code> interpolates between two colors. The space
+        you pick changes the path: <code>rgb</code> goes straight through
+        whatever sits between the endpoints in cube coordinates;
+        <code>lab</code> and <code>oklab</code> follow perceptual lines;
+        <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate
+        around hue. Same endpoints — wildly different middles.
+      </p>
+      <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.surface'</span>),
+  { <span class="c-key">ratio</span>: <span class="c-num">0.5</span>, <span class="c-key">colorSpace</span>: <span class="c-str">'oklch'</span> }
+));</code></pre>
+    </div>
+
+    <div class="mix-stage">
+      <div class="mix-row">
+        <color-input id="mix-a" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
+        <color-input id="mix-b" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
+      </div>
+      <label class="mix-space">
+        <span>interpolated in</span>
+        <select id="mix-space-sel">
+          <option value="oklch">oklch</option>
+          <option value="oklab">oklab</option>
+          <option value="lch">lch</option>
+          <option value="lab" selected>lab</option>
+          <option value="hsl">hsl</option>
+          <option value="okhsl">okhsl</option>
+          <option value="hsv">hsv</option>
+          <option value="hwb">hwb</option>
+          <option value="rgb">rgb</option>
+          <option value="lrgb">lrgb (linear)</option>
+          <option value="cubehelix">cubehelix</option>
+        </select>
+      </label>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Typography: a style is a scope ─────────────────────────── -->
+<section class="typo-feature" aria-labelledby="typo-title">
+  <div class="typo-feature-body">
+    <div class="typo-feature-text">
+      <h2 id="typo-title">A style is <em>a scope.</em></h2>
+      <p>
+        A type style is a collection of properties — family, size,
+        weight, line-height, tracking. Design Book treats it as a
+        <em>scope</em> with a <code>compose: 'typography'</code> marker,
+        so every property stays a real, ref-able token in the graph.
+        Renderers re-aggregate the scope at output time — a CSS class
+        for the browser, a <code>$type: 'typography'</code> composite
+        for the W3 Design Tokens spec.
+      </p>
+      <pre class="code"><code>book.<span class="c-fn">addTypography</span>(<span class="c-str">'heading-lg'</span>, {
+  <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
+  <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
+  <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
+  <span class="c-key">lineHeight</span>:    <span class="c-str">'1'</span>,
+  <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
+});
+
+<span class="c-dim">// Variant via extends — inherits the compose marker.</span>
+book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</span>,
+  { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
+  { <span class="c-key">extends</span>: <span class="c-str">'heading-lg'</span> });</code></pre>
+    </div>
+
+    <figure class="typo-stage">
+      <div class="typo-sample typo-sample--heading">A style is a scope.</div>
+      <div class="typo-sample typo-sample--hero">Variants extend.</div>
+      <figcaption>Same book. Two scopes. One inherits the other.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ─── Inheritance: only the changes are bright ──────────────────── -->
+<section class="extends-feature" aria-labelledby="extends-title">
+  <div class="extends-feature-body">
+    <div class="extends-feature-text">
+      <h2 id="extends-title"><em>Inherit.</em> Override what changes.</h2>
+      <p>
+        A scope can extend another. Every token cascades through unless
+        you redefine it locally — and the dependency graph still knows.
+        Change a parent token, every dependent in every descendant
+        recomputes. The editor dims inherited rows so the decision is
+        visible at a glance — only the changes are bright.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
+light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#ff8800'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#888888'</span>));
+
+<span class="c-dim">// dark inherits everything, then overrides two tokens.</span>
+<span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, { <span class="c-key">extends</span>: <span class="c-str">'light'</span> });
+dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
+dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));</code></pre>
+    </div>
+
+    <figure class="extends-stage">
+      <div class="extends-pane">
+        <div class="extends-pane-head">
+          <span class="extends-pane-name">dark</span>
+          <span class="extends-pane-meta">extends <code>light</code></span>
+        </div>
+        <div class="extends-rows">
+          <div class="ext-row ext-row--override">
+            <span class="ext-key">bg</span>
+            <span class="ext-swatch" style="background:#1a1a1a"></span>
+            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>)</span>
+          </div>
+          <div class="ext-row ext-row--override">
+            <span class="ext-key">text</span>
+            <span class="ext-swatch" style="background:#f5f5f5"></span>
+            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>)</span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">primary</span>
+            <span class="ext-swatch" style="background:#0066cc"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #0066cc</span></span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">accent</span>
+            <span class="ext-swatch" style="background:#ff8800"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #ff8800</span></span>
+          </div>
+          <div class="ext-row ext-row--inherited">
+            <span class="ext-key">muted</span>
+            <span class="ext-swatch" style="background:#888888"></span>
+            <span class="ext-val">inherit <span class="ext-resolved">→ #888888</span></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ─── One source, many outputs ─────────────────────────────────── -->
 <section class="renderers">
   <header class="renderers-head">
-    <h2>One source, many outputs.</h2>
+    <h2><em>One source,</em> many outputs.</h2>
     <p>
       The same book renders to whatever target you need. CSS variables
       and JSON ship in the box; the
       <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
-      format too. Custom renderers are a registration call — twenty
-      lines of TypeScript turn the graph into Tailwind config, Swift
+      format too. Custom renderers register through one call —
+      <code>book.registerRenderer(name, fn)</code> — and twenty lines
+      of TypeScript turn the graph into Tailwind config, Swift
       extensions, SwiftUI, Kotlin, a JSON dialect of your choice.
     </p>
   </header>
@@ -328,15 +560,26 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
 
   <details class="renderer-source">
     <summary>The custom Tailwind renderer in full</summary>
-    <pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
+<pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
 <span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
-  <span class="c-fn">const</span> ui = book.<span class="c-fn">getScope</span>(<span class="c-str">'ui'</span>);
-  <span class="c-fn">const</span> values = book.<span class="c-fn">getScope</span>(<span class="c-str">'values'</span>);
-  <span class="c-fn">const</span> colors = {};
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> values.<span class="c-fn">getAllKeys</span>())  colors[k]     = values.<span class="c-fn">resolve</span>(k);
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> ui.<span class="c-fn">getAllKeys</span>())      colors[<span class="c-str">`ui-${</span>k<span class="c-str">}`</span>] = ui.<span class="c-fn">resolve</span>(k);
-  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: { colors: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(colors, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } } }`</span>;
-}</code></pre>
+  <span class="c-fn">const</span> colors = {}, spacing = {};
+  <span class="c-fn">const</span> isColor     = (s) =&gt; <span class="c-fn">parse</span>(s) != <span class="c-num">null</span>;
+  <span class="c-fn">const</span> isDimension = (s) =&gt; <span class="c-str">/^-?\d+(\.\d+)?[a-z%]+$/i</span>.<span class="c-fn">test</span>(s);
+
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> scope <span class="c-fn">of</span> book.<span class="c-fn">getAllScopes</span>()) {
+    <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+      <span class="c-fn">const</span> v = scope.<span class="c-fn">resolve</span>(k);
+      <span class="c-fn">const</span> key = <span class="c-str">`${</span>scope.name<span class="c-str">}-${</span>k<span class="c-str">}`</span>;
+      <span class="c-fn">if</span> (<span class="c-fn">isColor</span>(v))     colors[key]  = v;
+      <span class="c-fn">else if</span> (<span class="c-fn">isDimension</span>(v)) spacing[key] = v;
+    }
+  }
+  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ colors, spacing }, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } }`</span>;
+}
+
+<span class="c-dim">// Register it under any name — it's now a peer of the built-ins.</span>
+book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</span>, tailwindRenderer);
+<span class="c-fn">const</span> config = book.<span class="c-fn">render</span>(<span class="c-str">'tailwind'</span>);</code></pre>
   </details>
 </section>
 

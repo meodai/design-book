@@ -59,9 +59,11 @@ export {
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   random,
+  nth,
   registerBuiltinFunctions,
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
+export type { NthOptions } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

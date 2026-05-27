@@ -5,6 +5,7 @@ import {
   closestColor, furthestFrom, mostVivid, leastVivid,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
+  nth,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, Scope } from '../src/index';
 import { parse } from 'culori';
@@ -466,6 +467,19 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const easing = args[1].trim().replace(/^['"]|['"]$/g, '');
     const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
     return timing(duration, easing, options);
+  },
+
+  // nth(scope, index, options?)
+  nth(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('nth requires 2 arguments: scope and index');
+    const scope = getScopeArg(parseArg(args[0], book));
+    const indexParsed = parseArg(args[1], book);
+    if (indexParsed.type !== 'raw' || typeof indexParsed.value !== 'number') {
+      throw new Error('nth requires a numeric index as second argument');
+    }
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return nth(scope, indexParsed.value as number, options);
   },
 
   // color('...') as an explicit constructor

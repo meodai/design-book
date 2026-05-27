@@ -57,6 +57,8 @@ At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the r
 
 **With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`
 
+**With scope argument** (generic selectors): `nth`, `random`, `nextLarger`, `nextSmaller`
+
 **Without scope** (pure transforms): `colorMix`, `lighten`, `darken`, `relativeTo`, `spacingScale`, `typographyScale`, `timing`
 
 ### Renderers (`src/renderers/`)
