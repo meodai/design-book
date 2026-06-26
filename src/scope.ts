@@ -1,8 +1,10 @@
+import { parse } from 'culori';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError } from './errors';
+import type { ComparableEntry, TokenOrderer } from './orderers';
 
 export type SortDirection = 'asc' | 'desc';
 export type SortCriterion =
@@ -15,6 +17,8 @@ type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
+  getOrderer(type: string): TokenOrderer | undefined;
+  getOrdererTypes(): string[];
 };
 
 export class Scope {
@@ -29,6 +33,11 @@ export class Scope {
   /** Local order config. `undefined` = inherit from extends chain;
    *  `[]` = explicit insertion order (overrides an inherited order). */
   private _order?: ScopeOrder;
+  /** Memoized sorted keys. Invalidated on any token set/delete/setOrder/clearOrder. */
+  private orderedKeysCache: string[] | null = null;
+  /** Re-entrancy guard: while computing the ordered keys, getAllKeys returns
+   *  insertion order to let scope-iterating functions resolve safely. */
+  private _ordering = false;
   /** Keys currently mid-resolution, guarding against re-entrant resolution.
    *  Scope-iterating functions (bestContrastWith, minContrastWith, …) walk
    *  every key in their own scope, including the token that holds the
@@ -95,6 +104,7 @@ export class Scope {
   set(name: string, value: AnyTokenValue): void {
     const oldValue = this.tokens.get(name);
     this.tokens.set(name, value);
+    this.orderedKeysCache = null;
     this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
   }
 
@@ -115,6 +125,7 @@ export class Scope {
   delete(name: string): boolean {
     const had = this.tokens.delete(name);
     if (had) {
+      this.orderedKeysCache = null;
       this.book._notifyTokenChange(`${this.name}.${name}`, undefined, undefined);
     }
     return had;
@@ -131,7 +142,8 @@ export class Scope {
     return this.book.resolve(qualifiedKey);
   }
 
-  getAllKeys(): string[] {
+  /** Keys in insertion / parent-first order (the pre-ordering behavior). */
+  private baseKeys(): string[] {
     const localKeys = Array.from(this.tokens.keys());
     if (!this.extendsName) return localKeys;
 
@@ -140,12 +152,30 @@ export class Scope {
     return Array.from(combined);
   }
 
+  getAllKeys(): string[] {
+    const order = this.getEffectiveOrder();
+    const base = this.baseKeys();
+    // No ordering, empty criteria, or a re-entrant call during ordering:
+    // hand back insertion order.
+    if (!order || order.length === 0 || this._ordering) return base;
+    if (this.orderedKeysCache) return this.orderedKeysCache;
+    const sorted = this.computeOrderedKeys(base, order);
+    this.orderedKeysCache = sorted;
+    return sorted;
+  }
+
+  invalidateOrderCache(): void {
+    this.orderedKeysCache = null;
+  }
+
   setOrder(order: ScopeOrder): void {
     this._order = order;
+    this.orderedKeysCache = null;
   }
 
   clearOrder(): void {
     this._order = undefined;
+    this.orderedKeysCache = null;
   }
 
   /** This scope's *local* order config (undefined if unset). */
@@ -165,17 +195,110 @@ export class Scope {
 
   allTokens(): Record<string, AnyTokenValue> {
     const result: Record<string, AnyTokenValue> = {};
-
-    if (this.extendsName) {
-      const parentTokens = this.book.getScope(this.extendsName)?.allTokens() ?? {};
-      Object.assign(result, parentTokens);
+    for (const key of this.getAllKeys()) {
+      const token = this.get(key);
+      if (token) result[key] = token;
     }
-
-    for (const [key, value] of this.tokens) {
-      result[key] = value;
-    }
-
     return result;
+  }
+
+  private computeOrderedKeys(keys: string[], order: ScopeOrder): string[] {
+    this._ordering = true;
+    try {
+      type Entry = { key: string; index: number; type: string; resolved: string | null; token: AnyTokenValue };
+      const entries: Entry[] = keys.map((key, index) => {
+        const token = this.get(key)!;
+        let resolved: string | null = null;
+        try { resolved = this.resolve(key); } catch { resolved = null; }
+        const type = this.effectiveType(token, resolved);
+        return { key, index, type, resolved, token };
+      });
+
+      const ranks = this.computeValueRanks(entries, order);
+
+      const resolvable = entries.filter(e => e.resolved !== null);
+      const unresolvable = entries.filter(e => e.resolved === null);
+
+      resolvable.sort((a, b) => {
+        for (const c of order) {
+          let r = 0;
+          if (c.by === 'name') {
+            r = a.key.localeCompare(b.key);
+            if (c.direction === 'desc') r = -r;
+          } else if (c.by === 'type') {
+            r = this.typeRank(a.type, c.priority) - this.typeRank(b.type, c.priority);
+          } else if (c.by === 'value') {
+            if (a.type === b.type) {
+              const ra = ranks.get(a.key);
+              const rb = ranks.get(b.key);
+              if (ra !== undefined && rb !== undefined) {
+                r = ra - rb;
+                if (c.direction === 'desc') r = -r;
+              }
+            }
+          }
+          if (r !== 0) return r;
+        }
+        return a.index - b.index; // stable tiebreak
+      });
+
+      return [...resolvable.map(e => e.key), ...unresolvable.map(e => e.key)];
+    } finally {
+      this._ordering = false;
+    }
+  }
+
+  /** For any `value` criterion: group resolvable entries by effective type,
+   *  run that type's orderer once, and record each entry's rank (index). */
+  private computeValueRanks(
+    entries: Array<{ key: string; type: string; resolved: string | null; token: AnyTokenValue }>,
+    order: ScopeOrder,
+  ): Map<string, number> {
+    const ranks = new Map<string, number>();
+    if (!order.some(c => c.by === 'value')) return ranks;
+
+    const byType = new Map<string, ComparableEntry[]>();
+    for (const e of entries) {
+      if (e.resolved === null) continue;
+      const list = byType.get(e.type) ?? [];
+      list.push({ key: e.key, type: e.type, resolved: e.resolved, token: e.token });
+      byType.set(e.type, list);
+    }
+
+    for (const [type, group] of byType) {
+      const orderer = this.book.getOrderer(type);
+      if (!orderer) {
+        warnMissingOrderer(type);
+        continue; // no ranks for this type -> value criterion falls through
+      }
+      orderer(group).forEach((entry, i) => ranks.set(entry.key, i));
+    }
+    return ranks;
+  }
+
+  /** Rank of a type for the `type` criterion: listed types by priority index,
+   *  then unlisted types in orderer-registration order, then unknown last. */
+  private typeRank(type: string, priority?: string[]): number {
+    if (priority) {
+      const i = priority.indexOf(type);
+      if (i >= 0) return i;
+    }
+    const base = priority?.length ?? 0;
+    const reg = this.book.getOrdererTypes().indexOf(type);
+    return reg >= 0 ? base + reg : base + 1000;
+  }
+
+  /** Effective type for grouping/value: declared type, or a function's
+   *  returnType, falling back to detecting from the resolved value. */
+  private effectiveType(token: AnyTokenValue, resolved: string | null): string {
+    if (token.type === 'function') {
+      const rt = (token as FunctionTokenValue).metadata?.returnType;
+      if (rt) return rt;
+    }
+    if (token.type === 'reference' || token.type === 'function') {
+      if (resolved !== null) return detectType(resolved);
+    }
+    return token.type;
   }
 
   resolve(name: string): string {
@@ -235,4 +358,19 @@ export class Scope {
     }
     return implementation(...resolvedArgs, fn.options);
   }
+}
+
+/** Best-effort type detection from a resolved value string. */
+function detectType(resolved: string): string {
+  if (parse(resolved)) return 'color';
+  if (/^-?\d/.test(resolved) && /[a-z%]/i.test(resolved)) return 'dimension';
+  return 'string';
+}
+
+const warnedOrdererTypes = new Set<string>();
+function warnMissingOrderer(type: string): void {
+  if (warnedOrdererTypes.has(type)) return;
+  warnedOrdererTypes.add(type);
+  // eslint-disable-next-line no-console
+  console.warn(`[design-book] no orderer registered for type "${type}"; value ordering falls through`);
 }
