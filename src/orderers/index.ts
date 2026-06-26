@@ -2,6 +2,7 @@ import type { AnyTokenValue } from '../tokens';
 import type { DesignBook } from '../design-book';
 import { dimensionOrderer } from './dimension';
 import { stringOrderer } from './string';
+import { colorOrderer } from './color';
 
 /** A token reduced to what an orderer needs: its key, effective type, and
  *  resolved value string. Orderers sort a homogeneous (same-type) list. */
@@ -21,5 +22,5 @@ export type TokenOrderer = (entries: ComparableEntry[]) => ComparableEntry[];
 export function registerBuiltinOrderers(book: DesignBook): void {
   book.registerOrderer('dimension', dimensionOrderer);
   book.registerOrderer('string', stringOrderer);
-  // color orderer registered in Task 3.
+  book.registerOrderer('color', colorOrderer);
 }
