@@ -4,6 +4,13 @@ import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError } from './errors';
 
+export type SortDirection = 'asc' | 'desc';
+export type SortCriterion =
+  | { by: 'name'; direction?: SortDirection }
+  | { by: 'value'; direction?: SortDirection }
+  | { by: 'type'; priority?: string[] };
+export type ScopeOrder = SortCriterion[];
+
 type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
@@ -19,6 +26,9 @@ export class Scope {
   private tokens: Map<string, AnyTokenValue>;
   private referenceResolver: ReferenceResolver;
   private book: BookWithScope;
+  /** Local order config. `undefined` = inherit from extends chain;
+   *  `[]` = explicit insertion order (overrides an inherited order). */
+  private _order?: ScopeOrder;
   /** Keys currently mid-resolution, guarding against re-entrant resolution.
    *  Scope-iterating functions (bestContrastWith, minContrastWith, …) walk
    *  every key in their own scope, including the token that holds the
@@ -128,6 +138,29 @@ export class Scope {
     const parentKeys = this.book.getScope(this.extendsName)?.getAllKeys() ?? [];
     const combined = new Set([...parentKeys, ...localKeys]);
     return Array.from(combined);
+  }
+
+  setOrder(order: ScopeOrder): void {
+    this._order = order;
+  }
+
+  clearOrder(): void {
+    this._order = undefined;
+  }
+
+  /** This scope's *local* order config (undefined if unset). */
+  getOrder(): ScopeOrder | undefined {
+    return this._order;
+  }
+
+  /** Local order if set, else the nearest ancestor's via `extends`, else
+   *  undefined. Mirrors how `compose` walks the chain. */
+  getEffectiveOrder(): ScopeOrder | undefined {
+    if (this._order !== undefined) return this._order;
+    if (this.extendsName) {
+      return this.book.getScope(this.extendsName)?.getEffectiveOrder();
+    }
+    return undefined;
   }
 
   allTokens(): Record<string, AnyTokenValue> {
