@@ -10,12 +10,16 @@ export class ScopeManager {
     this.book = book;
   }
 
-  addScope(name: string, options?: { extends?: string; description?: string; compose?: string }): Scope {
+  addScope(
+    name: string,
+    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
+  ): Scope {
     if (this.scopes.has(name)) {
       throw new ScopeError(`Scope "${name}" already exists`, name);
     }
     const scope = new Scope(name, this.book, options);
     this.scopes.set(name, scope);
+    if (options?.order !== undefined) scope.setOrder(options.order);
     return scope;
   }
 

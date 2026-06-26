@@ -14,6 +14,8 @@ export type {
   TokenInspection,
 } from './design-book';
 export { Scope } from './scope';
+export type { ScopeOrder, SortCriterion, SortDirection } from './scope';
+export type { ComparableEntry, TokenOrderer } from './orderers';
 
 // Tokens
 export {

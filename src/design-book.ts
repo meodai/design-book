@@ -176,7 +176,10 @@ export class DesignBook {
 
   // --- Scope delegation ---
 
-  addScope(name: string, options?: { extends?: string; description?: string; compose?: string }): Scope {
+  addScope(
+    name: string,
+    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
+  ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this.emit('scopeAdded', { scope: name });
     return scope;
