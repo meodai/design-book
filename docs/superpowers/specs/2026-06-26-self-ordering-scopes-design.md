@@ -23,7 +23,6 @@ A scope often *is* an ordered thing — a color ramp light→dark, a spacing sca
 
 - **No positional values / arithmetic function tokens.** That is spec #2. This spec only establishes canonical order and the comparator registry.
 - **No new token types.** Ordering reads existing tokens; it adds no value kinds.
-- **No order inheritance via `extends`.** Order config is local to the scope that sets it (see Architecture → Inheritance).
 - **No editor reordering UI.** Editor reflects canonical order where it already consumes `allTokens()`/`getAllKeys()`; bespoke editor work (drag handles, etc.) is not in scope.
 - **No cross-unit dimension normalization.** The default `dimension` comparator compares numeric `rawValue`; mixing `px` and `rem` in one ordered scope compares raw numbers (documented caveat).
 
@@ -67,12 +66,20 @@ type SortCriterion =
 type ScopeOrder = SortCriterion[];
 
 interface Scope {
-  setOrder(order: ScopeOrder): void;
-  clearOrder(): void;
-  getOrder(): ScopeOrder | undefined;
+  setOrder(order: ScopeOrder): void;     // set local order (overrides any inherited order)
+  clearOrder(): void;                     // remove local order → re-inherit from extends chain
+  getOrder(): ScopeOrder | undefined;     // this scope's *local* order (undefined if unset)
+  getEffectiveOrder(): ScopeOrder | undefined; // local order, else nearest ancestor's, else undefined
   // existing: getAllKeys(), allTokens(), resolve(), …
 }
 ```
+
+**Order inheritance** mirrors the existing `compose` marker: a scope with no local order inherits the nearest ancestor's order through `extends`. Three states:
+
+- **unset** (default) → inherits the effective order from the `extends` chain; insertion order if no ancestor is ordered.
+- **`setOrder(order)`** → local order, overriding any inherited order. A child can therefore sort *differently* than its parent.
+- **`setOrder([])`** (empty criteria) → explicit "ordering off": insertion order **even if** an ancestor is ordered. Distinct from `clearOrder()`.
+- **`clearOrder()`** → removes the local order, reverting to inherited (back to *unset*).
 
 - `direction` defaults to `'asc'`.
 - A criterion returns `-1 | 0 | +1`; on a `0` (tie / not-applicable) the next criterion decides. Final tiebreak is original insertion index (stable sort).
@@ -148,6 +155,7 @@ A private `effectiveType(key): string` helper centralizes this. Falls back to th
 
 - `Scope` holds `private orderedKeysCache: string[] | null` (null = stale).
 - Invalidated on: local `set()` / `delete()` (membership **and** value changes), and on `clearOrder()`/`setOrder()`.
+- **Order-config change propagates to descendants.** Because order is inherited, a `setOrder`/`clearOrder` on a parent must invalidate the ordered-keys cache of every scope that (transitively) `extends` it. `ScopeManager` already tracks inheritance — it invalidates descendant caches when an ancestor's order config changes.
 - **Cross-scope value reactivity:** a `value`-ordered scope can reorder when a token it *references* changes in another scope. The scope invalidates its cache on the book's existing `change`/`tokenChanged` event when the changed key is a member of this scope (directly or transitively via the dependency graph). This reuses the event system already in place — no new propagation machinery.
 
 ### Re-entrancy guard (ordering ↔ resolution)
@@ -158,7 +166,9 @@ Guard, mirroring the resolution guard added in `scope.ts` (the `resolving` set):
 
 ### Inheritance
 
-- Order config is **local** to the scope that sets it; it is not inherited through `extends`. A child scope with its own `setOrder` sorts the merged parent+local key set under the child's criteria. A child without order keeps today's parent-first behavior.
+- Order **inherits through `extends`**, mirroring the existing `compose` getter (which walks the chain). A private `effectiveOrder()` returns the local `_order` if set, else delegates to the parent, else `undefined`. `getAllKeys()` sorts by `effectiveOrder()`.
+- A child sorts the merged parent+local key set under the **effective** criteria — its own (`setOrder`), or the inherited one if it set none. So a child can sort *differently* (`setOrder`), the *same* (leave unset), or *not at all* (`setOrder([])`).
+- `_order === undefined` means "inherit"; `_order === []` means "explicitly insertion order" (overrides an ancestor). This is why `clearOrder()` (sets `undefined`) and `setOrder([])` differ.
 - Because order is now derived, the override-position gotcha disappears for ordered scopes: a locally-overridden inherited token sorts by its effective value/name/type, not by the inherited slot.
 
 ### Error handling
@@ -187,6 +197,8 @@ Guard, mirroring the resolution guard added in `scope.ts` (the `resolving` set):
 - Lazy invalidation: cache recomputes after `set`/`delete`; cross-scope — changing a referenced token in another scope reorders a `value`-ordered scope.
 - Re-entrancy: a scope ordered by `value` that contains an `nth()`/`random()` token resolves without infinite recursion (selector sees insertion order during ordering).
 - Inheritance: a child `setOrder` sorts the merged parent+local set; overridden inherited token sorts by effective value, not inherited slot.
+- Order inheritance: a child with no local order inherits the parent's order; `setOrder` on the child overrides it (sorts differently); `setOrder([])` forces insertion order despite an ordered parent; `clearOrder()` reverts to inherited.
+- Descendant invalidation: changing a parent's order reorders an unset child's `getAllKeys()`.
 - Integration: `nth`/`nextLarger`/`nextSmaller` honor canonical order; CSS renderer emits variables in canonical order.
 
 ## Open questions
@@ -204,3 +216,4 @@ Enabled by this spec. Sketch only — not designed here:
 - Function-token constructors `position()`, `typedPosition()`, `relativeTypedPosition()`, `count()`, `typedCount()` resolved against a **resolution context** (owning key + scope) threaded through `resolve()` → `resolveFunctionToken()` → implementation.
 - Arithmetic as function tokens (`add`, `subtract`, `multiply`, `divide`), consistent with the existing function-token idiom and the `calc()` renderer; e.g. `add(position(), 1)`, `divide(typedPosition(), count())`.
 - A token using a positional value gains a dependency on its scope's canonical order, so reorders re-propagate reactively.
+- **Positional/expression values inside option-embedded numeric slots** — notably `relativeTo`'s `modifications` array. Today those slots are opaque `null | number | string` stored in `options`, which the resolver passes through **unresolved** (only `args` are resolved). Spec #2 must make such slots resolvable, e.g. `relativeTo(ref('brand.base'), 'oklch', [null, null, relative('+', multiply(typedPosition(), 30))])`. Two sub-requirements: (1) resolve expression/positional tokens embedded in modification slots (move them into resolvable `args`, or teach the resolver to resolve function-token values found in `options`); (2) a `relative(op, expr)` wrapper to carry the `+`/`-`/`*`/`/` operator that the current `"+180"` string convention encodes, since a positional value resolves to a bare number.
