@@ -244,6 +244,19 @@ export class DesignBook {
     return this.scopeManager.getScopeDependencies(name);
   }
 
+  /** Invalidate the ordered-keys cache of every scope that (transitively)
+   *  extends `name`, because they merge `name`'s keys / may inherit its order. */
+  invalidateDescendantOrderCaches(name: string): void {
+    for (const scope of this.scopeManager.getAllScopes()) {
+      if (scope.name === name) continue;
+      let cur: string | undefined = scope.extendsScope;
+      while (cur) {
+        if (cur === name) { scope.invalidateOrderCache(); break; }
+        cur = this.scopeManager.getScope(cur)?.extendsScope;
+      }
+    }
+  }
+
   getSourceKey(key: string): string | undefined {
     const dotIndex = key.indexOf('.');
     if (dotIndex === -1) return undefined;

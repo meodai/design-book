@@ -21,6 +21,8 @@ function createMockBook() {
     getScope: vi.fn((name: string) => scopes.get(name)),
     getFunction: vi.fn(),
     _notifyTokenChange: vi.fn(),
+    invalidateDescendantOrderCaches: vi.fn(),
+    on: vi.fn(() => () => {}),
     _scopes: scopes,
   };
   return book;

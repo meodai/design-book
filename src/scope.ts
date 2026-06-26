@@ -19,6 +19,8 @@ type BookWithScope = BookLike & {
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
+  on(event: 'change', callback: (e: { detail: { changedKeys: string[] } }) => void): () => void;
+  invalidateDescendantOrderCaches(name: string): void;
 };
 
 export class Scope {
@@ -35,6 +37,8 @@ export class Scope {
   private _order?: ScopeOrder;
   /** Memoized sorted keys. Invalidated on any token set/delete/setOrder/clearOrder. */
   private orderedKeysCache: string[] | null = null;
+  /** Unsubscribe handle for the book-level `change` event (subscribed lazily). */
+  private _changeUnsub?: () => void;
   /** Re-entrancy guard: while computing the ordered keys, getAllKeys returns
    *  insertion order to let scope-iterating functions resolve safely. */
   private _ordering = false;
@@ -104,7 +108,8 @@ export class Scope {
   set(name: string, value: AnyTokenValue): void {
     const oldValue = this.tokens.get(name);
     this.tokens.set(name, value);
-    this.orderedKeysCache = null;
+    this.invalidateOrderCache();
+    this.book.invalidateDescendantOrderCaches(this.name);
     this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
   }
 
@@ -125,7 +130,8 @@ export class Scope {
   delete(name: string): boolean {
     const had = this.tokens.delete(name);
     if (had) {
-      this.orderedKeysCache = null;
+      this.invalidateOrderCache();
+      this.book.invalidateDescendantOrderCaches(this.name);
       this.book._notifyTokenChange(`${this.name}.${name}`, undefined, undefined);
     }
     return had;
@@ -168,14 +174,27 @@ export class Scope {
     this.orderedKeysCache = null;
   }
 
+  private subscribeToChanges(): void {
+    if (this._changeUnsub) return;
+    const prefix = `${this.name}.`;
+    this._changeUnsub = this.book.on('change', (e: { detail: { changedKeys: string[] } }) => {
+      if (e.detail.changedKeys.some(k => k.startsWith(prefix))) {
+        this.invalidateOrderCache();
+      }
+    });
+  }
+
   setOrder(order: ScopeOrder): void {
     this._order = order;
-    this.orderedKeysCache = null;
+    this.invalidateOrderCache();
+    this.subscribeToChanges();
+    this.book.invalidateDescendantOrderCaches(this.name);
   }
 
   clearOrder(): void {
     this._order = undefined;
-    this.orderedKeysCache = null;
+    this.invalidateOrderCache();
+    this.book.invalidateDescendantOrderCaches(this.name);
   }
 
   /** This scope's *local* order config (undefined if unset). */
