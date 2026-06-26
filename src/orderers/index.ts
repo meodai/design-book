@@ -1,5 +1,7 @@
 import type { AnyTokenValue } from '../tokens';
 import type { DesignBook } from '../design-book';
+import { dimensionOrderer } from './dimension';
+import { stringOrderer } from './string';
 
 /** A token reduced to what an orderer needs: its key, effective type, and
  *  resolved value string. Orderers sort a homogeneous (same-type) list. */
@@ -17,5 +19,7 @@ export type TokenOrderer = (entries: ComparableEntry[]) => ComparableEntry[];
 /** Auto-register built-in orderers on a DesignBook. Filled in by later
  *  tasks (dimension, string, color). */
 export function registerBuiltinOrderers(book: DesignBook): void {
-  // dimension/string/color orderers registered in Tasks 2 & 3.
+  book.registerOrderer('dimension', dimensionOrderer);
+  book.registerOrderer('string', stringOrderer);
+  // color orderer registered in Task 3.
 }
