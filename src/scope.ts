@@ -2,6 +2,7 @@ import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
+import { CircularDependencyError } from './errors';
 
 type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
@@ -18,6 +19,11 @@ export class Scope {
   private tokens: Map<string, AnyTokenValue>;
   private referenceResolver: ReferenceResolver;
   private book: BookWithScope;
+  /** Keys currently mid-resolution, guarding against re-entrant resolution.
+   *  Scope-iterating functions (bestContrastWith, minContrastWith, …) walk
+   *  every key in their own scope, including the token that holds the
+   *  function itself — resolving that key would recurse infinitely. */
+  private resolving: Set<string> = new Set();
 
   constructor(
     name: string,
@@ -145,21 +151,30 @@ export class Scope {
       throw new Error(`Token "${name}" not found in scope "${this.name}"`);
     }
 
-    if (token.type === 'reference') {
-      const ref = token as ReferenceValue;
-      return this.book.resolve(ref.key);
+    const qualified = `${this.name}.${name}`;
+    if (this.resolving.has(name)) {
+      throw new CircularDependencyError([qualified, qualified]);
     }
+    this.resolving.add(name);
+    try {
+      if (token.type === 'reference') {
+        const ref = token as ReferenceValue;
+        return this.book.resolve(ref.key);
+      }
 
-    if (token.type === 'function') {
-      return this.resolveFunctionToken(token as FunctionTokenValue);
+      if (token.type === 'function') {
+        return this.resolveFunctionToken(token as FunctionTokenValue);
+      }
+
+      const tv = token as TokenValue;
+      if (tv.metadata?.unit) {
+        return `${tv.rawValue}${tv.metadata.unit}`;
+      }
+
+      return String(tv.rawValue);
+    } finally {
+      this.resolving.delete(name);
     }
-
-    const tv = token as TokenValue;
-    if (tv.metadata?.unit) {
-      return `${tv.rawValue}${tv.metadata.unit}`;
-    }
-
-    return String(tv.rawValue);
   }
 
   /** Resolve a function token, recursing into any nested function-token
