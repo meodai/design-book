@@ -164,6 +164,9 @@ export class Scope {
     // No ordering, empty criteria, or a re-entrant call during ordering:
     // hand back insertion order.
     if (!order || order.length === 0 || this._ordering) return base;
+    // I1-A fix: subscribe lazily so cross-scope ref changes in inherited-order
+    // scopes (which never call setOrder()) still invalidate the cache.
+    this.subscribeToChanges();
     if (this.orderedKeysCache) return this.orderedKeysCache;
     const sorted = this.computeOrderedKeys(base, order);
     this.orderedKeysCache = sorted;
@@ -180,8 +183,19 @@ export class Scope {
     this._changeUnsub = this.book.on('change', (e: { detail: { changedKeys: string[] } }) => {
       if (e.detail.changedKeys.some(k => k.startsWith(prefix))) {
         this.invalidateOrderCache();
+        // I1-B fix: a change to one of this scope's keys (e.g. a cross-scope ref
+        // whose target changed) must also invalidate descendant ordered caches that
+        // merge or inherit this scope's keys.
+        this.book.invalidateDescendantOrderCaches(this.name);
       }
     });
+  }
+
+  /** Release the book-level change subscription. Call before discarding the
+   *  scope (e.g. in ScopeManager.deleteScope) to prevent memory leaks. */
+  dispose(): void {
+    this._changeUnsub?.();
+    this._changeUnsub = undefined;
   }
 
   setOrder(order: ScopeOrder): void {

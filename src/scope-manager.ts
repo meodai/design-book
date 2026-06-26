@@ -46,6 +46,9 @@ export class ScopeManager {
       throw new ScopeError(`Scope "${name}" not found`, name);
     }
     const keys = scope.getAllKeys().map(k => `${name}.${k}`);
+    // I2 fix: release the book-level change subscription before removing the
+    // scope so the listener Set doesn't retain a stale closure forever.
+    scope.dispose();
     const graph = this.book.getDependencyGraph();
     for (const key of keys) {
       graph.removeNode(key);
