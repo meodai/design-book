@@ -3,7 +3,9 @@ import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
+import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { TokenOrderer } from './orderers';
 import { isReferenceValue, isTokenValue, string as stringToken } from './tokens';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
@@ -123,6 +125,7 @@ export class DesignBook {
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
+  private orderers: Map<string, TokenOrderer> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
 
   private _propagating = false;
@@ -147,6 +150,7 @@ export class DesignBook {
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
     registerBuiltinFunctions(this);
+    registerBuiltinOrderers(this);
     this.registerFunction('ramp', (seedValue: string, options?: { shade: string }) => {
       if (!options?.shade) {
         throw new FunctionError('ramp: missing required "shade" option', 'ramp');
@@ -360,6 +364,21 @@ export class DesignBook {
   getFunction(name: string): FunctionImplementation | undefined {
     const fn = this.functions.get(name);
     return typeof fn === 'function' ? fn : undefined;
+  }
+
+  // --- Orderer registry ---
+
+  registerOrderer(type: string, orderer: TokenOrderer): void {
+    this.orderers.set(type, orderer);
+  }
+
+  getOrderer(type: string): TokenOrderer | undefined {
+    return this.orderers.get(type);
+  }
+
+  /** Registered orderer types in registration order. */
+  getOrdererTypes(): string[] {
+    return Array.from(this.orderers.keys());
   }
 
   // --- Renderer registry ---
