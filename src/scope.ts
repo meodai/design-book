@@ -107,10 +107,20 @@ export class Scope {
 
   set(name: string, value: AnyTokenValue): void {
     const oldValue = this.tokens.get(name);
+    const existed = this.tokens.has(name);
     this.tokens.set(name, value);
     this.invalidateOrderCache();
     this.book.invalidateDescendantOrderCaches(this.name);
-    this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
+    try {
+      this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
+    } catch (e) {
+      // change was rejected (e.g. it would close a dependency cycle) —
+      // roll the token back so the book never holds a value the graph refused;
+      // the order caches stay invalidated and recompute from the restored map
+      if (existed) this.tokens.set(name, oldValue as AnyTokenValue);
+      else this.tokens.delete(name);
+      throw e;
+    }
   }
 
   has(name: string): boolean {
