@@ -2,5 +2,6 @@ node_modules/
 dist/
 demo-dist/
 editor-dist/
+live-test-dist/
 .claude/
 .superpowers/

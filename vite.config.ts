@@ -28,6 +28,17 @@ export default defineConfig(({ mode }) => {
     };
   }
 
+  if (mode === 'live-test') {
+    return {
+      root: 'live-test',
+      base: process.env.BASE_PATH ?? '/',
+      server: { host: true },
+      build: {
+        outDir: '../live-test-dist',
+      },
+    };
+  }
+
   if (mode === 'marketing') {
     return {
       root: 'marketing',

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Book — Live Test</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script type="module" src="./live-test.ts"></script>
+</head>
+<body>
+
+  <!-- ── Beam control bar (page chrome, not themed by the beam) ── -->
+  <aside class="beam-bar">
+    <div class="beam-brand">
+      <strong>design-book</strong> <span>× token-beam</span>
+    </div>
+
+    <form class="beam-connect" id="beam-form">
+      <input
+        id="beam-code"
+        type="text"
+        placeholder="beam://A3F9K2"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="token-beam session code"
+      />
+      <button type="submit" id="beam-connect-btn">Connect</button>
+    </form>
+
+    <div class="beam-status">
+      <span class="beam-dot" id="beam-dot" data-state="idle"></span>
+      <span id="beam-state-label">not connected</span>
+    </div>
+
+    <div class="beam-palette" id="beam-palette" aria-label="received palette"></div>
+  </aside>
+
+  <!-- ── The specimen: a generic page themed entirely from the beam ── -->
+  <main class="page">
+
+    <header class="page-header">
+      <div class="page-logo"><span class="logo-dot"></span> Acme&nbsp;Studio</div>
+      <nav class="page-nav">
+        <a href="#" class="is-active">Overview</a>
+        <a href="#">Projects</a>
+        <a href="#">Team</a>
+        <a href="#">Settings</a>
+      </nav>
+      <button class="btn btn-primary btn-sm">Sign&nbsp;up</button>
+    </header>
+
+    <section class="hero">
+      <span class="badge" id="hero-badge">Live-themed</span>
+      <h1>Every color on this page<br />was derived, not chosen.</h1>
+      <p>
+        Beam a palette from any color tool and design-book works out the rest:
+        readable text, surfaces, borders, states — recomputed live, every time
+        a color changes.
+      </p>
+      <div class="hero-actions">
+        <button class="btn btn-primary">Get started</button>
+        <button class="btn btn-ghost">How it works</button>
+      </div>
+    </section>
+
+    <section class="cards">
+      <article class="card">
+        <span class="chip chip-1"></span>
+        <h3>Beamed in</h3>
+        <p>Raw colors arrive over a token-beam session as W3C design tokens and land in a scope.</p>
+        <a href="#">Read more →</a>
+      </article>
+      <article class="card">
+        <span class="chip chip-2"></span>
+        <h3>Derived</h3>
+        <p>Functions like <code>bestContrastWith</code> and <code>mostVivid</code> pick and mix every UI color from the palette.</p>
+        <a href="#">Read more →</a>
+      </article>
+      <article class="card">
+        <span class="chip chip-3"></span>
+        <h3>Reactive</h3>
+        <p>Change one color at the source and the dependency graph restyles the whole page in one pass.</p>
+        <a href="#">Read more →</a>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-copy">
+        <h2>Stay in the loop</h2>
+        <p>A little form, because every design system demo needs one.</p>
+        <div class="tags">
+          <span class="tag">tokens</span>
+          <span class="tag">contrast</span>
+          <span class="tag">live</span>
+        </div>
+      </div>
+      <form class="panel-form" onsubmit="return false">
+        <label>Name <input type="text" placeholder="Ada Lovelace" /></label>
+        <label>Favourite color space
+          <select>
+            <option>OKLCH</option>
+            <option>Lab</option>
+            <option>HSL, ironically</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" checked /> Beam me updates</label>
+        <button class="btn btn-primary" type="submit">Subscribe</button>
+      </form>
+    </section>
+
+    <footer class="page-footer">
+      <span>Acme Studio — themed by whatever you beam at it.</span>
+      <a href="https://github.com/meodai/token-beam">token-beam</a>
+    </footer>
+
+  </main>
+
+</body>
+</html>
