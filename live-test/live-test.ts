@@ -163,9 +163,11 @@ async function connect(rawCode: string) {
   }
 
   session?.disconnect();
+  // clientType is left at the library default ('receiver') — the sync
+  // server routes payloads by role, so an unknown clientType pairs fine
+  // but never receives sync messages.
   session = new TargetSession({
     sessionToken,
-    clientType: 'web',
     origin: 'design-book live-test',
     icon: { type: 'unicode', value: '📖' },
   });
