@@ -440,7 +440,7 @@ body {
 
 /* dependency graph — the book's own SVG renderer, themed by the book */
 
-.graph { padding-bottom: 2.5rem; }
+.graph { margin-top: 2.5rem; padding-bottom: 2.5rem; }
 
 .graph h2 { margin: 0 0 0.3rem; }
 
