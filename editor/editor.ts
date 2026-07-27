@@ -6,7 +6,7 @@ import {
   Renderer, SVGRenderer, TableViewRenderer,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
-import type { Scope } from '../src/index';
+import type { Scope, ScopeOrder } from '../src/index';
 import { parseTokenInput } from './editor-input-parser';
 
 import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
@@ -273,6 +273,22 @@ function updateAll() {
   }
 }
 
+/** Reorder token lines in place after an order change — replaces each editor's
+ *  document with the scope's current canonical order WITHOUT destroying any
+ *  editors. Avoids the full-column teardown of renderInputColumn() (which
+ *  flashes and resets scroll). Guarded so the swap doesn't re-parse back. */
+function refreshScopeDocs() {
+  syncingFromEditor = true;
+  for (const [name, view] of editorViews) {
+    const scope = book.getScope(name);
+    if (!scope) continue;
+    const text = scopeToText(scope);
+    if (text === view.state.doc.toString()) continue;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+  }
+  syncingFromEditor = false;
+}
+
 // --- Resolve a token for display, returning resolved value or error string ---
 
 function safeResolve(scopeName: string, tokenName: string): { value: string; error?: string } {
@@ -376,6 +392,36 @@ function scopeToText(scope: Scope): string {
     lines.push(`${key}: ${getTokenDisplayValue(scope, key)}`);
   }
   return lines.join('\n');
+}
+
+// --- Per-scope order dropdown ---
+// Maps the header <select> values to ScopeOrder presets. `''` clears the
+// order (insertion). scopeToText() reads scope.getAllKeys(), so picking an
+// order reorders the token lines in that scope's editor on the next render.
+const ORDER_PRESETS: Record<string, ScopeOrder | null> = {
+  '':           null,
+  'value':      [{ by: 'value' }],
+  'value-desc': [{ by: 'value', direction: 'desc' }],
+  'name':       [{ by: 'name' }],
+  'type':       [{ by: 'type' }, { by: 'value' }],
+};
+
+const ORDER_OPTIONS_HTML = [
+  '<option value="">insertion</option>',
+  '<option value="value">value</option>',
+  '<option value="value-desc">value ↺</option>',
+  '<option value="name">name</option>',
+  '<option value="type">type</option>',
+].join('');
+
+/** Map a scope's local order back to the matching <select> value. */
+function orderToSelectValue(order: ScopeOrder | undefined): string {
+  if (!order || order.length === 0) return '';
+  const c = order[0];
+  if (c.by === 'type') return 'type';
+  if (c.by === 'value') return c.direction === 'desc' ? 'value-desc' : 'value';
+  if (c.by === 'name') return 'name';
+  return '';
 }
 
 // --- Sync editor content to scope ---
@@ -921,7 +967,9 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
       }),
       colorSwatchPlugin(_book, scope),
       EditorView.updateListener.of((update: ViewUpdate) => {
-        if (update.docChanged) {
+        // Skip programmatic doc swaps (e.g. reordering after a setOrder change);
+        // only user edits should sync back into the book.
+        if (update.docChanged && !syncingFromEditor) {
           syncScopeFromEditor(scope, update.state.doc.toString(), _book);
         }
         // On blur: if editor is empty, remove the scope
@@ -996,6 +1044,26 @@ function renderInputColumn() {
     if (extendsInfo) {
       header.innerHTML += `<span class="scope-extends">extends ${extendsInfo}</span>`;
     }
+
+    // Order dropdown — appended after the innerHTML writes above so its
+    // change listener survives (further `innerHTML +=` would re-parse it away).
+    const orderLabel = document.createElement('label');
+    orderLabel.className = 'scope-order';
+    orderLabel.innerHTML = '<span>order</span>';
+    const orderSel = document.createElement('select');
+    orderSel.className = 'scope-order-select';
+    orderSel.title = `Order tokens in "${scope.name}"`;
+    orderSel.innerHTML = ORDER_OPTIONS_HTML;
+    orderSel.value = orderToSelectValue(scope.getOrder());
+    orderSel.addEventListener('change', () => {
+      const preset = ORDER_PRESETS[orderSel.value];
+      if (preset) scope.setOrder(preset);
+      else scope.clearOrder();
+      refreshScopeDocs(); // reorder lines in place — no column rebuild, no jump
+      updateAll();
+    });
+    orderLabel.appendChild(orderSel);
+    header.appendChild(orderLabel);
 
     block.appendChild(header);
 

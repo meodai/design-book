@@ -12,8 +12,8 @@
     href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap"
     rel="stylesheet"
   />
-  <script type="module" crossorigin src="/assets/index-DTOilmVT.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-C0P9jvgE.css">
+  <script type="module" crossorigin src="/assets/index-C0NYVKnE.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DWZBfdsK.css">
 </head>
 <body>
 
@@ -379,6 +379,52 @@ ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(<spa
       </div>
       <div class="ramp-arrow" aria-hidden="true">→</div>
       <div class="ramp-bars" id="ramp-bars"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── setOrder: a scope that keeps itself sorted ───────────────── -->
+<section class="order-feature" aria-labelledby="order-title">
+  <div class="order-feature-body">
+    <div class="order-feature-text">
+      <h2 id="order-title"><em>Don't arrange the palette.</em> Let it sort itself.</h2>
+      <p>
+        Give a scope an <code>order</code> and it stays sorted — by
+        <code>value</code>, <code>name</code> or <code>type</code>, composed as
+        a hierarchy. The value orderer routes colors through
+        <a href="https://github.com/darosh/colorsort-js" target="_blank" rel="noopener">colorsort-js</a>
+        for a perceptually smooth sequence, and dimensions by magnitude. The
+        order is canonical — every renderer and every positional selector
+        (<code>nth</code>, <code>nextLarger</code>) reads it — and it re-sorts
+        the moment a token's value changes. Children inherit a parent's order
+        unless they set their own.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>, {
+  <span class="c-key">order</span>: [{ <span class="c-key">by</span>: <span class="c-str">'value'</span> }]      <span class="c-dim">// perceptual color order</span>
+});
+
+<span class="c-dim">// insert in any order — the scope keeps itself sorted</span>
+palette.<span class="c-fn">set</span>(<span class="c-str">'teal'</span>,  <span class="c-fn">relativeTo</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+190'</span>]));
+palette.<span class="c-fn">set</span>(<span class="c-str">'coral'</span>, <span class="c-fn">relativeTo</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+20'</span>]));
+
+palette.<span class="c-fn">getAllKeys</span>();   <span class="c-dim">// → one smooth perceptual order</span></code></pre>
+    </div>
+
+    <div class="order-stage">
+      <div class="order-head">
+        <div class="order-seed">
+          <color-input id="order-seed-input" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+          <span class="order-seed-lbl">brand.primary</span>
+        </div>
+        <div class="order-modes" id="order-modes" role="group" aria-label="Sort criterion">
+          <button type="button" data-mode="insertion">insertion</button>
+          <button type="button" data-mode="value-asc" class="is-active">value</button>
+          <button type="button" data-mode="value-desc">value ↺</button>
+          <button type="button" data-mode="name">name</button>
+        </div>
+      </div>
+      <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
+      <figcaption class="order-caption">Eight colors, inserted scrambled. Pick a rule — the scope re-sorts itself. Change the seed — the whole order recolors.</figcaption>
     </div>
   </div>
 </section>

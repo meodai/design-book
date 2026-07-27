@@ -479,6 +479,7 @@ h1, h2, h3 {
    continuation of the function plates rather than a different rhythm. */
 .ramp-feature-text h2,
 .mix-feature-text h2,
+.order-feature-text h2,
 .typo-feature-text h2,
 .extends-feature-text h2,
 .renderers-head h2 {
@@ -491,6 +492,7 @@ h1, h2, h3 {
 }
 .ramp-feature-text h2 em,
 .mix-feature-text h2 em,
+.order-feature-text h2 em,
 .typo-feature-text h2 em,
 .extends-feature-text h2 em,
 .renderers-head h2 em {
@@ -499,6 +501,7 @@ h1, h2, h3 {
 }
 .ramp-feature-text > p,
 .mix-feature-text > p,
+.order-feature-text > p,
 .typo-feature-text > p,
 .extends-feature-text > p,
 .renderers-head > p {
@@ -1149,11 +1152,131 @@ h1, h2, h3 {
 
 /* ── ramp: single-color → tonal scale demo ──────────────────────── */
 .ramp-feature,
-.mix-feature {
+.mix-feature,
+.order-feature {
   max-width: var(--max);
   margin: 0 auto;
   padding: clamp(60px, 8vw, 100px) var(--gutter);
   border-top: 1px solid var(--rule);
+}
+
+/* — setOrder demo — */
+.order-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .order-feature-body { grid-template-columns: 5fr 7fr; }
+}
+.order-feature-text { max-width: 56ch; }
+.order-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.order-stage {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2vw, 22px);
+  padding: clamp(20px, 3vw, 32px);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+.order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.order-seed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.order-seed color-input,
+.order-seed hdr-color-input {
+  --hdr-color-input-size: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  display: block;
+}
+.order-modes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.order-modes button {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.order-modes button:hover { color: var(--text); }
+.order-modes button.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+.order-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.order-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.order-swatch {
+  flex: 1 1 70px;
+  min-width: 54px;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+  display: flex;
+  align-items: flex-end;
+  padding: 6px;
+  position: relative;
+  will-change: transform;
+}
+.order-swatch span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: #fff;
+  mix-blend-mode: difference;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.order-swatch:hover span,
+.order-swatch:focus-within span { opacity: 1; }
+.order-caption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+@media (max-width: 899px) {
+  .order-swatch { flex-basis: 54px; }
 }
 
 /* — colorMix demo — */

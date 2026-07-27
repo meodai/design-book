@@ -205,6 +205,41 @@ h3 {
   font-weight: 300;
 }
 
+.scope-header .scope-order {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6rem;
+  color: var(--c-surface-on-alt);
+  font-weight: 300;
+}
+
+.scope-order-select {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--c-surface-on);
+  background-color: var(--c-surface);
+  padding: 0.15rem 1rem 0.15rem 0.4rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 var(--s-line) var(--c-surface-on);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 0.42rem) 55%, calc(100% - 0.28rem) 55%;
+  background-size: 0.22rem 0.22rem, 0.22rem 0.22rem;
+  background-repeat: no-repeat;
+}
+
+.scope-order-select:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--s-line--fat) var(--c-surface-on);
+}
+
 /* CodeMirror scope editor */
 .scope-editor {
   overflow: hidden;

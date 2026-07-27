@@ -40,6 +40,7 @@ import {
   color,
   ref,
   ramp,
+  relativeTo,
 } from "../src/index";
 
 import { Poline } from "poline";
@@ -660,6 +661,112 @@ function nextSmallerLocal (target, scope, minD = 0) {
     });
   }
 
+  render();
+})();
+
+// — setOrder: a scope that keeps itself sorted —
+(function demoOrder () {
+  const seedEl  = document.getElementById("order-seed-input");
+  const modesEl = document.getElementById("order-modes");
+  const host    = document.getElementById("order-swatches");
+  if (!seedEl || !modesEl || !host) return;
+
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Eight named colors on a hue wheel — constant L/C, evenly-spaced hues
+  // rotated off the seed. Names are NOT in hue order, and the list is
+  // declared scrambled, so insertion ≠ value ≠ name. The value orderer
+  // (colorsort-js) walks the wheel, turning the scramble into a smooth arc.
+  // [name, L, C, hueOffset]
+  const SPEC = [
+    ["orchid", 0.70, 0.14, "+330"],
+    ["coral",  0.70, 0.14, "+20"],
+    ["teal",   0.70, 0.14, "+190"],
+    ["gold",   0.70, 0.14, "+85"],
+    ["indigo", 0.70, 0.14, "+285"],
+    ["fern",   0.70, 0.14, "+140"],
+    ["rose",   0.70, 0.14, "+5"],
+    ["azure",  0.70, 0.14, "+245"],
+  ];
+
+  // A real DesignBook — the scope genuinely sorts itself.
+  const book = new DesignBook("order-demo");
+  const seed = book.addScope("seed");
+  seed.set("primary", color(seedEl.getAttribute("value") || "#c8391a"));
+  const palette = book.addScope("palette");
+  for (const [name, L, C, H] of SPEC) {
+    palette.set(name, relativeTo(ref("seed.primary"), "oklch", [L, C, H]));
+  }
+
+  const MODES = {
+    "insertion":  null,
+    "value-asc":  [{ by: "value", direction: "asc" }],   // dark → light
+    "value-desc": [{ by: "value", direction: "desc" }],  // light → dark
+    "name":       [{ by: "name" }],
+  };
+  let mode = "value-asc";
+
+  // Persistent nodes keyed by token name so reorders can FLIP-animate.
+  const tiles = new Map();
+  for (const [name] of SPEC) {
+    const el = document.createElement("div");
+    el.className = "order-swatch";
+    el.tabIndex = 0;
+    el.innerHTML = `<span>${name}</span>`;
+    tiles.set(name, el);
+    host.appendChild(el);
+  }
+
+  function applyOrder () {
+    const o = MODES[mode];
+    if (o) palette.setOrder(o); else palette.clearOrder();
+  }
+
+  function render () {
+    // FLIP — first: record current positions.
+    const first = new Map();
+    for (const [name, el] of tiles) first.set(name, el.getBoundingClientRect());
+
+    // Reorder the DOM and repaint colors per the scope's canonical order.
+    for (const name of palette.getAllKeys()) {
+      const el = tiles.get(name);
+      if (!el) continue;
+      el.style.background = palette.resolve(name);
+      host.appendChild(el); // move into sorted sequence
+    }
+
+    if (reduceMotion) return;
+    // FLIP — last + invert + play.
+    for (const [name, el] of tiles) {
+      const f = first.get(name);
+      const last = el.getBoundingClientRect();
+      const dx = f.left - last.left;
+      const dy = f.top - last.top;
+      if (!dx && !dy) continue;
+      el.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }],
+        { duration: 420, easing: "cubic-bezier(.22,.61,.36,1)" },
+      );
+    }
+  }
+
+  modesEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-mode]");
+    if (!btn) return;
+    mode = btn.dataset.mode;
+    modesEl.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
+    applyOrder();
+    render();
+  });
+
+  const onSeed = () => {
+    try { seed.set("primary", color(seedEl.value)); } catch { return; }
+    render(); // colors re-derived → re-sorts under the current rule
+  };
+  seedEl.addEventListener("input", onSeed);
+  seedEl.addEventListener("change", onSeed);
+
+  applyOrder();
   render();
 })();
 
