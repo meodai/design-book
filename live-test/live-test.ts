@@ -14,6 +14,7 @@ import {
   mostVivid,
   leastVivid,
   minContrastWith,
+  bestContrastWith,
   furthestFrom,
   nth,
   colorMix,
@@ -62,8 +63,12 @@ ui.set('bg-seed', leastVivid(beam));
 ui.set('bg', ramp(ref('ui.bg-seed'), { shade: '100' }));
 ui.set('card', ramp(ref('ui.bg-seed'), { shade: '50' }));
 ui.set('text', minContrastWith(ref('ui.bg'), pool, { ratio: 7 }));
-ui.set('accent', mostVivid(beam, { against: ref('ui.bg'), minContrast: 3 }));
-ui.set('accent-text', minContrastWith(ref('ui.accent'), pool, { ratio: 4.5 }));
+// Interaction color: the palette's most vivid, full stop. The text on it
+// is the most READABLE pool candidate (bestContrastWith = max contrast) —
+// and since the pool carries the ink/paper anchors, there is always a
+// readable option even when the whole palette sits near the accent.
+ui.set('accent', mostVivid(beam));
+ui.set('accent-text', bestContrastWith(ref('ui.accent'), pool));
 // A tonal ramp grown from the accent: deep step for hover, whisper-light
 // steps for the panel wash — one received color becomes a whole family.
 ui.set('accent-hover', ramp(ref('ui.accent'), { shade: '700' }));
@@ -78,6 +83,12 @@ ui.set('chip-1', nth(beam, 0.15));
 ui.set('chip-2', nth(beam, 0.5));
 ui.set('chip-3', nth(beam, 0.85));
 ui.set('code-bg', colorMix(ref('ui.card'), ref('ui.border'), { ratio: 0.45 }));
+// Five consecutive ramp steps of the accent — the fake barchart's bars.
+ui.set('ramp-1', ramp(ref('ui.accent'), { shade: '300' }));
+ui.set('ramp-2', ramp(ref('ui.accent'), { shade: '400' }));
+ui.set('ramp-3', ramp(ref('ui.accent'), { shade: '500' }));
+ui.set('ramp-4', ramp(ref('ui.accent'), { shade: '600' }));
+ui.set('ramp-5', ramp(ref('ui.accent'), { shade: '800' }));
 
 // ── Palette application ──────────────────────────────────────────
 

@@ -253,6 +253,71 @@ body {
 .chip-2 { background: var(--ui-chip-2, #7a4bd6); }
 .chip-3 { background: var(--ui-chip-3, #1a9988); }
 
+/* fake barchart — bars are consecutive ramp steps of the accent */
+
+.chart {
+  background: var(--ui-card, #fff);
+  border: 1px solid var(--ui-border, #e2e2e2);
+  border-radius: 14px;
+  padding: 1.6rem 1.8rem 1.2rem;
+  margin-bottom: 2.5rem;
+  transition: background 0.35s ease, border-color 0.35s ease;
+}
+
+.chart h2 { margin: 0 0 0.3rem; }
+
+.chart-sub {
+  color: var(--ui-muted, #555);
+  margin: 0 0 1.4rem;
+  font-size: 0.9rem;
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.2rem;
+  height: 180px;
+}
+
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  height: 100%;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 6px 6px 2px 2px;
+  transition: background 0.35s ease, height 0.5s ease;
+}
+
+.bar-1 { background: var(--ui-ramp-1, #7aa7d9); }
+.bar-2 { background: var(--ui-ramp-2, #4d88c9); }
+.bar-3 { background: var(--ui-ramp-3, #0066cc); }
+.bar-4 { background: var(--ui-ramp-4, #0055aa); }
+.bar-5 { background: var(--ui-ramp-5, #003a75); }
+
+.bar-val {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ui-muted, #555);
+}
+
+.bar-lbl {
+  font-size: 0.8rem;
+  color: var(--ui-text, #1a1a1a);
+}
+
+.chart-note {
+  margin: 0.9rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ui-muted, #555);
+}
+
 /* panel + form */
 
 .panel {
