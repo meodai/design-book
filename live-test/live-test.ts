@@ -15,7 +15,6 @@ import {
   mostVivid,
   leastVivid,
   minContrastWith,
-  bestContrastWith,
   furthestFrom,
   closestColor,
   relativeTo,
@@ -55,73 +54,78 @@ const pool = book.addScope('pool', { extends: 'beam' });
 pool.set('ink', ref('base.ink'));
 pool.set('paper', ref('base.paper'));
 
-// Every color the page uses, derived from the palette.
-//
-// Text colors are picked with minContrastWith from `pool`: among all
-// candidates that clear the ratio it takes the LOWEST-contrast one — the
-// most palette-flavored color that is still readable. The ink/paper
-// anchors in the pool are the safety net: they only win when no beamed
-// color clears the bar (e.g. an all-mid-tone palette).
-const ui = book.addScope('ui');
-// Background: a ramp step OF the palette's most muted color — carries the
-// palette's hue instead of defaulting to plain paper. Which step depends
-// on the mode; see applyMode().
-ui.set('bg-seed', leastVivid(beam));
-// Body text: ratio 10 rather than the AAA-minimum 7 — at 7 the pick can
-// land on "barely sufficient" colors (a 7.5:1 orange reads as decoration,
-// not text). At 10 only genuinely comfortable candidates survive, and the
-// LEAST contrasty of those keeps the pick palette-flavored.
-ui.set('text', minContrastWith(ref('ui.bg'), pool, { ratio: 10 }));
-// Interaction color: the palette's most vivid, full stop. The text on it
-// is the most READABLE pool candidate (bestContrastWith = max contrast) —
-// and since the pool carries the ink/paper anchors, there is always a
-// readable option even when the whole palette sits near the accent.
-ui.set('accent', mostVivid(beam));
-ui.set('accent-text', bestContrastWith(ref('ui.accent'), pool));
-ui.set('panel-text', minContrastWith(ref('ui.panel'), pool, { ratio: 4.5 }));
-ui.set('border', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.18 }));
-ui.set('muted', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.7 }));
-ui.set('second', furthestFrom(beam));
-ui.set('second-text', minContrastWith(ref('ui.second'), pool, { ratio: 4.5 }));
-ui.set('chip-1', nth(beam, 0.15));
-ui.set('chip-2', nth(beam, 0.5));
-ui.set('chip-3', nth(beam, 0.85));
-ui.set('code-bg', colorMix(ref('ui.card'), ref('ui.border'), { ratio: 0.45 }));
-// Five consecutive ramp steps of the accent — the fake barchart's bars.
-ui.set('ramp-1', ramp(ref('ui.accent'), { shade: '300' }));
-ui.set('ramp-2', ramp(ref('ui.accent'), { shade: '400' }));
-ui.set('ramp-3', ramp(ref('ui.accent'), { shade: '500' }));
-ui.set('ramp-4', ramp(ref('ui.accent'), { shade: '600' }));
-ui.set('ramp-5', ramp(ref('ui.accent'), { shade: '800' }));
-// Semantic states: the palette's own "red-est" and "green-est" colors —
-// error and success always belong to the palette, whatever arrives.
-ui.set('error', closestColor(color('#c0392b'), beam));
-ui.set('success', closestColor(color('#1e8e4d'), beam));
-// Focus ring: a synthesized complement — the accent rotated in OKLCH,
-// so it is related to the palette without being in it.
-ui.set('focus', relativeTo(ref('ui.accent'), 'oklch', [0.62, 0.18, '+160']));
-// Interaction shades of things we already derived. shade() adapts to its
-// input's lightness on its own, so it needs no mode handling.
-ui.set('link-hover', darken(ref('ui.accent'), { amount: 0.12 }));
-ui.set('accent-active', shade(ref('ui.accent'), { amount: 0.2 }));
+// Everything the page uses, split into semantic scopes. Text colors are
+// picked with minContrastWith from `pool`: among all candidates that
+// clear the ratio it takes the LOWEST-contrast one — the most
+// palette-flavored color that is still readable. The ink/paper anchors
+// in the pool are the safety net: they only win when no beamed color
+// clears the bar (e.g. an all-mid-tone palette).
+
+// Surfaces — everything you stand on. The seed is the palette's most
+// muted color; bg/card/panel are ramp steps of it, set by applyMode().
+const surface = book.addScope('surface');
+surface.set('seed', leastVivid(beam));
+surface.set('border', colorMix(ref('surface.bg'), ref('text.body'), { ratio: 0.18 }));
+surface.set('code', colorMix(ref('surface.card'), ref('surface.border'), { ratio: 0.45 }));
+
+// Text — what you read. Body ratio is 10 rather than the AAA-minimum 7:
+// at 7 the pick can land on "barely sufficient" colors (a 7.5:1 orange
+// reads as decoration, not text).
+const text = book.addScope('text');
+text.set('body', minContrastWith(ref('surface.bg'), pool, { ratio: 10 }));
+text.set('muted', colorMix(ref('surface.bg'), ref('text.body'), { ratio: 0.7 }));
+text.set('on-panel', minContrastWith(ref('surface.panel'), pool, { ratio: 4.5 }));
+
+// Action — what you click. Primary is the palette's most vivid, full
+// stop; the text on it is a palette color whenever one clears 7:1 —
+// the ink/paper anchors in the pool only win when nothing beamed has
+// enough delta. The focus ring is a synthesized complement (accent
+// rotated in OKLCH), related to the palette without being in it.
+// shade() adapts to its input's lightness, so `active` needs no mode
+// handling.
+const action = book.addScope('action');
+action.set('primary', mostVivid(beam));
+action.set('on-primary', minContrastWith(ref('action.primary'), pool, { ratio: 7 }));
+action.set('link', darken(ref('action.primary'), { amount: 0.12 }));
+action.set('active', shade(ref('action.primary'), { amount: 0.2 }));
+action.set('focus', relativeTo(ref('action.primary'), 'oklch', [0.62, 0.18, '+160']));
+
+// Ramp — one accent, a whole tonal family (the barchart's bars).
+const accentRamp = book.addScope('ramp');
+for (const step of ['300', '400', '500', '600', '800']) {
+  accentRamp.set(step, ramp(ref('action.primary'), { shade: step }));
+}
+
+// State — the palette's own semantics: its red-est and green-est colors.
+const state = book.addScope('state');
+state.set('error', closestColor(color('#c0392b'), beam));
+state.set('success', closestColor(color('#1e8e4d'), beam));
+
+// Decor — badge and chips; the palette's odd one out and three spreads.
+const decor = book.addScope('decor');
+decor.set('badge', furthestFrom(beam));
+decor.set('on-badge', minContrastWith(ref('decor.badge'), pool, { ratio: 4.5 }));
+decor.set('chip-1', nth(beam, 0.15));
+decor.set('chip-2', nth(beam, 0.5));
+decor.set('chip-3', nth(beam, 0.85));
 
 // ── Light/dark mode: the same derivation logic, inverted ─────────
 // Light mode reads the ramps near their light end (bg 100, card 50);
 // dark mode reads the same ramps near the dark end (bg 950, card 900 —
 // cards stay one step ELEVATED from the background either way). Text
-// pickers depend on ui.bg, so they re-pick on their own when it flips.
+// pickers depend on surface.bg, so they re-pick on their own.
 function applyMode(dark: boolean) {
-  ui.set('bg', ramp(ref('ui.bg-seed'), { shade: dark ? '950' : '100' }));
-  ui.set('card', ramp(ref('ui.bg-seed'), { shade: dark ? '900' : '50' }));
-  ui.set('panel', ramp(ref('ui.accent'), { shade: dark ? '900' : '100' }));
-  ui.set('panel-border', ramp(ref('ui.accent'), { shade: dark ? '800' : '200' }));
-  ui.set('accent-hover', ramp(ref('ui.accent'), { shade: dark ? '400' : '700' }));
-  ui.set(
-    'input-bg',
+  surface.set('bg', ramp(ref('surface.seed'), { shade: dark ? '950' : '100' }));
+  surface.set('card', ramp(ref('surface.seed'), { shade: dark ? '900' : '50' }));
+  surface.set('panel', ramp(ref('action.primary'), { shade: dark ? '900' : '100' }));
+  surface.set('panel-border', ramp(ref('action.primary'), { shade: dark ? '800' : '200' }));
+  surface.set(
+    'input',
     dark
-      ? darken(ref('ui.panel'), { amount: 0.06 })
-      : lighten(ref('ui.panel'), { amount: 0.06 }),
+      ? darken(ref('surface.panel'), { amount: 0.06 })
+      : lighten(ref('surface.panel'), { amount: 0.06 }),
   );
+  action.set('hover', ramp(ref('action.primary'), { shade: dark ? '400' : '700' }));
   document.documentElement.classList.toggle('is-dark', dark);
 }
 
