@@ -9,6 +9,7 @@
 
 import {
   DesignBook,
+  SVGRenderer,
   color,
   ref,
   mostVivid,
@@ -16,6 +17,11 @@ import {
   minContrastWith,
   bestContrastWith,
   furthestFrom,
+  closestColor,
+  relativeTo,
+  lighten,
+  darken,
+  shade,
   nth,
   colorMix,
   ramp,
@@ -40,9 +46,9 @@ const base = book.addScope('base');
 base.set('ink', color('#141414'));
 base.set('paper', color('#fbfbf8'));
 
-// Raw beamed palette — self-sorting, so swatches and positional picks
-// (nth) follow a perceptually smooth order regardless of arrival order.
-const beam = book.addScope('beam', { order: [{ by: 'value' }] });
+// Raw beamed palette — kept exactly in arrival order; the source's own
+// sequence is part of the palette.
+const beam = book.addScope('beam');
 
 // Candidate pool for contrast picking: the beamed palette plus the anchors.
 const pool = book.addScope('pool', { extends: 'beam' });
@@ -57,23 +63,21 @@ pool.set('paper', ref('base.paper'));
 // anchors in the pool are the safety net: they only win when no beamed
 // color clears the bar (e.g. an all-mid-tone palette).
 const ui = book.addScope('ui');
-// Background: a whisper-light ramp step OF the palette's most muted color
-// — carries the palette's hue instead of defaulting to plain paper.
+// Background: a ramp step OF the palette's most muted color — carries the
+// palette's hue instead of defaulting to plain paper. Which step depends
+// on the mode; see applyMode().
 ui.set('bg-seed', leastVivid(beam));
-ui.set('bg', ramp(ref('ui.bg-seed'), { shade: '100' }));
-ui.set('card', ramp(ref('ui.bg-seed'), { shade: '50' }));
-ui.set('text', minContrastWith(ref('ui.bg'), pool, { ratio: 7 }));
+// Body text: ratio 10 rather than the AAA-minimum 7 — at 7 the pick can
+// land on "barely sufficient" colors (a 7.5:1 orange reads as decoration,
+// not text). At 10 only genuinely comfortable candidates survive, and the
+// LEAST contrasty of those keeps the pick palette-flavored.
+ui.set('text', minContrastWith(ref('ui.bg'), pool, { ratio: 10 }));
 // Interaction color: the palette's most vivid, full stop. The text on it
 // is the most READABLE pool candidate (bestContrastWith = max contrast) —
 // and since the pool carries the ink/paper anchors, there is always a
 // readable option even when the whole palette sits near the accent.
 ui.set('accent', mostVivid(beam));
 ui.set('accent-text', bestContrastWith(ref('ui.accent'), pool));
-// A tonal ramp grown from the accent: deep step for hover, whisper-light
-// steps for the panel wash — one received color becomes a whole family.
-ui.set('accent-hover', ramp(ref('ui.accent'), { shade: '700' }));
-ui.set('panel', ramp(ref('ui.accent'), { shade: '100' }));
-ui.set('panel-border', ramp(ref('ui.accent'), { shade: '200' }));
 ui.set('panel-text', minContrastWith(ref('ui.panel'), pool, { ratio: 4.5 }));
 ui.set('border', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.18 }));
 ui.set('muted', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.7 }));
@@ -89,6 +93,40 @@ ui.set('ramp-2', ramp(ref('ui.accent'), { shade: '400' }));
 ui.set('ramp-3', ramp(ref('ui.accent'), { shade: '500' }));
 ui.set('ramp-4', ramp(ref('ui.accent'), { shade: '600' }));
 ui.set('ramp-5', ramp(ref('ui.accent'), { shade: '800' }));
+// Semantic states: the palette's own "red-est" and "green-est" colors —
+// error and success always belong to the palette, whatever arrives.
+ui.set('error', closestColor(color('#c0392b'), beam));
+ui.set('success', closestColor(color('#1e8e4d'), beam));
+// Focus ring: a synthesized complement — the accent rotated in OKLCH,
+// so it is related to the palette without being in it.
+ui.set('focus', relativeTo(ref('ui.accent'), 'oklch', [0.62, 0.18, '+160']));
+// Interaction shades of things we already derived. shade() adapts to its
+// input's lightness on its own, so it needs no mode handling.
+ui.set('link-hover', darken(ref('ui.accent'), { amount: 0.12 }));
+ui.set('accent-active', shade(ref('ui.accent'), { amount: 0.2 }));
+
+// ── Light/dark mode: the same derivation logic, inverted ─────────
+// Light mode reads the ramps near their light end (bg 100, card 50);
+// dark mode reads the same ramps near the dark end (bg 950, card 900 —
+// cards stay one step ELEVATED from the background either way). Text
+// pickers depend on ui.bg, so they re-pick on their own when it flips.
+function applyMode(dark: boolean) {
+  ui.set('bg', ramp(ref('ui.bg-seed'), { shade: dark ? '950' : '100' }));
+  ui.set('card', ramp(ref('ui.bg-seed'), { shade: dark ? '900' : '50' }));
+  ui.set('panel', ramp(ref('ui.accent'), { shade: dark ? '900' : '100' }));
+  ui.set('panel-border', ramp(ref('ui.accent'), { shade: dark ? '800' : '200' }));
+  ui.set('accent-hover', ramp(ref('ui.accent'), { shade: dark ? '400' : '700' }));
+  ui.set(
+    'input-bg',
+    dark
+      ? darken(ref('ui.panel'), { amount: 0.06 })
+      : lighten(ref('ui.panel'), { amount: 0.06 }),
+  );
+  document.documentElement.classList.toggle('is-dark', dark);
+}
+
+let darkMode = localStorage.getItem('live-test-dark') === '1';
+applyMode(darkMode);
 
 // ── Palette application ──────────────────────────────────────────
 
@@ -134,6 +172,7 @@ styleEl.id = 'live-vars';
 document.head.appendChild(styleEl);
 
 const paletteEl = document.getElementById('beam-palette')!;
+const graphEl = document.getElementById('dep-graph')!;
 
 function renderAll() {
   try {
@@ -141,6 +180,15 @@ function renderAll() {
   } catch (e) {
     console.warn('[live-test] render failed:', e);
     return;
+  }
+
+  try {
+    graphEl.innerHTML = new SVGRenderer(book, {
+      showConnections: true,
+      interactive: true,
+    }).render();
+  } catch (e) {
+    console.warn('[live-test] svg graph render failed:', e);
   }
 
   paletteEl.innerHTML = '';
@@ -244,3 +292,43 @@ form.addEventListener('submit', (e) => {
 // Prefill the last-used code (no auto-connect — sessions expire).
 const lastCode = localStorage.getItem('live-test-beam-code');
 if (lastCode) codeInput.value = lastCode;
+
+// ── Fake form: shows the palette-derived error/success states ────
+
+const panelForm = document.getElementById('panel-form') as HTMLFormElement;
+const nameInput = document.getElementById('f-name') as HTMLInputElement;
+const formNote = document.getElementById('form-note')!;
+
+panelForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!nameInput.value.trim()) {
+    nameInput.classList.add('is-invalid');
+    formNote.textContent = 'A name would help — even a made-up one.';
+    formNote.className = 'form-note is-error';
+  } else {
+    nameInput.classList.remove('is-invalid');
+    formNote.textContent = `Subscribed, ${nameInput.value.trim()} — in palette-appropriate green.`;
+    formNote.className = 'form-note is-success';
+  }
+});
+
+nameInput.addEventListener('input', () => nameInput.classList.remove('is-invalid'));
+
+// ── Dark mode toggle ─────────────────────────────────────────────
+
+const modeBtn = document.getElementById('mode-toggle')!;
+
+function syncModeBtn() {
+  modeBtn.textContent = darkMode ? '○ light' : '● dark';
+}
+
+modeBtn.addEventListener('click', () => {
+  darkMode = !darkMode;
+  localStorage.setItem('live-test-dark', darkMode ? '1' : '0');
+  applyMode(darkMode);
+  book.flush();
+  renderAll();
+  syncModeBtn();
+});
+
+syncModeBtn();

@@ -32,6 +32,8 @@
       <span id="beam-state-label">not connected</span>
     </div>
 
+    <button type="button" id="mode-toggle" class="mode-toggle">● dark</button>
+
     <div class="beam-palette" id="beam-palette" aria-label="received palette"></div>
   </aside>
 
@@ -120,8 +122,8 @@
           <span class="tag">live</span>
         </div>
       </div>
-      <form class="panel-form" onsubmit="return false">
-        <label>Name <input type="text" placeholder="Ada Lovelace" /></label>
+      <form class="panel-form" id="panel-form" novalidate>
+        <label>Name <input id="f-name" type="text" placeholder="Ada Lovelace" /></label>
         <label>Favourite color space
           <select>
             <option>OKLCH</option>
@@ -131,7 +133,17 @@
         </label>
         <label class="check"><input type="checkbox" checked /> Beam me updates</label>
         <button class="btn btn-primary" type="submit">Subscribe</button>
+        <p class="form-note" id="form-note" role="status"></p>
       </form>
+    </section>
+
+    <section class="graph" aria-labelledby="graph-title">
+      <h2 id="graph-title">The receipts</h2>
+      <p class="graph-sub">
+        Every decision on this page, drawn by the book's own SVG renderer —
+        solid curves are references, dashed ones are function dependencies.
+      </p>
+      <div class="graph-svg" id="dep-graph"></div>
     </section>
 
     <footer class="page-footer">

@@ -78,6 +78,19 @@ body {
   border-radius: 50%;
   background: #6b6b74;
 }
+.mode-toggle {
+  align-self: flex-start;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #3a3a42;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.mode-toggle:hover { border-color: #6b6b74; }
+
 .beam-dot[data-state='connecting'] { background: #e6b04b; }
 .beam-dot[data-state='connected']  { background: #e6b04b; }
 .beam-dot[data-state='paired']     { background: #59c96c; }
@@ -163,7 +176,9 @@ body {
   background: var(--ui-accent, #0066cc);
   color: var(--ui-accent-text, #fff);
 }
-.btn-primary:hover { background: var(--ui-accent-hover, #0055aa); }
+.btn-primary:hover  { background: var(--ui-accent-hover, #0055aa); }
+.btn-primary:active { background: var(--ui-accent-active, #004488); }
+.btn:focus-visible  { outline: 2px solid var(--ui-focus, #0066cc); outline-offset: 2px; }
 
 .btn-ghost {
   background: transparent;
@@ -271,6 +286,7 @@ body {
   text-decoration: none;
   font-weight: 600;
 }
+.card a:hover { color: var(--ui-link-hover, #004488); }
 
 .chip {
   display: block;
@@ -392,15 +408,24 @@ body {
   padding: 0.5rem 0.7rem;
   border-radius: 3px;
   border: 1px solid var(--ui-border, #ccc);
-  background: var(--ui-bg, #fafafa);
-  color: var(--ui-text, #1a1a1a);
+  background: var(--ui-input-bg, #fafafa);
+  color: var(--ui-panel-text, #1a1a1a);
 }
 
 .panel-form input[type='text']:focus-visible,
 .panel-form select:focus-visible {
-  outline: 2px solid var(--ui-accent, #0066cc);
+  outline: 2px solid var(--ui-focus, #0066cc);
   outline-offset: 1px;
 }
+
+.panel-form input.is-invalid {
+  border-color: var(--ui-error, #c0392b);
+  outline: 1px solid var(--ui-error, #c0392b);
+}
+
+.form-note { margin: 0; font-size: 0.85rem; min-height: 1.2em; }
+.form-note.is-error   { color: var(--ui-error, #c0392b); }
+.form-note.is-success { color: var(--ui-success, #1e8e4d); }
 
 .panel-form .check {
   flex-direction: row;
@@ -411,6 +436,33 @@ body {
 .panel-form input[type='checkbox'] { accent-color: var(--ui-accent, #0066cc); }
 
 .panel-form .btn { align-self: flex-start; }
+
+/* dependency graph — the book's own SVG renderer, themed by the book */
+
+.graph { padding-bottom: 2.5rem; }
+
+.graph h2 { margin: 0 0 0.3rem; }
+
+.graph-sub {
+  color: var(--ui-muted, #555);
+  margin: 0 0 1.4rem;
+  font-size: 0.9rem;
+  max-width: 40rem;
+}
+
+.graph-svg {
+  --c-surface: var(--ui-card, #fff);
+  --c-surface-on: var(--ui-text, #1a1a1a);
+  --c-surface-on-alt: var(--ui-muted, #888);
+  overflow-x: auto;
+}
+
+.graph-svg svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+}
 
 /* footer */
 
