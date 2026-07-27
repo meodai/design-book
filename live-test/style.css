@@ -47,7 +47,7 @@ body {
   min-width: 0;
   padding: 0.45rem 0.6rem;
   border: 1px solid #3a3a42;
-  border-radius: 6px;
+  border-radius: 3px;
   background: #0e0e11;
   color: inherit;
   font: inherit;
@@ -57,7 +57,7 @@ body {
 .beam-connect button {
   padding: 0.45rem 0.8rem;
   border: 0;
-  border-radius: 6px;
+  border-radius: 3px;
   background: #f2f2f0;
   color: #16161a;
   font: inherit;
@@ -93,7 +93,7 @@ body {
 .beam-palette .swatch {
   width: 34px;
   height: 34px;
-  border-radius: 7px;
+  border-radius: 3px;
   border: 1px solid rgb(255 255 255 / 0.12);
   transition: background 0.35s ease;
 }
@@ -151,7 +151,7 @@ body {
 .btn {
   font: inherit;
   padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1px solid transparent;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
@@ -174,7 +174,37 @@ body {
 
 /* hero */
 
-.hero { padding: 3.5rem 0 3rem; }
+.hero {
+  padding: 3.5rem 0 3rem;
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.hero-copy { flex: 1; }
+
+.hero-art { flex: 0 0 240px; }
+
+.hero-art svg { width: 100%; height: auto; display: block; }
+
+.art-ray-in {
+  stroke: var(--ui-muted, #999);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.art-prism {
+  stroke: var(--ui-text, #1a1a1a);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  fill: var(--ui-card, transparent);
+}
+
+.art-band { transition: fill 0.35s ease; }
+.art-band-1 { fill: var(--ui-accent, #0066cc); }
+.art-band-2 { fill: var(--ui-chip-1, #7a4bd6); }
+.art-band-3 { fill: var(--ui-chip-2, #1a9988); }
+.art-band-4 { fill: var(--ui-chip-3, #e8a13c); }
 
 .hero h1 {
   font-size: clamp(1.8rem, 4vw, 2.8rem);
@@ -195,7 +225,7 @@ body {
 .badge {
   display: inline-block;
   padding: 0.25rem 0.7rem;
-  border-radius: 999px;
+  border-radius: 3px;
   font-size: 0.78rem;
   font-weight: 600;
   background: var(--ui-second, #7a4bd6);
@@ -214,7 +244,7 @@ body {
 .card {
   background: var(--ui-card, #fff);
   border: 1px solid var(--ui-border, #e2e2e2);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.1rem 1.2rem 1.2rem;
   transition: background 0.35s ease, border-color 0.35s ease;
 }
@@ -232,7 +262,7 @@ body {
   font-size: 0.82em;
   background: var(--ui-code-bg, #eee);
   padding: 0.05em 0.3em;
-  border-radius: 4px;
+  border-radius: 2px;
 }
 
 .card a {
@@ -246,7 +276,7 @@ body {
   display: block;
   width: 26px;
   height: 26px;
-  border-radius: 8px;
+  border-radius: 3px;
   transition: background 0.35s ease;
 }
 .chip-1 { background: var(--ui-chip-1, #0066cc); }
@@ -258,7 +288,7 @@ body {
 .chart {
   background: var(--ui-card, #fff);
   border: 1px solid var(--ui-border, #e2e2e2);
-  border-radius: 14px;
+  border-radius: 2px;
   padding: 1.6rem 1.8rem 1.2rem;
   margin-bottom: 2.5rem;
   transition: background 0.35s ease, border-color 0.35s ease;
@@ -291,7 +321,7 @@ body {
 
 .bar {
   width: 100%;
-  border-radius: 6px 6px 2px 2px;
+  border-radius: 2px 2px 0 0;
   transition: background 0.35s ease, height 0.5s ease;
 }
 
@@ -326,7 +356,7 @@ body {
   gap: 2rem;
   background: var(--ui-panel, #fff);
   border: 1px solid var(--ui-panel-border, #e2e2e2);
-  border-radius: 14px;
+  border-radius: 2px;
   padding: 1.6rem 1.8rem;
   color: var(--ui-panel-text, #1a1a1a);
   transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
@@ -342,7 +372,7 @@ body {
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.2rem 0.6rem;
-  border-radius: 999px;
+  border-radius: 3px;
   border: 1px solid var(--ui-accent, #0066cc);
   color: var(--ui-accent, #0066cc);
 }
@@ -360,7 +390,7 @@ body {
 .panel-form select {
   font: inherit;
   padding: 0.5rem 0.7rem;
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1px solid var(--ui-border, #ccc);
   background: var(--ui-bg, #fafafa);
   color: var(--ui-text, #1a1a1a);
@@ -403,4 +433,6 @@ body {
   .beam-bar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .page { padding: 1.25rem 1.25rem 2.5rem; }
   .panel { grid-template-columns: 1fr; }
+  .hero { flex-direction: column-reverse; }
+  .hero-art { flex-basis: auto; width: 200px; }
 }

@@ -50,16 +50,29 @@
     </header>
 
     <section class="hero">
-      <span class="badge" id="hero-badge">Live-themed</span>
-      <h1>Every color on this page<br />was derived, not chosen.</h1>
-      <p>
-        Beam a palette from any color tool and design-book works out the rest:
-        readable text, surfaces, borders, states — recomputed live, every time
-        a color changes.
-      </p>
-      <div class="hero-actions">
-        <button class="btn btn-primary">Get started</button>
-        <button class="btn btn-ghost">How it works</button>
+      <div class="hero-copy">
+        <span class="badge" id="hero-badge">Live-themed</span>
+        <h1>Every color on this page<br />was derived, not chosen.</h1>
+        <p>
+          Beam a palette from any color tool and design-book works out the rest:
+          readable text, surfaces, borders, states — recomputed live, every time
+          a color changes.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary">Get started</button>
+          <button class="btn btn-ghost">How it works</button>
+        </div>
+      </div>
+      <!-- One ray in, the palette out: the token-beam prism. -->
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="8" y1="96" x2="88" y2="96" class="art-ray-in" />
+          <polygon points="120,42 78,126 162,126" class="art-prism" />
+          <polygon points="146,88 232,24 232,58"  class="art-band art-band-1" />
+          <polygon points="146,92 232,64 232,96"  class="art-band art-band-2" />
+          <polygon points="146,98 232,102 232,134" class="art-band art-band-3" />
+          <polygon points="146,102 232,140 232,174" class="art-band art-band-4" />
+        </svg>
       </div>
     </section>
 
