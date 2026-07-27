@@ -230,7 +230,7 @@ body {
 
 .card code {
   font-size: 0.82em;
-  background: color-mix(in srgb, var(--ui-border, #e2e2e2) 45%, transparent);
+  background: var(--ui-code-bg, #eee);
   padding: 0.05em 0.3em;
   border-radius: 4px;
 }
@@ -259,16 +259,17 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
-  background: var(--ui-card, #fff);
-  border: 1px solid var(--ui-border, #e2e2e2);
+  background: var(--ui-panel, #fff);
+  border: 1px solid var(--ui-panel-border, #e2e2e2);
   border-radius: 14px;
   padding: 1.6rem 1.8rem;
-  transition: background 0.35s ease, border-color 0.35s ease;
+  color: var(--ui-panel-text, #1a1a1a);
+  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease;
 }
 
 .panel h2 { margin: 0 0 0.4rem; }
 
-.panel-copy p { color: var(--ui-muted, #555); margin: 0 0 1rem; }
+.panel-copy p { opacity: 0.8; margin: 0 0 1rem; }
 
 .tags { display: flex; gap: 0.4rem; }
 

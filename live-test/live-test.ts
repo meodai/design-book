@@ -13,11 +13,11 @@ import {
   ref,
   mostVivid,
   leastVivid,
-  bestContrastWith,
+  minContrastWith,
   furthestFrom,
   nth,
   colorMix,
-  darken,
+  ramp,
 } from '../src/index';
 
 import {
@@ -49,20 +49,35 @@ pool.set('ink', ref('base.ink'));
 pool.set('paper', ref('base.paper'));
 
 // Every color the page uses, derived from the palette.
+//
+// Text colors are picked with minContrastWith from `pool`: among all
+// candidates that clear the ratio it takes the LOWEST-contrast one — the
+// most palette-flavored color that is still readable. The ink/paper
+// anchors in the pool are the safety net: they only win when no beamed
+// color clears the bar (e.g. an all-mid-tone palette).
 const ui = book.addScope('ui');
-ui.set('accent', mostVivid(beam));
-ui.set('accent-text', bestContrastWith(ref('ui.accent'), pool));
-ui.set('accent-hover', darken(ref('ui.accent'), { amount: 0.08 }));
-ui.set('bg', colorMix(ref('base.paper'), leastVivid(beam), { ratio: 0.12 }));
-ui.set('text', bestContrastWith(ref('ui.bg'), pool));
-ui.set('card', colorMix(ref('ui.bg'), ref('base.paper'), { ratio: 0.65 }));
+// Background: a whisper-light ramp step OF the palette's most muted color
+// — carries the palette's hue instead of defaulting to plain paper.
+ui.set('bg-seed', leastVivid(beam));
+ui.set('bg', ramp(ref('ui.bg-seed'), { shade: '100' }));
+ui.set('card', ramp(ref('ui.bg-seed'), { shade: '50' }));
+ui.set('text', minContrastWith(ref('ui.bg'), pool, { ratio: 7 }));
+ui.set('accent', mostVivid(beam, { against: ref('ui.bg'), minContrast: 3 }));
+ui.set('accent-text', minContrastWith(ref('ui.accent'), pool, { ratio: 4.5 }));
+// A tonal ramp grown from the accent: deep step for hover, whisper-light
+// steps for the panel wash — one received color becomes a whole family.
+ui.set('accent-hover', ramp(ref('ui.accent'), { shade: '700' }));
+ui.set('panel', ramp(ref('ui.accent'), { shade: '100' }));
+ui.set('panel-border', ramp(ref('ui.accent'), { shade: '200' }));
+ui.set('panel-text', minContrastWith(ref('ui.panel'), pool, { ratio: 4.5 }));
 ui.set('border', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.18 }));
-ui.set('muted', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.62 }));
+ui.set('muted', colorMix(ref('ui.bg'), ref('ui.text'), { ratio: 0.7 }));
 ui.set('second', furthestFrom(beam));
-ui.set('second-text', bestContrastWith(ref('ui.second'), pool));
+ui.set('second-text', minContrastWith(ref('ui.second'), pool, { ratio: 4.5 }));
 ui.set('chip-1', nth(beam, 0.15));
 ui.set('chip-2', nth(beam, 0.5));
 ui.set('chip-3', nth(beam, 0.85));
+ui.set('code-bg', colorMix(ref('ui.card'), ref('ui.border'), { ratio: 0.45 }));
 
 // ── Palette application ──────────────────────────────────────────
 
