@@ -1,14 +1,14 @@
-import { wcagContrast, formatHex, parse } from 'culori';
+import { wcagContrast, parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
   extractVisualDependencies,
-  getTokenProcessors,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { collectScopeColors } from './scope-colors';
 
 export function bestContrastWithImpl(targetValue: string, scope: Scope, not: string[] = []): string {
   const targetColor = parse(targetValue);
@@ -19,50 +19,14 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, not: str
     );
   }
 
-  const excluded = new Set(not);
   let bestHex: string | null = null;
   let bestRatio = -1;
 
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const token = scope.get(key);
-    if (!token) continue;
-
-    let colorHex: string | null = null;
-
-    if (token.type === 'color') {
-      const tv = token as TokenValue;
-      const processors = getTokenProcessors(tv);
-      if (processors && processors[0]) {
-        const formatted = formatHex(processors[0].instance);
-        if (formatted) colorHex = formatted;
-      }
-      if (!colorHex) {
-        const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      }
-    } else {
-      // Reference or function token — resolve through the scope so the candidate
-      // pool includes computed colors (colorMix, lighten, darken, etc.), not
-      // just hand-written ones.
-      try {
-        const resolved = scope.resolve(key);
-        const parsed = parse(resolved);
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!colorHex) continue;
-
-    const candidateColor = parse(colorHex);
-    if (!candidateColor) continue;
-
-    const ratio = wcagContrast(targetColor, candidateColor);
+  for (const candidate of collectScopeColors(scope, not)) {
+    const ratio = wcagContrast(targetColor, candidate.parsed);
     if (ratio > bestRatio) {
       bestRatio = ratio;
-      bestHex = colorHex;
+      bestHex = candidate.hex;
     }
   }
 

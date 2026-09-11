@@ -1,56 +1,10 @@
-import { parse, formatHex, converter, differenceEuclidean } from 'culori';
-import { createFunctionToken, extractVisualDependencies, getTokenProcessors, normalizeNotKeys } from '../../tokens';
-import type { FunctionTokenValue, ReferenceValue, TokenValue } from '../../tokens';
+import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from '../../tokens';
+import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
-
-const toOklab = converter('oklab');
-const deltaE = differenceEuclidean('oklab');
+import { collectScopeColors, perceptualDistance } from './scope-colors';
 
 export function furthestFromImpl(scope: Scope, not: string[] = []): string {
-  const excluded = new Set(not);
-  const colors: Array<{ hex: string; lab: any }> = [];
-
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const token = scope.get(key);
-    if (!token) continue;
-
-    let colorHex: string | null = null;
-
-    if (token.type === 'color') {
-      const tv = token as TokenValue;
-      const processors = getTokenProcessors(tv);
-      if (processors && processors[0]) {
-        const formatted = formatHex(processors[0].instance);
-        if (formatted) colorHex = formatted;
-      }
-      if (!colorHex) {
-        const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      }
-    } else {
-      // Reference or function token — resolve through the scope so the
-      // candidate pool includes computed colors (colorMix, lighten, darken,
-      // etc.), not just hand-written ones.
-      try {
-        const resolved = scope.resolve(key);
-        const parsed = parse(resolved);
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!colorHex) continue;
-
-    const parsed = parse(colorHex);
-    if (!parsed) continue;
-
-    const lab = toOklab(parsed);
-    if (!lab) continue;
-
-    colors.push({ hex: colorHex, lab });
-  }
+  const colors = collectScopeColors(scope, not);
 
   if (colors.length === 0) {
     return '#00000000';
@@ -67,7 +21,7 @@ export function furthestFromImpl(scope: Scope, not: string[] = []): string {
     let totalDistance = 0;
     for (let j = 0; j < colors.length; j++) {
       if (i === j) continue;
-      totalDistance += deltaE(colors[i].lab, colors[j].lab);
+      totalDistance += perceptualDistance(colors[i].parsed, colors[j].parsed);
     }
     const avgDistance = totalDistance / (colors.length - 1);
     if (avgDistance > highestAvgDistance) {

@@ -1,9 +1,8 @@
-import { parse, formatHex, converter, wcagContrast } from 'culori';
+import { parse, converter, wcagContrast } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
   extractVisualDependencies,
-  getTokenProcessors,
   normalizeNotKeys,
 } from '../../tokens';
 import type {
@@ -14,6 +13,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { collectScopeColors } from './scope-colors';
 
 const toOklch = converter('oklch');
 
@@ -35,50 +35,15 @@ export function mostVividImpl(
   not: string[] = [],
 ): string {
   const targetColor = against ? parse(against) : null;
-  const excluded = new Set(not);
 
   const candidates: Array<{ hex: string; chroma: number; contrast: number }> = [];
 
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const token = scope.get(key);
-    if (!token) continue;
-
-    let colorHex: string | null = null;
-
-    if (token.type === 'color') {
-      const tv = token as TokenValue;
-      const processors = getTokenProcessors(tv);
-      if (processors && processors[0]) {
-        const formatted = formatHex(processors[0].instance);
-        if (formatted) colorHex = formatted;
-      }
-      if (!colorHex) {
-        const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      }
-    } else {
-      // Reference or function token — resolve through the scope so the
-      // candidate pool includes computed colours (colorMix, lighten, darken,
-      // etc.), not just hand-written ones.
-      try {
-        const resolved = scope.resolve(key);
-        const parsed = parse(resolved);
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!colorHex) continue;
-
-    const parsed = parse(colorHex);
-    if (!parsed) continue;
-    const lch = toOklch(parsed);
+  for (const candidate of collectScopeColors(scope, not)) {
+    const lch = toOklch(candidate.parsed);
     if (!lch || typeof lch.c !== 'number') continue;
 
-    const contrast = targetColor ? wcagContrast(targetColor, parsed) : Infinity;
-    candidates.push({ hex: colorHex, chroma: lch.c, contrast });
+    const contrast = targetColor ? wcagContrast(targetColor, candidate.parsed) : Infinity;
+    candidates.push({ hex: candidate.hex, chroma: lch.c, contrast });
   }
 
   if (candidates.length === 0) {

@@ -3,12 +3,12 @@ import {
   createFunctionToken,
   extractDependencies,
   extractVisualDependencies,
-  getTokenProcessors,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { collectScopeColors } from './scope-colors';
 
 export interface MinContrastOptions {
   ratio?: number;
@@ -32,8 +32,6 @@ export function minContrastWithImpl(
     );
   }
 
-  const excluded = new Set(not);
-
   // `not` may also reference tokens outside the iterated scope (e.g. another
   // scope's selector). Pre-resolve those to hex so candidates whose value
   // matches one are excluded — lets `not: [ref('ui.accent')]` keep this
@@ -51,45 +49,12 @@ export function minContrastWithImpl(
 
   const candidates: Array<{ hex: string; contrast: number }> = [];
 
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const token = scope.get(key);
-    if (!token) continue;
-
-    let colorHex: string | null = null;
-
-    if (token.type === 'color') {
-      const tv = token as TokenValue;
-      const processors = getTokenProcessors(tv);
-      if (processors && processors[0]) {
-        const formatted = formatHex(processors[0].instance);
-        if (formatted) colorHex = formatted;
-      }
-      if (!colorHex) {
-        const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      }
-    } else {
-      // Reference or function token — resolve through the scope so the
-      // candidate pool includes computed colors (colorMix, lighten, darken,
-      // etc.), not just hand-written ones.
-      try {
-        const resolved = scope.resolve(key);
-        const parsed = parse(resolved);
-        if (parsed) colorHex = formatHex(parsed) ?? null;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!colorHex) continue;
-    if (excludedHexes.has(colorHex)) continue;
-
-    const candidateColor = parse(colorHex);
-    if (!candidateColor) continue;
-
-    const contrast = wcagContrast(targetColor, candidateColor);
-    candidates.push({ hex: colorHex, contrast });
+  for (const candidate of collectScopeColors(scope, not)) {
+    if (excludedHexes.has(candidate.hex)) continue;
+    candidates.push({
+      hex: candidate.hex,
+      contrast: wcagContrast(targetColor, candidate.parsed),
+    });
   }
 
   if (candidates.length === 0) {
