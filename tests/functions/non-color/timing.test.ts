@@ -19,4 +19,12 @@ describe('timing', () => {
 
     expect(book.resolve('ui.expand')).toBe('300ms ease-in-out 100ms');
   });
+
+  it('includes negative delay when specified', () => {
+    const book = new DesignBook('test');
+    const ui = book.addScope('ui');
+    ui.set('early', timing(ms(300), 'ease-in-out', { delay: -100 }));
+
+    expect(book.resolve('ui.early')).toBe('300ms ease-in-out -100ms');
+  });
 });

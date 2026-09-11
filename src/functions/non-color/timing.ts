@@ -2,7 +2,7 @@ import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function timingImpl(duration: string, easing: string, delay: number): string {
-  if (delay > 0) {
+  if (delay !== 0) {
     return `${duration} ${easing} ${delay}ms`;
   }
   return `${duration} ${easing}`;
