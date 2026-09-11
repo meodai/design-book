@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { px, rem, ms, ref } from '../../../src/tokens';
+import { px, rem, ms, ref, string as stringToken } from '../../../src/tokens';
 import { nextSmaller } from '../../../src/functions/non-color/next-smaller';
 
 describe('nextSmaller', () => {
@@ -71,6 +71,32 @@ describe('nextSmaller', () => {
     ui.set('breath', nextSmaller(ref('space.s'), space));
 
     expect(() => book.resolve('ui.breath')).toThrow(/no member of scope "space" is smaller/);
+  });
+
+  it('skips off-unit members instead of throwing, falling back to the standard "no smaller" error when none match', () => {
+    const book = new DesignBook('test');
+    const space = book.addScope('space');
+    space.set('s', px(8));
+    space.set('m', rem(1));
+
+    const ui = book.addScope('ui');
+    ui.set('breath', nextSmaller(ref('space.s'), space));
+
+    expect(() => book.resolve('ui.breath')).toThrow(/no member of scope "space" is smaller/);
+  });
+
+  it('finds a same-unit candidate even when the scope contains off-unit or non-dimensional noise', () => {
+    const book = new DesignBook('test');
+    const space = book.addScope('space');
+    space.set('odd-unit', rem(1));
+    space.set('non-dimensional', stringToken('2xl'));
+    space.set('s', px(8));
+    space.set('m', px(12));
+
+    const ui = book.addScope('ui');
+    ui.set('breath', nextSmaller(px(16), space));
+
+    expect(book.resolve('ui.breath')).toBe('12px');
   });
 
   it('respects the not option', () => {

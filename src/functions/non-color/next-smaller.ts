@@ -69,12 +69,10 @@ export function nextSmallerImpl(
       continue;
     }
 
-    if (candidate.unit !== target.unit) {
-      throw new Error(
-        `nextSmaller: unit mismatch in scope "${scope.name}" — `
-          + `target uses "${target.unit || '(unitless)'}" but key "${key}" uses "${candidate.unit || '(unitless)'}"`,
-      );
-    }
+    // Skip members whose unit doesn't match the target instead of failing
+    // the whole scope — a stray `rem(1)` or `string('2xl')` shouldn't break
+    // nextSmaller for an otherwise-consistent px scope.
+    if (candidate.unit !== target.unit) continue;
 
     if (candidate.num >= target.num - minDistance) continue;
     if (!best || candidate.num > best.num) {
