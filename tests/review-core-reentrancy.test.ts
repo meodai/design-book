@@ -59,3 +59,55 @@ describe('a re-entrant change that closes a cycle', () => {
     expect(later).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('a handler that throws does not discard what was queued behind it', () => {
+  it('still wires up and emits the queued change', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('x', color('#111111'));
+
+    const wWatcher = vi.fn();
+    book.watch('s.w', wWatcher);
+
+    let fired = false;
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      s.set('w', px(4));
+    });
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      fired = true;
+      throw new Error('handler boom');
+    });
+
+    expect(() => s.set('x', color('#222222'))).toThrow('handler boom');
+
+    // s.x is rolled back by Scope.set, but the queued s.w must not be orphaned
+    expect(book.resolve('s.x')).toBe('#111111');
+    expect(book.resolve('s.w')).toBe('4px');
+    expect(book.getDependencyGraph().getAllNodes()).toContain('s.w');
+    expect(wWatcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the queue empty for the next change', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('x', color('#111111'));
+
+    let fired = false;
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      fired = true;
+      s.set('w', px(4));
+      throw new Error('handler boom');
+    });
+
+    expect(() => s.set('x', color('#222222'))).toThrow('handler boom');
+
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+    s.set('x', color('#333333'));
+
+    expect(keys).toEqual(['s.x']);
+  });
+});

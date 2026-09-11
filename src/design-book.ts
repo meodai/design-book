@@ -527,26 +527,41 @@ export class DesignBook {
     try {
       this._processAutoChange(qualifiedKey, newValue, oldValue);
 
-      // Process any re-entrant changes. Each one gets its own try/catch: the
-      // outer set() has already been accepted, so a failure here must roll
-      // back *that* key rather than surface as an exception from an unrelated
-      // set(), and it must not abandon the changes queued behind it.
-      while (this._reentrantQueue.length > 0) {
-        const queued = this._reentrantQueue.shift()!;
-        try {
-          this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
-        } catch (e) {
-          this._rollbackKey(queued.key, queued.oldValue);
-          this.emit('error', {
-            key: queued.key,
-            error: e instanceof Error ? e : new Error(String(e)),
-            phase: 'reentrant',
-          });
-        }
-      }
+      this._drainReentrantQueue();
     } finally {
-      this._propagating = false;
-      this._reentrantQueue.length = 0;
+      // The outer change may have bailed out — an event handler throwing, a
+      // rejected write — with entries still queued. Their tokens are already
+      // stored, so discarding them would leave orphans with no graph node
+      // that nothing ever retries. Drain them through the same path instead.
+      try {
+        this._drainReentrantQueue();
+      } finally {
+        // Backstop: a listener throwing out of the drain must not leave a
+        // poisoned queue behind to replay on the next change.
+        this._reentrantQueue.length = 0;
+        this._propagating = false;
+      }
+    }
+  }
+
+  /** Apply the changes that were made while a previous one was propagating.
+   *  Each gets its own try/catch: the outer `set()` has already been
+   *  accepted, so a failure here must roll back *that* key rather than
+   *  surface as an exception from an unrelated `set()`, and it must not
+   *  abandon the changes queued behind it. */
+  private _drainReentrantQueue(): void {
+    while (this._reentrantQueue.length > 0) {
+      const queued = this._reentrantQueue.shift()!;
+      try {
+        this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
+      } catch (e) {
+        this._rollbackKey(queued.key, queued.oldValue);
+        this.emit('error', {
+          key: queued.key,
+          error: e instanceof Error ? e : new Error(String(e)),
+          phase: 'reentrant',
+        });
+      }
     }
   }
 
