@@ -103,7 +103,38 @@ export class Renderer {
     this.functionRenderers.set(name, renderer);
   }
 
+  /** Two different `scope.token` pairs can mangle to the same CSS custom
+   *  property name (`a.b-c` and `a-b.c` both become `--a-b-c`; `fontSize`,
+   *  `font_size` and `font-size` collide inside one scope). Silently
+   *  emitting both means the last declaration wins, so fail loudly instead. */
+  private assertNoVarNameCollisions(): void {
+    const seen = new Map<string, string[]>();
+
+    for (const scope of this.book.getAllScopes()) {
+      for (const key of scope.getAllKeys()) {
+        if (!scope.get(key)) continue;
+        const varName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+        const owners = seen.get(varName);
+        if (owners) owners.push(`${scope.name}.${key}`);
+        else seen.set(varName, [`${scope.name}.${key}`]);
+      }
+    }
+
+    const collisions = [...seen.entries()].filter(([, owners]) => owners.length > 1);
+    if (collisions.length === 0) return;
+
+    const detail = collisions
+      .map(([varName, owners]) => `${varName} <- ${owners.join(', ')}`)
+      .join('; ');
+    throw new Error(
+      `CSS variable name collision: ${detail}. ` +
+      'Rename the tokens or scopes so each maps to a unique custom property.'
+    );
+  }
+
   private renderCssVariables(): string {
+    this.assertNoVarNameCollisions();
+
     const lines: string[] = [':root {'];
 
     for (const scope of this.book.getAllScopes()) {

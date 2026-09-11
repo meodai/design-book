@@ -125,6 +125,41 @@ describe('Renderer', () => {
     });
   });
 
+  describe('css variable name collisions', () => {
+    it('throws when two scope/token pairs mangle to the same var name', () => {
+      const book = new DesignBook('test');
+      const a = book.addScope('a');
+      a.set('b-c', color('#0066cc'));
+      const ab = book.addScope('a-b');
+      ab.set('c', color('#cc0066'));
+
+      const renderer = new Renderer(book, 'css-variables');
+      expect(() => renderer.render()).toThrow(/--a-b-c/);
+      expect(() => renderer.render()).toThrow(/a\.b-c/);
+      expect(() => renderer.render()).toThrow(/a-b\.c/);
+    });
+
+    it('throws when camelCase, snake_case and kebab-case keys collide in one scope', () => {
+      const book = new DesignBook('test');
+      const t = book.addScope('t');
+      t.set('fontSize', px(16));
+      t.set('font_size', px(17));
+      t.set('font-size', px(18));
+
+      const renderer = new Renderer(book, 'css-variables');
+      expect(() => renderer.render()).toThrow(/--t-font-size/);
+      expect(() => renderer.render()).toThrow(/t\.fontSize/);
+      expect(() => renderer.render()).toThrow(/t\.font_size/);
+      expect(() => renderer.render()).toThrow(/t\.font-size/);
+    });
+
+    it('does not throw when all mangled names are unique', () => {
+      const book = createTestBook();
+      const renderer = new Renderer(book, 'css-variables');
+      expect(() => renderer.render()).not.toThrow();
+    });
+  });
+
   describe('json format', () => {
     it('renders all values fully resolved', () => {
       const book = createTestBook();
