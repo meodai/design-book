@@ -1,6 +1,7 @@
 import { parse, interpolate, interpolateWithPremultipliedAlpha, toGamut } from 'culori';
 import { formatColor } from './scope-colors';
 import { createFunctionToken, extractDependencies } from '../../tokens';
+import type { Color } from 'culori';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -30,6 +31,27 @@ export function toCssColorSpace(colorSpace: string): string {
 
 const toRgbGamut = toGamut('rgb', 'oklch');
 
+/** The colour CSS `color-mix(in <mode>, c1, c2)` computes at `ratio`:
+ *  premultiplied-alpha interpolation — so a transparent colour contributes
+ *  nothing but its alpha — with the hue left unweighted because it is
+ *  angular, then mapped back into sRGB. Shared with lighten/darken so they
+ *  stay the JS twin of the `color-mix()` the CSS renderer emits. */
+export function cssColorMix(
+  color1: Color | string,
+  color2: Color | string,
+  ratio: number,
+  mode: string,
+): Color {
+  const mixed: Record<string, any> =
+    interpolateWithPremultipliedAlpha([color1, color2] as any, mode as any)(ratio);
+  if ('h' in mixed) {
+    const unweighted: Record<string, any> =
+      interpolate([color1, color2] as any, mode as any)(ratio);
+    if (typeof unweighted.h === 'number') mixed.h = unweighted.h;
+  }
+  return toRgbGamut(mixed as Color);
+}
+
 export function colorMixImpl(
   color1Value: string,
   color2Value: string,
@@ -52,22 +74,13 @@ export function colorMixImpl(
     );
   }
 
-  const mode = toCuloriColorSpace(colorSpace);
-  // CSS `color-mix()` interpolates with premultiplied alpha, so a fully
-  // transparent colour contributes nothing but its alpha. Hue is the
-  // exception — it is angular, and the spec interpolates it unweighted.
-  const mixed: Record<string, any> =
-    interpolateWithPremultipliedAlpha([parsed1, parsed2], mode as any)(ratio);
-  if ('h' in mixed) {
-    const unweighted: Record<string, any> =
-      interpolate([parsed1, parsed2], mode as any)(ratio);
-    if (typeof unweighted.h === 'number') mixed.h = unweighted.h;
-  }
-
   // Formatting straight to hex clips out-of-sRGB channels and skews the
-  // hue (`#f99500` where the browser shows `#dda200`); map into gamut
-  // first, the way lighten/darken/shade do.
-  const result = formatColor(toRgbGamut(mixed as any));
+  // hue (`#f99500` where the browser shows `#dda200`), and drops alpha;
+  // cssColorMix gamut-maps, and formatColor emits 8-digit hex when the
+  // result is translucent.
+  const result = formatColor(
+    cssColorMix(parsed1, parsed2, ratio, toCuloriColorSpace(colorSpace)),
+  );
 
   if (!result) {
     throw new FunctionError(
