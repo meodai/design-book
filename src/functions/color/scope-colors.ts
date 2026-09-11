@@ -33,7 +33,10 @@ export const perceptualDistance: (a: Color | string, b: Color | string) => numbe
  * are not colours, or that fail to resolve, are skipped.
  *
  * @param scope Scope to iterate.
- * @param not Fully-qualified keys to exclude from the pool.
+ * @param not Fully-qualified keys to exclude from the pool. An inherited
+ *   candidate is excluded by either its key in the iterated scope
+ *   (`dark.black`) or the key it is inherited from (`palette.black`) — the
+ *   latter is what an author naturally writes.
  */
 export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []): ScopeColor[] {
   const excluded = new Set(not);
@@ -41,6 +44,8 @@ export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []
 
   for (const key of scope.getAllKeys()) {
     if (excluded.has(`${scope.name}.${key}`)) continue;
+    const sourceKey = scope.getSourceKey(key);
+    if (sourceKey && excluded.has(sourceKey)) continue;
 
     const token = scope.get(key);
     if (!token) continue;
