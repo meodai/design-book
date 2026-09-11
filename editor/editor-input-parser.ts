@@ -5,9 +5,9 @@ import {
   closestColor, furthestFrom, mostVivid, leastVivid,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
-  nth,
+  nth, random,
 } from '../src/index';
-import type { AnyTokenValue, DesignBook, Scope } from '../src/index';
+import type { AnyTokenValue, DesignBook, RandomOptions, Scope } from '../src/index';
 import { parse } from 'culori';
 
 /**
@@ -481,17 +481,41 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return timing(duration, easing, options);
   },
 
-  // nth(scope, index, options?)
+  // nth(scope, { index, not }) — the options-object form the serializer
+  // emits (fn.args is just [scope]; index/not live in fn.options) — or
+  // nth(scope, index, options?) — the positional convenience form.
   nth(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 2) throw new Error('nth requires 2 arguments: scope and index');
     const scope = getScopeArg(parseArg(args[0], book));
-    const indexParsed = parseArg(args[1], book);
+
+    const secondArg = args[1].trim();
+    if (secondArg.startsWith('{')) {
+      const options = parseOptionsArg(secondArg) as { index?: number; not?: string[] } | undefined;
+      if (typeof options?.index !== 'number') {
+        throw new Error('nth requires a numeric "index" in its options object');
+      }
+      return nth(scope, options.index, { not: options.not });
+    }
+
+    const indexParsed = parseArg(secondArg, book);
     if (indexParsed.type !== 'raw' || typeof indexParsed.value !== 'number') {
       throw new Error('nth requires a numeric index as second argument');
     }
     const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
     return nth(scope, indexParsed.value as number, options);
+  },
+
+  // random(scope, { type, seed?, not? })
+  random(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('random requires 2 arguments: scope and an options object with a "type"');
+    const scope = getScopeArg(parseArg(args[0], book));
+    const options = parseOptionsArg(args.slice(1).join(',')) as RandomOptions | undefined;
+    if (!options || typeof options.type !== 'string') {
+      throw new Error('random requires an options object with a "type" (e.g. { type: "color" })');
+    }
+    return random(scope, options);
   },
 
   // color('...') as an explicit constructor
