@@ -14,6 +14,8 @@ export class ScopeManager {
     name: string,
     options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
   ): Scope {
+    this.validateScopeName(name);
+    this.validateExtends(name, options?.extends);
     if (this.scopes.has(name)) {
       throw new ScopeError(`Scope "${name}" already exists`, name);
     }
@@ -21,6 +23,42 @@ export class ScopeManager {
     this.scopes.set(name, scope);
     if (options?.order !== undefined) scope.setOrder(options.order);
     return scope;
+  }
+
+  /** Token keys are `scope.token`, so a dotted scope name would produce keys
+   *  nothing can address (`resolve('a.b.x')` splits at the first dot). */
+  private validateScopeName(name: string): void {
+    if (typeof name !== 'string' || name.trim() === '') {
+      throw new ScopeError('Scope name must be a non-empty string', name);
+    }
+    if (name.includes('.')) {
+      throw new ScopeError(
+        `Invalid scope name "${name}": "." separates scope from token and cannot appear in a scope name`,
+        name,
+      );
+    }
+  }
+
+  /** An extends chain that reaches back to the new scope makes `get`, `has`
+   *  and `getAllKeys` recurse forever. */
+  private validateExtends(name: string, base?: string): void {
+    if (base === undefined) return;
+    if (base === name) {
+      throw new ScopeError(`Scope "${name}" cannot extend itself`, name);
+    }
+    const seen = new Set<string>();
+    let current: string | undefined = base;
+    while (current !== undefined) {
+      if (current === name) {
+        throw new ScopeError(
+          `Scope "${name}" cannot extend "${base}": the chain leads back to "${name}"`,
+          name,
+        );
+      }
+      if (seen.has(current)) return; // pre-existing loop elsewhere, not ours
+      seen.add(current);
+      current = this.scopes.get(current)?.extendsScope;
+    }
   }
 
   extendScope(name: string, base: string, description?: string): Scope {
