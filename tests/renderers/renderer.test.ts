@@ -92,6 +92,24 @@ describe('Renderer', () => {
       expect(output).toContain('calc(var(--brand-font) * 1.5625)');
     });
 
+    it('builds var() names in function args with the same mangler as declarations', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primaryColor', color('#0066cc'));
+      brand.set('accent_color', color('#cc0066'));
+      const ui = book.addScope('ui');
+      ui.set('light', lighten(ref('brand.primaryColor'), { amount: 0.2 }));
+      ui.set('dark', darken(ref('brand.accent_color'), { amount: 0.2 }));
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain('--brand-primary-color: #0066cc');
+      expect(output).toContain('--brand-accent-color: #cc0066');
+      expect(output).toContain('color-mix(in oklch, var(--brand-primary-color) 80%, white)');
+      expect(output).toContain('color-mix(in oklch, var(--brand-accent-color) 80%, black)');
+      expect(output).not.toContain('--brand-primaryColor');
+      expect(output).not.toContain('--brand-accent_color');
+    });
+
     it('renders bestContrastWith as resolved value (no CSS equivalent)', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');

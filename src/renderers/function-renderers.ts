@@ -1,3 +1,4 @@
+import { keyToHyphen } from './renderer';
 import type { FunctionRendererOptions, Renderer } from './renderer';
 import { isReferenceValue, isTokenValue } from '../tokens';
 import type { FunctionArg, ReferenceValue, TokenValue } from '../tokens';
@@ -7,7 +8,7 @@ function argToCssValue(arg: FunctionArg): string {
   if (typeof arg === 'number') return String(arg);
   if (isReferenceValue(arg)) {
     const ref = arg as ReferenceValue;
-    return `var(--${ref.key.replace(/[._]/g, '-')})`;
+    return `var(--${keyToHyphen(ref.key)})`;
   }
   if (isTokenValue(arg)) {
     const tv = arg as TokenValue;

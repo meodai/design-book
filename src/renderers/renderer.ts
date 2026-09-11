@@ -42,7 +42,7 @@ const toRgb = converter('rgb');
 /** Normalise a token key for use in CSS identifiers. Replaces `.` and
  *  `_` with `-`, splits camelCase boundaries (`fontFamily` →
  *  `font-family`), and lowercases the result. */
-function keyToHyphen(key: string): string {
+export function keyToHyphen(key: string): string {
   return key
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/[._]/g, '-')
