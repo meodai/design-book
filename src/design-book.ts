@@ -186,6 +186,7 @@ export class DesignBook {
     options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
+    this._linkInheritedKeysOf(name);
     this.emit('scopeAdded', { scope: name });
     return scope;
   }
@@ -517,8 +518,16 @@ export class DesignBook {
 
     if (currentValue) {
       const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
+      const pool = this._getPoolDepsForKey(qualifiedKey, currentValue);
+      const previousDeps = this.graph.getPrerequisitesFor(qualifiedKey);
       this.graph.addNode(qualifiedKey);
-      this.graph.updateEdges(qualifiedKey, deps, this._getPoolDepsForKey(qualifiedKey, currentValue));
+      try {
+        this.graph.updateEdges(qualifiedKey, deps, pool);
+        this._linkInheritedDependencies(deps, pool);
+      } catch (e) {
+        this.graph.updateEdges(qualifiedKey, previousDeps);
+        throw e;
+      }
       this._updateReferenceCaches(qualifiedKey);
       if (!this._liveKeys.has(qualifiedKey)) {
         this._liveKeys.add(qualifiedKey);
@@ -674,6 +683,44 @@ export class DesignBook {
     return false;
   }
 
+  /** A key that resolves through `extends` owns no token of its own, so
+   *  nothing ever gave it an edge from the parent key it reads. Register
+   *  that edge so changes to the source propagate to whatever depends on
+   *  the inherited key — and so cycle detection can see through
+   *  inheritance. Pool members are linked optionally: a soft edge there
+   *  must never reject an otherwise-legal change. */
+  private _linkInheritedDependencies(dependencies: string[], poolDependencies: string[] = []): void {
+    for (const dep of dependencies) {
+      this._linkInheritedDependency(dep, false);
+    }
+    const hard = new Set(dependencies);
+    for (const dep of poolDependencies) {
+      if (!hard.has(dep)) this._linkInheritedDependency(dep, true);
+    }
+  }
+
+  private _linkInheritedDependency(dep: string, optional: boolean): void {
+    const source = this.getSourceKey(dep);
+    if (!source || source === dep) return;
+    this.graph.addNode(dep);
+    if (optional) this.graph.updateEdges(dep, [], [source]);
+    else this.graph.updateEdges(dep, [source]);
+  }
+
+  /** After a scope starts extending another, any of its inherited keys that
+   *  already have dependents (e.g. a forward `ref('child.a')` written before
+   *  the scope existed) need the edge from their new source. */
+  private _linkInheritedKeysOf(scopeName: string): void {
+    const scope = this.scopeManager.getScope(scopeName);
+    if (!scope?.extendsScope) return;
+    for (const name of scope.getAllKeys()) {
+      const key = `${scopeName}.${name}`;
+      if (!this.graph.hasNode(key)) continue;
+      if (this.graph.getDependentsOf(key).length === 0) continue;
+      this._linkInheritedDependency(key, false);
+    }
+  }
+
   /** Drop a deleted token from the graph without cutting the tokens that
    *  depend on it: `removeNode` would strip their incoming edge, so a later
    *  re-`set` of the same key would never reach them again. Keep the node as
@@ -719,8 +766,10 @@ export class DesignBook {
 
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
+      const pool = this._getPoolDepsForKey(key, currentValue);
       try {
-        this.graph.updateEdges(key, deps, this._getPoolDepsForKey(key, currentValue));
+        this.graph.updateEdges(key, deps, pool);
+        this._linkInheritedDependencies(deps, pool);
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
