@@ -133,8 +133,9 @@ describe('shrinking the candidate pool propagates too', () => {
     const changed: string[] = [];
     book.on('tokenChanged', (e) => changed.push(e.detail.key));
 
-    palette.delete('dark');
+    book.deleteScope('palette');
 
     expect(changed).toContain('ui.text');
+    expect(book.getDependencyGraph().getPrerequisitesFor('ui.text')).toEqual([]);
   });
 });
