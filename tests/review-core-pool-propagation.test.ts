@@ -82,3 +82,59 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     expect(book.resolve('s.text')).toBe('#222222');
   });
 });
+
+describe('shrinking the candidate pool propagates too', () => {
+  it('removing a key from the iterated scope notifies the function token', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    const ui = book.addScope('ui');
+    palette.set('light', color('#ffffff'));
+    palette.set('dark', color('#000000'));
+    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    expect(book.resolve('ui.text')).toBe('#000000');
+
+    const watcher = vi.fn();
+    book.watch('ui.text', watcher);
+
+    palette.delete('dark');
+
+    expect(watcher).toHaveBeenCalled();
+    expect(watcher.mock.calls[0][0]).toBe('#ffffff');
+    expect(book.getDependencyGraph().getPrerequisitesFor('ui.text')).not.toContain('palette.dark');
+  });
+
+  it('removing a pool key notifies in batch mode too', () => {
+    const book = new DesignBook('test', { mode: 'batch' });
+    const palette = book.addScope('palette');
+    const ui = book.addScope('ui');
+    palette.set('light', color('#ffffff'));
+    palette.set('dark', color('#000000'));
+    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    book.flush();
+
+    const watcher = vi.fn();
+    book.watch('ui.text', watcher);
+
+    palette.delete('dark');
+    book.flush();
+
+    expect(watcher).toHaveBeenCalled();
+    expect(book.resolve('ui.text')).toBe('#ffffff');
+  });
+
+  it('deleting the whole iterated scope notifies the function token', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    const ui = book.addScope('ui');
+    palette.set('light', color('#ffffff'));
+    palette.set('dark', color('#000000'));
+    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+
+    const changed: string[] = [];
+    book.on('tokenChanged', (e) => changed.push(e.detail.key));
+
+    palette.delete('dark');
+
+    expect(changed).toContain('ui.text');
+  });
+});

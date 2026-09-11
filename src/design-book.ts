@@ -602,7 +602,7 @@ export class DesignBook {
     this.emit('tokenChanged', { key: qualifiedKey, newValue, oldValue });
 
     // Fire tokenChanged for all dependents with their actual resolved values
-    const dependents = this.graph.dfsTraversal(qualifiedKey).slice(1);
+    const dependents = this._collectDependents(qualifiedKey, previousDependents);
     for (const dep of dependents) {
       changedKeys.push(dep);
       const depDotIndex = dep.indexOf('.');
@@ -771,6 +771,26 @@ export class DesignBook {
     }
   }
 
+  /** Transitive dependents of `key`, seeded with keys that depended on it
+   *  before the graph was re-wired. A scope-iterating function loses its edge
+   *  to a pool member the moment that member disappears, so by fan-out time
+   *  the traversal alone can no longer find it — yet it is exactly the token
+   *  that needs to hear about the change. */
+  private _collectDependents(key: string, alsoFrom: string[] = []): string[] {
+    const seen = new Set<string>([key]);
+    const dependents: string[] = [];
+    const walk = (start: string): void => {
+      for (const node of this.graph.dfsTraversal(start)) {
+        if (seen.has(node)) continue;
+        seen.add(node);
+        dependents.push(node);
+      }
+    };
+    walk(key);
+    for (const previous of alsoFrom) walk(previous);
+    return dependents;
+  }
+
   /** Drop a deleted token from the graph without cutting the tokens that
    *  depend on it: `removeNode` would strip their incoming edge, so a later
    *  re-`set` of the same key would never reach them again. Keep the node as
@@ -923,7 +943,7 @@ export class DesignBook {
       this.batchQueue.delete(key);
     }
 
-    this._emitBatchChanges(processed, queued);
+    this._emitBatchChanges(processed, queued, previousDependents);
 
     if (errors.length > 0) {
       this.emit('batch-failed', { processed, errors });
@@ -941,13 +961,14 @@ export class DesignBook {
   private _emitBatchChanges(
     processed: string[],
     queued: Map<string, { newValue: any; oldValue: any }>,
+    previousDependents: Map<string, string[]>,
   ): void {
     if (processed.length === 0) return;
 
     const changedKeys = [...new Set(processed)];
     const seen = new Set(changedKeys);
     for (const key of processed) {
-      for (const dep of this.graph.dfsTraversal(key).slice(1)) {
+      for (const dep of this._collectDependents(key, previousDependents.get(key))) {
         if (seen.has(dep)) continue;
         seen.add(dep);
         changedKeys.push(dep);
