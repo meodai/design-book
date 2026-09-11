@@ -267,21 +267,33 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return ramp(seed, options as { shade: string });
   },
 
-  // relativeTo(color, colorSpace, modifications, options?)
+  // relativeTo(color, colorSpace, modifications) — positional form, or
+  // relativeTo(color, { colorSpace, modifications }) — the options-object
+  // form the serializer emits (fn.options is { colorSpace, modifications }).
   relativeTo(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('relativeTo requires at least 1 argument');
-    const color = getTokenArg(parseArg(args[0], book));
-    // Default: oklch, [null, null, null]
+    const colorArg = getTokenArg(parseArg(args[0], book));
+
+    // Defaults match the relativeTo() constructor's own defaults.
     let colorSpace = 'oklch';
     let modifications: (null | number | string)[] = [null, null, null];
-    if (args.length > 1) {
-      if (/^[a-z]+$/i.test(args[1].trim())) {
-        colorSpace = args[1].trim();
+
+    if (args.length === 2 && args[1].trim().startsWith('{')) {
+      const options = parseOptionsArg(args[1]) as
+        | { colorSpace?: string; modifications?: (null | number | string)[] }
+        | undefined;
+      if (options?.colorSpace) colorSpace = options.colorSpace;
+      if (options?.modifications) modifications = options.modifications;
+    } else if (args.length > 1) {
+      const csArg = args[1].trim().replace(/^['"]|['"]$/g, '');
+      if (csArg) colorSpace = csArg;
+      if (args.length > 2) {
+        modifications = parseModificationsArray(args[2]);
       }
-      // TODO: parse modifications from text if needed
     }
-    return relativeTo(color, colorSpace, modifications);
+
+    return relativeTo(colorArg, colorSpace, modifications);
   },
 
   // closestColor(target, scope)
@@ -530,4 +542,22 @@ function parseOptionsArg(str: string): Record<string, any> | undefined {
   } catch (err) {
     throw new Error(`Cannot parse options "${str}": ${(err as Error).message}`);
   }
+}
+
+/** Parse relativeTo's positional modifications array: `[null, null, '+0.1']`. */
+function parseModificationsArray(str: string): (null | number | string)[] {
+  const trimmed = str.trim();
+  let jsonLike = trimmed.replace(/'([^']*)'/g, '"$1"');
+  jsonLike = jsonLike.replace(/([[,\s])(-?)\.(\d)/g, '$1$20.$3');
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonLike);
+  } catch (err) {
+    throw new Error(`Cannot parse modifications "${str}": ${(err as Error).message}`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error(`Expected an array for modifications, got "${str}"`);
+  }
+  return parsed as (null | number | string)[];
 }
