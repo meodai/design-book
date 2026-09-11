@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { color, ref, px, rem, ms } from '../../src/tokens';
+import { color, ref, px, rem, ms, dimension, string } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
-import { bestContrastWith, colorMix, lighten, darken, relativeTo, spacingScale, typographyScale } from '../../src/functions';
+import { bestContrastWith, colorMix, lighten, darken, relativeTo, spacingScale, timing, typographyScale } from '../../src/functions';
 
 function createTestBook() {
   const book = new DesignBook('test');
@@ -364,6 +364,120 @@ describe('Renderer', () => {
       const output = renderer.renderW3DesignTokensObject();
       expect(output.brand.primary.$type).toBe('color');
       expect(output.ui.bg.$value).toBe('{brand.primary}');
+    });
+  });
+
+  describe('w3-design-tokens shapes', () => {
+    it('emits a transition composite for timing tokens', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('fast', ms(200));
+      book.addScope('motion').set(
+        'hover',
+        timing(ref('brand.fast'), 'ease-in-out', { delay: 50 })
+      );
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.motion.hover.$type).toBe('transition');
+      expect(out.motion.hover.$value).toEqual({
+        duration: { value: 200, unit: 'ms' },
+        delay: { value: 50, unit: 'ms' },
+        timingFunction: [0.42, 0, 0.58, 1],
+      });
+    });
+
+    it('passes an easing it cannot express as a cubic bezier through unchanged', () => {
+      const book = new DesignBook('test');
+      book.addScope('motion').set('step', timing(ms(200), 'steps(4)'));
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.motion.step.$value).toEqual({
+        duration: { value: 200, unit: 'ms' },
+        delay: { value: 0, unit: 'ms' },
+        timingFunction: 'steps(4)',
+      });
+    });
+
+    it('types a scale function over a duration as duration', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('fast', ms(200));
+      book.addScope('motion').set('slow', spacingScale(ref('brand.fast'), { multiplier: 2 }));
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.motion.slow.$type).toBe('duration');
+      expect(out.motion.slow.$value).toEqual({ value: 400, unit: 'ms' });
+    });
+
+    it('types a reference to a duration-returning function as duration', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('fast', ms(200));
+      const motion = book.addScope('motion');
+      motion.set('slow', spacingScale(ref('brand.fast'), { multiplier: 2 }));
+      motion.set('alias', ref('motion.slow'));
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.motion.alias.$type).toBe('duration');
+    });
+
+    it('omits $type for a plain string token', () => {
+      const book = new DesignBook('test');
+      book.addScope('brand').set('label', string('uppercase'));
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.brand.label.$value).toBe('uppercase');
+      expect(out.brand.label.$type).toBeUndefined();
+    });
+
+    it('keeps fontFamily when the token metadata asks for it', () => {
+      const book = new DesignBook('test');
+      book.addScope('brand').set(
+        'sans',
+        string('Inter, system-ui', { metadata: { w3Type: 'fontFamily' } })
+      );
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.brand.sans.$type).toBe('fontFamily');
+      expect(out.brand.sans.$value).toBe('Inter, system-ui');
+    });
+
+    it('types a unitless dimension as number with a numeric $value', () => {
+      const book = new DesignBook('test');
+      book.addScope('brand').set('ratio', dimension(1.5, ''));
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.brand.ratio.$type).toBe('number');
+      expect(out.brand.ratio.$value).toBe(1.5);
+    });
+
+    it('formats typography sub-values per the W3 spec', () => {
+      const book = new DesignBook('test');
+      book.addTypography('heading-lg', {
+        fontFamily: 'Inter',
+        fontSize: rem(2),
+        fontWeight: '700',
+        lineHeight: '1.15',
+        letterSpacing: '-0.02em',
+      });
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.typography['heading-lg'].$type).toBe('typography');
+      expect(out.typography['heading-lg'].$value).toEqual({
+        fontFamily: 'Inter',
+        fontSize: { value: 2, unit: 'rem' },
+        fontWeight: 700,
+        lineHeight: 1.15,
+        letterSpacing: { value: -0.02, unit: 'em' },
+      });
+    });
+
+    it('keeps a non-numeric font weight keyword as a string', () => {
+      const book = new DesignBook('test');
+      book.addTypography('body', { fontFamily: 'Georgia', fontWeight: 'bold' });
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.typography.body.$value.fontWeight).toBe('bold');
     });
   });
 

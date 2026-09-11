@@ -178,10 +178,12 @@ describe('typography composites', () => {
       expect(obj.typography).toBeDefined();
       expect(obj.typography['heading-lg']).toBeDefined();
       expect(obj.typography['heading-lg'].$type).toBe('typography');
+      // fontSize is a W3 dimension object and fontWeight a number, per
+      // the DTCG typography composite.
       expect(obj.typography['heading-lg'].$value).toEqual({
         fontFamily: 'Inter',
-        fontSize: '2rem',
-        fontWeight: '700',
+        fontSize: { value: 2, unit: 'rem' },
+        fontWeight: 700,
       });
     });
 
