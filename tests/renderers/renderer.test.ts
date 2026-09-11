@@ -125,6 +125,38 @@ describe('Renderer', () => {
     });
   });
 
+  describe('numeric precision', () => {
+    it('does not round the color-mix percentage to whole percents', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc'));
+      book.addScope('ui').set(
+        'mixed',
+        colorMix(ref('brand.primary'), color('#000000'), { ratio: 1 / 3 })
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        'color-mix(in lab, var(--brand-primary) 66.66666667%, #000000)'
+      );
+      expect(output).not.toContain(' 67%');
+    });
+
+    it('emits the full typographyScale factor so calc() matches the JS product', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('base', px(16));
+      const ui = book.addScope('ui');
+      ui.set('lg', typographyScale(ref('brand.base'), { ratio: 1.25, step: 3 }));
+
+      const output = new Renderer(book, 'css-variables').render();
+      // 1.25^3 = 1.953125; truncating to 1.9531 makes the browser compute
+      // 31.2496px where JS resolves 31.25px.
+      expect(output).toContain('calc(var(--brand-base) * 1.953125)');
+      expect(book.resolve('ui.lg')).toBe('31.25px');
+    });
+  });
+
   describe('colorMix css colorSpace names', () => {
     function cssFor(space: string): string {
       const book = new DesignBook('test');

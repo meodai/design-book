@@ -52,7 +52,8 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const color2 = css(args[1]);
     const ratio = colorMixOptions?.ratio ?? 0.5;
     const colorSpace = toCssColorSpace(colorMixOptions?.colorSpace ?? 'lab');
-    const pct = Math.round((1 - ratio) * 100);
+    // Rounding to whole percents shifts the mix (1/3 became 67%).
+    const pct = formatNumber((1 - ratio) * 100);
     return `color-mix(in ${colorSpace}, ${color1} ${pct}%, ${color2})`;
   });
 
@@ -125,7 +126,9 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const ratio = typographyScaleOptions?.ratio ?? 1.25;
     const step = typographyScaleOptions?.step ?? 0;
     if (step === 0) return base;
-    const factor = Math.round(Math.pow(ratio, step) * 10000) / 10000;
+    // The JS side rounds the product; rounding the factor here would make
+    // the browser compute a different size.
+    const factor = formatNumber(Math.pow(ratio, step));
     return `calc(${base} * ${factor})`;
   });
 
