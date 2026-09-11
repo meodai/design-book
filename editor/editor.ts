@@ -152,12 +152,17 @@ exampleStage.appendChild(loginTemplate.content.cloneNode(true));
 
 // --- Event log ---
 
+function escapeLogText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function logEvent(
   type: string,
   detail: {
     key?: string;
     changedKeys?: string[];
     scope?: string;
+    phase?: string;
     message?: string;
   },
 ) {
@@ -169,12 +174,18 @@ function logEvent(
 
   let detailStr = '';
   if (detail.key) {
-    detailStr = ` <span class="event-key">${detail.key}</span>`;
+    detailStr = ` <span class="event-key">${escapeLogText(detail.key)}</span>`;
   } else if (detail.changedKeys) {
     const keys = detail.changedKeys as string[];
-    detailStr = ` <span class="event-key">${keys.join(', ')}</span>`;
+    detailStr = ` <span class="event-key">${escapeLogText(keys.join(', '))}</span>`;
   } else if (detail.scope) {
-    detailStr = ` <span class="event-key">${detail.scope}</span>`;
+    detailStr = ` <span class="event-key">${escapeLogText(detail.scope)}</span>`;
+  }
+  if (detail.phase) {
+    detailStr += ` <span class="event-phase">${escapeLogText(detail.phase)}</span>`;
+  }
+  if (detail.message) {
+    detailStr += ` <span class="event-message">${escapeLogText(detail.message)}</span>`;
   }
 
   entry.innerHTML = `<span class="event-time">${ts}</span> <span class="event-type">${type}</span>${detailStr}`;
@@ -204,6 +215,15 @@ book.on('change', (e) => {
 });
 book.on('scopeAdded', (e) => {
   logEvent('scopeAdded', e.detail);
+});
+// Changes rejected after they were announced (a re-entrant write that had
+// nobody left to throw at, or a failed rollback) surface only here.
+book.on('error', (e) => {
+  logEvent('error', {
+    key: e.detail.key,
+    phase: e.detail.phase,
+    message: e.detail.error.message,
+  });
 });
 
 // --- Rendering ---

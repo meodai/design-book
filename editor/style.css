@@ -466,6 +466,14 @@ h3 {
   opacity: 1;
 }
 
+.event-log .event-phase {
+  opacity: 0.7;
+}
+
+.event-log .event-message {
+  opacity: 0.7;
+}
+
 /* Example view — live-rendered component using the `card` scope */
 .example-view {
   background: var(--c-surface);
