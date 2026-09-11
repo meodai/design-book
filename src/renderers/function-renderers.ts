@@ -1,6 +1,7 @@
 import { keyToHyphen } from './renderer';
 import type { FunctionRendererOptions, Renderer } from './renderer';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
+import { toCssColorSpace } from '../functions/color/color-mix';
 import {
   RELATIVE_TO_CSS_SCALES,
   relativeToChannels,
@@ -50,7 +51,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const color1 = css(args[0]);
     const color2 = css(args[1]);
     const ratio = colorMixOptions?.ratio ?? 0.5;
-    const colorSpace = colorMixOptions?.colorSpace ?? 'lab';
+    const colorSpace = toCssColorSpace(colorMixOptions?.colorSpace ?? 'lab');
     const pct = Math.round((1 - ratio) * 100);
     return `color-mix(in ${colorSpace}, ${color1} ${pct}%, ${color2})`;
   });

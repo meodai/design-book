@@ -41,4 +41,25 @@ describe('colorMix', () => {
     const result = book.resolve('ui.mixed');
     expect(result).toMatch(/^#[0-9a-f]{6}$/);
   });
+  describe('colorSpace names', () => {
+    function mixIn(space: string): string {
+      const book = new DesignBook('test');
+      const ui = book.addScope('ui');
+      ui.set('mixed', colorMix(color('#0066cc'), color('#ffcc00'), { colorSpace: space }));
+      return book.resolve('ui.mixed');
+    }
+
+    it('accepts CSS names as aliases of the Culori mode names', () => {
+      expect(mixIn('srgb')).toBe(mixIn('rgb'));
+      expect(mixIn('srgb-linear')).toBe(mixIn('lrgb'));
+      expect(mixIn('display-p3')).toBe(mixIn('p3'));
+      expect(mixIn('xyz-d65')).toBe(mixIn('xyz65'));
+      expect(mixIn('xyz-d50')).toBe(mixIn('xyz50'));
+    });
+
+    it('still accepts names that are spelled the same in both', () => {
+      expect(mixIn('oklch')).toMatch(/^#[0-9a-f]{6}$/);
+      expect(mixIn('lab')).toMatch(/^#[0-9a-f]{6}$/);
+    });
+  });
 });

@@ -125,6 +125,32 @@ describe('Renderer', () => {
     });
   });
 
+  describe('colorMix css colorSpace names', () => {
+    function cssFor(space: string): string {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc'));
+      book.addScope('ui').set(
+        'mixed',
+        colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.5, colorSpace: space })
+      );
+      return new Renderer(book, 'css-variables').render();
+    }
+
+    it('maps Culori mode names to their CSS spellings', () => {
+      expect(cssFor('rgb')).toContain('color-mix(in srgb,');
+      expect(cssFor('lrgb')).toContain('color-mix(in srgb-linear,');
+      expect(cssFor('p3')).toContain('color-mix(in display-p3,');
+      expect(cssFor('xyz65')).toContain('color-mix(in xyz-d65,');
+      expect(cssFor('xyz50')).toContain('color-mix(in xyz-d50,');
+    });
+
+    it('passes through names that are already CSS spellings', () => {
+      expect(cssFor('oklch')).toContain('color-mix(in oklch,');
+      expect(cssFor('srgb')).toContain('color-mix(in srgb,');
+    });
+  });
+
   describe('relativeTo css', () => {
     function bookWithPrimary() {
       const book = new DesignBook('test');
