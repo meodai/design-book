@@ -2,7 +2,7 @@ import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function typographyScaleImpl(baseValue: string, ratio: number, step: number): string {
-  const match = baseValue.match(/^([\d.]+)(.*)$/);
+  const match = baseValue.match(/^(-?[\d.]+)(.*)$/);
   if (!match) {
     throw new Error(`typographyScale: cannot parse value "${baseValue}"`);
   }

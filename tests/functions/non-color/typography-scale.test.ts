@@ -27,4 +27,12 @@ describe('typographyScale', () => {
 
     expect(book.resolve('ui.base')).toBe('1rem');
   });
+
+  it('supports negative bases', () => {
+    const book = new DesignBook('test');
+    const ui = book.addScope('ui');
+    ui.set('negative', typographyScale(rem(-1), { ratio: 1.25, step: 1 }));
+
+    expect(book.resolve('ui.negative')).toBe('-1.25rem');
+  });
 });
