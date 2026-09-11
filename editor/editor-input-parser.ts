@@ -208,8 +208,9 @@ function parseArg(
     if (scope) return { type: 'scope', value: scope };
   }
 
-  // Number
-  if (/^[\d.]+$/.test(trimmed)) {
+  // Number — signed, so a hand-typed `nth(brand, -1)` reads as an index
+  // rather than falling through to the string branch.
+  if (/^[+-]?[\d.]+$/.test(trimmed)) {
     return { type: 'raw', value: parseFloat(trimmed) };
   }
 
