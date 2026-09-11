@@ -308,6 +308,17 @@ function looksLikeColor(value: string): boolean {
     || value.startsWith('hsl');
 }
 
+// --- Dimension serialization ---
+
+// px/rem/ms have dedicated constructors (and parser shorthands); every
+// other unit renders through the explicit dimension(n, 'unit') form so it
+// round-trips through the parser unambiguously.
+const DIMENSION_SHORTCUT_UNITS = new Set(['px', 'rem', 'ms']);
+
+function formatDimension(value: string | number, unit: string): string {
+  return DIMENSION_SHORTCUT_UNITS.has(unit) ? `${unit}(${value})` : `dimension(${value}, '${unit}')`;
+}
+
 // --- Get display value for a token ---
 
 export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
@@ -335,7 +346,7 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
             // Scope argument -- show scope name
             argStrs.push(arg.name || 'scope');
           } else if (arg.type === 'dimension') {
-            argStrs.push(`${arg.metadata?.unit || ''}(${arg.rawValue})`);
+            argStrs.push(formatDimension(arg.rawValue, arg.metadata?.unit || ''));
           }
         } else if (typeof arg === 'string') {
           argStrs.push(arg);
@@ -368,7 +379,7 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
     return `color('${tv.rawValue}')`;
   }
   if (tv.metadata?.unit) {
-    return `${tv.metadata.unit}(${tv.rawValue})`;
+    return formatDimension(tv.rawValue, tv.metadata.unit);
   }
   if (tv.type === 'string') {
     return `string('${tv.rawValue}')`;

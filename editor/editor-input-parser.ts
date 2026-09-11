@@ -39,19 +39,19 @@ export function parseTokenInput(
   }
 
   // px(number)
-  const pxMatch = trimmed.match(/^px\(\s*([\d.]+)\s*\)$/);
+  const pxMatch = trimmed.match(/^px\(\s*(-?[\d.]+)\s*\)$/);
   if (pxMatch) {
     return px(parseFloat(pxMatch[1]));
   }
 
   // rem(number)
-  const remMatch = trimmed.match(/^rem\(\s*([\d.]+)\s*\)$/);
+  const remMatch = trimmed.match(/^rem\(\s*(-?[\d.]+)\s*\)$/);
   if (remMatch) {
     return rem(parseFloat(remMatch[1]));
   }
 
   // ms(number)
-  const msMatch = trimmed.match(/^ms\(\s*([\d.]+)\s*\)$/);
+  const msMatch = trimmed.match(/^ms\(\s*(-?[\d.]+)\s*\)$/);
   if (msMatch) {
     return ms(parseFloat(msMatch[1]));
   }
@@ -64,6 +64,14 @@ export function parseTokenInput(
 
     if (FUNCTION_PARSERS[funcName]) {
       return FUNCTION_PARSERS[funcName](argsStr, book, currentScope);
+    }
+
+    // Generic dimension shorthand: <unit>(number), e.g. em(2), vh(50).
+    // dimension(n, 'unit') itself is already handled above via
+    // FUNCTION_PARSERS.dimension.
+    const genericUnitMatch = argsStr.trim().match(/^-?[\d.]+$/);
+    if (genericUnitMatch) {
+      return dimension(parseFloat(argsStr.trim()), funcName);
     }
   }
 
@@ -132,7 +140,7 @@ function parseArg(
   }
 
   // px(number), rem(number), ms(number)
-  const dimMatch = trimmed.match(/^(px|rem|ms)\(\s*([\d.]+)\s*\)$/);
+  const dimMatch = trimmed.match(/^(px|rem|ms)\(\s*(-?[\d.]+)\s*\)$/);
   if (dimMatch) {
     const unit = dimMatch[1];
     const val = parseFloat(dimMatch[2]);
@@ -142,9 +150,17 @@ function parseArg(
   }
 
   // dimension(number, 'unit')
-  const dimensionMatch = trimmed.match(/^dimension\(\s*([\d.]+)\s*,\s*['"]([^'"]+)['"]\s*\)$/);
+  const dimensionMatch = trimmed.match(/^dimension\(\s*(-?[\d.]+)\s*,\s*['"]([^'"]+)['"]\s*\)$/);
   if (dimensionMatch) {
     return { type: 'token', value: dimension(parseFloat(dimensionMatch[1]), dimensionMatch[2]) };
+  }
+
+  // Generic dimension shorthand: <unit>(number), e.g. em(2), vh(50) —
+  // for units without a dedicated constructor. px/rem/ms above take
+  // precedence, and dimension(...) is handled explicitly too.
+  const genericUnitMatch = trimmed.match(/^([a-zA-Z]+)\(\s*(-?[\d.]+)\s*\)$/);
+  if (genericUnitMatch && !['px', 'rem', 'ms'].includes(genericUnitMatch[1])) {
+    return { type: 'token', value: dimension(parseFloat(genericUnitMatch[2]), genericUnitMatch[1]) };
   }
 
   // string('...')
