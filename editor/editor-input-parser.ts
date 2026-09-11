@@ -215,13 +215,14 @@ function getScopeArg(parsed: ReturnType<typeof parseArg>): Scope {
 type FuncParser = (argsStr: string, book?: DesignBook, currentScope?: Scope) => AnyTokenValue;
 
 const FUNCTION_PARSERS: Record<string, FuncParser> = {
-  // bestContrastWith(target, scope)
+  // bestContrastWith(target, scope, options?)
   bestContrastWith(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 2) throw new Error('bestContrastWith requires 2 arguments');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    return bestContrastWith(target, scope);
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return bestContrastWith(target, scope, options);
   },
 
   // minContrastWith(target, scope, options?)
@@ -312,21 +313,23 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return relativeTo(colorArg, colorSpace, modifications);
   },
 
-  // closestColor(target, scope)
+  // closestColor(target, scope, options?)
   closestColor(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 2) throw new Error('closestColor requires 2 arguments');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    return closestColor(target, scope);
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
+    return closestColor(target, scope, options);
   },
 
-  // furthestFrom(scope)
+  // furthestFrom(scope, options?)
   furthestFrom(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('furthestFrom requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
-    return furthestFrom(scope);
+    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
+    return furthestFrom(scope, options);
   },
 
   // mostVivid(scope, ...) — accepts either
