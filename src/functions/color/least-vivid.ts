@@ -26,7 +26,9 @@ const toOklch = converter('oklch');
  * Optional readability gate: pass `against` (a target colour) and a
  * `minContrast` ratio and the function will prefer candidates that clear the
  * threshold. If nothing does, it falls back to the highest-contrast
- * candidate, the same way `mostVivid` / `minContrastWith` do.
+ * candidate, the same way `mostVivid` / `minContrastWith` do. A gate that
+ * cannot be applied — `minContrast` without `against`, or an `against` colour
+ * that does not parse — throws rather than being ignored.
  */
 export function leastVividImpl(
   scope: Scope,
@@ -34,7 +36,22 @@ export function leastVividImpl(
   minContrast: number,
   not: string[] = [],
 ): string {
+  // A gate that cannot be applied is a configuration error, not a silent
+  // no-op — otherwise an unreadable colour quietly wins the pool.
+  if (!against && minContrast > 0) {
+    throw new FunctionError(
+      `leastVivid: minContrast needs an \`against\` colour to measure against`,
+      'leastVivid',
+    );
+  }
+
   const targetColor = against ? parse(against) : null;
+  if (against && !targetColor) {
+    throw new FunctionError(
+      `leastVivid: cannot parse \`against\` colour "${against}"`,
+      'leastVivid',
+    );
+  }
 
   const candidates: Array<{ hex: string; chroma: number; contrast: number }> = [];
 
