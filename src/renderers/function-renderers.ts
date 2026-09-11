@@ -1,14 +1,21 @@
 import { keyToHyphen } from './renderer';
 import type { FunctionRendererOptions, Renderer } from './renderer';
-import { isReferenceValue, isTokenValue } from '../tokens';
+import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
 import type { FunctionArg, ReferenceValue, TokenValue } from '../tokens';
 
-function argToCssValue(arg: FunctionArg): string {
+/** Convert a single function argument into a CSS expression. Nested
+ *  function tokens are handed back to the renderer so they render through
+ *  the function-renderer registry (or their resolved value) rather than
+ *  stringifying to `[object Object]`. */
+function argToCssValue(renderer: Renderer, arg: FunctionArg): string {
   if (typeof arg === 'string') return arg;
   if (typeof arg === 'number') return String(arg);
   if (isReferenceValue(arg)) {
     const ref = arg as ReferenceValue;
     return `var(--${keyToHyphen(ref.key)})`;
+  }
+  if (isFunctionTokenValue(arg)) {
+    return renderer.renderFunctionToken(arg);
   }
   if (isTokenValue(arg)) {
     const tv = arg as TokenValue;
@@ -23,13 +30,15 @@ function getOptions<T extends FunctionRendererOptions>(options?: FunctionRendere
 }
 
 export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
+  const css = (arg: FunctionArg): string => argToCssValue(renderer, arg);
+
   // --- Functions WITHOUT scope (pure transforms) ---
 
   // colorMix(color1, color2, options?)
   renderer.registerFunctionRenderer('colorMix', (args, options) => {
     const colorMixOptions = getOptions<{ ratio?: number; colorSpace?: string }>(options);
-    const color1 = argToCssValue(args[0]);
-    const color2 = argToCssValue(args[1]);
+    const color1 = css(args[0]);
+    const color2 = css(args[1]);
     const ratio = colorMixOptions?.ratio ?? 0.5;
     const colorSpace = colorMixOptions?.colorSpace ?? 'lab';
     const pct = Math.round((1 - ratio) * 100);
@@ -39,7 +48,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   // lighten(color, options?)
   renderer.registerFunctionRenderer('lighten', (args, options) => {
     const lightenOptions = getOptions<{ amount?: number }>(options);
-    const color = argToCssValue(args[0]);
+    const color = css(args[0]);
     const amount = lightenOptions?.amount ?? 0.1;
     const pct = Math.round((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, white)`;
@@ -48,7 +57,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   // darken(color, options?)
   renderer.registerFunctionRenderer('darken', (args, options) => {
     const darkenOptions = getOptions<{ amount?: number }>(options);
-    const color = argToCssValue(args[0]);
+    const color = css(args[0]);
     const amount = darkenOptions?.amount ?? 0.1;
     const pct = Math.round((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, black)`;
@@ -61,7 +70,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
       colorSpace?: string;
       modifications?: (null | number | string)[];
     }>(options);
-    const color = argToCssValue(args[0]);
+    const color = css(args[0]);
     // colorSpace and modifications are captured in closure, passed via options
     const colorSpace = relativeToOptions?.colorSpace ?? 'oklch';
     const modifications: (null | number | string)[] = relativeToOptions?.modifications ?? [null, null, null];
@@ -92,7 +101,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   // spacingScale(base, options?)
   renderer.registerFunctionRenderer('spacingScale', (args, options) => {
     const spacingScaleOptions = getOptions<{ multiplier?: number }>(options);
-    const base = argToCssValue(args[0]);
+    const base = css(args[0]);
     const multiplier = spacingScaleOptions?.multiplier ?? 1;
     if (multiplier === 1) return base;
     return `calc(${base} * ${multiplier})`;
@@ -101,7 +110,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   // typographyScale(base, options?)
   renderer.registerFunctionRenderer('typographyScale', (args, options) => {
     const typographyScaleOptions = getOptions<{ ratio?: number; step?: number }>(options);
-    const base = argToCssValue(args[0]);
+    const base = css(args[0]);
     const ratio = typographyScaleOptions?.ratio ?? 1.25;
     const step = typographyScaleOptions?.step ?? 0;
     if (step === 0) return base;
@@ -112,7 +121,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   // timing(duration, easing, options?)
   renderer.registerFunctionRenderer('timing', (args, options) => {
     const timingOptions = getOptions<{ delay?: number }>(options);
-    const duration = argToCssValue(args[0]);
+    const duration = css(args[0]);
     const easing = typeof args[1] === 'string' ? args[1] : String(args[1]);
     const delay = timingOptions?.delay;
     if (delay) return `${duration} ${easing} ${delay}ms`;

@@ -125,6 +125,35 @@ describe('Renderer', () => {
     });
   });
 
+  describe('nested function arguments', () => {
+    it('recurses through the function-renderer registry', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('p', color('#0066cc'));
+      const ui = book.addScope('ui');
+      ui.set('x', darken(lighten(ref('brand.p'), { amount: 0.1 }), { amount: 0.2 }));
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-x: color-mix(in oklch, color-mix(in oklch, var(--brand-p) 90%, white) 80%, black);'
+      );
+      expect(output).not.toContain('[object Object]');
+    });
+
+    it('falls back to the resolved value for functions with no renderer', () => {
+      const book = new DesignBook('test');
+      const palette = book.addScope('palette');
+      palette.set('black', color('#000000'));
+      palette.set('white', color('#ffffff'));
+      const ui = book.addScope('ui');
+      ui.set('x', darken(bestContrastWith(color('#ffffff'), palette), { amount: 0.2 }));
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain('--ui-x: color-mix(in oklch, #000000 80%, black);');
+      expect(output).not.toContain('[object Object]');
+    });
+  });
+
   describe('css variable name collisions', () => {
     it('throws when two scope/token pairs mangle to the same var name', () => {
       const book = new DesignBook('test');

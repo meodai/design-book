@@ -1,4 +1,5 @@
 import { DesignBook } from '../design-book';
+import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
@@ -101,6 +102,38 @@ export class Renderer {
 
   registerFunctionRenderer(name: string, renderer: FunctionRenderer): void {
     this.functionRenderers.set(name, renderer);
+  }
+
+  /** Render a function token to a CSS expression. Nested function tokens
+   *  reach this through `argToCssValue`, so a `darken(lighten(…))` nests
+   *  its `color-mix()` calls instead of stringifying to `[object Object]`.
+   *  Functions with no registered renderer fall back to their resolved
+   *  value, which is the only thing CSS can express for them. */
+  renderFunctionToken(fn: FunctionTokenValue): string {
+    const funcRenderer = this.functionRenderers.get(fn.name);
+    if (funcRenderer) return funcRenderer(fn.args, fn.options);
+    return this.resolveFunctionToken(fn);
+  }
+
+  /** Evaluate a function token through the book's function registry.
+   *  Inline (nested) function tokens have no scope entry of their own, so
+   *  they can't go through `book.resolve`; this mirrors what
+   *  `Scope.resolveFunctionToken` does for named ones. */
+  private resolveFunctionToken(fn: FunctionTokenValue): string {
+    const resolvedArgs = fn.args.map((arg: FunctionArg) => {
+      if (isReferenceValue(arg)) return this.book.resolve(arg.key);
+      if (isFunctionTokenValue(arg)) return this.resolveFunctionToken(arg);
+      if (isTokenValue(arg)) {
+        if (arg.metadata?.unit) return `${arg.rawValue}${arg.metadata.unit}`;
+        return String(arg.rawValue);
+      }
+      return arg;
+    });
+    const implementation = this.book.getFunction(fn.name);
+    if (!implementation) {
+      throw new Error(`Function "${fn.name}" is not registered`);
+    }
+    return implementation(...resolvedArgs, fn.options);
   }
 
   /** Two different `scope.token` pairs can mangle to the same CSS custom
