@@ -1,10 +1,17 @@
-import { parse, formatHex, converter } from 'culori';
+import { parse, formatHex, interpolate, toGamut } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
-const toHsl = converter('hsl');
+const toRgbGamut = toGamut('rgb', 'oklch');
 
+/**
+ * Mixes a colour towards white in OKLCH — the JS twin of what the CSS
+ * renderer emits, `color-mix(in oklch, <color> (1-amount)*100%, white)`, so a
+ * token resolves to the same colour whether it is computed here or by the
+ * browser. The mix is gamut-mapped before formatting: `formatHex` alone would
+ * clip out-of-sRGB channels and shift the hue.
+ */
 export function lightenImpl(colorValue: string, amount: number): string {
   const parsed = parse(colorValue);
   if (!parsed) {
@@ -14,19 +21,9 @@ export function lightenImpl(colorValue: string, amount: number): string {
     );
   }
 
-  const hslColor = toHsl(parsed);
-  if (!hslColor) {
-    throw new FunctionError(
-      `lighten: cannot convert color to HSL "${colorValue}"`,
-      'lighten'
-    );
-  }
+  const mixed = interpolate([parsed, 'white'], 'oklch')(amount);
 
-  // Increase lightness, clamp to 1
-  const newL = Math.min(1, (hslColor.l ?? 0) + amount);
-  const lightened = { ...hslColor, l: newL };
-
-  const result = formatHex(lightened);
+  const result = formatHex(toRgbGamut(mixed));
   if (!result) {
     throw new FunctionError(
       `lighten: failed to format lightened color`,
