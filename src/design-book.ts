@@ -982,7 +982,15 @@ export class DesignBook {
       this.batchQueue.delete(key);
     }
 
-    this._emitBatchChanges(processed, queued, previousDependents);
+    // Notify for every key whose graph edges were updated, not only the ones
+    // that resolved: auto mode emits tokenChanged for an unresolvable key
+    // too. Keys the graph rejected outright are excluded — their tokens were
+    // rolled back, so nothing changed.
+    const notified = [...processed];
+    for (const key of validKeys) {
+      if (!notified.includes(key)) notified.push(key);
+    }
+    this._emitBatchChanges(notified, queued, previousDependents);
 
     if (errors.length > 0) {
       this.emit('batch-failed', { processed, errors });
@@ -994,19 +1002,19 @@ export class DesignBook {
   }
 
   /** Batch counterpart of `_processAutoChange`'s notification half: one
-   *  `tokenChanged` per processed key (with the queued new/old value), one
+   *  `tokenChanged` per notified key (with the queued new/old value), one
    *  per transitive dependent (with its freshly resolved value), and a
    *  single aggregate `change`. Every key is reported at most once. */
   private _emitBatchChanges(
-    processed: string[],
+    notified: string[],
     queued: Map<string, { newValue: any; oldValue: any }>,
     previousDependents: Map<string, string[]>,
   ): void {
-    if (processed.length === 0) return;
+    if (notified.length === 0) return;
 
-    const changedKeys = [...new Set(processed)];
+    const changedKeys = [...new Set(notified)];
     const seen = new Set(changedKeys);
-    for (const key of processed) {
+    for (const key of notified) {
       for (const dep of this._collectDependents(key, previousDependents.get(key))) {
         if (seen.has(dep)) continue;
         seen.add(dep);

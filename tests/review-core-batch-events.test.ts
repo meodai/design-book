@@ -74,3 +74,38 @@ describe('flush() emits the same events auto mode does', () => {
     expect(token).not.toHaveBeenCalled();
   });
 });
+
+describe('flush() emits for keys that got a graph update but failed to resolve', () => {
+  it('matches auto mode for an unresolvable reference', () => {
+    const auto = new DesignBook('auto');
+    const autoScope = auto.addScope('s');
+    const autoKeys: string[] = [];
+    auto.on('tokenChanged', (e) => autoKeys.push(e.detail.key));
+    autoScope.set('y', ref('s.missing'));
+    expect(autoKeys).toContain('s.y');
+
+    const book = new DesignBook('test', { mode: 'batch' });
+    const s = book.addScope('s');
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+
+    s.set('y', ref('s.missing'));
+    const result = book.flush();
+
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.processed).not.toContain('s.y');
+    expect(keys).toContain('s.y');
+  });
+
+  it('still says nothing about a key the graph rejected outright', () => {
+    const book = new DesignBook('test', { mode: 'batch' });
+    const s = book.addScope('s');
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+
+    s.set('n', ref('s.n'));
+    book.flush();
+
+    expect(keys).not.toContain('s.n');
+  });
+})
