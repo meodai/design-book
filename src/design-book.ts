@@ -1,7 +1,7 @@
 import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
-import { TokenError } from './errors';
+import { ScopeError, TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
@@ -210,7 +210,7 @@ export class DesignBook {
   }
 
   extendScope(name: string, base: string, description?: string): Scope {
-    return this.scopeManager.extendScope(name, base, description);
+    return this.addScope(name, { extends: base, description });
   }
 
   /** Convenience for creating a typography scope. Equivalent to
@@ -242,7 +242,14 @@ export class DesignBook {
   }
 
   copyScope(source: string, target: string): Scope {
-    return this.scopeManager.copyScope(source, target);
+    if (!this.scopeManager.hasScope(source)) {
+      throw new ScopeError(`Scope "${source}" not found`, source);
+    }
+    // Create the target through addScope so it validates the name and fires
+    // scopeAdded before the copied tokens start emitting tokenChanged.
+    const scope = this.addScope(target);
+    this.scopeManager.copyTokensInto(source, scope);
+    return scope;
   }
 
   deleteScope(name: string): string[] {
