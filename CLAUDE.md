@@ -86,6 +86,7 @@ Event system uses `DesignBookEventMap` with typed payloads:
 - `scopeRemoved` → `ScopeRemovedDetail { scope, removedKeys }`
 - `batch-complete` → `BatchCompleteDetail { processed }`
 - `batch-failed` → `BatchFailedDetail { processed, errors }`
+- `error` → `ErrorDetail { key, error, phase }` — a change made from an event handler was rejected after the outer `set()` had already returned, so it was reported instead of thrown
 
 `on()` and `watch()` return unsubscribe functions.
 

@@ -500,6 +500,7 @@ book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
 book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors */ });
 book.on('batch-complete', (e) => { /* e.detail.processed */ });
+book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase — a re-entrant change rejected too late to throw */ });
 book.watch('brand.primary', (newValue, detail) => {
   // newValue is undefined when the token no longer resolves
   // detail contains the underlying tokenChanged event payload
