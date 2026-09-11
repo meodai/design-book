@@ -16,7 +16,14 @@ import type { Scope } from '../../scope';
 const deltaE = differenceEuclidean('oklab');
 
 export function closestColorImpl(targetValue: string, scope: Scope, not: string[] = []): string {
-  const targetParsed = parse(targetValue);
+  const targetRaw = parse(targetValue);
+  if (!targetRaw) {
+    return '#00000000';
+  }
+  // Candidates are compared in their sRGB hex form (that is what the function
+  // returns), so clamp the target the same way. Otherwise a wide-gamut token
+  // measured against its own clamped hex would not be at distance zero.
+  const targetParsed = parse(formatHex(targetRaw));
   if (!targetParsed) {
     return '#00000000';
   }

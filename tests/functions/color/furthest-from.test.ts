@@ -18,4 +18,19 @@ describe('furthestFrom', () => {
     // blue is most different from the reds
     expect(book.resolve('ui.outlier')).toBe('#0000ff');
   });
+
+  it('measures distance in OKLab, not CIE Lab', () => {
+    const book = new DesignBook('test');
+    const pool = book.addScope('pool');
+    pool.set('lime', color('#34e411'));
+    pool.set('rust', color('#cd2506'));
+    pool.set('mist', color('#b7bddc'));
+    pool.set('sand', color('#d1d5be'));
+
+    const ui = book.addScope('ui');
+    ui.set('outlier', furthestFrom(pool));
+
+    // CIE Lab picks the lime; OKLab picks the rust.
+    expect(book.resolve('ui.outlier')).toBe('#cd2506');
+  });
 });

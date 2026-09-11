@@ -1216,7 +1216,7 @@ ui.set('dark-variant', relativeTo(
 
 ##### `closestColor(targetColor, scope, options?)`
 
-Finds the perceptually closest color in a scope to the given target. Uses Euclidean distance in RGB space.
+Finds the perceptually closest color in a scope to the given target. Uses Euclidean distance in OKLab.
 
 ```typescript
 export function closestColor(
@@ -1240,7 +1240,7 @@ export function furthestFrom(
 ): FunctionTokenValue
 ```
 
-- Uses CIELAB Delta E (Euclidean distance in LAB space) for perceptual accuracy.
+- Uses Euclidean distance in OKLab for perceptual accuracy.
 - Returns the hex value of the most distant color.
 
 ### Non-Color Functions

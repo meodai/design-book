@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color } from '../../../src/tokens';
+import { color, ref } from '../../../src/tokens';
 import { closestColor } from '../../../src/functions/color/closest-color';
 
 describe('closestColor', () => {
@@ -31,5 +31,18 @@ describe('closestColor', () => {
     ui.set('match', closestColor(color('#ffff00'), palette));
 
     expect(book.resolve('ui.match')).toBe('#ffff80');
+  });
+
+  it('matches a wide-gamut token to itself', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    palette.set('accent', color('oklch(0.7 0.3 150)'));
+    palette.set('mint', color('#00c600'));
+
+    const ui = book.addScope('ui');
+    ui.set('match', closestColor(ref('palette.accent'), palette));
+
+    // oklch(0.7 0.3 150) is out of sRGB; its clamped hex is #00cb00.
+    expect(book.resolve('ui.match')).toBe('#00cb00');
   });
 });
