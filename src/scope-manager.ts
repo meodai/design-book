@@ -49,11 +49,13 @@ export class ScopeManager {
     // I2 fix: release the book-level change subscription before removing the
     // scope so the listener Set doesn't retain a stale closure forever.
     scope.dispose();
-    const graph = this.book.getDependencyGraph();
-    for (const key of keys) {
-      graph.removeNode(key);
-    }
+    // Drop the scope first so the book sees each key as gone, then notify per
+    // key: that detaches the node the same way Scope.delete does (keeping it
+    // while dependents point at it) and fans the change out to them.
     this.scopes.delete(name);
+    for (const key of keys) {
+      this.book._notifyTokenChange(key, undefined, undefined);
+    }
     return keys;
   }
 

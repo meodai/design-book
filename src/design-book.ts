@@ -526,7 +526,7 @@ export class DesignBook {
       }
     } else {
       this._updateReferenceCaches(qualifiedKey, previousDependents);
-      this.graph.removeNode(qualifiedKey);
+      this._detachNode(qualifiedKey);
       if (this._liveKeys.delete(qualifiedKey)) {
         this._refreshPoolEdges(qualifiedKey);
       }
@@ -674,6 +674,18 @@ export class DesignBook {
     return false;
   }
 
+  /** Drop a deleted token from the graph without cutting the tokens that
+   *  depend on it: `removeNode` would strip their incoming edge, so a later
+   *  re-`set` of the same key would never reach them again. Keep the node as
+   *  a dangling prerequisite while anything still points at it. */
+  private _detachNode(qualifiedKey: string): void {
+    if (this.graph.getDependentsOf(qualifiedKey).length > 0) {
+      this.graph.updateEdges(qualifiedKey, []);
+      return;
+    }
+    this.graph.removeNode(qualifiedKey);
+  }
+
   private _updateReferenceCaches(qualifiedKey: string, dependentKeys?: string[]): void {
     const dotIndex = qualifiedKey.indexOf('.');
     if (dotIndex === -1) return;
@@ -701,7 +713,7 @@ export class DesignBook {
 
       if (!currentValue) {
         deletedKeys.add(key);
-        this.graph.removeNode(key);
+        this._detachNode(key);
         continue;
       }
 
