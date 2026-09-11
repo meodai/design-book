@@ -96,13 +96,16 @@ export class ScopeManager {
     // I2 fix: release the book-level change subscription before removing the
     // scope so the listener Set doesn't retain a stale closure forever.
     scope.dispose();
-    // Drop the scope first so the book sees each key as gone, then notify per
-    // key: that detaches the node the same way Scope.delete does (keeping it
-    // while dependents point at it) and fans the change out to them.
-    this.scopes.delete(name);
+    // Empty the scope but keep it registered while notifying: that makes
+    // every key read as gone (so the node is detached the way Scope.delete
+    // does it, keeping it while dependents point at it, and the change fans
+    // out to them) while the book can still reach the scope to refresh those
+    // dependents' reference caches. Unregister it only afterwards.
+    scope._detachForDeletion();
     for (const key of keys) {
       this.book._notifyTokenChange(key, undefined, undefined);
     }
+    this.scopes.delete(name);
     return keys;
   }
 

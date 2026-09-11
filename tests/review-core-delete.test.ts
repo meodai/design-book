@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color, ref } from '../src/tokens';
+import { color, getReferenceResolution, ref } from '../src/tokens';
 
 describe('deleting a token keeps its dependents connected', () => {
   it('re-setting a deleted token still reaches its dependents', () => {
@@ -72,5 +72,51 @@ describe('deleting a token keeps its dependents connected', () => {
 
     expect(book.getDependencyGraph().getAllNodes()).not.toContain('ui.bg');
     expect(book.getDependencyGraph().getDependentsOf('brand.primary')).not.toContain('ui.bg');
+  });
+});
+
+describe('deleting invalidates the reference caches of dependents', () => {
+  it('deleting a single token marks its references unresolvable', () => {
+    const book = new DesignBook('test');
+    const a = book.addScope('a');
+    const b = book.addScope('b');
+    a.set('x', color('#ff0000'));
+    const r = ref('a.x');
+    b.set('y', r);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+
+    a.delete('x');
+
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+  });
+
+  it('deleting the whole scope does the same', () => {
+    const book = new DesignBook('test');
+    const a = book.addScope('a');
+    const b = book.addScope('b');
+    a.set('x', color('#ff0000'));
+    const r = ref('a.x');
+    b.set('y', r);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+
+    book.deleteScope('a');
+
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+  });
+
+  it('deleting a scope that extends another reports its inherited keys as gone', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    parent.set('a', color('#ff0000'));
+    const r = ref('child.a');
+    other.set('x', r);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+
+    book.deleteScope('child');
+
+    expect(book.hasScope('child')).toBe(false);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
   });
 });

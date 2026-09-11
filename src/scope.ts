@@ -242,6 +242,19 @@ export class Scope {
     });
   }
 
+  /** Prepare for removal: drop the local tokens *and* the inheritance link,
+   *  so every one of this scope's keys reads as gone while the scope itself
+   *  stays reachable. `ScopeManager.deleteScope` needs that window — the
+   *  book refreshes a key's dependents' reference caches through the scope
+   *  that owns the key, so unregistering the scope first made the whole
+   *  notification a no-op. Silent by design; the manager notifies per key. */
+  _detachForDeletion(): void {
+    this.tokens.clear();
+    this.extendsName = undefined;
+    this.invalidateOrderCache();
+    this.book.invalidateDescendantOrderCaches(this.name);
+  }
+
   /** Release the book-level change subscription. Call before discarding the
    *  scope (e.g. in ScopeManager.deleteScope) to prevent memory leaks. */
   dispose(): void {
