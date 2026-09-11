@@ -118,6 +118,27 @@ describe('nth', () => {
     expect(book.resolve('ui.clamped')).toBe('#000000');
   });
 
+  it('picks the last item with index 0.999 (relative position near 1)', () => {
+    const { book, ramp } = makeColorScope();
+    const ui = book.addScope('ui');
+    ui.set('near-last', nth(ramp, 0.999));
+    expect(book.resolve('ui.near-last')).toBe('#cccccc');
+  });
+
+  it('throws a FunctionError from the wrapper when index is NaN', () => {
+    const { book, ramp } = makeColorScope();
+    const ui = book.addScope('ui');
+    ui.set('bad', nth(ramp, NaN));
+    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
+  });
+
+  it('throws a FunctionError from the wrapper when index is Infinity', () => {
+    const { book, ramp } = makeColorScope();
+    const ui = book.addScope('ui');
+    ui.set('bad', nth(ramp, Infinity));
+    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
+  });
+
   // --- Error cases ---
 
   it('throws when integer index is out of bounds (positive)', () => {

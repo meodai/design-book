@@ -18,6 +18,7 @@ import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
 import type { Scope } from '../scope';
+import { FunctionError } from '../errors';
 
 export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
@@ -127,7 +128,13 @@ export function registerBuiltinFunctions(book: {
 		'nth',
 		(scope: Scope, options?: { index: number; not?: string[] }) => {
 			if (!options || options.index === undefined) {
-				throw new Error('nth: index option is required');
+				throw new FunctionError('nth: index option is required', 'nth');
+			}
+			if (!Number.isFinite(options.index)) {
+				throw new FunctionError(
+					`nth: index must be a finite number, got ${options.index}`,
+					'nth',
+				);
 			}
 			return nthImpl(scope, options.index, options.not ?? []);
 		},
