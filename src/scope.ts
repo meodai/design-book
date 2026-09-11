@@ -158,6 +158,12 @@ export class Scope {
     return this.book.resolve(qualifiedKey);
   }
 
+  /** Keys stored directly on this scope, in insertion order and without
+   *  the sorting pass `getAllKeys()` performs. Inherited keys are excluded. */
+  ownKeys(): string[] {
+    return Array.from(this.tokens.keys());
+  }
+
   /** Keys in insertion / parent-first order (the pre-ordering behavior). */
   private baseKeys(): string[] {
     const localKeys = Array.from(this.tokens.keys());

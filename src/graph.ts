@@ -13,6 +13,10 @@ export class Graph {
     }
   }
 
+  hasNode(key: string): boolean {
+    return this.outgoing.has(key);
+  }
+
   addEdge(from: string, to: string): void {
     this.addNode(from);
     this.addNode(to);

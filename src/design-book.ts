@@ -4,9 +4,9 @@ import { Scope } from './scope';
 import { TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
-import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { isReferenceValue, isTokenValue, string as stringToken } from './tokens';
+import { extractVisualDependencies, isFunctionTokenValue, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -130,6 +130,11 @@ export class DesignBook {
 
   private _propagating = false;
   private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any }> = [];
+
+  /** Keys currently backed by a stored token, as far as the graph knows.
+   *  Used to spot the moment a scope gains or loses a member so that
+   *  scope-iterating function tokens can refresh their candidate-pool edges. */
+  private _liveKeys: Set<string> = new Set();
 
   private _rampEngine?: RampEngine;
   private _rampOptions: {
@@ -513,11 +518,18 @@ export class DesignBook {
     if (currentValue) {
       const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
       this.graph.addNode(qualifiedKey);
-      this.graph.updateEdges(qualifiedKey, deps);
+      this.graph.updateEdges(qualifiedKey, deps, this._getPoolDepsForKey(qualifiedKey, currentValue));
       this._updateReferenceCaches(qualifiedKey);
+      if (!this._liveKeys.has(qualifiedKey)) {
+        this._liveKeys.add(qualifiedKey);
+        this._refreshPoolEdges(qualifiedKey);
+      }
     } else {
       this._updateReferenceCaches(qualifiedKey, previousDependents);
       this.graph.removeNode(qualifiedKey);
+      if (this._liveKeys.delete(qualifiedKey)) {
+        this._refreshPoolEdges(qualifiedKey);
+      }
     }
 
     const changedKeys: string[] = [qualifiedKey];
@@ -585,6 +597,83 @@ export class DesignBook {
     return this._extractDepsFromValue(value);
   }
 
+  /** Live candidate pool of a function token: every key of the scope(s) it
+   *  iterates, read fresh from the scope rather than from the
+   *  construction-time `metadata.visualDependencies` snapshot. The token's
+   *  own key is excluded so `s.text = bestContrastWith(ref('s.bg'), s)`
+   *  doesn't depend on itself. */
+  private _getPoolDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
+    if (value.type !== 'function') return [];
+    const source = this.getSourceKey(qualifiedKey);
+    // An inherited token's pool edges belong to the token it inherits from.
+    if (source && source !== qualifiedKey) return [];
+    return extractVisualDependencies((value as FunctionTokenValue).args)
+      .filter(key => key !== qualifiedKey);
+  }
+
+  /** A scope-iterating function's pool is its scope's live key list, so a
+   *  scope gaining or losing a member changes the dependencies of every
+   *  function token that iterates it (or iterates a scope that inherits
+   *  from it). Re-register those edges. */
+  private _refreshPoolEdges(changedKey: string): void {
+    const dotIndex = changedKey.indexOf('.');
+    if (dotIndex === -1) return;
+    const affected = this._scopeAndDescendants(changedKey.substring(0, dotIndex));
+
+    for (const scope of this.scopeManager.getAllScopes()) {
+      for (const name of scope.ownKeys()) {
+        const token = scope.get(name);
+        if (!token || token.type !== 'function') continue;
+        if (!this._iteratesAnyScope(token as FunctionTokenValue, affected)) continue;
+        const key = `${scope.name}.${name}`;
+        if (key === changedKey) continue;
+        this.graph.addNode(key);
+        try {
+          this.graph.updateEdges(
+            key,
+            this._getEffectiveDepsForKey(key, token),
+            this._getPoolDepsForKey(key, token),
+          );
+        } catch {
+          // A hard-dependency cycle here pre-dates this refresh; leave the
+          // token's existing edges in place rather than failing the change
+          // that merely grew the pool.
+        }
+      }
+    }
+  }
+
+  /** `name` plus every scope that (transitively) extends it — their
+   *  `getAllKeys()` all include `name`'s keys. */
+  private _scopeAndDescendants(name: string): Set<string> {
+    const names = new Set([name]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const scope of this.scopeManager.getAllScopes()) {
+        if (names.has(scope.name)) continue;
+        if (scope.extendsScope && names.has(scope.extendsScope)) {
+          names.add(scope.name);
+          grew = true;
+        }
+      }
+    }
+    return names;
+  }
+
+  private _iteratesAnyScope(fn: FunctionTokenValue, scopeNames: Set<string>): boolean {
+    for (const arg of fn.args) {
+      if (isFunctionTokenValue(arg)) {
+        if (this._iteratesAnyScope(arg, scopeNames)) return true;
+        continue;
+      }
+      if (typeof arg !== 'object' || arg === null) continue;
+      const scopeArg = arg as ScopeFunctionArg;
+      if (typeof scopeArg.getAllKeys === 'function' && scopeNames.has(scopeArg.name)) return true;
+    }
+    return false;
+  }
+
   private _updateReferenceCaches(qualifiedKey: string, dependentKeys?: string[]): void {
     const dotIndex = qualifiedKey.indexOf('.');
     if (dotIndex === -1) return;
@@ -619,11 +708,23 @@ export class DesignBook {
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
       try {
-        this.graph.updateEdges(key, deps);
+        this.graph.updateEdges(key, deps, this._getPoolDepsForKey(key, currentValue));
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
         failedKeys.add(key);
+      }
+    }
+
+    // Scopes that gained or lost a member need every function token that
+    // iterates them re-wired before the topological pass.
+    for (const key of keys) {
+      if (failedKeys.has(key)) continue;
+      if (deletedKeys.has(key)) {
+        if (this._liveKeys.delete(key)) this._refreshPoolEdges(key);
+      } else if (!this._liveKeys.has(key)) {
+        this._liveKeys.add(key);
+        this._refreshPoolEdges(key);
       }
     }
 

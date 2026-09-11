@@ -15,7 +15,17 @@ export class DependencyGraph extends Graph {
     return this.topologicalSort(upstream);
   }
 
-  updateEdges(key: string, dependencies: string[]): void {
+  /** Replace every incoming edge of `key`.
+   *
+   *  `dependencies` are hard prerequisites: if they would close a cycle the
+   *  whole update is rolled back and a `CircularDependencyError` is thrown.
+   *
+   *  `optionalDependencies` are soft prerequisites — the live membership of a
+   *  scope iterated by a function token. Two selectors that sit in each
+   *  other's candidate pool legitimately form a cycle there (resolution
+   *  breaks it with a re-entrancy guard), so a soft edge that would close a
+   *  cycle is simply dropped instead of rejecting the change. */
+  updateEdges(key: string, dependencies: string[], optionalDependencies: string[] = []): void {
     // Save current incoming edges for rollback
     const currentPrereqs = [...this.getIncoming(key)];
 
@@ -44,6 +54,30 @@ export class DependencyGraph extends Graph {
         this.addEdge(prereq, key);
       }
       throw new CircularDependencyError([...dependencies, key]);
+    }
+
+    this.addOptionalEdges(key, optionalDependencies, new Set(dependencies));
+  }
+
+  private addOptionalEdges(key: string, optionalDependencies: string[], hard: Set<string>): void {
+    const optional = Array.from(new Set(optionalDependencies)).filter(
+      dep => dep !== key && !hard.has(dep),
+    );
+    if (optional.length === 0) return;
+
+    for (const dep of optional) {
+      this.addEdge(dep, key);
+    }
+    if (!this.hasCycles()) return;
+
+    // At least one soft edge closes a cycle — re-add them one by one and keep
+    // only the ones that don't.
+    for (const dep of optional) {
+      this.removeEdge(dep, key);
+    }
+    for (const dep of optional) {
+      this.addEdge(dep, key);
+      if (this.hasCycles()) this.removeEdge(dep, key);
     }
   }
 }
