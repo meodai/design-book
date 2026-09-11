@@ -72,7 +72,7 @@ export function parseTokenInput(
 
 // --- Argument parsing helpers ---
 
-/** Split top-level arguments respecting nested parens and quotes */
+/** Split top-level arguments respecting nested parens, brackets, braces and quotes */
 function splitArgs(argsStr: string): string[] {
   const args: string[] = [];
   let depth = 0;
@@ -91,10 +91,10 @@ function splitArgs(argsStr: string): string[] {
     if (ch === "'" || ch === '"') {
       inQuote = ch;
       current += ch;
-    } else if (ch === '(') {
+    } else if (ch === '(' || ch === '[' || ch === '{') {
       depth++;
       current += ch;
-    } else if (ch === ')') {
+    } else if (ch === ')' || ch === ']' || ch === '}') {
       depth--;
       current += ch;
     } else if (ch === ',' && depth === 0) {

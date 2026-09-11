@@ -310,7 +310,7 @@ function looksLikeColor(value: string): boolean {
 
 // --- Get display value for a token ---
 
-function getTokenDisplayValue(scope: Scope, tokenName: string): string {
+export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   if (scope.isInherited(tokenName)) {
     return 'inherit';
   }
@@ -386,7 +386,7 @@ function getScopeExtends(name: string): string | undefined {
 
 // --- Convert scope tokens to text for CodeMirror ---
 
-function scopeToText(scope: Scope): string {
+export function scopeToText(scope: Scope): string {
   const lines: string[] = [];
   for (const key of scope.getAllKeys()) {
     lines.push(`${key}: ${getTokenDisplayValue(scope, key)}`);
