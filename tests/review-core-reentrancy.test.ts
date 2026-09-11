@@ -153,3 +153,54 @@ describe('a change that is announced and then rolled back is corrected', () => {
     expect(keys).toEqual([]);
   });
 });
+
+describe('the finally-drain never replaces the exception already in flight', () => {
+  it('an error listener that throws does not become the reported error', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('x', color('#111111'));
+    s.set('y', color('#222222'));
+    s.set('z', ref('s.y'));
+
+    book.on('error', () => {
+      throw new Error('from the error listener');
+    });
+
+    let fired = false;
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      s.set('y', ref('s.z')); // rejected when the queue is drained
+    });
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      fired = true;
+      throw new Error('the original error');
+    });
+
+    expect(() => s.set('x', color('#333333'))).toThrow('the original error');
+    expect(book.resolve('s.y')).toBe('#222222');
+  });
+
+  it('a tokenChanged listener that throws during the drain does not either', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('x', color('#111111'));
+
+    let fired = false;
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      s.set('w', px(4));
+    });
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.w') return;
+      throw new Error('from the drain');
+    });
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      fired = true;
+      throw new Error('the original error');
+    });
+
+    expect(() => s.set('x', color('#222222'))).toThrow('the original error');
+  });
+});

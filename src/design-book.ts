@@ -549,6 +549,10 @@ export class DesignBook {
       // that nothing ever retries. Drain them through the same path instead.
       try {
         this._drainReentrantQueue();
+      } catch (e) {
+        // An exception may already be in flight towards the caller; letting
+        // this one out of the finally would replace it and hide the cause.
+        this._reportSuppressed(qualifiedKey, e, 'reentrant');
       } finally {
         // Backstop: a listener throwing out of the drain must not leave a
         // poisoned queue behind to replay on the next change.
@@ -569,12 +573,12 @@ export class DesignBook {
       try {
         this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
       } catch (e) {
-        this._rollbackKey(queued.key, queued.oldValue);
-        this.emit('error', {
-          key: queued.key,
-          error: e instanceof Error ? e : new Error(String(e)),
-          phase: 'reentrant',
-        });
+        // Reporting must not throw either: the drain also runs from a
+        // `finally`, where an escaping error would replace the caller's.
+        try {
+          this._rollbackKey(queued.key, queued.oldValue);
+        } catch { /* the token is already unusable; the report matters more */ }
+        this._reportSuppressed(queued.key, e, 'reentrant');
       }
     }
   }
