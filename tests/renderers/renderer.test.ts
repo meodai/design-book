@@ -488,6 +488,20 @@ describe('Renderer', () => {
       expect(out.brand.sans.$value).toBe('Inter, system-ui');
     });
 
+    it('keeps the unit when metadata carries both unit and w3Type', () => {
+      // val() shallow-merges options, so a metadata object replaces the one
+      // the constructor built — the documented form passes both together.
+      const book = new DesignBook('test');
+      book.addScope('motion').set(
+        'slow',
+        px(300, { metadata: { unit: 'ms', w3Type: 'duration' } })
+      );
+
+      const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
+      expect(out.motion.slow.$type).toBe('duration');
+      expect(out.motion.slow.$value).toEqual({ value: 300, unit: 'ms' });
+    });
+
     it('types a unitless dimension as number with a numeric $value', () => {
       const book = new DesignBook('test');
       book.addScope('brand').set('ratio', dimension(1.5, ''));

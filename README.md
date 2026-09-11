@@ -94,7 +94,16 @@ mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally 
 leastVivid(scope, { against, minContrast }) // Lowest OKLCH chroma — the muted counterpart
 ```
 
-`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Pass `against` (a target colour) and `minContrast` to require the result to clear a WCAG threshold against that target — useful for picking an accent / link colour out of a generated palette without it turning unreadable. Falls back to the highest-contrast candidate if nothing meets the threshold, same as `minContrastWith`.
+`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Pass `against` (a target colour) and `minContrast` to require the result to clear a WCAG threshold against that target — useful for picking an accent / link colour out of a generated palette without it turning unreadable. Falls back to the highest-contrast candidate if nothing meets the threshold, same as `minContrastWith`. A gate that cannot be applied is an error, not a silent pass: `minContrast` without `against`, or an `against` colour that does not parse, throws a `FunctionError` at resolve time.
+
+`closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
+
+**Translucent candidates.** Selectors keep alpha. A candidate is judged as it
+would actually look — composited over the target colour — so a 5%-black
+hairline scores as the near-invisible line it is rather than as pure black,
+and the winner is returned with its own alpha as 8-digit hex
+(`#00000080`). Feed that into a renderer and you get the translucent token
+back, not an opaque approximation of it.
 
 ### Excluding candidates with `not`
 
@@ -130,6 +139,18 @@ relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
 
 `shade` is useful when you want a subtle variation that's *always* visible against the input — `darken(surface)` collapses to black when the surface is already dark, but `shade(surface)` flips direction and lightens instead. Picks based on OKLCH lightness: > 0.5 darkens, ≤ 0.5 lightens.
 
+`lighten` and `darken` are OKLCH mixes towards white and black — the JS twin
+of the `color-mix(in oklch, <color> N%, white | black)` the CSS renderer
+emits, so a token resolves to the same colour whether JS or the browser
+computes it. `colorMix` matches CSS `color-mix()` too: premultiplied-alpha
+interpolation (a fully transparent colour contributes nothing but its
+alpha), with the result gamut-mapped in OKLCH instead of clipped
+channel-wise — mixing `#ff0000` and `#00ff00` in `oklch` gives `#dda200`,
+not the clipped `#f99500`. All four keep alpha and emit 8-digit hex when the
+result is translucent; `shade` carries the input's alpha through unchanged,
+while `lighten`/`darken`/`colorMix` compute the mixed alpha the way the
+browser does.
+
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
 
 ### Dimension selection (require a scope to search)
@@ -143,9 +164,12 @@ Same selector idea as `closestColor` / `furthestFrom`, but for dimensional
 scopes (spacing, type, motion). Pass the target value and a scope of
 dimensional tokens; the function returns the strictly-larger (or strictly-
 smaller) neighbour. `minDistance` skips members that are too close — handy
-when adjacent steps are nearly the same. All members of the scope must share
-a unit (mixed units throw); the unit can be anything — `px`, `rem`, `em`,
-`ms`, etc.
+when adjacent steps are nearly the same. Comparison is per unit: members
+whose unit differs from the target's are skipped rather than treated as an
+error, so a scope that mixes `px` and `rem` still works — each target only
+ever sees its own unit. The unit can be anything — `px`, `rem`, `em`, `ms`,
+etc. If no member of the target's unit qualifies, the function throws at
+resolve time.
 
 ```typescript
 // scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }
@@ -320,6 +344,13 @@ dark.resolve('text'); // '#1a1a1a'
 
 Inherited tokens remain part of the dependency graph. If `dark.primary` currently resolves from `light.primary`, anything depending on `dark.primary` will continue to update when `light.primary` changes.
 
+`addScope` validates the name and the inheritance chain and throws a
+`ScopeError` rather than producing a book you cannot address: an empty or
+whitespace-only name, a name containing `.` (the separator between scope and
+token, so `resolve('a.b.x')` could never find the token), a scope extending
+itself, and an `extends` chain that leads back to the new scope are all
+rejected.
+
 ## Typography
 
 A type style is a *collection* of properties (family, size, weight, line-height, …) that you want to address as one thing. Design Book models that as a **scope** with a `compose` marker, so each property stays a real token in the graph while renderers can re-aggregate the scope into a composite output (a CSS class, a W3 `typography` token).
@@ -438,6 +469,12 @@ Other useful methods: `book.getRendererNames()`, `book.getRenderer(name)`. Regis
 
 References become `var()`, functions become CSS-native where possible (`color-mix`, `calc`, `color(from ...)`).
 
+Custom-property names are checked for collisions before anything is emitted.
+Two different keys can mangle to the same name — `a.b-c` and `a-b.c` both
+become `--a-b-c`, and `fontSize` / `font_size` / `font-size` collide inside
+one scope — in which case the last declaration would silently win. The
+renderer throws instead, naming the property and every token that claims it.
+
 ### JSON
 
 ```json
@@ -472,6 +509,25 @@ If you want structured data instead of a JSON string, use `renderJsonObject()`.
 
 Follows the [W3 Design Tokens spec](https://www.designtokens.org/tr/drafts/format/): structured color/dimension/duration values, `$description` support, references as `{scope.token}`.
 
+`$type` is inferred from the token, and W3 has no `string` type, so a string
+token is emitted without one. Where you know better, set it yourself with
+`metadata.w3Type` — the escape hatch wins over the inferred type:
+
+```typescript
+fonts.set('sans', string('"Inter", system-ui, sans-serif', {
+  metadata: { w3Type: 'fontFamily' },
+}));
+```
+
+One catch: constructor options go through `val()`, which **shallow-merges**
+them into the token, so a `metadata` object replaces whatever metadata the
+constructor had built rather than extending it. `px(300, { metadata: { w3Type: 'duration' } })`
+would drop the `unit: 'px'` the constructor set. Pass both together:
+
+```typescript
+motion.set('slow', px(300, { metadata: { unit: 'ms', w3Type: 'duration' } }));
+```
+
 If you want the structured token object directly, use `renderW3DesignTokensObject()`.
 
 ### Table view
@@ -500,7 +556,7 @@ book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
 book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors */ });
 book.on('batch-complete', (e) => { /* e.detail.processed */ });
-book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase — a re-entrant change rejected too late to throw */ });
+book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase */ });
 book.watch('brand.primary', (newValue, detail) => {
   // newValue is undefined when the token no longer resolves
   // detail contains the underlying tokenChanged event payload
@@ -509,6 +565,23 @@ dispose();
 ```
 
 `book.on()` and `book.watch()` both return unsubscribe functions.
+
+`error` reports a failure that could not be thrown at anybody.
+`e.detail.phase` says which:
+
+- `'reentrant'` — the change was made from an event handler while a previous
+  change was still propagating, so it was queued; by the time it ran the
+  outer `set()` had already returned and there was no caller left to throw
+  at. The token is rolled back and the failure is reported here.
+- `'rollback'` — announcing that an already-announced change had been undone
+  itself failed.
+
+**A rejected `set()` corrects itself before it throws.** When a write is
+accepted, announced, and only then refused (a cycle the graph rejects, say),
+listeners have already been told the new value. The book rolls the token
+back and emits a second `tokenChanged` (plus the accompanying `change`)
+carrying the restored value *before* rethrowing, so watchers and renderers
+never keep a value that no longer exists.
 
 ## Source Introspection
 
@@ -556,6 +629,12 @@ const result = book.flush(); // { processed: [...], errors: [...] }
 book.mode = 'auto';
 ```
 
+Switching out of batch mode with writes still queued flushes them: anything
+left in the queue would otherwise sit unpropagated until some later,
+unrelated `flush()`. Setting `mode = 'auto'` after the explicit `flush()`
+above is therefore a no-op; drop the `flush()` and the mode switch does it.
+`flush()` never throws — it collects errors and fires `batch-failed`.
+
 ## Dependency Graph
 
 ```typescript
@@ -570,6 +649,15 @@ graph.getAdjacencyList(true);               // upstream: incoming edges per node
 ```
 
 For inherited tokens, prerequisites reflect the active source token. If `dark.primary` is inherited from `light.primary`, `graph.getPrerequisitesFor('dark.primary')` includes `light.primary`.
+
+The graph holds *value* dependencies only. The candidate pool of a
+scope-iterating selector is not one: `ui.text = bestContrastWith(ref('ui.bg'), ui)`
+lists `ui.bg` as a prerequisite, but not the other members of `ui` it
+chooses between. The book tracks pools in a separate index, so a change to
+any member of an iterated scope — added, changed, deleted, inherited through
+`extends` — still notifies the selector, while a pool member that is itself
+derived from the selector (`ui.muted = lighten(ref('ui.text'))`) is not a
+cycle and is accepted.
 
 ## Editor
 
