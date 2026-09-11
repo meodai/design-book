@@ -170,10 +170,12 @@ function parseArg(
     return { type: 'token', value: dimension(parseFloat(genericUnitMatch[2]), genericUnitMatch[1]) };
   }
 
-  // string('...')
-  const stringMatch = trimmed.match(/^string\(\s*['"]([^'"]*)['"]\s*\)$/);
+  // string('...') — matching-quote regex, backreferenced so an embedded
+  // opposite quote (string("it's")) still matches, and allowing empty
+  // content (string('')).
+  const stringMatch = trimmed.match(/^string\(\s*(['"])(.*)\1\s*\)$/);
   if (stringMatch) {
-    return { type: 'token', value: string(stringMatch[1]) };
+    return { type: 'token', value: string(stringMatch[2]) };
   }
 
   // Nested function call: name(...) where name is a known function, e.g.
@@ -570,8 +572,11 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
 
   // string('...')
   string(argsStr) {
-    const match = argsStr.trim().match(/^['"]([^'"]+)['"]$/);
-    if (match) return string(match[1]);
+    // Matching-quote regex: backreferences the opening quote (so a value
+    // containing the other quote character, e.g. "it's", still matches)
+    // and allows zero-length content (so string('') parses to "").
+    const match = argsStr.trim().match(/^(['"])(.*)\1$/);
+    if (match) return string(match[2]);
     return string(argsStr.trim());
   },
 };
