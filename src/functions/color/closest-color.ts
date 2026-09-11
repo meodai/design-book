@@ -1,4 +1,4 @@
-import { parse, formatHex } from 'culori';
+import { parse, formatHex, differenceEuclidean } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
@@ -9,20 +9,17 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
+// Perceptual distance. Euclidean RGB is not perceptually uniform: it
+// over-weights channel deltas that the eye barely notices and misses hue
+// shifts it does. OKLab is designed so that plain Euclidean distance
+// tracks perceived difference.
+const deltaE = differenceEuclidean('oklab');
+
 export function closestColorImpl(targetValue: string, scope: Scope, not: string[] = []): string {
   const targetParsed = parse(targetValue);
   if (!targetParsed) {
     return '#00000000';
   }
-
-  const targetRgb = parse(formatHex(targetParsed) ?? targetValue);
-  if (!targetRgb) {
-    return '#00000000';
-  }
-
-  const tr = (targetRgb as any).r ?? 0;
-  const tg = (targetRgb as any).g ?? 0;
-  const tb = (targetRgb as any).b ?? 0;
 
   const excluded = new Set(not);
   let closestHex: string | null = null;
@@ -64,13 +61,7 @@ export function closestColorImpl(targetValue: string, scope: Scope, not: string[
     const candidateParsed = parse(colorHex);
     if (!candidateParsed) continue;
 
-    const cr = (candidateParsed as any).r ?? 0;
-    const cg = (candidateParsed as any).g ?? 0;
-    const cb = (candidateParsed as any).b ?? 0;
-
-    const distance = Math.sqrt(
-      (tr - cr) ** 2 + (tg - cg) ** 2 + (tb - cb) ** 2
-    );
+    const distance = deltaE(targetParsed, candidateParsed);
 
     if (distance < closestDistance) {
       closestDistance = distance;

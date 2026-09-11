@@ -3,8 +3,8 @@ import { createFunctionToken, extractVisualDependencies, getTokenProcessors, nor
 import type { FunctionTokenValue, ReferenceValue, TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 
-const toLab = converter('lab');
-const deltaE = differenceEuclidean('lab');
+const toOklab = converter('oklab');
+const deltaE = differenceEuclidean('oklab');
 
 export function furthestFromImpl(scope: Scope, not: string[] = []): string {
   const excluded = new Set(not);
@@ -46,7 +46,7 @@ export function furthestFromImpl(scope: Scope, not: string[] = []): string {
     const parsed = parse(colorHex);
     if (!parsed) continue;
 
-    const lab = toLab(parsed);
+    const lab = toOklab(parsed);
     if (!lab) continue;
 
     colors.push({ hex: colorHex, lab });
