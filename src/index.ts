@@ -6,6 +6,7 @@ export type {
   ChangeDetail,
   DesignBookEvent,
   DesignBookEventMap,
+  ErrorDetail,
   FunctionImplementation,
   RendererFn,
   ScopeAddedDetail,

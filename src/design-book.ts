@@ -58,6 +58,17 @@ export interface BatchCompleteDetail {
   processed: string[];
 }
 
+export interface ErrorDetail {
+  /** Key whose change was rejected. */
+  key: string;
+  error: Error;
+  /** Where the rejection happened. `reentrant`: the change was made from an
+   *  event handler while a previous change was still propagating, so it was
+   *  queued; by the time it ran, the outer `set()` had already returned and
+   *  there was nobody left to throw at. */
+  phase: 'reentrant';
+}
+
 export interface DesignBookEventMap {
   tokenChanged: TokenChangedDetail;
   change: ChangeDetail;
@@ -65,6 +76,7 @@ export interface DesignBookEventMap {
   scopeRemoved: ScopeRemovedDetail;
   'batch-failed': BatchFailedDetail;
   'batch-complete': BatchCompleteDetail;
+  error: ErrorDetail;
 }
 
 export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
@@ -508,14 +520,34 @@ export class DesignBook {
     try {
       this._processAutoChange(qualifiedKey, newValue, oldValue);
 
-      // Process any re-entrant changes
+      // Process any re-entrant changes. Each one gets its own try/catch: the
+      // outer set() has already been accepted, so a failure here must roll
+      // back *that* key rather than surface as an exception from an unrelated
+      // set(), and it must not abandon the changes queued behind it.
       while (this._reentrantQueue.length > 0) {
         const queued = this._reentrantQueue.shift()!;
-        this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
+        try {
+          this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
+        } catch (e) {
+          this._rollbackKey(queued.key, queued.oldValue);
+          this.emit('error', {
+            key: queued.key,
+            error: e instanceof Error ? e : new Error(String(e)),
+            phase: 'reentrant',
+          });
+        }
       }
     } finally {
       this._propagating = false;
+      this._reentrantQueue.length = 0;
     }
+  }
+
+  private _rollbackKey(qualifiedKey: string, oldValue: AnyTokenValue | undefined): void {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return;
+    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
+    scope?._rollback(qualifiedKey.substring(dotIndex + 1), oldValue);
   }
 
   private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {

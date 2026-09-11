@@ -147,6 +147,16 @@ export class Scope {
     return had;
   }
 
+  /** Put a token back after the book rejected the change that set it —
+   *  restoring `undefined` removes the entry. Deliberately silent: the
+   *  caller is already mid-propagation and must not start a new change. */
+  _rollback(name: string, oldValue: AnyTokenValue | undefined): void {
+    if (oldValue === undefined) this.tokens.delete(name);
+    else this.tokens.set(name, oldValue);
+    this.invalidateOrderCache();
+    this.book.invalidateDescendantOrderCaches(this.name);
+  }
+
   updateReferenceCaches(key: string, dependentKeys?: string[]): void {
     this.referenceResolver.updateAllReferencesTo(key, dependentKeys);
   }
