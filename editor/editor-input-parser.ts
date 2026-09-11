@@ -506,19 +506,28 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
   },
 };
 
-/** Try to parse a simple options-like string: { ratio: 0.5, step: 3 } or just key=value pairs */
+/**
+ * Parse a simple options-like string: `{ ratio: 0.5, step: 3 }`. Normalises
+ * a few hand-written forms that aren't valid JSON — unquoted keys, single
+ * quotes, and leading-dot numbers like `.5` — before parsing. Throws with a
+ * clear message if the result still isn't parseable, rather than silently
+ * falling back to the caller's defaults.
+ */
 function parseOptionsArg(str: string): Record<string, any> | undefined {
   const trimmed = str.trim();
   if (!trimmed) return undefined;
 
-  // Try JSON-like: { ratio: 0.5 } — fix unquoted keys
-  const jsonLike = trimmed.replace(/^\{?\s*/, '{').replace(/\s*\}?$/, '}');
-  const withQuotedKeys = jsonLike.replace(/(\w+)\s*:/g, '"$1":');
-  try {
-    return JSON.parse(withQuotedKeys);
-  } catch {
-    // ignore
-  }
+  // Wrap in braces if missing, quote unquoted keys, normalise single-quoted
+  // string values to double quotes, and add a leading zero to bare-dot
+  // numbers (.5 -> 0.5, -.5 -> -0.5) so JSON.parse can handle them.
+  let jsonLike = trimmed.replace(/^\{?\s*/, '{').replace(/\s*\}?$/, '}');
+  jsonLike = jsonLike.replace(/(\w+)\s*:/g, '"$1":');
+  jsonLike = jsonLike.replace(/'([^']*)'/g, '"$1"');
+  jsonLike = jsonLike.replace(/([:,[\s])(-?)\.(\d)/g, '$1$20.$3');
 
-  return undefined;
+  try {
+    return JSON.parse(jsonLike);
+  } catch (err) {
+    throw new Error(`Cannot parse options "${str}": ${(err as Error).message}`);
+  }
 }
