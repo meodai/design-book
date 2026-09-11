@@ -63,3 +63,33 @@ describe('colorMix', () => {
     });
   });
 });
+
+describe('colorMix gamut mapping and alpha', () => {
+  function mix(a: string, b: string, options?: Record<string, unknown>): string {
+    const book = new DesignBook('test');
+    const ui = book.addScope('ui');
+    ui.set('mixed', colorMix(color(a), color(b), options as any));
+    return book.resolve('ui.mixed');
+  }
+
+  it('gamut-maps an out-of-sRGB mix instead of clipping it', () => {
+    // Clipping the channels gives #f99500 and skews the hue; the browser
+    // (and a proper OKLCH gamut map) lands on #dda200.
+    expect(mix('#ff0000', '#00ff00', { colorSpace: 'oklch' })).toBe('#dda200');
+  });
+
+  it('keeps a translucent input translucent, as 8-digit hex', () => {
+    expect(mix('#ff000080', '#00ff00', { colorSpace: 'oklch' })).toBe('#ecae00c0');
+    expect(mix('#ff000080', '#0000ff80', { colorSpace: 'srgb' })).toBe('#7f008080');
+  });
+
+  it('premultiplies alpha the way CSS color-mix does', () => {
+    // Mixing an invisible colour in must not drag the result towards it:
+    // 50% of transparent red over blue is blue at half alpha, not purple.
+    expect(mix('#ff000000', '#0000ff', { colorSpace: 'srgb' })).toBe('#0000ff80');
+  });
+
+  it('leaves an opaque mix opaque', () => {
+    expect(mix('#000000', '#ffffff', { colorSpace: 'srgb' })).toBe('#808080');
+  });
+});
