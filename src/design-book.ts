@@ -172,7 +172,13 @@ export class DesignBook {
   }
 
   set mode(value: 'auto' | 'batch') {
+    const wasBatching = this._mode === 'batch';
     this._mode = value;
+    // Leaving batch mode: anything still queued would otherwise sit
+    // unpropagated until some later, unrelated flush.
+    if (wasBatching && value !== 'batch' && this.batchQueue.size > 0) {
+      this.flush();
+    }
   }
 
   get batchQueueSize(): number {
