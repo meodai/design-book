@@ -191,6 +191,23 @@ export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): 
   return not.map((n) => (typeof n === 'string' ? n : (n as ReferenceValue).key));
 }
 
+/** Names of the scopes a function token iterates — the scope arguments of
+ *  the call itself plus those of any nested function-token arguments.
+ *  Unlike `extractVisualDependencies` this does not enumerate the scope's
+ *  members, so it stays valid as the scope gains and loses keys: it is what
+ *  the book indexes selectors by. */
+export function extractIteratedScopes(args: FunctionArg[]): string[] {
+  const names: string[] = [];
+  for (const arg of args) {
+    if (isFunctionTokenValue(arg)) {
+      for (const name of extractIteratedScopes(arg.args)) names.push(name);
+    } else if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
+      names.push((arg as ScopeFunctionArg).name);
+    }
+  }
+  return names;
+}
+
 export function extractVisualDependencies(args: FunctionArg[]): string[] {
   const deps: string[] = [];
   for (const arg of args) {

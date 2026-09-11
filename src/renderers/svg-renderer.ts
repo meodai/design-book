@@ -1,5 +1,6 @@
 import { parse, formatHex, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
+import { extractVisualDependencies } from '../tokens';
 import type { AnyTokenValue, TokenValue, ReferenceValue, FunctionTokenValue } from '../tokens';
 
 export interface SVGRenderOptions {
@@ -97,15 +98,21 @@ function pickActiveOutline(fillValue: string): string {
 /** Function tokens fall into two families: palette-linkers (iterate a
  *  scope — bestContrastWith, mostVivid, closestColor, …) and value
  *  derivers (apply a formula to inputs — darken, colorMix, spacingScale).
- *  Palette-linkers always have a non-empty visualDependencies array. */
+ *  Palette-linkers iterate a scope, so their candidate pool is read live
+ *  from the scope arguments rather than from `metadata.visualDependencies`
+ *  — that snapshot is taken when the token is built and is empty for a
+ *  selector written before the scope it iterates had any members. */
+function paletteCandidates(token: AnyTokenValue): string[] {
+  if (token.type !== 'function') return [];
+  return extractVisualDependencies((token as FunctionTokenValue).args);
+}
+
 function isPaletteLinker(token: AnyTokenValue): boolean {
-  if (token.type !== 'function') return false;
-  const fn = token as FunctionTokenValue;
-  return (fn.metadata?.visualDependencies?.length ?? 0) > 0;
+  return paletteCandidates(token).length > 0;
 }
 
 /** For a palette-linker function token, find the candidate in its
- *  visualDependencies whose resolved value matches the function's output —
+ *  live candidate pool whose resolved value matches the function's output —
  *  the token that was actually picked. Returns null if no match. Handles
  *  both color outputs (matched via normalized hex) and non-color outputs
  *  like dimensions (matched via raw resolved string). */
@@ -114,9 +121,8 @@ function findResolvedSource(
   qualifiedKey: string,
   token: AnyTokenValue,
 ): string | null {
-  if (!isPaletteLinker(token)) return null;
-  const fn = token as FunctionTokenValue;
-  const visualDeps = fn.metadata?.visualDependencies ?? [];
+  const visualDeps = paletteCandidates(token);
+  if (visualDeps.length === 0) return null;
 
   let resolved: string;
   try {

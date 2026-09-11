@@ -4,9 +4,9 @@ import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
-import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
+import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { extractVisualDependencies, isFunctionTokenValue, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
+import { extractIteratedScopes, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -157,9 +157,23 @@ export class DesignBook {
   private _announced = false;
 
   /** Keys currently backed by a stored token, as far as the graph knows.
-   *  Used to spot the moment a scope gains or loses a member so that
-   *  scope-iterating function tokens can refresh their candidate-pool edges. */
+   *  Used to spot the moment a key first appears, so that keys inheriting
+   *  scopes were already pointing at can be linked to their new source. */
   private _liveKeys: Set<string> = new Set();
+
+  /** Scope name → keys of the selectors that iterate it. A selector is a
+   *  function token with a scope argument (bestContrastWith, nth, …); its
+   *  candidate pool is the scope's live membership, which is not a value
+   *  dependency — a pool member may legitimately be derived from the
+   *  selector itself. Keeping the relation in an index rather than in the
+   *  graph means such a pair no longer reads as a cycle, while a change to
+   *  any pool member still fans out to the selector (see
+   *  `_collectDependents`). */
+  private _selectorsByScope: Map<string, Set<string>> = new Map();
+
+  /** Reverse of `_selectorsByScope`, so a selector can be re-indexed
+   *  without scanning every scope. */
+  private _scopesBySelector: Map<string, Set<string>> = new Map();
 
   private _rampEngine?: RampEngine;
   private _rampOptions: {
@@ -617,6 +631,9 @@ export class DesignBook {
     if (dotIndex === -1) return;
     const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
     scope?._rollback(qualifiedKey.substring(dotIndex + 1), oldValue);
+    // The write may already have been indexed; the index must describe the
+    // token that is actually stored now.
+    this._indexSelector(qualifiedKey, this.getTokenByKey(qualifiedKey));
   }
 
   private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {
@@ -625,14 +642,13 @@ export class DesignBook {
 
     if (currentValue) {
       const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
-      const pool = this._getPoolDepsForKey(qualifiedKey, currentValue);
       const previousDeps = this.graph.getPrerequisitesFor(qualifiedKey);
       const hadNode = this.graph.hasNode(qualifiedKey);
       const isNewKey = !this._liveKeys.has(qualifiedKey);
       this.graph.addNode(qualifiedKey);
       try {
-        this.graph.updateEdges(qualifiedKey, deps, pool);
-        this._linkInheritedDependencies(deps, pool);
+        this.graph.updateEdges(qualifiedKey, deps);
+        this._linkInheritedDependencies(deps);
         if (isNewKey) this._linkInheritedShadowsOf(qualifiedKey);
       } catch (e) {
         this.graph.updateEdges(qualifiedKey, previousDeps);
@@ -641,18 +657,15 @@ export class DesignBook {
         if (!hadNode) this.graph.removeNode(qualifiedKey);
         throw e;
       }
+      this._indexSelector(qualifiedKey, currentValue);
       this._updateReferenceCaches(qualifiedKey);
       this._updateOwnReferenceCaches(qualifiedKey);
-      if (isNewKey) {
-        this._liveKeys.add(qualifiedKey);
-        this._refreshPoolEdges(qualifiedKey);
-      }
+      if (isNewKey) this._liveKeys.add(qualifiedKey);
     } else {
+      this._indexSelector(qualifiedKey, undefined);
       this._updateReferenceCaches(qualifiedKey, previousDependents);
       this._detachNode(qualifiedKey);
-      if (this._liveKeys.delete(qualifiedKey)) {
-        this._refreshPoolEdges(qualifiedKey);
-      }
+      this._liveKeys.delete(qualifiedKey);
     }
 
     const changedKeys: string[] = [qualifiedKey];
@@ -721,50 +734,70 @@ export class DesignBook {
     return this._extractDepsFromValue(value);
   }
 
-  /** Live candidate pool of a function token: every key of the scope(s) it
-   *  iterates, read fresh from the scope rather than from the
-   *  construction-time `metadata.visualDependencies` snapshot. The token's
-   *  own key is excluded so `s.text = bestContrastWith(ref('s.bg'), s)`
-   *  doesn't depend on itself. */
-  private _getPoolDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
-    if (value.type !== 'function') return [];
+  /** Record (or forget) `qualifiedKey` as a selector over the scopes its
+   *  function token iterates. Called for every write and every delete, so
+   *  the index always mirrors the stored tokens. */
+  private _indexSelector(qualifiedKey: string, value: AnyTokenValue | undefined): void {
+    const previous = this._scopesBySelector.get(qualifiedKey);
+    if (previous) {
+      for (const scopeName of previous) {
+        const selectors = this._selectorsByScope.get(scopeName);
+        selectors?.delete(qualifiedKey);
+        if (selectors && selectors.size === 0) this._selectorsByScope.delete(scopeName);
+      }
+      this._scopesBySelector.delete(qualifiedKey);
+    }
+
+    if (!value || value.type !== 'function') return;
+    // An inherited key carries the parent's token; the parent's own entry
+    // already covers the pool, and the inheritance edge carries the change
+    // down to the shadow.
     const source = this.getSourceKey(qualifiedKey);
-    // An inherited token's pool edges belong to the token it inherits from.
-    if (source && source !== qualifiedKey) return [];
-    return extractVisualDependencies((value as FunctionTokenValue).args)
-      .filter(key => key !== qualifiedKey);
+    if (source && source !== qualifiedKey) return;
+
+    const scopeNames = new Set(extractIteratedScopes((value as FunctionTokenValue).args));
+    if (scopeNames.size === 0) return;
+    this._scopesBySelector.set(qualifiedKey, scopeNames);
+    for (const scopeName of scopeNames) {
+      let selectors = this._selectorsByScope.get(scopeName);
+      if (!selectors) {
+        selectors = new Set();
+        this._selectorsByScope.set(scopeName, selectors);
+      }
+      selectors.add(qualifiedKey);
+    }
   }
 
-  /** A scope-iterating function's pool is its scope's live key list, so a
-   *  scope gaining or losing a member changes the dependencies of every
-   *  function token that iterates it (or iterates a scope that inherits
-   *  from it). Re-register those edges. */
-  private _refreshPoolEdges(changedKey: string): void {
+  /** Selectors whose candidate pool contains `changedKey` — those iterating
+   *  the key's own scope, and those iterating a scope that inherits it
+   *  through `extends` (a `dark extends palette` pool sees palette's keys).
+   *  A selector never reports its own key back to itself. */
+  private _selectorsIterating(changedKey: string): string[] {
+    if (this._selectorsByScope.size === 0) return [];
     const dotIndex = changedKey.indexOf('.');
-    if (dotIndex === -1) return;
-    const affected = this._scopeAndDescendants(changedKey.substring(0, dotIndex));
+    if (dotIndex === -1) return [];
+    const changedScope = changedKey.substring(0, dotIndex);
 
-    for (const scope of this.scopeManager.getAllScopes()) {
-      for (const name of scope.ownKeys()) {
-        const token = scope.get(name);
-        if (!token || token.type !== 'function') continue;
-        if (!this._iteratesAnyScope(token as FunctionTokenValue, affected)) continue;
-        const key = `${scope.name}.${name}`;
-        if (key === changedKey) continue;
-        this.graph.addNode(key);
-        try {
-          this.graph.updateEdges(
-            key,
-            this._getEffectiveDepsForKey(key, token),
-            this._getPoolDepsForKey(key, token),
-          );
-        } catch {
-          // A hard-dependency cycle here pre-dates this refresh; leave the
-          // token's existing edges in place rather than failing the change
-          // that merely grew the pool.
-        }
+    const selectors: string[] = [];
+    for (const [iterated, keys] of this._selectorsByScope) {
+      if (!this._scopeInheritsFrom(iterated, changedScope)) continue;
+      for (const key of keys) {
+        if (key !== changedKey) selectors.push(key);
       }
     }
+    return selectors;
+  }
+
+  /** True when `scopeName` is `ancestor` or reaches it through `extends`. */
+  private _scopeInheritsFrom(scopeName: string, ancestor: string): boolean {
+    const seen = new Set<string>();
+    let current: string | undefined = scopeName;
+    while (current !== undefined && !seen.has(current)) {
+      if (current === ancestor) return true;
+      seen.add(current);
+      current = this.scopeManager.getScope(current)?.extendsScope;
+    }
+    return false;
   }
 
   /** `name` plus every scope that (transitively) extends it — their
@@ -785,41 +818,22 @@ export class DesignBook {
     return names;
   }
 
-  private _iteratesAnyScope(fn: FunctionTokenValue, scopeNames: Set<string>): boolean {
-    for (const arg of fn.args) {
-      if (isFunctionTokenValue(arg)) {
-        if (this._iteratesAnyScope(arg, scopeNames)) return true;
-        continue;
-      }
-      if (typeof arg !== 'object' || arg === null) continue;
-      const scopeArg = arg as ScopeFunctionArg;
-      if (typeof scopeArg.getAllKeys === 'function' && scopeNames.has(scopeArg.name)) return true;
-    }
-    return false;
-  }
-
   /** A key that resolves through `extends` owns no token of its own, so
    *  nothing ever gave it an edge from the parent key it reads. Register
    *  that edge so changes to the source propagate to whatever depends on
    *  the inherited key — and so cycle detection can see through
-   *  inheritance. Pool members are linked optionally: a soft edge there
-   *  must never reject an otherwise-legal change. */
-  private _linkInheritedDependencies(dependencies: string[], poolDependencies: string[] = []): void {
+   *  inheritance. */
+  private _linkInheritedDependencies(dependencies: string[]): void {
     for (const dep of dependencies) {
-      this._linkInheritedDependency(dep, false);
-    }
-    const hard = new Set(dependencies);
-    for (const dep of poolDependencies) {
-      if (!hard.has(dep)) this._linkInheritedDependency(dep, true);
+      this._linkInheritedDependency(dep);
     }
   }
 
-  private _linkInheritedDependency(dep: string, optional: boolean): void {
+  private _linkInheritedDependency(dep: string): void {
     const source = this.getSourceKey(dep);
     if (!source || source === dep) return;
     this.graph.addNode(dep);
-    if (optional) this.graph.updateEdges(dep, [], [source]);
-    else this.graph.updateEdges(dep, [source]);
+    this.graph.updateEdges(dep, [source]);
   }
 
   /** A brand-new key may be the source that inheriting scopes were waiting
@@ -839,7 +853,7 @@ export class DesignBook {
       const key = `${name}.${tokenName}`;
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length === 0) continue;
-      this._linkInheritedDependency(key, false);
+      this._linkInheritedDependency(key);
     }
   }
 
@@ -853,27 +867,45 @@ export class DesignBook {
       const key = `${scopeName}.${name}`;
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length === 0) continue;
-      this._linkInheritedDependency(key, false);
+      this._linkInheritedDependency(key);
     }
   }
 
   /** Transitive dependents of `key`, seeded with keys that depended on it
-   *  before the graph was re-wired. A scope-iterating function loses its edge
-   *  to a pool member the moment that member disappears, so by fan-out time
-   *  the traversal alone can no longer find it — yet it is exactly the token
-   *  that needs to hear about the change. */
+   *  before the graph was re-wired, and widened by the selector index: a
+   *  selector has no graph edge to its candidate pool, yet any key of the
+   *  scope it iterates changing (or appearing, or going away) changes what
+   *  it picks. Every key reached that way is itself fanned out from, so a
+   *  selector feeding another selector's pool still propagates; `seen`
+   *  keeps mutual pools from recursing. */
   private _collectDependents(key: string, alsoFrom: string[] = []): string[] {
     const seen = new Set<string>([key]);
     const dependents: string[] = [];
+    const pending: string[] = [key];
+
     const walk = (start: string): void => {
       for (const node of this.graph.dfsTraversal(start)) {
         if (seen.has(node)) continue;
         seen.add(node);
         dependents.push(node);
+        pending.push(node);
       }
     };
+
     walk(key);
     for (const previous of alsoFrom) walk(previous);
+
+    while (pending.length > 0) {
+      const node = pending.shift()!;
+      for (const selector of this._selectorsIterating(node)) {
+        if (seen.has(selector)) continue;
+        seen.add(selector);
+        dependents.push(selector);
+        pending.push(selector);
+        walk(selector);
+      }
+    }
+
     return dependents;
   }
 
@@ -928,6 +960,7 @@ export class DesignBook {
 
       if (!currentValue) {
         deletedKeys.add(key);
+        this._indexSelector(key, undefined);
         this._detachNode(key);
         continue;
       }
@@ -935,11 +968,11 @@ export class DesignBook {
       const hadNode = this.graph.hasNode(key);
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
-      const pool = this._getPoolDepsForKey(key, currentValue);
       try {
-        this.graph.updateEdges(key, deps, pool);
-        this._linkInheritedDependencies(deps, pool);
+        this.graph.updateEdges(key, deps);
+        this._linkInheritedDependencies(deps);
         if (!this._liveKeys.has(key)) this._linkInheritedShadowsOf(key);
+        this._indexSelector(key, currentValue);
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
@@ -953,16 +986,10 @@ export class DesignBook {
       }
     }
 
-    // Scopes that gained or lost a member need every function token that
-    // iterates them re-wired before the topological pass.
     for (const key of keys) {
       if (failedKeys.has(key)) continue;
-      if (deletedKeys.has(key)) {
-        if (this._liveKeys.delete(key)) this._refreshPoolEdges(key);
-      } else if (!this._liveKeys.has(key)) {
-        this._liveKeys.add(key);
-        this._refreshPoolEdges(key);
-      }
+      if (deletedKeys.has(key)) this._liveKeys.delete(key);
+      else this._liveKeys.add(key);
     }
 
     for (const key of keys) {

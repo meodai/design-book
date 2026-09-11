@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color, ref } from '../../src/tokens';
 import { darken } from '../../src/functions/color/darken';
+import { bestContrastWith } from '../../src/functions/color/best-contrast';
 import { SVGRenderer } from '../../src/renderers/svg-renderer';
 
 function createTestBook() {
@@ -153,5 +154,24 @@ describe('SVGRenderer', () => {
       // And the hover rule actually swaps `.conn-bg` to the variable.
       expect(svg).toContain('.conn-bg, svg.interactive:has([data-token-key="ui.uses-dark"]:hover) .connection[data-to="ui.uses-dark"] .conn-bg { stroke: var(--active-outline); }');
     });
+  });
+});
+
+describe('SVGRenderer palette-linker edges', () => {
+  it('treats a selector built against a then-empty scope as a palette linker', () => {
+    const book = new DesignBook('late-pool');
+    const palette = book.addScope('palette');
+    const ui = book.addScope('ui');
+    // The scope is still empty here, so the construction-time
+    // visualDependencies snapshot is empty — the pool is what the scope
+    // holds at render time.
+    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    palette.set('black', color('#000000'));
+    palette.set('white', color('#ffffff'));
+
+    const svg = new SVGRenderer(book).render();
+
+    expect(svg).toContain('data-from="palette.black" data-to="ui.text"');
+    expect(svg).toContain('bestContrastWith');
   });
 });

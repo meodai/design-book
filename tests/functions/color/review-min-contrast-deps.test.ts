@@ -10,6 +10,9 @@ describe('minContrastWith dependencies', () => {
     const s = book.addScope('s');
     s.set('white', color('#ffffff'));
     s.set('black', color('#000000'));
+    // s.accent exists before the selector is written, so it is in the pool
+    // s.text iterates from the start.
+    s.set('accent', color('#e03e1a'));
     // `not: ['s.accent']` only narrows the pool this selector iterates; it is
     // not a value this selector reads, so it must not become a graph edge.
     s.set('text', minContrastWith(ref('s.white'), s, { not: ['s.accent'] }));

@@ -3,6 +3,7 @@ import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { furthestFrom } from '../src/functions/color/furthest-from';
+import { lighten } from '../src/functions/color/lighten';
 import { CircularDependencyError } from '../src/errors';
 
 /** Regression for the Figma-plugin freeze: two function tokens that appear
@@ -65,5 +66,30 @@ describe('direct reference cycles', () => {
     // previous value survives the rejected overwrite
     expect(book.resolve('s.b')).toBe('#123456');
     expect(book.resolve('s.a')).toBe('#123456');
+  });
+});
+
+describe('hard dependencies that point back into a candidate pool', () => {
+  it('lets a pool member be derived from the selector that iterates it', () => {
+    const book = new DesignBook('test');
+    const ui = book.addScope('ui');
+    ui.set('bg', color('#ffffff'));
+    ui.set('muted', color('#cccccc'));
+    // ui.muted sits in the pool ui.text selects from …
+    ui.set('text', bestContrastWith(ref('ui.bg'), ui));
+
+    // … which must not stop ui.muted from reading ui.text: pool membership
+    // is not a value dependency, so there is no cycle to reject.
+    expect(() => ui.set('muted', lighten(ref('ui.text')))).not.toThrow();
+    expect(book.resolve('ui.muted')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(book.resolve('ui.text')).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it('rejects a real cycle between two value dependencies all the same', () => {
+    const book = new DesignBook('test');
+    const ui = book.addScope('ui');
+    ui.set('bg', color('#ffffff'));
+    ui.set('muted', lighten(ref('ui.bg')));
+    expect(() => ui.set('bg', lighten(ref('ui.muted')))).toThrow(CircularDependencyError);
   });
 });

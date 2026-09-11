@@ -31,6 +31,7 @@ export {
   createFunctionToken,
   extractDependencies,
   extractVisualDependencies,
+  extractIteratedScopes,
   getReferenceResolution,
   getTokenProcessors,
   isReferenceValue,
