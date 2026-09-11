@@ -111,3 +111,45 @@ describe('a handler that throws does not discard what was queued behind it', () 
     expect(keys).toEqual(['s.x']);
   });
 });
+
+describe('a change that is announced and then rolled back is corrected', () => {
+  it('re-announces the restored value so watchers do not keep a dead one', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('x', color('#111111'));
+
+    const wValues: Array<string | undefined> = [];
+    book.watch('s.w', (v) => wValues.push(v));
+
+    let fired = false;
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      s.set('w', ref('s.x'));
+    });
+    book.on('tokenChanged', (e) => {
+      if (e.detail.key !== 's.x' || fired) return;
+      fired = true;
+      throw new Error('handler boom');
+    });
+
+    expect(() => s.set('x', color('#222222'))).toThrow('handler boom');
+
+    expect(book.resolve('s.x')).toBe('#111111');
+    expect(book.resolve('s.w')).toBe('#111111');
+    // the drain announced s.w while s.x was still #222222; the final value
+    // must be announced too, or every watcher keeps a value that is gone
+    expect(wValues).toContain('#222222');
+    expect(wValues[wValues.length - 1]).toBe('#111111');
+  });
+
+  it('says nothing when the change was refused before it was announced', () => {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+
+    expect(() => s.set('n', ref('s.n'))).toThrow();
+
+    expect(keys).toEqual([]);
+  });
+});

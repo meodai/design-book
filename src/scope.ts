@@ -17,6 +17,7 @@ type BookWithScope = BookLike & {
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
+  _notifyRollback(key: string, restoredValue: any, rejectedValue: any): void;
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
   on(event: 'change', callback: (e: { detail: { changedKeys: string[] } }) => void): () => void;
@@ -119,6 +120,10 @@ export class Scope {
       // the order caches stay invalidated and recompute from the restored map
       if (existed) this.tokens.set(name, oldValue as AnyTokenValue);
       else this.tokens.delete(name);
+      // The book may already have announced this change — handlers run
+      // synchronously inside _notifyTokenChange — so announce the restored
+      // state too rather than leave listeners holding a value that is gone.
+      this.book._notifyRollback(`${this.name}.${name}`, oldValue, value);
       throw e;
     }
   }

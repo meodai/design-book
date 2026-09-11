@@ -62,11 +62,13 @@ export interface ErrorDetail {
   /** Key whose change was rejected. */
   key: string;
   error: Error;
-  /** Where the rejection happened. `reentrant`: the change was made from an
-   *  event handler while a previous change was still propagating, so it was
-   *  queued; by the time it ran, the outer `set()` had already returned and
-   *  there was nobody left to throw at. */
-  phase: 'reentrant';
+  /** Where the rejection happened.
+   *  `reentrant`: the change was made from an event handler while a previous
+   *  change was still propagating, so it was queued; by the time it ran, the
+   *  outer `set()` had already returned and there was nobody left to throw at.
+   *  `rollback`: announcing that an already-announced change had been undone
+   *  itself failed. */
+  phase: 'reentrant' | 'rollback';
 }
 
 export interface DesignBookEventMap {
@@ -142,6 +144,12 @@ export class DesignBook {
 
   private _propagating = false;
   private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any }> = [];
+
+  /** True once the current top-level propagation has announced a change.
+   *  `_notifyRollback` consults it: a change that was announced and then
+   *  undone needs a corrective announcement, while one the graph refused
+   *  before saying anything needs none. */
+  private _announced = false;
 
   /** Keys currently backed by a stored token, as far as the graph knows.
    *  Used to spot the moment a scope gains or loses a member so that
@@ -524,6 +532,7 @@ export class DesignBook {
     }
 
     this._propagating = true;
+    this._announced = false;
     try {
       this._processAutoChange(qualifiedKey, newValue, oldValue);
 
@@ -562,6 +571,35 @@ export class DesignBook {
           phase: 'reentrant',
         });
       }
+    }
+  }
+
+  /** Announce that an already-announced change has been undone.
+   *
+   *  `Scope.set` rolls its token back only after `_notifyTokenChange` has
+   *  returned — and handlers have by then been told the new value, and may
+   *  have made further changes off the back of it. Without a second
+   *  announcement every watcher and renderer keeps a value that no longer
+   *  exists. A change the graph refused before saying anything needs no
+   *  correction, hence the `_announced` guard.
+   *
+   *  Never throws: the caller is already on its way out with the original
+   *  error, and replacing it would hide the real cause. */
+  _notifyRollback(qualifiedKey: string, restoredValue: any, rejectedValue: any): void {
+    if (!this._announced) return;
+    try {
+      this._notifyTokenChange(qualifiedKey, restoredValue, rejectedValue);
+    } catch (e) {
+      this._reportSuppressed(qualifiedKey, e, 'rollback');
+    }
+  }
+
+  /** Report an error raised while another one is already in flight. */
+  private _reportSuppressed(key: string, e: unknown, phase: ErrorDetail['phase']): void {
+    try {
+      this.emit('error', { key, error: e instanceof Error ? e : new Error(String(e)), phase });
+    } catch {
+      // An error listener that throws is not worth masking the original for.
     }
   }
 
@@ -616,6 +654,7 @@ export class DesignBook {
     }
 
     // Fire tokenChanged for this key
+    this._announced = true;
     this.emit('tokenChanged', { key: qualifiedKey, newValue, oldValue });
 
     // Fire tokenChanged for all dependents with their actual resolved values
