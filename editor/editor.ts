@@ -319,6 +319,53 @@ function formatDimension(value: string | number, unit: string): string {
   return DIMENSION_SHORTCUT_UNITS.has(unit) ? `${unit}(${value})` : `dimension(${value}, '${unit}')`;
 }
 
+/** Serialize a FunctionTokenValue back to its input-column call syntax.
+ *  Recurses into `arg.type === 'function'` args so a function nested
+ *  inside another function's arguments (e.g. spacingScale(lighten(...)))
+ *  round-trips instead of being silently dropped. */
+function serializeFunctionToken(fn: any): string {
+  const argStrs: string[] = [];
+  if (fn.args) {
+    for (const arg of fn.args) {
+      if (typeof arg === 'object' && arg !== null) {
+        if (arg.type === 'reference') {
+          argStrs.push(`ref('${arg.key}')`);
+        } else if (arg.type === 'color') {
+          argStrs.push(`color('${arg.rawValue}')`);
+        } else if (arg.type === 'function') {
+          argStrs.push(serializeFunctionToken(arg));
+        } else if (typeof arg.getAllKeys === 'function') {
+          // Scope argument -- show scope name
+          argStrs.push(arg.name || 'scope');
+        } else if (arg.type === 'dimension') {
+          argStrs.push(formatDimension(arg.rawValue, arg.metadata?.unit || ''));
+        }
+      } else if (typeof arg === 'string') {
+        argStrs.push(arg);
+      } else if (typeof arg === 'number') {
+        argStrs.push(String(arg));
+      }
+    }
+  }
+  // Preserve options across edit-cycle round-trips so ratios, steps, etc.
+  // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
+  // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
+  const optionKeys = fn.options
+    ? Object.keys(fn.options).filter((k) => {
+        if (k === 'description') return false;
+        const v = fn.options[k];
+        if (v === undefined || v === null) return false;
+        if (Array.isArray(v) && v.length === 0) return false;
+        return true;
+      })
+    : [];
+  if (optionKeys.length > 0) {
+    const optionPairs = optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`);
+    argStrs.push(`{ ${optionPairs.join(', ')} }`);
+  }
+  return `${fn.name}(${argStrs.join(', ')})`;
+}
+
 // --- Get display value for a token ---
 
 export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
@@ -333,45 +380,7 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
     return `ref('${(token as any).key}')`;
   }
   if (token.type === 'function') {
-    const fn = token as any;
-    const argStrs: string[] = [];
-    if (fn.args) {
-      for (const arg of fn.args) {
-        if (typeof arg === 'object' && arg !== null) {
-          if (arg.type === 'reference') {
-            argStrs.push(`ref('${arg.key}')`);
-          } else if (arg.type === 'color') {
-            argStrs.push(`color('${arg.rawValue}')`);
-          } else if (typeof arg.getAllKeys === 'function') {
-            // Scope argument -- show scope name
-            argStrs.push(arg.name || 'scope');
-          } else if (arg.type === 'dimension') {
-            argStrs.push(formatDimension(arg.rawValue, arg.metadata?.unit || ''));
-          }
-        } else if (typeof arg === 'string') {
-          argStrs.push(arg);
-        } else if (typeof arg === 'number') {
-          argStrs.push(String(arg));
-        }
-      }
-    }
-    // Preserve options across edit-cycle round-trips so ratios, steps, etc.
-    // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
-    // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
-    const optionKeys = fn.options
-      ? Object.keys(fn.options).filter((k) => {
-          if (k === 'description') return false;
-          const v = fn.options[k];
-          if (v === undefined || v === null) return false;
-          if (Array.isArray(v) && v.length === 0) return false;
-          return true;
-        })
-      : [];
-    if (optionKeys.length > 0) {
-      const optionPairs = optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`);
-      argStrs.push(`{ ${optionPairs.join(', ')} }`);
-    }
-    return `${fn.name}(${argStrs.join(', ')})`;
+    return serializeFunctionToken(token as any);
   }
   // Plain token
   const tv = token as any;

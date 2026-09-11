@@ -176,6 +176,14 @@ function parseArg(
     return { type: 'token', value: string(stringMatch[1]) };
   }
 
+  // Nested function call: name(...) where name is a known function, e.g.
+  // spacingScale(lighten(ref('brand.primary'), { amount: 0.3 })). Recurse
+  // into parseTokenInput so nested calls build proper FunctionTokenValues.
+  const nestedFuncMatch = trimmed.match(/^(\w+)\((.+)\)$/s);
+  if (nestedFuncMatch && FUNCTION_PARSERS[nestedFuncMatch[1]]) {
+    return { type: 'token', value: parseTokenInput(trimmed, book) };
+  }
+
   // #hex color (bare, inside function args)
   if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) {
     return { type: 'token', value: color(trimmed) };
