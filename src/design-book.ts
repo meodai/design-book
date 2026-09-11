@@ -141,6 +141,11 @@ export class DesignBook {
   private renderers: Map<string, RendererFn> = new Map();
   private orderers: Map<string, TokenOrderer> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
+  /** Queue entries already reported by a previous `flush()`. A key that
+   *  fails to resolve stays queued, and re-announcing the identical pending
+   *  write on every later flush is noise. Entry objects are replaced by each
+   *  `_notifyTokenChange`, so identity is the "is this write new" stamp. */
+  private reportedBatchEntries: WeakSet<object> = new WeakSet();
 
   private _propagating = false;
   private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any }> = [];
@@ -1025,9 +1030,20 @@ export class DesignBook {
     // that resolved: auto mode emits tokenChanged for an unresolvable key
     // too. Keys the graph rejected outright are excluded — their tokens were
     // rolled back, so nothing changed.
-    const notified = [...processed];
-    for (const key of validKeys) {
-      if (!notified.includes(key)) notified.push(key);
+    const processedKeys = new Set(processed);
+    const notified: string[] = [];
+    const notifiedSet = new Set<string>();
+    for (const key of [...processed, ...validKeys]) {
+      if (notifiedSet.has(key)) continue;
+      const entry = queued.get(key);
+      // A key that failed to resolve is still queued with the same entry;
+      // report that write once rather than on every later flush. A key that
+      // did resolve is always worth reporting — it may be the retry that
+      // finally worked.
+      if (!processedKeys.has(key) && entry && this.reportedBatchEntries.has(entry)) continue;
+      if (entry) this.reportedBatchEntries.add(entry);
+      notifiedSet.add(key);
+      notified.push(key);
     }
     this._emitBatchChanges(notified, queued, previousDependents);
 

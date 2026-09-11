@@ -109,3 +109,57 @@ describe('flush() emits for keys that got a graph update but failed to resolve',
     expect(keys).not.toContain('s.n');
   });
 })
+
+describe('a permanently unresolvable key is reported once, not every flush', () => {
+  it('stays silent on later no-op flushes', () => {
+    const book = new DesignBook('test', { mode: 'batch' });
+    const s = book.addScope('s');
+    s.set('y', ref('s.missing'));
+
+    const keys: string[] = [];
+    const changed = vi.fn();
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+    book.on('change', changed);
+
+    book.flush();
+    expect(keys).toEqual(['s.y']);
+    expect(changed).toHaveBeenCalledTimes(1);
+
+    book.flush();
+    book.flush();
+
+    expect(keys).toEqual(['s.y']);
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports it again when the token is written again', () => {
+    const book = new DesignBook('test', { mode: 'batch' });
+    const s = book.addScope('s');
+    s.set('y', ref('s.missing'));
+    book.flush();
+
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+
+    s.set('y', ref('s.stillMissing'));
+    book.flush();
+
+    expect(keys).toContain('s.y');
+  });
+
+  it('reports it when it finally resolves', () => {
+    const book = new DesignBook('test', { mode: 'batch' });
+    const s = book.addScope('s');
+    s.set('y', ref('s.missing'));
+    book.flush();
+
+    const keys: string[] = [];
+    book.on('tokenChanged', (e) => keys.push(e.detail.key));
+
+    s.set('missing', color('#ff0000'));
+    book.flush();
+
+    expect(keys).toContain('s.y');
+    expect(book.resolve('s.y')).toBe('#ff0000');
+  });
+});
