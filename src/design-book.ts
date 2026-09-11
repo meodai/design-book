@@ -565,12 +565,16 @@ export class DesignBook {
       const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
       const pool = this._getPoolDepsForKey(qualifiedKey, currentValue);
       const previousDeps = this.graph.getPrerequisitesFor(qualifiedKey);
+      const hadNode = this.graph.hasNode(qualifiedKey);
       this.graph.addNode(qualifiedKey);
       try {
         this.graph.updateEdges(qualifiedKey, deps, pool);
         this._linkInheritedDependencies(deps, pool);
       } catch (e) {
         this.graph.updateEdges(qualifiedKey, previousDeps);
+        // The caller will drop the token; don't leave a node behind for a key
+        // the graph never accepted in the first place.
+        if (!hadNode) this.graph.removeNode(qualifiedKey);
         throw e;
       }
       this._updateReferenceCaches(qualifiedKey);
@@ -793,6 +797,9 @@ export class DesignBook {
     const processed: string[] = [];
     const errors: Error[] = [];
     const failedKeys = new Set<string>();
+    /** Keys whose stored token was rolled back because the graph refused it;
+     *  they leave the queue even though they were never processed. */
+    const rejectedKeys = new Set<string>();
     const deletedKeys = new Set<string>();
     const previousDependents = new Map<string, string[]>();
 
@@ -810,6 +817,7 @@ export class DesignBook {
         continue;
       }
 
+      const hadNode = this.graph.hasNode(key);
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
       const pool = this._getPoolDepsForKey(key, currentValue);
@@ -820,6 +828,12 @@ export class DesignBook {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
         failedKeys.add(key);
+        // Undo the write the graph refused. Leaving it in place kept the
+        // cyclic token in the scope and the key in the queue, so every later
+        // flush re-reported the same error.
+        rejectedKeys.add(key);
+        this._rollbackKey(key, queued.get(key)?.oldValue);
+        if (!hadNode) this.graph.removeNode(key);
       }
     }
 
@@ -890,8 +904,12 @@ export class DesignBook {
       }
     }
 
-    // Only clear processed keys from the queue, not failed ones
+    // Only clear processed keys from the queue, not failed ones — except the
+    // rejected ones, which no longer have a token to retry.
     for (const key of processed) {
+      this.batchQueue.delete(key);
+    }
+    for (const key of rejectedKeys) {
       this.batchQueue.delete(key);
     }
 
