@@ -85,6 +85,13 @@ export function minContrastWith(
   const { ratio = 4.5, not, description, ...rest } = options ?? {};
   const notKeys = normalizeNotKeys(not);
 
+  // Only `not` keys outside the iterated scope are dependencies: those are
+  // excluded by value, so this selector must re-evaluate when they change.
+  // A key inside the scope is excluded by name alone, so its value is never
+  // read; declaring it anyway can close a false cycle — `s.text` excluding
+  // `s.accent` while `s.accent` is derived from `s.text`.
+  const externalNotKeys = notKeys.filter((k) => !k.startsWith(`${scope.name}.`));
+
   return createFunctionToken(
     'minContrastWith',
     [targetValue, scope],
@@ -93,10 +100,7 @@ export function minContrastWith(
       ...rest,
       options: { ratio, not: notKeys },
       metadata: {
-        // `not` keys are real dependencies — when the token they reference
-        // changes, this selector must re-evaluate (its candidate pool may
-        // gain or lose a value-based exclusion).
-        dependencies: [...extractDependencies([targetValue]), ...notKeys],
+        dependencies: [...extractDependencies([targetValue]), ...externalNotKeys],
         visualDependencies: extractVisualDependencies([targetValue, scope]),
         returnType: 'color',
       },
