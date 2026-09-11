@@ -1,5 +1,5 @@
-import { parse, interpolate, interpolateWithPremultipliedAlpha, toGamut } from 'culori';
-import { formatColor } from './scope-colors';
+import { parse, interpolate, interpolateWithPremultipliedAlpha } from 'culori';
+import { formatColor, gamutMapSrgb } from './scope-colors';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { Color } from 'culori';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -29,13 +29,12 @@ export function toCssColorSpace(colorSpace: string): string {
   return CULORI_TO_CSS_COLOR_SPACE[colorSpace] ?? colorSpace;
 }
 
-const toRgbGamut = toGamut('rgb', 'oklch');
-
 /** The colour CSS `color-mix(in <mode>, c1, c2)` computes at `ratio`:
  *  premultiplied-alpha interpolation — so a transparent colour contributes
  *  nothing but its alpha — with the hue left unweighted because it is
- *  angular, then mapped back into sRGB. Shared with lighten/darken so they
- *  stay the JS twin of the `color-mix()` the CSS renderer emits. */
+ *  angular, then mapped into sRGB if (and only if) it landed outside it.
+ *  Shared with lighten/darken so they stay the JS twin of the
+ *  `color-mix()` the CSS renderer emits. */
 export function cssColorMix(
   color1: Color | string,
   color2: Color | string,
@@ -49,7 +48,7 @@ export function cssColorMix(
       interpolate([color1, color2] as any, mode as any)(ratio);
     if (typeof unweighted.h === 'number') mixed.h = unweighted.h;
   }
-  return toRgbGamut(mixed as Color);
+  return gamutMapSrgb(mixed as Color);
 }
 
 export function colorMixImpl(

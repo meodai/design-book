@@ -1,4 +1,4 @@
-import { parse, formatHex, formatHex8, wcagContrast, differenceEuclidean, converter } from 'culori';
+import { parse, formatHex, formatHex8, wcagContrast, differenceEuclidean, converter, inGamut, toGamut } from 'culori';
 import type { Color } from 'culori';
 import { getTokenProcessors } from '../../tokens';
 import type { TokenValue } from '../../tokens';
@@ -16,6 +16,23 @@ export interface ScopeColor {
 }
 
 const toRgb = converter('rgb');
+const toRgbGamut = toGamut('rgb', 'oklch');
+
+/** True when the colour is displayable in sRGB. */
+export const isInSrgb = inGamut('rgb');
+
+/**
+ * Bring a colour into sRGB, reducing chroma in OKLCH rather than clipping
+ * channels — but only when it is actually outside the gamut. `toGamut`
+ * hands a displayable colour back through a round trip via OKLCH, and a
+ * channel sitting exactly at 0 or 1 comes back marginally out of range,
+ * which trips the chroma reduction and costs 1/255: a 50/50 sRGB mix of
+ * black and cyan came out `#007f7f` instead of the `#008080` the browser
+ * computes, and mixing a colour with itself stopped being the identity.
+ */
+export function gamutMapSrgb(color: Color): Color {
+  return isInSrgb(color) ? color : toRgbGamut(color);
+}
 
 /**
  * Hex form of a colour, keeping alpha when it has any. Selectors return this,

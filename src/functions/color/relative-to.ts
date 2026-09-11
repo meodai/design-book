@@ -1,7 +1,8 @@
-import { parse, formatHex, converter, toGamut, inGamut } from 'culori';
+import { parse, formatHex, converter } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
+import { gamutMapSrgb } from './scope-colors';
 
 /** Channel order per colour space. Culori's object key order is not a
  *  reliable channel order — `hsl` comes out `s, l, h`, and achromatic
@@ -29,8 +30,6 @@ export const RELATIVE_TO_CSS_SCALES: Record<string, readonly [number, number, nu
   rgb: [255, 255, 255],
 };
 
-const toRgbGamut = toGamut('rgb', 'oklch');
-const isInSrgb = inGamut('rgb');
 
 export function relativeToChannels(colorSpace: string): readonly [string, string, string] {
   const channels = RELATIVE_TO_CHANNELS[colorSpace];
@@ -104,15 +103,9 @@ export function relativeToImpl(
   }
 
   // Out-of-sRGB results are gamut-mapped in OKLCH rather than clipped
-  // channel-wise. The in-gamut check comes first mainly as a shortcut —
-  // toGamut hands a displayable colour straight back, and for the Lab/LCh
-  // spaces the round trip it takes through OKLCH is byte-identical anyway
-  // (checked over 30k in-gamut colours). It does earn its keep for the
-  // sRGB-based spaces: converting an `hsl` or `rgb` colour through OKLCH
-  // and back shifts about one colour in a thousand by 1/255.
-  const result = isInSrgb(modified)
-    ? formatHex(modified)
-    : formatHex(toRgbGamut(modified));
+  // channel-wise; a displayable one is left exactly as it is (see
+  // gamutMapSrgb — the round trip costs 1/255 for the sRGB-based spaces).
+  const result = formatHex(gamutMapSrgb(modified));
   if (!result) {
     throw new FunctionError(
       `relativeTo: failed to format modified color`,

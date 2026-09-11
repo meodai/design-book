@@ -80,7 +80,9 @@ describe('colorMix gamut mapping and alpha', () => {
 
   it('keeps a translucent input translucent, as 8-digit hex', () => {
     expect(mix('#ff000080', '#00ff00', { colorSpace: 'oklch' })).toBe('#ecae00c0');
-    expect(mix('#ff000080', '#0000ff80', { colorSpace: 'srgb' })).toBe('#7f008080');
+    // Premultiplied srgb puts r and b at exactly 0.5 with alpha 0.5, which
+    // is what `color-mix(in srgb, …)` returns.
+    expect(mix('#ff000080', '#0000ff80', { colorSpace: 'srgb' })).toBe('#80008080');
   });
 
   it('premultiplies alpha the way CSS color-mix does', () => {
@@ -91,5 +93,21 @@ describe('colorMix gamut mapping and alpha', () => {
 
   it('leaves an opaque mix opaque', () => {
     expect(mix('#000000', '#ffffff', { colorSpace: 'srgb' })).toBe('#808080');
+  });
+
+  it('does not touch a mix that is already inside sRGB', () => {
+    // toGamut round-trips through OKLCH even for a displayable colour, and a
+    // channel sitting exactly at 0 or 1 comes back marginally out of range,
+    // so the chroma reduction kicks in and costs 1/255. The browser computes
+    // #008080 here.
+    expect(mix('#000000', '#00ffff', { colorSpace: 'srgb' })).toBe('#008080');
+  });
+
+  it('mixing a colour with itself is the identity', () => {
+    // Unguarded gamut mapping turned this into #01bd91. (In a polar mode the
+    // interpolation itself round-trips through OKLCH, so a channel pinned at
+    // 0 or 1 can still land epsilon outside sRGB there — that is inherent to
+    // mixing in OKLCH, not to the gamut map.)
+    expect(mix('#00bd91', '#00bd91', { colorSpace: 'srgb' })).toBe('#00bd91');
   });
 });

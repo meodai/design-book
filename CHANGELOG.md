@@ -23,7 +23,11 @@ All notable changes to Design Book are recorded here. The format follows
 - `colorMix` gamut-maps its result in OKLCH instead of clipping channels
   (`colorMix(#ff0000, #00ff00, { colorSpace: 'oklch' })` is `#dda200`, not
   `#f99500`) and keeps alpha, interpolating premultiplied the way CSS
-  `color-mix()` does.
+  `color-mix()` does. The map only runs when the mix is actually outside
+  sRGB: `toGamut` round-trips a displayable colour through OKLCH, which
+  nudges a channel pinned at 0 or 1 out of range and desaturates it by
+  1/255 — a 50/50 sRGB mix of black and cyan is `#008080`, and mixing a
+  colour with itself is the identity.
 - `lighten`, `darken` and `shade` keep alpha instead of dropping it, and
   emit 8-digit hex when the result is translucent. `lighten`/`darken` mix
   the alpha the way the browser does; `shade` carries the input's through.
@@ -35,6 +39,13 @@ All notable changes to Design Book are recorded here. The format follows
 - The SVG renderer identifies palette-linker tokens from their live scope
   arguments, so a selector written before the scope it iterates had any
   members still renders as a linker.
+
+### Changed
+
+- **Breaking (API):** `DependencyGraph.updateEdges(key, dependencies)` lost
+  its third parameter. It used to take `optionalDependencies` — the soft
+  pool edges — which no longer exist; pools are an index on the book.
+  Callers passing three arguments should drop the third.
 
 ### Added
 
