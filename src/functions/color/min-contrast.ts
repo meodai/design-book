@@ -1,4 +1,4 @@
-import { wcagContrast, formatHex, parse } from 'culori';
+import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
@@ -8,7 +8,7 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors } from './scope-colors';
+import { collectScopeColors, contrastAgainst, formatColor } from './scope-colors';
 
 export interface MinContrastOptions {
   ratio?: number;
@@ -42,7 +42,7 @@ export function minContrastWithImpl(
     if (k.startsWith(localPrefix)) continue;
     try {
       const parsed = parse(scope.resolveKey(k));
-      const hex = parsed ? formatHex(parsed) : null;
+      const hex = parsed ? formatColor(parsed) : null;
       if (hex) excludedHexes.add(hex);
     } catch { /* unresolvable — skip */ }
   }
@@ -53,7 +53,7 @@ export function minContrastWithImpl(
     if (excludedHexes.has(candidate.hex)) continue;
     candidates.push({
       hex: candidate.hex,
-      contrast: wcagContrast(targetColor, candidate.parsed),
+      contrast: contrastAgainst(targetColor, candidate.parsed),
     });
   }
 

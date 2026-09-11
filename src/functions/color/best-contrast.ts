@@ -1,4 +1,4 @@
-import { wcagContrast, parse } from 'culori';
+import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
@@ -8,7 +8,7 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors } from './scope-colors';
+import { collectScopeColors, contrastAgainst } from './scope-colors';
 
 export function bestContrastWithImpl(targetValue: string, scope: Scope, not: string[] = []): string {
   const targetColor = parse(targetValue);
@@ -23,7 +23,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, not: str
   let bestRatio = -1;
 
   for (const candidate of collectScopeColors(scope, not)) {
-    const ratio = wcagContrast(targetColor, candidate.parsed);
+    const ratio = contrastAgainst(targetColor, candidate.parsed);
     if (ratio > bestRatio) {
       bestRatio = ratio;
       bestHex = candidate.hex;

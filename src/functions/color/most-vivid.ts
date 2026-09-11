@@ -1,4 +1,4 @@
-import { parse, converter, wcagContrast } from 'culori';
+import { parse, converter } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
@@ -13,7 +13,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors } from './scope-colors';
+import { collectScopeColors, contrastAgainst } from './scope-colors';
 
 const toOklch = converter('oklch');
 
@@ -42,7 +42,7 @@ export function mostVividImpl(
     const lch = toOklch(candidate.parsed);
     if (!lch || typeof lch.c !== 'number') continue;
 
-    const contrast = targetColor ? wcagContrast(targetColor, candidate.parsed) : Infinity;
+    const contrast = targetColor ? contrastAgainst(targetColor, candidate.parsed) : Infinity;
     candidates.push({ hex: candidate.hex, chroma: lch.c, contrast });
   }
 
