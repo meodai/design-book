@@ -120,3 +120,54 @@ describe('deleting invalidates the reference caches of dependents', () => {
     expect(getReferenceResolution(r)?.isResolvable).toBe(false);
   });
 });
+
+describe('reference caches are invalidated through inherited hops', () => {
+  it('deleting the parent token invalidates a ref to the inherited key', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    parent.set('a', color('#ff0000'));
+    const r = ref('child.a');
+    other.set('x', r);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+
+    parent.delete('a');
+
+    expect(() => book.resolve('other.x')).toThrow();
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+  });
+
+  it('deleting the parent scope does the same', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    parent.set('a', color('#ff0000'));
+    const r = ref('child.a');
+    other.set('x', r);
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+
+    book.deleteScope('parent');
+
+    expect(() => book.resolve('other.x')).toThrow();
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+  });
+
+  it('re-resolves through the hop when the parent token comes back', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    parent.set('a', color('#ff0000'));
+    const r = ref('child.a');
+    other.set('x', r);
+    parent.delete('a');
+    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+
+    parent.set('a', color('#00ff00'));
+
+    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(book.resolve('other.x')).toBe('#00ff00');
+  });
+});

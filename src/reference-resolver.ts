@@ -9,6 +9,10 @@ export interface BookLike {
   resolve(key: string): string;
   getTokenByKey(key: string): any;
   getDependencyGraph(): { getDependentsOf(key: string): string[] };
+  /** Fully-qualified key of the token a key actually reads — different from
+   *  the key itself when it resolves through `extends`. Optional so simple
+   *  test doubles need not supply it. */
+  getSourceKey?(key: string): string | undefined;
 }
 
 export class ReferenceResolver {
@@ -39,10 +43,30 @@ export class ReferenceResolver {
   }
 
   updateAllReferencesTo(key: string, dependentKeys?: string[]): void {
-    const dependents = dependentKeys ?? this.book.getDependencyGraph().getDependentsOf(key);
-    for (const depKey of dependents) {
-      const token = this.book.getTokenByKey(depKey);
-      if (!token) continue;
+    const seeds = dependentKeys ?? this.book.getDependencyGraph().getDependentsOf(key);
+    const queue = seeds.map(dependent => ({ key: dependent, via: key }));
+    const seen = new Set<string>([key]);
+
+    while (queue.length > 0) {
+      const { key: depKey, via } = queue.shift()!;
+      if (seen.has(depKey)) continue;
+      seen.add(depKey);
+
+      // A key that resolves through `extends` owns no token of its own — it
+      // is a hop on the way to the tokens that actually reference it, and
+      // `getTokenByKey` hands back the *parent's* token rather than telling
+      // us so. Walk past it, or a `ref('child.a')` would never hear about
+      // `parent.a` changing or going away.
+      const source = this.book.getSourceKey?.(depKey);
+      const isInheritedHop = source !== undefined && source !== depKey;
+      const token = isInheritedHop ? undefined : this.book.getTokenByKey(depKey);
+
+      if (!token) {
+        for (const next of this.book.getDependencyGraph().getDependentsOf(depKey)) {
+          queue.push({ key: next, via: depKey });
+        }
+        continue;
+      }
 
       if (token.type === 'reference') {
         this.updateReferenceMetadata(token as ReferenceValue);
@@ -51,7 +75,7 @@ export class ReferenceResolver {
       if (token.type === 'function') {
         const fn = token as FunctionTokenValue;
         for (const arg of fn.args) {
-          if (isReferenceValue(arg) && arg.key === key) {
+          if (isReferenceValue(arg) && arg.key === via) {
             this.updateReferenceMetadata(arg as ReferenceValue);
           }
         }
