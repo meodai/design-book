@@ -566,10 +566,12 @@ export class DesignBook {
       const pool = this._getPoolDepsForKey(qualifiedKey, currentValue);
       const previousDeps = this.graph.getPrerequisitesFor(qualifiedKey);
       const hadNode = this.graph.hasNode(qualifiedKey);
+      const isNewKey = !this._liveKeys.has(qualifiedKey);
       this.graph.addNode(qualifiedKey);
       try {
         this.graph.updateEdges(qualifiedKey, deps, pool);
         this._linkInheritedDependencies(deps, pool);
+        if (isNewKey) this._linkInheritedShadowsOf(qualifiedKey);
       } catch (e) {
         this.graph.updateEdges(qualifiedKey, previousDeps);
         // The caller will drop the token; don't leave a node behind for a key
@@ -579,7 +581,7 @@ export class DesignBook {
       }
       this._updateReferenceCaches(qualifiedKey);
       this._updateOwnReferenceCaches(qualifiedKey);
-      if (!this._liveKeys.has(qualifiedKey)) {
+      if (isNewKey) {
         this._liveKeys.add(qualifiedKey);
         this._refreshPoolEdges(qualifiedKey);
       }
@@ -757,6 +759,27 @@ export class DesignBook {
     else this.graph.updateEdges(dep, [source]);
   }
 
+  /** A brand-new key may be the source that inheriting scopes were waiting
+   *  for: `other.x = ref('child.a')` written before `parent.a` existed left
+   *  `child.a` as an orphan node. Link every descendant scope's shadow of
+   *  this key that already has dependents. (Descendants that define the key
+   *  themselves are skipped — `_linkInheritedDependency` only acts when the
+   *  source differs from the key.) */
+  private _linkInheritedShadowsOf(qualifiedKey: string): void {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return;
+    const scopeName = qualifiedKey.substring(0, dotIndex);
+    const tokenName = qualifiedKey.substring(dotIndex + 1);
+
+    for (const name of this._scopeAndDescendants(scopeName)) {
+      if (name === scopeName) continue;
+      const key = `${name}.${tokenName}`;
+      if (!this.graph.hasNode(key)) continue;
+      if (this.graph.getDependentsOf(key).length === 0) continue;
+      this._linkInheritedDependency(key, false);
+    }
+  }
+
   /** After a scope starts extending another, any of its inherited keys that
    *  already have dependents (e.g. a forward `ref('child.a')` written before
    *  the scope existed) need the edge from their new source. */
@@ -853,6 +876,7 @@ export class DesignBook {
       try {
         this.graph.updateEdges(key, deps, pool);
         this._linkInheritedDependencies(deps, pool);
+        if (!this._liveKeys.has(key)) this._linkInheritedShadowsOf(key);
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));

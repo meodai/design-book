@@ -56,3 +56,39 @@ describe('inherited keys participate in the dependency graph', () => {
     expect(book.resolve('other.x')).toBe('#00ff00');
   });
 });
+
+describe('the parent token can be created last', () => {
+  it('links the inherited key when the parent key appears after the dependent', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    other.set('x', ref('child.a')); // nothing resolves child.a yet
+
+    parent.set('a', color('#ff0000'));
+
+    expect(book.getDependencyGraph().getIncoming('child.a')).toContain('parent.a');
+    expect(book.resolve('other.x')).toBe('#ff0000');
+
+    const watcher = vi.fn();
+    book.watch('other.x', watcher);
+    parent.set('a', color('#00ff00'));
+
+    expect(watcher).toHaveBeenCalled();
+    expect(book.resolve('other.x')).toBe('#00ff00');
+  });
+
+  it('leaves a shadowing descendant alone', () => {
+    const book = new DesignBook('test');
+    const parent = book.addScope('parent');
+    const child = book.addScope('child', { extends: 'parent' });
+    const other = book.addScope('other');
+    child.set('a', color('#0000ff'));
+    other.set('x', ref('child.a'));
+
+    parent.set('a', color('#ff0000'));
+
+    expect(book.getDependencyGraph().getIncoming('child.a')).not.toContain('parent.a');
+    expect(book.resolve('other.x')).toBe('#0000ff');
+  });
+});
