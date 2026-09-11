@@ -752,6 +752,7 @@ export class DesignBook {
     const previousDependents = new Map<string, string[]>();
 
     const keys = Array.from(this.batchQueue.keys());
+    const queued = new Map(this.batchQueue);
 
     // Add all keys as nodes and update edges
     for (const key of keys) {
@@ -849,6 +850,8 @@ export class DesignBook {
       this.batchQueue.delete(key);
     }
 
+    this._emitBatchChanges(processed, queued);
+
     if (errors.length > 0) {
       this.emit('batch-failed', { processed, errors });
     } else {
@@ -856,5 +859,45 @@ export class DesignBook {
     }
 
     return { processed, errors };
+  }
+
+  /** Batch counterpart of `_processAutoChange`'s notification half: one
+   *  `tokenChanged` per processed key (with the queued new/old value), one
+   *  per transitive dependent (with its freshly resolved value), and a
+   *  single aggregate `change`. Every key is reported at most once. */
+  private _emitBatchChanges(
+    processed: string[],
+    queued: Map<string, { newValue: any; oldValue: any }>,
+  ): void {
+    if (processed.length === 0) return;
+
+    const changedKeys = [...new Set(processed)];
+    const seen = new Set(changedKeys);
+    for (const key of processed) {
+      for (const dep of this.graph.dfsTraversal(key).slice(1)) {
+        if (seen.has(dep)) continue;
+        seen.add(dep);
+        changedKeys.push(dep);
+      }
+    }
+
+    const scopes = new Set<string>();
+    for (const key of changedKeys) {
+      const dotIndex = key.indexOf('.');
+      if (dotIndex !== -1) scopes.add(key.substring(0, dotIndex));
+
+      const entry = queued.get(key);
+      let newValue = entry?.newValue;
+      if (!entry) {
+        try {
+          newValue = this.resolve(key);
+        } catch {
+          newValue = undefined;
+        }
+      }
+      this.emit('tokenChanged', { key, newValue, oldValue: entry?.oldValue });
+    }
+
+    this.emit('change', { changedKeys, scopes: Array.from(scopes) });
   }
 }
