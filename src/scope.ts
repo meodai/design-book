@@ -161,6 +161,31 @@ export class Scope {
     this.referenceResolver.updateAllReferencesTo(key, dependentKeys);
   }
 
+  /** Refresh the cached resolution of the references a token holds itself —
+   *  the token's own key if it is a reference, plus any reference arguments
+   *  of a function token. `updateReferenceCaches` only walks the *dependents*
+   *  of a key, so without this a freshly set reference stayed uncached until
+   *  something it points at happened to change. */
+  updateOwnReferenceCaches(name: string): void {
+    const token = this.get(name);
+    if (!token) return;
+    if (isReferenceValue(token)) {
+      this.referenceResolver.updateReferenceMetadata(token);
+    } else if (isFunctionTokenValue(token)) {
+      this.updateFunctionArgReferenceCaches(token);
+    }
+  }
+
+  private updateFunctionArgReferenceCaches(fn: FunctionTokenValue): void {
+    for (const arg of fn.args) {
+      if (isReferenceValue(arg)) {
+        this.referenceResolver.updateReferenceMetadata(arg);
+      } else if (isFunctionTokenValue(arg)) {
+        this.updateFunctionArgReferenceCaches(arg);
+      }
+    }
+  }
+
   /** Resolve any fully-qualified token key (in this scope or another) by
    *  delegating to the owning book. Useful for selectors that need to
    *  cross-resolve `not` references during candidate iteration. */

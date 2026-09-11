@@ -578,6 +578,7 @@ export class DesignBook {
         throw e;
       }
       this._updateReferenceCaches(qualifiedKey);
+      this._updateOwnReferenceCaches(qualifiedKey);
       if (!this._liveKeys.has(qualifiedKey)) {
         this._liveKeys.add(qualifiedKey);
         this._refreshPoolEdges(qualifiedKey);
@@ -791,6 +792,14 @@ export class DesignBook {
     scope?.updateReferenceCaches(qualifiedKey, dependentKeys);
   }
 
+  private _updateOwnReferenceCaches(qualifiedKey: string): void {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return;
+
+    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
+    scope?.updateOwnReferenceCaches(qualifiedKey.substring(dotIndex + 1));
+  }
+
   // --- Batch ---
 
   flush(): { processed: string[]; errors: Error[] } {
@@ -855,6 +864,7 @@ export class DesignBook {
         this._updateReferenceCaches(key, previousDependents.get(key));
       } else {
         this._updateReferenceCaches(key);
+        this._updateOwnReferenceCaches(key);
       }
     }
 
