@@ -67,6 +67,20 @@ describe('Renderer', () => {
       expect(output).toContain('color-mix(in oklch, var(--brand-primary) 90%, black)');
     });
 
+    it('keeps a fractional lighten/darken amount exact in the percentage', () => {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc'));
+      const ui = book.addScope('ui');
+      ui.set('light', lighten(ref('brand.primary'), { amount: 1 / 3 }));
+      ui.set('dark', darken(ref('brand.primary'), { amount: 1 / 3 }));
+
+      const output = new Renderer(book, 'css-variables').render();
+      // Math.round() collapsed this to 67% and shifted the mix.
+      expect(output).toContain('color-mix(in oklch, var(--brand-primary) 66.66666667%, white)');
+      expect(output).toContain('color-mix(in oklch, var(--brand-primary) 66.66666667%, black)');
+    });
+
     it('renders spacingScale with calc() and var() ref', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');

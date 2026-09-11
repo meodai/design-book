@@ -62,7 +62,8 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const lightenOptions = getOptions<{ amount?: number }>(options);
     const color = css(args[0]);
     const amount = lightenOptions?.amount ?? 0.1;
-    const pct = Math.round((1 - amount) * 100);
+    // Rounding to whole percents shifts the mix (1/3 became 67%).
+    const pct = formatNumber((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, white)`;
   });
 
@@ -71,7 +72,8 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const darkenOptions = getOptions<{ amount?: number }>(options);
     const color = css(args[0]);
     const amount = darkenOptions?.amount ?? 0.1;
-    const pct = Math.round((1 - amount) * 100);
+    // Rounding to whole percents shifts the mix (1/3 became 67%).
+    const pct = formatNumber((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, black)`;
   });
 
