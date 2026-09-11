@@ -119,7 +119,20 @@ export function registerBuiltinFunctions(book: {
 		'random',
 		(scope: Scope, options?: { type: RandomType; seed: number | string; not?: string[] }) => {
 			if (!options) {
-				throw new Error('random: options are required');
+				throw new FunctionError('random: options are required', 'random');
+			}
+			if (options.type === undefined || options.type === null) {
+				throw new FunctionError('random: options.type is required', 'random');
+			}
+			if (
+				options.seed === undefined
+				|| options.seed === null
+				|| (typeof options.seed !== 'number' && typeof options.seed !== 'string')
+			) {
+				throw new FunctionError(
+					`random: options.seed must be a number or string, got ${typeof options.seed}`,
+					'random',
+				);
 			}
 			return randomImpl(scope, options.type, options.seed, options.not ?? []);
 		},

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color, px, string as stringToken } from '../../../src/tokens';
+import { color, px, string as stringToken, createFunctionToken } from '../../../src/tokens';
 import { random } from '../../../src/functions/generic/random';
 import { FunctionError } from '../../../src/errors';
 
@@ -108,6 +108,31 @@ describe('random', () => {
     // With 16 candidates and 10 distinct seeds we expect at least a couple of
     // different outcomes — guards against the seed being ignored.
     expect(picks.size).toBeGreaterThan(1);
+  });
+
+  it('throws a FunctionError (not a raw TypeError) when seed is missing, e.g. from a hand-built or deserialized token', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    palette.set('a', color('#aaaaaa'));
+
+    const ui = book.addScope('ui');
+    // Bypasses the `random()` constructor (which always fills in a seed),
+    // simulating a raw/deserialized function token missing one.
+    ui.set('bad', createFunctionToken('random', [palette], { options: { type: 'color' } }));
+
+    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
+    expect(() => book.resolve('ui.bad')).not.toThrow(TypeError);
+  });
+
+  it('throws a FunctionError when type is missing', () => {
+    const book = new DesignBook('test');
+    const palette = book.addScope('palette');
+    palette.set('a', color('#aaaaaa'));
+
+    const ui = book.addScope('ui');
+    ui.set('bad', createFunctionToken('random', [palette], { options: { seed: 1 } }));
+
+    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
   });
 
   it('exposes the requested type as the function returnType', () => {
