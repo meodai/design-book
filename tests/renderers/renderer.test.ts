@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color, ref, px, rem, ms } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
-import { bestContrastWith, colorMix, lighten, darken, spacingScale, typographyScale } from '../../src/functions';
+import { bestContrastWith, colorMix, lighten, darken, relativeTo, spacingScale, typographyScale } from '../../src/functions';
 
 function createTestBook() {
   const book = new DesignBook('test');
@@ -122,6 +122,81 @@ describe('Renderer', () => {
       const output = renderer.render();
       // bestContrastWith resolves to computed hex — no CSS function for this
       expect(output).toContain('--ui-text: #000000');
+    });
+  });
+
+  describe('relativeTo css', () => {
+    function bookWithPrimary() {
+      const book = new DesignBook('test');
+      const brand = book.addScope('brand');
+      brand.set('primary', color('#0066cc'));
+      return book;
+    }
+
+    it('emits <space>(from …) rather than color(from …)', () => {
+      const book = bookWithPrimary();
+      book.addScope('ui').set(
+        'complement',
+        relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180'])
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-complement: oklch(from var(--brand-primary) l c calc(h + 180));'
+      );
+      expect(output).not.toContain('color(from');
+    });
+
+    it('scales hsl saturation and lightness to 0..100', () => {
+      const book = bookWithPrimary();
+      book.addScope('ui').set(
+        'x',
+        relativeTo(ref('brand.primary'), 'hsl', ['+30', 0.5, '-0.1'])
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-x: hsl(from var(--brand-primary) calc(h + 30) 50 calc(l - 10));'
+      );
+    });
+
+    it('leaves * and / factors unscaled', () => {
+      const book = bookWithPrimary();
+      book.addScope('ui').set(
+        'x',
+        relativeTo(ref('brand.primary'), 'hsl', [null, '*0.5', '/2'])
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-x: hsl(from var(--brand-primary) h calc(s * 0.5) calc(l / 2));'
+      );
+    });
+
+    it('scales rgb channels to 0..255', () => {
+      const book = bookWithPrimary();
+      book.addScope('ui').set(
+        'x',
+        relativeTo(ref('brand.primary'), 'rgb', [1, null, '+0.1'])
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-x: rgb(from var(--brand-primary) 255 g calc(b + 25.5));'
+      );
+    });
+
+    it('emits lab channels unscaled', () => {
+      const book = bookWithPrimary();
+      book.addScope('ui').set(
+        'x',
+        relativeTo(ref('brand.primary'), 'lab', ['+10', null, null])
+      );
+
+      const output = new Renderer(book, 'css-variables').render();
+      expect(output).toContain(
+        '--ui-x: lab(from var(--brand-primary) calc(l + 10) a b);'
+      );
     });
   });
 

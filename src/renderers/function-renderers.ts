@@ -1,6 +1,10 @@
 import { keyToHyphen } from './renderer';
 import type { FunctionRendererOptions, Renderer } from './renderer';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
+import {
+  RELATIVE_TO_CSS_SCALES,
+  relativeToChannels,
+} from '../functions/color/relative-to';
 import type { FunctionArg, ReferenceValue, TokenValue } from '../tokens';
 
 /** Convert a single function argument into a CSS expression. Nested
@@ -23,6 +27,12 @@ function argToCssValue(renderer: Renderer, arg: FunctionArg): string {
     return String(tv.rawValue);
   }
   return String(arg);
+}
+
+/** Trim binary-float noise (0.1 * 255 → 25.500000000000004) without
+ *  rounding away meaningful precision. */
+function formatNumber(value: number): string {
+  return String(Number(value.toPrecision(10)));
 }
 
 function getOptions<T extends FunctionRendererOptions>(options?: FunctionRendererOptions): T | undefined {
@@ -64,38 +74,38 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   });
 
   // relativeTo(color, colorSpace, modifications, options?)
-  // CSS: color(from <color> <space> <channel-exprs>)
+  // CSS relative-colour syntax: `<space>(from <color> <ch> <ch> <ch>)`.
+  // `color(from …)` is rejected by browsers for these spaces.
   renderer.registerFunctionRenderer('relativeTo', (args, options) => {
     const relativeToOptions = getOptions<{
       colorSpace?: string;
       modifications?: (null | number | string)[];
     }>(options);
     const color = css(args[0]);
-    // colorSpace and modifications are captured in closure, passed via options
     const colorSpace = relativeToOptions?.colorSpace ?? 'oklch';
-    const modifications: (null | number | string)[] = relativeToOptions?.modifications ?? [null, null, null];
+    const modifications: (null | number | string)[] = relativeToOptions?.modifications ?? [];
 
-    // Map color space to channel names
-    const channelNames: Record<string, string[]> = {
-      oklch: ['l', 'c', 'h'],
-      hsl: ['h', 's', 'l'],
-      lab: ['l', 'a', 'b'],
-      lch: ['l', 'c', 'h'],
-      rgb: ['r', 'g', 'b'],
-    };
-    const channels = channelNames[colorSpace] ?? ['l', 'c', 'h'];
+    const channels = relativeToChannels(colorSpace);
+    const scales = RELATIVE_TO_CSS_SCALES[colorSpace];
 
     const channelExprs = channels.map((ch, i) => {
       const mod = modifications[i];
       if (mod === null || mod === undefined) return ch;
-      if (typeof mod === 'number') return String(mod);
-      // String modifier: "+180", "-0.2", "*0.5", "/2"
+      // Absolute values and +/- deltas live in Culori's channel range, so
+      // they are scaled into the CSS one. Factors for * and / are ratios
+      // and stay as written.
+      if (typeof mod === 'number') return formatNumber(mod * scales[i]);
       const op = mod[0];
-      const val = mod.slice(1);
-      return `calc(${ch} ${op} ${val})`;
+      if (op === '+' || op === '-') {
+        return `calc(${ch} ${op} ${formatNumber(parseFloat(mod.slice(1)) * scales[i])})`;
+      }
+      if (op === '*' || op === '/') {
+        return `calc(${ch} ${op} ${mod.slice(1)})`;
+      }
+      return formatNumber(parseFloat(mod) * scales[i]);
     });
 
-    return `color(from ${color} ${colorSpace} ${channelExprs.join(' ')})`;
+    return `${colorSpace}(from ${color} ${channelExprs.join(' ')})`;
   });
 
   // spacingScale(base, options?)
