@@ -104,8 +104,12 @@ export function relativeToImpl(
   }
 
   // Out-of-sRGB results are gamut-mapped in OKLCH rather than clipped
-  // channel-wise. The in-gamut check comes first because toGamut round-trips
-  // through OKLCH, which can shift an already-displayable colour by 1/255.
+  // channel-wise. The in-gamut check comes first mainly as a shortcut —
+  // toGamut hands a displayable colour straight back, and for the Lab/LCh
+  // spaces the round trip it takes through OKLCH is byte-identical anyway
+  // (checked over 30k in-gamut colours). It does earn its keep for the
+  // sRGB-based spaces: converting an `hsl` or `rgb` colour through OKLCH
+  // and back shifts about one colour in a thousand by 1/255.
   const result = isInSrgb(modified)
     ? formatHex(modified)
     : formatHex(toRgbGamut(modified));
