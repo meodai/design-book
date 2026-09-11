@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color } from '../../../src/tokens';
-import { shade } from '../../../src/functions/color/shade';
-import { parse, converter } from 'culori';
+import { shade, shadeImpl } from '../../../src/functions/color/shade';
+import { parse, converter, formatHex, toGamut } from 'culori';
 
 const toOklch = converter('oklch');
 
@@ -92,5 +92,20 @@ describe('shade', () => {
     ui.set('big', shade(palette.get('black') as any, { amount: 2 }));
 
     expect(book.resolve('ui.big')).toBe('#ffffff');
+  });
+});
+
+describe('shade gamut mapping', () => {
+  it('gamut-maps a saturated result instead of clipping it', () => {
+    // Raising OKLCH lightness on pure blue leaves sRGB. Formatting the raw
+    // OKLCH colour clips the channels (#0448ff); mapping it back into gamut
+    // by reducing chroma keeps the hue and lands on #1757ff.
+    expect(shadeImpl('#0000ff', 0.1)).toBe('#1757ff');
+  });
+
+  it('matches an explicit toGamut of the shifted colour', () => {
+    const lch = toOklch(parse('#0000ff'));
+    const shifted = { ...lch!, l: (lch!.l ?? 0) + 0.1 };
+    expect(shadeImpl('#0000ff', 0.1)).toBe(formatHex(toGamut('rgb', 'oklch')(shifted)));
   });
 });
