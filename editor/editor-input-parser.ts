@@ -133,7 +133,14 @@ function parseArg(
     return { type: 'ref', value: ref(refMatch[1]) };
   }
 
-  // color('...')
+  // color('...') — matching-quote form first, so values containing spaces,
+  // commas or parens (rgb(0, 0, 0), hsl(200 50% 50%)) parse correctly.
+  const colorQuotedMatch = trimmed.match(/^color\(\s*(['"])(.*)\1\s*\)$/);
+  if (colorQuotedMatch) {
+    return { type: 'token', value: color(colorQuotedMatch[2]) };
+  }
+
+  // color(...) — bare/unquoted form (e.g. color(#fff), color(red))
   const colorMatch = trimmed.match(/^color\(\s*['"]?([^'")\s]+)['"]?\s*\)$/);
   if (colorMatch) {
     return { type: 'token', value: color(colorMatch[1]) };
