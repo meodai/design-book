@@ -47,6 +47,19 @@ describe('readableOn in the editor', () => {
     expect(parseTokenInput(serialized, book, ui)).toEqual(original);
   });
 
+  it('displays readableOn inside the options object, the way it is typed', () => {
+    const ui = book.addScope('ui-10-display');
+    ui.set('accent', mostVivid(pool, { readableOn: ref('bg-10.white'), not: ['pool-10.gray'] }));
+    ui.set('match', closestColor(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), minContrast: 7 }));
+
+    expect(getTokenDisplayValue(ui, 'accent')).toBe(
+      "mostVivid(pool-10, { readableOn: ref('bg-10.white'), not: [\"pool-10.gray\"], minContrast: 4.5 })",
+    );
+    expect(getTokenDisplayValue(ui, 'match')).toBe(
+      "closestColor(color('#ffff66'), pool-10, { readableOn: ref('bg-10.white'), minContrast: 7 })",
+    );
+  });
+
   it('accepts readableOn written inside the options object', () => {
     const ui = book.addScope('ui-10-typed');
     const parsed = parseTokenInput(

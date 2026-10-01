@@ -3,6 +3,7 @@ import {
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
   spacingScale, typographyScale,
   nextLarger, nextSmaller,
+  lightest, darkest, sibling,
   Renderer, SVGRenderer, TableViewRenderer,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
@@ -44,6 +45,15 @@ function bootDesignSystem() {
   space.set('xl', px(24));
   space.set('2xl', px(40));
 
+  // A small neutral ramp, light → dark. Its key order is what `sibling`
+  // steps through and what `lightest` / `darkest` rank.
+  const gray = book.addScope('gray');
+  gray.set('g100', color('#f2f2f2'));
+  gray.set('g300', color('#c8c8c8'));
+  gray.set('g500', color('#6e6e6e'));
+  gray.set('g700', color('#555555'));
+  gray.set('g900', color('#222222'));
+
   // Brand re-uses the canonical spacing scale instead of redefining values.
   brand.set('space-sm', ref('space.s'));
   brand.set('space-md', ref('space.l'));
@@ -66,6 +76,21 @@ function bootDesignSystem() {
   ui.set('gap-emphasis', nextLarger(ref('space.m'), space));
   // Step DOWN from l → m (12px). Useful for derived "tighter" tokens.
   ui.set('gap-tight', nextSmaller(ref('space.l'), space));
+  // sibling steps by position from a token in its own scope: +1 is the next
+  // member, -1 the previous. Past either end it stops there...
+  ui.set('surface-hover', sibling(ref('gray.g100'), 1));    // → g300
+  ui.set('surface-press', sibling(ref('gray.g100'), 2));    // → g500
+  ui.set('step-past-end', sibling(ref('gray.g900'), 3));    // → g900, stops
+  // ...unless it wraps around.
+  ui.set('step-wrapped', sibling(ref('gray.g900'), 1, { wrap: true }));  // → g100
+  ui.set('gap-loose', sibling(ref('space.l'), 1));          // → xl (24px)
+  // lightest / darkest rank a scope by OKLCH lightness.
+  ui.set('paper', lightest(gray));                          // → g100
+  ui.set('ink', darkest(gray));                             // → g900
+  // readableOn drops members that don't reach minContrast (default 4.5)
+  // against a backdrop before ranking: the lightest grey that still reads
+  // on the page — the softest usable text colour.
+  ui.set('text-soft', lightest(gray, { readableOn: ref('semantic.background') }));  // → g500
 
   // Font families — plain string tokens reused by typography scopes.
   const fonts = book.addScope('fonts');
@@ -341,6 +366,13 @@ function formatDimension(value: string | number, unit: string): string {
  *  Recurses into `arg.type === 'function'` args so a function nested
  *  inside another function's arguments (e.g. spacingScale(lighten(...)))
  *  round-trips instead of being silently dropped. */
+/** Fixed argument count of the colour selectors that take `readableOn`.
+ *  The backdrop is stored as one more trailing argument; it is printed back
+ *  inside the options object, the way it is typed. */
+const READABLE_ON_SELECTORS: Record<string, number> = {
+  mostVivid: 1, leastVivid: 1, lightest: 1, darkest: 1, furthestFrom: 1, closestColor: 2,
+};
+
 function serializeFunctionToken(fn: any): string {
   // sibling keeps its anchor key in fn.options (it needs the key's position,
   // not its value); print it the way it is typed.
@@ -388,8 +420,13 @@ function serializeFunctionToken(fn: any): string {
         return true;
       })
     : [];
-  if (optionKeys.length > 0) {
-    const optionPairs = optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`);
+  const fixedArgs = READABLE_ON_SELECTORS[fn.name];
+  const readableOn = fixedArgs !== undefined && argStrs.length > fixedArgs ? argStrs.pop() : undefined;
+  const optionPairs = [
+    ...(readableOn ? [`readableOn: ${readableOn}`] : []),
+    ...optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`),
+  ];
+  if (optionPairs.length > 0) {
     argStrs.push(`{ ${optionPairs.join(', ')} }`);
   }
   return `${fn.name}(${argStrs.join(', ')})`;
