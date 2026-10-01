@@ -32,6 +32,7 @@ export {
   extractDependencies,
   extractVisualDependencies,
   extractIteratedScopes,
+  iteratedScopesOf,
   getReferenceResolution,
   getTokenProcessors,
   isReferenceValue,
@@ -65,10 +66,11 @@ export {
   nextLarger, nextSmaller,
   random,
   nth,
+  sibling,
   registerBuiltinFunctions,
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
-export type { NthOptions } from './functions';
+export type { NthOptions, SiblingOptions } from './functions';
 export type { LightnessSelectorOptions, ReadableOnOptions } from './functions';
 
 // Renderers

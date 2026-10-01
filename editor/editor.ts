@@ -342,6 +342,17 @@ function formatDimension(value: string | number, unit: string): string {
  *  inside another function's arguments (e.g. spacingScale(lighten(...)))
  *  round-trips instead of being silently dropped. */
 function serializeFunctionToken(fn: any): string {
+  // sibling keeps its anchor key in fn.options (it needs the key's position,
+  // not its value); print it the way it is typed.
+  if (fn.name === 'sibling' && fn.options?.from) {
+    const { from, offset, wrap, not } = fn.options;
+    const extras: string[] = [];
+    if (wrap) extras.push('wrap: true');
+    if (Array.isArray(not) && not.length > 0) extras.push(`not: ${JSON.stringify(not)}`);
+    const tail = extras.length > 0 ? `, { ${extras.join(', ')} }` : '';
+    return `sibling(ref('${from}'), ${offset}${tail})`;
+  }
+
   const argStrs: string[] = [];
   if (fn.args) {
     for (const arg of fn.args) {
@@ -808,7 +819,7 @@ const FUNCTION_NAMES = [
   'lightest', 'darkest',
   'nextLarger', 'nextSmaller',
   'spacingScale', 'typographyScale', 'timing',
-  'random', 'nth',
+  'random', 'nth', 'sibling',
 ];
 
 const VALUE_CONSTRUCTORS = [

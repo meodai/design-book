@@ -18,6 +18,7 @@ import { typographyScaleImpl } from './non-color/typography-scale';
 import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
+import { siblingImpl, scopeOfKey } from './generic/sibling';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { splitReadableArgs } from './color/readable';
@@ -46,9 +47,13 @@ export { random } from './generic/random';
 export type { RandomOptions, RandomType } from './generic/random';
 export { nth } from './generic/nth';
 export type { NthOptions } from './generic/nth';
+export { sibling } from './generic/sibling';
+export type { SiblingOptions } from './generic/sibling';
 
 export function registerBuiltinFunctions(book: {
 	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
+	/** `sibling` looks up the scope its anchor key lives in. */
+	getScope(name: string): Scope | undefined;
 }): void {
 	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[] }) =>
 		bestContrastWithImpl(targetValue, scope, options?.not ?? []),
@@ -149,6 +154,23 @@ export function registerBuiltinFunctions(book: {
 				);
 			}
 			return nthImpl(scope, options.index, options.not ?? []);
+		},
+	);
+	book.registerFunction(
+		'sibling',
+		(options?: { from?: string; offset?: number; wrap?: boolean; not?: string[] }) => {
+			if (!options || typeof options.from !== 'string' || !options.from.includes('.')) {
+				throw new FunctionError('sibling: a fully-qualified `from` key is required', 'sibling');
+			}
+			if (!Number.isInteger(options.offset)) {
+				throw new FunctionError(`sibling: offset must be an integer, got ${options.offset}`, 'sibling');
+			}
+			const scopeName = scopeOfKey(options.from);
+			const scope = book.getScope(scopeName);
+			if (!scope) {
+				throw new FunctionError(`sibling: unknown scope "${scopeName}"`, 'sibling');
+			}
+			return siblingImpl(scope, options.from, options.offset as number, options.wrap ?? false, options.not ?? []);
 		},
 	);
 }

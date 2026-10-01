@@ -6,7 +6,7 @@ import {
   lightest, darkest,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
-  nth, random,
+  nth, random, sibling,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
 import { parse } from 'culori';
@@ -453,6 +453,30 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return nth(scope, indexParsed.value as number, options);
   },
 
+  // sibling(ref('scope.token'), offset, { wrap?, not? }?)
+  sibling(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('sibling requires 2 arguments: ref(...) and an offset');
+    const anchor = getTokenArg(parseArg(args[0], book));
+    const offsetParsed = parseArg(args[1], book);
+    if (offsetParsed.type !== 'raw' || typeof offsetParsed.value !== 'number') {
+      throw new Error('sibling requires a numeric offset as second argument');
+    }
+
+    const options: { wrap?: boolean; not?: Array<ReferenceValue | string>; description?: string } = {};
+    const optsStr = args.slice(2).join(',').trim().replace(/^\{|\}$/g, '').trim();
+    for (const pair of optsStr ? splitArgs(optsStr) : []) {
+      const colonIdx = pair.indexOf(':');
+      if (colonIdx === -1) continue;
+      const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+      const valueStr = pair.slice(colonIdx + 1).trim();
+      if (key === 'wrap') options.wrap = valueStr === 'true';
+      else if (key === 'not') options.not = parseNotList(valueStr, book);
+      else if (key === 'description') options.description = valueStr.replace(/^['"]|['"]$/g, '');
+    }
+    return sibling(anchor as ReferenceValue, offsetParsed.value as number, options);
+  },
+
   // random(scope, { type, seed?, not? })
   random(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
@@ -527,15 +551,7 @@ function parseSelectorTail(
     const valueStr = pair.slice(colonIdx + 1).trim();
 
     if (key === 'not') {
-      const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
-      options.not = arrStr
-        ? splitArgs(arrStr).map((item) => {
-            const trimmed = item.trim();
-            const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
-            if (strMatch) return strMatch[1];
-            return getTokenArg(parseArg(trimmed, book)) as ReferenceValue;
-          })
-        : [];
+      options.not = parseNotList(valueStr, book);
     } else if (key === 'readableOn') {
       options.readableOn = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'minContrast') {
@@ -547,6 +563,18 @@ function parseSelectorTail(
     }
   }
   return options;
+}
+
+/** A `not: [...]` list: `ref('scope.token')` calls and quoted key strings. */
+function parseNotList(valueStr: string, book?: DesignBook): Array<ReferenceValue | string> {
+  const arrStr = valueStr.trim().replace(/^\[|\]$/g, '').trim();
+  if (!arrStr) return [];
+  return splitArgs(arrStr).map((item) => {
+    const trimmed = item.trim();
+    const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
+    if (strMatch) return strMatch[1];
+    return getTokenArg(parseArg(trimmed, book)) as ReferenceValue;
+  });
 }
 
 type SelectorTailOptions = {

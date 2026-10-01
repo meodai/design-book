@@ -25,6 +25,13 @@ All notable changes to Design Book are recorded here. The format follows
 
 - `lightest(scope, { not, readableOn })` and `darkest(...)` select the
   colour with the highest / lowest OKLCH lightness from a scope.
+- `sibling(ref('ramp.s300'), offset, { wrap, not })` returns the member
+  `offset` steps away from a token in its own scope's key order. It stops at
+  the first / last member by default and wraps around with `wrap: true`.
+- `metadata.iteratedScopes` lets a function token declare scopes it walks
+  without taking them as an argument; the selector-pool index honours it.
+  `registerBuiltinFunctions` now needs `getScope` on the object it is given
+  (a `DesignBook` has it).
 
 ### Fixed
 

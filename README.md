@@ -123,7 +123,7 @@ ui.set('accent', mostVivid(palette, {
 }));
 
 // `not` is also available on bestContrastWith, minContrastWith,
-// closestColor, furthestFrom, nextLarger, nextSmaller and nth.
+// closestColor, furthestFrom, nextLarger, nextSmaller, nth and sibling.
 ```
 
 Plain strings work too — `not: ['palette.error']` is equivalent to
@@ -239,6 +239,32 @@ ui.set('text',       nth(ramp, -1));     // darkest
 ui.set('subtle',     nth(ramp, 0.15));   // just off white
 ui.set('muted-text', nth(ramp, 0.7));    // dark but not darkest
 ```
+
+### Relative steps
+
+```typescript
+sibling(ref('ramp.s300'), 1)                  // The member after ramp.s300
+sibling(ref('ramp.s300'), -1)                 // The member before it
+sibling(ref('ramp.s900'), 1, { wrap: true })  // Past the end → back to the first
+```
+
+Where `nth` addresses a position in a scope, `sibling` steps from a token:
+it takes the anchor's position in its own scope (key order, inherited
+members included) and returns the value `offset` members away. Any integer
+works. Past either end it stops at the first or last member; pass
+`{ wrap: true }` to wrap around instead. `not` skips keys while stepping.
+
+```typescript
+// ramp runs light → dark
+ui.set('button',       ref('ramp.s500'));
+ui.set('button-hover', sibling(ref('ramp.s500'), 1));   // one step darker
+ui.set('button-press', sibling(ref('ramp.s500'), 2));   // two steps darker
+```
+
+It follows the scope: change, add or remove a member and the step
+re-resolves. Members that walk the same scope themselves (another
+`sibling`, an `nth`, a selector) are skipped, so a `sibling` can live in
+the scope it steps through.
 
 ### Non-color generators
 

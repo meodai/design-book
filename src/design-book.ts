@@ -6,7 +6,7 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { extractIteratedScopes, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
+import { iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -755,7 +755,7 @@ export class DesignBook {
     const source = this.getSourceKey(qualifiedKey);
     if (source && source !== qualifiedKey) return;
 
-    const scopeNames = new Set(extractIteratedScopes((value as FunctionTokenValue).args));
+    const scopeNames = new Set(iteratedScopesOf(value as FunctionTokenValue));
     if (scopeNames.size === 0) return;
     this._scopesBySelector.set(qualifiedKey, scopeNames);
     for (const scopeName of scopeNames) {
