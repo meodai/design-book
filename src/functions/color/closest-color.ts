@@ -8,8 +8,16 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { collectScopeColors, perceptualDistance } from './scope-colors';
+import { filterReadable, readableOnParts } from './readable';
+import type { ReadableOnOptions } from './readable';
 
-export function closestColorImpl(targetValue: string, scope: Scope, not: string[] = []): string {
+export function closestColorImpl(
+  targetValue: string,
+  scope: Scope,
+  not: string[] = [],
+  readableOn: string | null = null,
+  minContrast?: number,
+): string {
   const targetRaw = parse(targetValue);
   if (!targetRaw) {
     return '#00000000';
@@ -25,7 +33,8 @@ export function closestColorImpl(targetValue: string, scope: Scope, not: string[
   let closestHex: string | null = null;
   let closestDistance = Infinity;
 
-  for (const candidate of collectScopeColors(scope, not)) {
+  const pool = filterReadable('closestColor', collectScopeColors(scope, not), readableOn, minContrast);
+  for (const candidate of pool) {
     const distance = perceptualDistance(targetParsed, candidate.parsed);
     if (distance < closestDistance) {
       closestDistance = distance;
@@ -39,22 +48,23 @@ export function closestColorImpl(targetValue: string, scope: Scope, not: string[
 export function closestColor(
   targetColor: TokenValue | ReferenceValue | FunctionTokenValue,
   scope: Scope,
-  options?: {
+  options?: ReadableOnOptions & {
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
     description?: string;
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const readable = readableOnParts('closestColor', options);
   return createFunctionToken(
     'closestColor',
-    [targetColor, scope],
+    [targetColor, scope, ...readable.args],
     {
       description: options?.description,
-      options: { not: normalizeNotKeys(options?.not) },
+      options: { not: normalizeNotKeys(options?.not), ...readable.options },
       metadata: {
-        dependencies: extractDependencies([targetColor]),
-        visualDependencies: extractVisualDependencies([targetColor, scope]),
+        dependencies: [...extractDependencies([targetColor]), ...readable.dependencies],
+        visualDependencies: extractVisualDependencies([targetColor, scope, ...readable.args]),
         returnType: 'color',
       },
     },

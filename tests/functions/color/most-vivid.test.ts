@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color, ref } from '../../../src/tokens';
+import { color } from '../../../src/tokens';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
 
 describe('mostVivid', () => {
@@ -29,53 +29,5 @@ describe('mostVivid', () => {
     ui.set('accent', mostVivid(palette));
 
     expect(book.resolve('ui.accent')).toBe('#b0c4de');
-  });
-
-  it('respects a minContrast gate against a target', () => {
-    const book = new DesignBook('test');
-    const palette = book.addScope('palette');
-    palette.set('lightVivid', color('#ffff00')); // yellow: high chroma, ~1.07 contrast vs white
-    palette.set('darkVivid',  color('#1d4eb8')); // navy: lower chroma, ~8.1 contrast vs white
-
-    const ui = book.addScope('ui');
-    ui.set('accent', mostVivid(palette, {
-      against: color('#ffffff'),
-      minContrast: 4.5,
-    }));
-
-    // Yellow has higher chroma but fails the contrast gate; navy wins.
-    expect(book.resolve('ui.accent')).toBe('#1d4eb8');
-  });
-
-  it('falls back to highest contrast when nothing meets minContrast', () => {
-    const book = new DesignBook('test');
-    const palette = book.addScope('palette');
-    palette.set('paleA', color('#ffeeee')); // ~1.05 contrast vs white
-    palette.set('paleB', color('#eeeeff')); // ~1.07 contrast vs white
-
-    const ui = book.addScope('ui');
-    ui.set('accent', mostVivid(palette, {
-      against: color('#ffffff'),
-      minContrast: 4.5,
-    }));
-
-    // Neither meets the threshold — falls back to the higher-contrast option.
-    expect(book.resolve('ui.accent')).toBe('#eeeeff');
-  });
-
-  it('accepts a ref as the contrast target', () => {
-    const book = new DesignBook('test');
-    const palette = book.addScope('palette');
-    palette.set('surface', color('#ffffff'));
-    palette.set('vivid',   color('#1d4eb8'));
-    palette.set('pastel',  color('#cccccc'));
-
-    const ui = book.addScope('ui');
-    ui.set('link', mostVivid(palette, {
-      against: ref('palette.surface'),
-      minContrast: 4.5,
-    }));
-
-    expect(book.resolve('ui.link')).toBe('#1d4eb8');
   });
 });

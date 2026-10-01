@@ -78,7 +78,7 @@ terminate on the `seen` set; a selector never notifies itself.
 #### Colour behaviour worth knowing
 
 - Selectors judge translucent candidates composited over the target and can return 8-digit hex.
-- `mostVivid` / `leastVivid` throw when `minContrast` is given without `against`, or when `against` does not parse.
+- `readableOn` + `minContrast` (default 4.5) filter a colour selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
 - `closestColor` / `furthestFrom` measure Euclidean distance in OKLab.
 - `lighten` / `darken` are OKLCH mixes towards white / black through `cssColorMix` (`src/functions/color/color-mix.ts`) — the JS twin of the `color-mix()` the CSS renderer emits, premultiplied alpha included. `colorMix` uses the same helper. `shade` shifts OKLCH lightness and carries alpha through. All gamut-map in OKLCH before formatting and emit 8-digit hex only when translucent.
 - `nextLarger` / `nextSmaller` skip members whose unit differs from the target's instead of throwing.

@@ -123,7 +123,7 @@ didn't need to. Each one is a candidate for a procedural token.
 | `--press: <even darker>` | `darken(ref('color.brand'), { amount: 0.3 })` |
 | `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), ramp)` |
 | `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ramp, { ratio: 1.5 })` |
-| `--accent: <one of the brand colours>` | `mostVivid(values, { against, minContrast, not: [ref('values.error')] })` |
+| `--accent: <one of the brand colours>` | `mostVivid(values, { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
 | `--space-sm/md/lg/xl`: multiples of a base | `spacingScale(ref('space.base'), { multiplier })` |
 | `--font-h1/h2/h3`: modular scale | `typographyScale(ref('type.base'), { ratio, step })` |

@@ -1,19 +1,15 @@
-import { parse, converter } from 'culori';
+import { converter } from 'culori';
 import {
   createFunctionToken,
-  extractDependencies,
   extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
-import type {
-  FunctionArg,
-  FunctionTokenValue,
-  ReferenceValue,
-  TokenValue,
-} from '../../tokens';
+import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors, contrastAgainst } from './scope-colors';
+import { collectScopeColors } from './scope-colors';
+import { filterReadable, readableOnParts } from './readable';
+import type { ReadableOnOptions } from './readable';
 
 const toOklch = converter('oklch');
 
@@ -21,76 +17,40 @@ const toOklch = converter('oklch');
  * Returns the colour from a scope with the highest OKLCH chroma — the
  * perceptually "most vivid" candidate. OKLCH chroma is the right axis here
  * because HSL saturation conflates lightness and saturation, so a pale blue
- * and a vivid mid-blue can score the same.
- *
- * Optional readability gate: pass `against` (a target colour) and a
- * `minContrast` ratio and the function will only consider candidates that
- * clear the threshold. If nothing does, it falls back to the highest-contrast
- * candidate, the same way `minContrastWith` does. A gate that cannot be
- * applied — `minContrast` without `against`, or an `against` colour that does
- * not parse — throws rather than being ignored.
+ * and a vivid mid-blue can score the same. Ties go to the first candidate in
+ * scope order. Pass `readableOn` to rank only candidates readable on a
+ * backdrop.
  */
 export function mostVividImpl(
   scope: Scope,
-  against: string | null,
-  minContrast: number,
   not: string[] = [],
+  readableOn: string | null = null,
+  minContrast?: number,
 ): string {
-  // A gate that cannot be applied is a configuration error, not a silent
-  // no-op — otherwise an unreadable colour quietly wins the pool.
-  if (!against && minContrast > 0) {
-    throw new FunctionError(
-      `mostVivid: minContrast needs an \`against\` colour to measure against`,
-      'mostVivid',
-    );
+  const pool = filterReadable('mostVivid', collectScopeColors(scope, not), readableOn, minContrast);
+  let bestHex: string | null = null;
+  let bestChroma = -Infinity;
+
+  for (const candidate of pool) {
+    const chroma = toOklch(candidate.parsed)?.c;
+    if (typeof chroma !== 'number') continue;
+    if (chroma > bestChroma) {
+      bestChroma = chroma;
+      bestHex = candidate.hex;
+    }
   }
 
-  const targetColor = against ? parse(against) : null;
-  if (against && !targetColor) {
-    throw new FunctionError(
-      `mostVivid: cannot parse \`against\` colour "${against}"`,
-      'mostVivid',
-    );
-  }
-
-  const candidates: Array<{ hex: string; chroma: number; contrast: number }> = [];
-
-  for (const candidate of collectScopeColors(scope, not)) {
-    const lch = toOklch(candidate.parsed);
-    if (!lch || typeof lch.c !== 'number') continue;
-
-    const contrast = targetColor ? contrastAgainst(targetColor, candidate.parsed) : Infinity;
-    candidates.push({ hex: candidate.hex, chroma: lch.c, contrast });
-  }
-
-  if (candidates.length === 0) {
+  if (!bestHex) {
     throw new FunctionError(
       'mostVivid: no valid colour candidates found in scope',
       'mostVivid',
     );
   }
 
-  // If a readability gate is set, prefer candidates that clear it. If none
-  // do, fall back to the highest-contrast candidate (matches minContrastWith).
-  if (targetColor && minContrast > 0) {
-    const eligible = candidates.filter((c) => c.contrast >= minContrast);
-    if (eligible.length > 0) {
-      eligible.sort((a, b) => b.chroma - a.chroma);
-      return eligible[0].hex;
-    }
-    candidates.sort((a, b) => b.contrast - a.contrast);
-    return candidates[0].hex;
-  }
-
-  candidates.sort((a, b) => b.chroma - a.chroma);
-  return candidates[0].hex;
+  return bestHex;
 }
 
-export interface MostVividOptions {
-  /** Optional target colour the result must contrast with. */
-  against?: TokenValue | ReferenceValue | FunctionTokenValue;
-  /** Minimum WCAG contrast ratio against `against`. Defaults to 0 (off). */
-  minContrast?: number;
+export interface MostVividOptions extends ReadableOnOptions {
   /** Keys to exclude from the candidate pool. Pass `ref('scope.token')`
    *  or a literal `'scope.token'` string. Useful for keeping role-loaded
    *  tokens like `values.error` out of accent-colour picking. */
@@ -100,18 +60,14 @@ export interface MostVividOptions {
 }
 
 export function mostVivid(scope: Scope, options?: MostVividOptions): FunctionTokenValue {
-  const args: FunctionArg[] = options?.against ? [scope, options.against] : [scope];
-  const dependencies = options?.against ? extractDependencies([options.against]) : [];
+  const readable = readableOnParts('mostVivid', options);
 
-  return createFunctionToken('mostVivid', args, {
+  return createFunctionToken('mostVivid', [scope, ...readable.args], {
     description: options?.description,
-    options: {
-      minContrast: options?.minContrast ?? 0,
-      not: normalizeNotKeys(options?.not),
-    },
+    options: { not: normalizeNotKeys(options?.not), ...readable.options },
     metadata: {
-      dependencies,
-      visualDependencies: extractVisualDependencies([scope]),
+      dependencies: readable.dependencies,
+      visualDependencies: extractVisualDependencies([scope, ...readable.args]),
       returnType: 'color',
     },
   });

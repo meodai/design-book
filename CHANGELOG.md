@@ -6,6 +6,21 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The `mostVivid` / `leastVivid` readability gate is now a shared pool
+  filter, `readableOn`.** `against` is renamed `readableOn` (passing
+  `against` throws and names the new option), `minContrast` defaults to 4.5
+  once a backdrop is given, and the filter is available on every colour
+  selector — `mostVivid`, `leastVivid`, `closestColor`,
+  `furthestFrom`. Like `not`, it drops candidates from the
+  pool before ranking. **Behaviour change:** when no candidate reaches the
+  ratio the selector throws a `FunctionError`; it used to fall back to the
+  highest-contrast candidate, which could hand back a grey from
+  `mostVivid`. `minContrast` without `readableOn` now throws at
+  construction rather than at resolve time. Tokens serialised in the old
+  `[scope, against]` + `{ minContrast }` shape resolve unchanged.
+
 ### Fixed
 
 - **Selector candidate pools are no longer dependency-graph edges.** A

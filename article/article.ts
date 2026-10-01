@@ -75,18 +75,36 @@ const polineTokenNames = Array.from(
 
 let proceduralActivated = false;
 
+/** Run `fn` with the book in batch mode so its writes land as one change.
+ *  Restores the previous mode, so a nested call does not flush early. */
+function inBatch(fn: () => void) {
+  const previous = book.mode;
+  book.mode = 'batch';
+  try {
+    fn();
+  } finally {
+    book.mode = previous;
+  }
+}
+
 function syncPolineValues() {
   if (!proceduralActivated) return;
-  const steps = POLINE_TOKEN_COUNT - 1;
-  for (let i = 0; i < POLINE_TOKEN_COUNT; i++) {
-    const t = i / steps;
-    try {
-      const point = polineState.getColorAt(t);
-      values.set(polineTokenNames[i], color(point.hslCSS));
-    } catch (err) {
-      console.warn(`[poline] sync failed for ${polineTokenNames[i]}:`, err);
+  // One batch, not nine changes: written one at a time, the surface can flip
+  // (e.g. on the invert toggle) while the rest of the palette still belongs
+  // to the old one, and for a moment nothing reads on it — which the
+  // `readableOn` accent rightly refuses to pick from.
+  inBatch(() => {
+    const steps = POLINE_TOKEN_COUNT - 1;
+    for (let i = 0; i < POLINE_TOKEN_COUNT; i++) {
+      const t = i / steps;
+      try {
+        const point = polineState.getColorAt(t);
+        values.set(polineTokenNames[i], color(point.hslCSS));
+      } catch (err) {
+        console.warn(`[poline] sync failed for ${polineTokenNames[i]}:`, err);
+      }
     }
-  }
+  });
 }
 
 function activateProceduralPalette() {
@@ -111,21 +129,19 @@ function activateProceduralPalette() {
   // lightest step. brand and interaction both stop being fixed slots and
   // become procedural: mostVivid scans the palette and picks the
   // highest-chroma candidate that still clears a 4.5 WCAG contrast against
-  // the surface. The two will usually coincide — a single readable accent
-  // colour driving both the button background and the links — which is the
-  // usual real-world pattern.
+  // the surface. The two coincide — a single readable accent colour driving
+  // both the button background and the links — which is the usual
+  // real-world pattern.
   colorScope.set('surface', ref('values.poline100'));
   // `not` keeps the procedural accent from landing on role-loaded values
   // like values.red500 — those have their own semantic meaning (error /
   // alert) and shouldn't be reused as the brand / link colour.
   colorScope.set('brand', mostVivid(values, {
-    against: ref('color.surface'),
-    minContrast: 4.5,
+    readableOn: ref('color.surface'),
     not: [ref('values.red500')],
   }));
   colorScope.set('interaction', mostVivid(values, {
-    against: ref('color.surface'),
-    minContrast: 4.5,
+    readableOn: ref('color.surface'),
     not: [ref('values.red500')],
   }));
 

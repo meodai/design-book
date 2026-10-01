@@ -6,7 +6,7 @@ A reactive TypeScript constraint system for design decisions. Define how token v
 
 Design systems are usually stored as fixed answers — a color picked here, a spacing value decided there, each one maintained by hand. Design Book takes a different approach: instead of storing values, you define how values are chosen.
 
-A text color isn't `#ffffff` — it's "the highest-contrast color from this palette against this background." A hover state isn't a second hex to maintain — it's "primary mixed 15% toward black." An accent isn't a one-off pick — it's "the most vivid color that still clears contrast, excluding the tokens reserved for error and success."
+A text color isn't `#ffffff` — it's "the highest-contrast color from this palette against this background." A hover state isn't a second hex to maintain — it's "primary mixed 15% toward black." An accent isn't a one-off pick — it's "the most vivid color that still reads on the surface, excluding the tokens reserved for error and success."
 
 That makes Design Book feel less like a bag of transforms and more like a small reactive query engine for design decisions: selection, constraints, search, and resolution over a token system. You don't maintain tokens anymore — you maintain rules. When inputs change, the system re-runs those decisions, updates dependents, and lets you inspect why a value won.
 
@@ -90,11 +90,11 @@ bestContrastWith(target, scope)             // Highest WCAG contrast
 minContrastWith(target, scope, { ratio })   // Meets minimum ratio (default 4.5)
 closestColor(target, scope)                 // Perceptually closest
 furthestFrom(scope)                         // Most distant from others
-mostVivid(scope, { against, minContrast })  // Highest OKLCH chroma, optionally gated by readability
-leastVivid(scope, { against, minContrast }) // Lowest OKLCH chroma — the muted counterpart
+mostVivid(scope)                            // Highest OKLCH chroma
+leastVivid(scope)                           // Lowest OKLCH chroma — the muted counterpart
 ```
 
-`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Pass `against` (a target colour) and `minContrast` to require the result to clear a WCAG threshold against that target — useful for picking an accent / link colour out of a generated palette without it turning unreadable. Falls back to the highest-contrast candidate if nothing meets the threshold, same as `minContrastWith`. A gate that cannot be applied is an error, not a silent pass: `minContrast` without `against`, or an `against` colour that does not parse, throws a `FunctionError` at resolve time.
+`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
 
 `closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
@@ -115,8 +115,6 @@ to have the highest chroma.
 
 ```typescript
 ui.set('accent', mostVivid(palette, {
-  against: ref('ui.surface'),
-  minContrast: 4.5,
   not: [ref('palette.error'), ref('palette.success')],
 }));
 
@@ -126,6 +124,28 @@ ui.set('accent', mostVivid(palette, {
 
 Plain strings work too — `not: ['palette.error']` is equivalent to
 `not: [ref('palette.error')]`.
+
+### Keeping only readable candidates with `readableOn`
+
+The colour selectors `mostVivid`, `leastVivid`, `closestColor` and
+`furthestFrom` also take `readableOn` — a backdrop colour —
+and `minContrast` (default 4.5). Like `not`, it narrows the pool before the
+selector ranks anything: candidates below the WCAG ratio against the backdrop
+are dropped, so the vivid pick is the most vivid *readable* colour.
+
+```typescript
+ui.set('accent', mostVivid(palette, {
+  readableOn: ref('ui.surface'),
+  minContrast: 4.5,
+  not: [ref('palette.error')],
+}));
+```
+
+The backdrop is a real dependency — change `ui.surface` and the pick follows.
+Translucent candidates are judged composited over it. If no candidate reaches
+the ratio the selector throws instead of falling back, so it never hands back
+a colour you asked to be readable that is not. `bestContrastWith` and
+`minContrastWith` already pick by contrast and do not take it.
 
 ### Color transforms
 

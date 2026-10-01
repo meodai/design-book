@@ -19,6 +19,7 @@ import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
+import { splitReadableArgs } from './color/readable';
 
 export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
@@ -30,6 +31,7 @@ export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
 export { mostVivid } from './color/most-vivid';
 export { leastVivid } from './color/least-vivid';
+export type { ReadableOnOptions } from './color/readable';
 export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
@@ -63,36 +65,22 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('relativeTo', (baseColor: string, options?: { colorSpace?: string; modifications?: (null | number | string)[] }) =>
 		relativeToImpl(baseColor, options?.colorSpace ?? 'oklch', options?.modifications ?? [null, null, null]),
 	);
-	book.registerFunction('closestColor', (targetValue: string, scope: Scope, options?: { not?: string[] }) =>
-		closestColorImpl(targetValue, scope, options?.not ?? []),
-	);
-	book.registerFunction('furthestFrom', (scope: Scope, options?: { not?: string[] }) =>
-		furthestFromImpl(scope, options?.not ?? []),
-	);
-	book.registerFunction(
-		'mostVivid',
-		(
-			scope: Scope,
-			againstOrOptions?: string | { minContrast?: number; not?: string[] },
-			maybeOptions?: { minContrast?: number; not?: string[] },
-		) => {
-			const against = typeof againstOrOptions === 'string' ? againstOrOptions : null;
-			const options = typeof againstOrOptions === 'string' ? maybeOptions : againstOrOptions;
-			return mostVividImpl(scope, against, options?.minContrast ?? 0, options?.not ?? []);
-		},
-	);
-	book.registerFunction(
-		'leastVivid',
-		(
-			scope: Scope,
-			againstOrOptions?: string | { minContrast?: number; not?: string[] },
-			maybeOptions?: { minContrast?: number; not?: string[] },
-		) => {
-			const against = typeof againstOrOptions === 'string' ? againstOrOptions : null;
-			const options = typeof againstOrOptions === 'string' ? maybeOptions : againstOrOptions;
-			return leastVividImpl(scope, against, options?.minContrast ?? 0, options?.not ?? []);
-		},
-	);
+	book.registerFunction('closestColor', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return closestColorImpl(targetValue, scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('furthestFrom', (scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return furthestFromImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('mostVivid', (scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return mostVividImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('leastVivid', (scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return leastVividImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
 		shadeImpl(colorValue, options?.amount ?? 0.1),
 	);

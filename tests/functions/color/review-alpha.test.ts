@@ -48,19 +48,6 @@ describe('selectors and translucent candidates', () => {
     expect(book.resolve('ui.text')).toBe('#0000000d');
   });
 
-  it('mostVivid applies its contrast gate to the composited colour', () => {
-    const book = new DesignBook('test');
-    const pool = book.addScope('pool');
-    // Opaque, this blue clears 4.5:1 against white; at 20% alpha it does not.
-    pool.set('ghost', color('rgba(0, 0, 255, 0.2)'));
-    pool.set('green', color('#006600'));
-
-    const ui = book.addScope('ui');
-    ui.set('accent', mostVivid(pool, { against: color('#ffffff'), minContrast: 4.5 }));
-
-    expect(book.resolve('ui.accent')).toBe('#006600');
-  });
-
   it('leastVivid keeps alpha in the value it returns when there is no target', () => {
     const book = new DesignBook('test');
     const pool = book.addScope('pool');

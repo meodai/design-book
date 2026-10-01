@@ -97,15 +97,13 @@ function bootDesignSystem() {
   const card = book.addScope('card');
   card.set('surface', ref('brand.neutral-light'));
   card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
-  // mostVivid picks the highest-chroma colour in `brand` that still meets a
-  // 4.5 contrast against the card surface — readable accent, auto-selected.
-  // `not` keeps role-loaded tokens like brand.error / brand.success from
-  // being mistaken for the accent (red happens to have higher OKLCH chroma
-  // than blue, so without the exclusion the interactive colour would land
-  // on the error red).
+  // mostVivid picks the highest-chroma colour in `brand` that still reads
+  // on the card surface — `readableOn` drops the orange secondary, which is
+  // too light for white. `not` keeps role-loaded tokens like brand.error /
+  // brand.success from being mistaken for the accent (red happens to have
+  // higher OKLCH chroma than blue).
   card.set('interactive', mostVivid(brand, {
-    against: ref('card.surface'),
-    minContrast: 4.5,
+    readableOn: ref('card.surface'),
     not: [ref('brand.error'), ref('brand.success')],
   }));
   card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));

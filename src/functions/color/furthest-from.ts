@@ -2,9 +2,18 @@ import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { collectScopeColors, perceptualDistance } from './scope-colors';
+import { filterReadable, readableOnParts } from './readable';
+import type { ReadableOnOptions } from './readable';
 
-export function furthestFromImpl(scope: Scope, not: string[] = []): string {
-  const colors = collectScopeColors(scope, not);
+export function furthestFromImpl(
+  scope: Scope,
+  not: string[] = [],
+  readableOn: string | null = null,
+  minContrast?: number,
+): string {
+  // Distance is measured among the readable candidates only — the filter
+  // narrows the pool before ranking, the same as `not`.
+  const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, minContrast);
 
   if (colors.length === 0) {
     return '#00000000';
@@ -35,22 +44,23 @@ export function furthestFromImpl(scope: Scope, not: string[] = []): string {
 
 export function furthestFrom(
   scope: Scope,
-  options?: {
+  options?: ReadableOnOptions & {
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
     description?: string;
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const readable = readableOnParts('furthestFrom', options);
   return createFunctionToken(
     'furthestFrom',
-    [scope],
+    [scope, ...readable.args],
     {
       description: options?.description,
-      options: { not: normalizeNotKeys(options?.not) },
+      options: { not: normalizeNotKeys(options?.not), ...readable.options },
       metadata: {
-        dependencies: [],
-        visualDependencies: extractVisualDependencies([scope]),
+        dependencies: readable.dependencies,
+        visualDependencies: extractVisualDependencies([scope, ...readable.args]),
         returnType: 'color',
       },
     },

@@ -68,6 +68,7 @@ export {
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions } from './functions';
+export type { ReadableOnOptions } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

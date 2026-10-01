@@ -7,7 +7,7 @@ import {
   nextLarger, nextSmaller,
   nth, random,
 } from '../src/index';
-import type { AnyTokenValue, DesignBook, RandomOptions, Scope } from '../src/index';
+import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
 import { parse } from 'culori';
 
 /**
@@ -331,143 +331,37 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return relativeTo(colorArg, colorSpace, modifications);
   },
 
-  // closestColor(target, scope, options?)
+  // closestColor(target, scope, readableOn?, options?)
   closestColor(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 2) throw new Error('closestColor requires 2 arguments');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return closestColor(target, scope, options);
+    return closestColor(target, scope, parseSelectorTail('closestColor', args.slice(2), book));
   },
 
-  // furthestFrom(scope, options?)
+  // furthestFrom(scope, readableOn?, options?)
   furthestFrom(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('furthestFrom requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
-    const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
-    return furthestFrom(scope, options);
+    return furthestFrom(scope, parseSelectorTail('furthestFrom', args.slice(1), book));
   },
 
-  // mostVivid(scope, ...) — accepts either
-  //   mostVivid(scope, { against: ref(...), minContrast: N, not: [...] })
-  //   mostVivid(scope, againstRef, { minContrast: N, not: [...] })   // serialised form
-  // Items in `not` can be `ref('scope.token')` or a literal `"scope.token"`.
+  // mostVivid(scope, readableOn?, { not?, readableOn?, minContrast? }) — same
+  // tail as every colour selector, see parseSelectorTail.
   mostVivid(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('mostVivid requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
-
-    if (args.length === 1) return mostVivid(scope);
-
-    const options: {
-      against?: AnyTokenValue;
-      minContrast?: number;
-      not?: Array<AnyTokenValue | string>;
-      description?: string;
-    } = {};
-
-    // The second arg can be a positional `against` (a ref/token) — that's
-    // what the serializer in editor.ts emits, since fn.args is [scope,
-    // againstRef]. Detect it by leading char and route to options.against.
-    let optionsStartIdx = 1;
-    const secondArg = args[1].trim();
-    if (secondArg && !secondArg.startsWith('{')) {
-      options.against = getTokenArg(parseArg(secondArg, book));
-      optionsStartIdx = 2;
-    }
-
-    if (args.length > optionsStartIdx) {
-      const optsStr = args.slice(optionsStartIdx).join(',').trim().replace(/^\{|\}$/g, '').trim();
-      const pairs = splitArgs(optsStr);
-
-      for (const pair of pairs) {
-        const colonIdx = pair.indexOf(':');
-        if (colonIdx === -1) continue;
-        const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
-        const valueStr = pair.slice(colonIdx + 1).trim();
-
-        if (key === 'against') {
-          options.against = getTokenArg(parseArg(valueStr, book));
-        } else if (key === 'minContrast') {
-          options.minContrast = parseFloat(valueStr);
-        } else if (key === 'not') {
-          // Array literal: [ref('a.b'), 'c.d', "e.f"]. Refs become ReferenceValue;
-          // quoted strings stay as bare keys.
-          const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
-          options.not = arrStr
-            ? splitArgs(arrStr).map((item) => {
-                const trimmed = item.trim();
-                const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
-                if (strMatch) return strMatch[1];
-                return getTokenArg(parseArg(trimmed, book));
-              })
-            : [];
-        } else if (key === 'description') {
-          options.description = valueStr.replace(/^['"]|['"]$/g, '');
-        }
-      }
-    }
-
-    return mostVivid(scope, options as any);
+    return mostVivid(scope, parseSelectorTail('mostVivid', args.slice(1), book));
   },
 
-  // leastVivid(scope, ...) — same dual-form as mostVivid:
-  //   leastVivid(scope, { against: ref(...), minContrast: N, not: [...] })
-  //   leastVivid(scope, againstRef, { minContrast: N, not: [...] })   // serialised form
   leastVivid(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('leastVivid requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
-
-    if (args.length === 1) return leastVivid(scope);
-
-    const options: {
-      against?: AnyTokenValue;
-      minContrast?: number;
-      not?: Array<AnyTokenValue | string>;
-      description?: string;
-    } = {};
-
-    let optionsStartIdx = 1;
-    const secondArg = args[1].trim();
-    if (secondArg && !secondArg.startsWith('{')) {
-      options.against = getTokenArg(parseArg(secondArg, book));
-      optionsStartIdx = 2;
-    }
-
-    if (args.length > optionsStartIdx) {
-      const optsStr = args.slice(optionsStartIdx).join(',').trim().replace(/^\{|\}$/g, '').trim();
-      const pairs = splitArgs(optsStr);
-
-      for (const pair of pairs) {
-        const colonIdx = pair.indexOf(':');
-        if (colonIdx === -1) continue;
-        const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
-        const valueStr = pair.slice(colonIdx + 1).trim();
-
-        if (key === 'against') {
-          options.against = getTokenArg(parseArg(valueStr, book));
-        } else if (key === 'minContrast') {
-          options.minContrast = parseFloat(valueStr);
-        } else if (key === 'not') {
-          const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
-          options.not = arrStr
-            ? splitArgs(arrStr).map((item) => {
-                const trimmed = item.trim();
-                const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
-                if (strMatch) return strMatch[1];
-                return getTokenArg(parseArg(trimmed, book));
-              })
-            : [];
-        } else if (key === 'description') {
-          options.description = valueStr.replace(/^['"]|['"]$/g, '');
-        }
-      }
-    }
-
-    return leastVivid(scope, options as any);
+    return leastVivid(scope, parseSelectorTail('leastVivid', args.slice(1), book));
   },
 
   // spacingScale(base, options?)
@@ -589,6 +483,63 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
  * clear message if the result still isn't parseable, rather than silently
  * falling back to the caller's defaults.
  */
+/**
+ * Everything after a colour selector's fixed arguments: an optional
+ * positional `readableOn` (what the serializer writes, since the backdrop is
+ * stored as a trailing function argument) followed by an optional options
+ * object. Hand-parsed rather than through parseOptionsArg because `not` and
+ * `readableOn` may hold `ref(...)` calls, which are not JSON.
+ */
+function parseSelectorTail(
+  name: string,
+  rest: string[],
+  book?: DesignBook,
+): SelectorTailOptions | undefined {
+  if (rest.length === 0) return undefined;
+
+  const options: SelectorTailOptions = {};
+  let optsStr = rest.join(',').trim();
+  if (!optsStr.startsWith('{')) {
+    options.readableOn = getTokenArg(parseArg(rest[0].trim(), book));
+    optsStr = rest.slice(1).join(',').trim();
+  }
+
+  for (const pair of splitArgs(optsStr.replace(/^\{|\}$/g, '').trim())) {
+    const colonIdx = pair.indexOf(':');
+    if (colonIdx === -1) continue;
+    const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+    const valueStr = pair.slice(colonIdx + 1).trim();
+
+    if (key === 'not') {
+      const arrStr = valueStr.replace(/^\[|\]$/g, '').trim();
+      options.not = arrStr
+        ? splitArgs(arrStr).map((item) => {
+            const trimmed = item.trim();
+            const strMatch = trimmed.match(/^['"]([^'"]+)['"]$/);
+            if (strMatch) return strMatch[1];
+            return getTokenArg(parseArg(trimmed, book)) as ReferenceValue;
+          })
+        : [];
+    } else if (key === 'readableOn') {
+      options.readableOn = getTokenArg(parseArg(valueStr, book));
+    } else if (key === 'minContrast') {
+      options.minContrast = parseFloat(valueStr);
+    } else if (key === 'description') {
+      options.description = valueStr.replace(/^['"]|['"]$/g, '');
+    } else if (key === 'against') {
+      throw new Error(`${name}: \`against\` was renamed to \`readableOn\``);
+    }
+  }
+  return options;
+}
+
+type SelectorTailOptions = {
+  not?: Array<ReferenceValue | string>;
+  readableOn?: AnyTokenValue;
+  minContrast?: number;
+  description?: string;
+};
+
 function parseOptionsArg(str: string): Record<string, any> | undefined {
   const trimmed = str.trim();
   if (!trimmed) return undefined;
