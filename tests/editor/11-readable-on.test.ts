@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   DesignBook, color, ref,
-  closestColor, furthestFrom, mostVivid, leastVivid,
+  closestColor, furthestFrom, mostVivid, leastVivid, lightest, darkest,
 } from '../../src/index';
 import { parseTokenInput } from '../../editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
@@ -31,6 +31,8 @@ describe('readableOn in the editor', () => {
   const cases: Array<[string, () => any]> = [
     ['mostVivid',    () => mostVivid(pool, { readableOn: ref('bg-10.white'), minContrast: 5, not: ['pool-10.gray'] })],
     ['leastVivid',   () => leastVivid(pool, { readableOn: ref('bg-10.white') })],
+    ['lightest',     () => lightest(pool, { readableOn: ref('bg-10.white'), minContrast: 7 })],
+    ['darkest',      () => darkest(pool, { readableOn: ref('bg-10.white') })],
     ['closestColor', () => closestColor(color('#ffff66'), pool, { readableOn: ref('bg-10.white') })],
     ['furthestFrom', () => furthestFrom(pool, { readableOn: ref('bg-10.white') })],
   ];

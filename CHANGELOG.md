@@ -12,14 +12,19 @@ All notable changes to Design Book are recorded here. The format follows
   filter, `readableOn`.** `against` is renamed `readableOn` (passing
   `against` throws and names the new option), `minContrast` defaults to 4.5
   once a backdrop is given, and the filter is available on every colour
-  selector — `mostVivid`, `leastVivid`, `closestColor`,
-  `furthestFrom`. Like `not`, it drops candidates from the
+  selector — `mostVivid`, `leastVivid`, `lightest`, `darkest`,
+  `closestColor`, `furthestFrom`. Like `not`, it drops candidates from the
   pool before ranking. **Behaviour change:** when no candidate reaches the
   ratio the selector throws a `FunctionError`; it used to fall back to the
   highest-contrast candidate, which could hand back a grey from
   `mostVivid`. `minContrast` without `readableOn` now throws at
   construction rather than at resolve time. Tokens serialised in the old
   `[scope, against]` + `{ minContrast }` shape resolve unchanged.
+
+### Added
+
+- `lightest(scope, { not, readableOn })` and `darkest(...)` select the
+  colour with the highest / lowest OKLCH lightness from a scope.
 
 ### Fixed
 

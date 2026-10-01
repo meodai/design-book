@@ -4,6 +4,7 @@ import { color, createFunctionToken, ref } from '../../../src/tokens';
 import type { Scope } from '../../../src/scope';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
 import { leastVivid } from '../../../src/functions/color/least-vivid';
+import { lightest, darkest } from '../../../src/functions/color/lightest-darkest';
 import { closestColor } from '../../../src/functions/color/closest-color';
 import { furthestFrom } from '../../../src/functions/color/furthest-from';
 import { FunctionError } from '../../../src/errors';
@@ -46,14 +47,16 @@ describe('readableOn', () => {
 
   it('re-picks when the backdrop changes', () => {
     const { book, pool, ui } = setup();
-    ui.set('fg', mostVivid(pool, { readableOn: ref('ui.bg') }));
-    expect(book.resolve('ui.fg')).toBe('#1d4eb8'); // most vivid that reads on white
+    ui.set('fg', lightest(pool, { readableOn: ref('ui.bg') }));
+    expect(book.resolve('ui.fg')).toBe('#767676'); // lightest that reads on white
 
     ui.set('bg', color('#000000'));
-    expect(book.resolve('ui.fg')).toBe('#ffff00'); // on black, yellow reads
+    expect(book.resolve('ui.fg')).toBe('#ffff00'); // on black, yellow reads and is lightest
   });
 
   it.each<[string, (pool: Scope) => ReturnType<typeof mostVivid>, string]>([
+    ['lightest',     (p) => lightest(p, { readableOn: ref('ui.bg'), minContrast: 7 }), '#1d4eb8'],
+    ['darkest',      (p) => darkest(p, { readableOn: ref('ui.ink') }), '#767676'],
     ['closestColor', (p) => closestColor(color('#ffff66'), p, { readableOn: ref('ui.bg') }), '#767676'],
     ['furthestFrom', (p) => furthestFrom(p, { readableOn: ref('ui.ink') }), '#767676'],
   ])('applies to %s', (_name, make, expected) => {
@@ -92,7 +95,7 @@ describe('readableOn', () => {
   it('rejects minContrast without readableOn at construction', () => {
     const { pool } = setup();
     expect(() => mostVivid(pool, { minContrast: 4.5 })).toThrow(FunctionError);
-    expect(() => leastVivid(pool, { minContrast: 4.5 })).toThrow(/needs `readableOn`/);
+    expect(() => lightest(pool, { minContrast: 4.5 })).toThrow(/needs `readableOn`/);
   });
 
   it('rejects a non-positive minContrast', () => {

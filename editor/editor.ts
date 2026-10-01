@@ -805,6 +805,7 @@ const FUNCTION_NAMES = [
   'bestContrastWith', 'minContrastWith', 'colorMix',
   'lighten', 'darken', 'shade', 'relativeTo', 'ramp',
   'closestColor', 'furthestFrom', 'mostVivid', 'leastVivid',
+  'lightest', 'darkest',
   'nextLarger', 'nextSmaller',
   'spacingScale', 'typographyScale', 'timing',
   'random', 'nth',
@@ -890,7 +891,8 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       // Only suggest scope names for functions that take a scope argument
       const SCOPE_ARG_FUNCTIONS = [
         'bestContrastWith', 'minContrastWith', 'closestColor',
-        'furthestFrom', 'mostVivid', 'leastVivid', 'random', 'nth',
+        'furthestFrom', 'mostVivid', 'leastVivid', 'lightest', 'darkest',
+        'random', 'nth',
       ];
       if (SCOPE_ARG_FUNCTIONS.includes(funcArgMatch[1])) {
         for (const scope of book.getAllScopes()) {

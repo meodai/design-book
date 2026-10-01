@@ -92,9 +92,13 @@ closestColor(target, scope)                 // Perceptually closest
 furthestFrom(scope)                         // Most distant from others
 mostVivid(scope)                            // Highest OKLCH chroma
 leastVivid(scope)                           // Lowest OKLCH chroma — the muted counterpart
+lightest(scope)                             // Highest OKLCH lightness
+darkest(scope)                              // Lowest OKLCH lightness
 ```
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
+
+`lightest` and `darkest` rank by OKLCH L — not HSL lightness, which calls `#ffff00` and `#0000ff` equally light, and not WCAG luminance. Alpha is ignored when ranking; a translucent winner keeps its alpha.
 
 `closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
@@ -127,8 +131,8 @@ Plain strings work too — `not: ['palette.error']` is equivalent to
 
 ### Keeping only readable candidates with `readableOn`
 
-The colour selectors `mostVivid`, `leastVivid`, `closestColor` and
-`furthestFrom` also take `readableOn` — a backdrop colour —
+The colour selectors `mostVivid`, `leastVivid`, `lightest`, `darkest`,
+`closestColor` and `furthestFrom` also take `readableOn` — a backdrop colour —
 and `minContrast` (default 4.5). Like `not`, it narrows the pool before the
 selector ranks anything: candidates below the WCAG ratio against the backdrop
 are dropped, so the vivid pick is the most vivid *readable* colour.

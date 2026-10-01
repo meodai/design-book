@@ -59,6 +59,7 @@ export {
   bestContrastWith, minContrastWith,
   colorMix, lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, mostVivid, leastVivid,
+  lightest, darkest,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
@@ -68,7 +69,7 @@ export {
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions } from './functions';
-export type { ReadableOnOptions } from './functions';
+export type { LightnessSelectorOptions, ReadableOnOptions } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

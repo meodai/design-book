@@ -4,6 +4,7 @@ import { colorMixImpl } from './color/color-mix';
 import { darkenImpl } from './color/darken';
 import { furthestFromImpl } from './color/furthest-from';
 import { leastVividImpl } from './color/least-vivid';
+import { lightestImpl, darkestImpl } from './color/lightest-darkest';
 import { lightenImpl } from './color/lighten';
 import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
@@ -31,6 +32,8 @@ export { closestColor } from './color/closest-color';
 export { furthestFrom } from './color/furthest-from';
 export { mostVivid } from './color/most-vivid';
 export { leastVivid } from './color/least-vivid';
+export { lightest, darkest } from './color/lightest-darkest';
+export type { LightnessSelectorOptions } from './color/lightest-darkest';
 export type { ReadableOnOptions } from './color/readable';
 export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
@@ -80,6 +83,14 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('leastVivid', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
 		return leastVividImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('lightest', (scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return lightestImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('darkest', (scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
+		return darkestImpl(scope, options.not ?? [], readableOn, options.minContrast);
 	});
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
 		shadeImpl(colorValue, options?.amount ?? 0.1),

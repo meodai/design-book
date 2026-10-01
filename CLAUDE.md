@@ -55,7 +55,7 @@ Each function exports a **constructor** (returns `FunctionTokenValue` via `creat
 
 At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the registry and calls `implementation(...resolvedArgs, fn.options)`.
 
-**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`
+**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
 
 **With scope argument** (generic selectors): `nth`, `random`, `nextLarger`, `nextSmaller`
 
@@ -79,6 +79,7 @@ terminate on the `seen` set; a selector never notifies itself.
 
 - Selectors judge translucent candidates composited over the target and can return 8-digit hex.
 - `readableOn` + `minContrast` (default 4.5) filter a colour selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
+- `lightest` / `darkest` rank by OKLCH L, ignoring alpha.
 - `closestColor` / `furthestFrom` measure Euclidean distance in OKLab.
 - `lighten` / `darken` are OKLCH mixes towards white / black through `cssColorMix` (`src/functions/color/color-mix.ts`) — the JS twin of the `color-mix()` the CSS renderer emits, premultiplied alpha included. `colorMix` uses the same helper. `shade` shifts OKLCH lightness and carries alpha through. All gamut-map in OKLCH before formatting and emit 8-digit hex only when translucent.
 - `nextLarger` / `nextSmaller` skip members whose unit differs from the target's instead of throwing.

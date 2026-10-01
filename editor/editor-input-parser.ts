@@ -3,6 +3,7 @@ import {
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
   closestColor, furthestFrom, mostVivid, leastVivid,
+  lightest, darkest,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   nth, random,
@@ -346,6 +347,21 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     if (args.length < 1) throw new Error('furthestFrom requires 1 argument');
     const scope = getScopeArg(parseArg(args[0], book));
     return furthestFrom(scope, parseSelectorTail('furthestFrom', args.slice(1), book));
+  },
+
+  // lightest(scope, readableOn?, options?) / darkest(scope, readableOn?, options?)
+  lightest(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('lightest requires 1 argument');
+    const scope = getScopeArg(parseArg(args[0], book));
+    return lightest(scope, parseSelectorTail('lightest', args.slice(1), book));
+  },
+
+  darkest(argsStr, book, currentScope) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('darkest requires 1 argument');
+    const scope = getScopeArg(parseArg(args[0], book));
+    return darkest(scope, parseSelectorTail('darkest', args.slice(1), book));
   },
 
   // mostVivid(scope, readableOn?, { not?, readableOn?, minContrast? }) — same
