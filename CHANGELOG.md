@@ -35,6 +35,11 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Fixed
 
+- **W3 output for functions without a fixed return type.** `nth`, `random`
+  and `sibling` came out as `"$type": "unknown"` with the colour as a plain
+  string. They are now typed by what they resolve to — a colour gets
+  `color` and the structured W3 colour value, `16px` gets `dimension` —
+  and `$type` is left off for a plain string.
 - **Selector candidate pools are no longer dependency-graph edges.** A
   scope-iterating selector (`bestContrastWith`, `minContrastWith`,
   `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `nth`,

@@ -111,6 +111,13 @@ function resolveTokenValue(book: DesignBook, scopeName: string, tokenName: strin
   return book.resolve(`${scopeName}.${tokenName}`);
 }
 
+/** Best-effort type of a resolved value whose token does not declare one. */
+function inferTypeFromValue(resolved: string): string {
+  if (parse(resolved)) return 'color';
+  if (parseDimensionString(resolved)) return 'dimension';
+  return 'string';
+}
+
 function getTokenType(token: AnyTokenValue, book: DesignBook): string {
   if (token.type === 'reference') {
     const ref = token as ReferenceValue;
@@ -315,7 +322,11 @@ export class Renderer {
         if (!token) continue;
 
         const resolved = resolveTokenValue(this.book, scope.name, key);
-        const internalType = getTokenType(token, this.book);
+        // A function with no fixed return type (nth, random, sibling) is
+        // typed by what it resolved to, so it still gets a W3 type and a
+        // structured value instead of `"$type": "unknown"`.
+        const declaredType = getTokenType(token, this.book);
+        const internalType = declaredType === 'unknown' ? inferTypeFromValue(resolved) : declaredType;
         const plain = token.type === 'reference' || token.type === 'function'
           ? undefined
           : token as TokenValue;

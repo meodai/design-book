@@ -4,6 +4,8 @@ import { color, createFunctionToken, px, ref } from '../../../src/tokens';
 import { sibling } from '../../../src/functions/generic/sibling';
 import { lighten } from '../../../src/functions/color/lighten';
 import { FunctionError } from '../../../src/errors';
+import { Renderer } from '../../../src/renderers/renderer';
+import { nth } from '../../../src/functions/generic/nth';
 
 function setup() {
   const book = new DesignBook('test');
@@ -180,5 +182,44 @@ describe('sibling', () => {
     expect(messages[1]).toMatch(/`from` key is required/);
     expect(messages[2]).toMatch(/offset must be an integer/);
     expect(messages[3]).toMatch(/unknown scope "ghost"/);
+  });
+});
+
+describe('sibling in the renderers', () => {
+  function book3() {
+    const book = new DesignBook('test');
+    const ramp = book.addScope('ramp');
+    ramp.set('a', color('#eeeeee'));
+    ramp.set('b', color('#999999'));
+    const space = book.addScope('space');
+    space.set('m', px(8));
+    space.set('l', px(16));
+    const ui = book.addScope('ui');
+    ui.set('up', sibling(ref('ramp.a'), 1));
+    ui.set('gap', sibling(ref('space.m'), 1));
+    ui.set('pick', nth(ramp, 1)); // same untyped-function path as sibling
+    return book;
+  }
+
+  it('JSON gets the resolved value', () => {
+    const json = new Renderer(book3(), 'json').renderJsonObject();
+    expect(json['ui.up']).toBe('#999999');
+    expect(json['ui.gap']).toBe('16px');
+  });
+
+  it('CSS gets the resolved value', () => {
+    const css = new Renderer(book3(), 'css-variables').render();
+    expect(css).toContain('--ui-up: #999999;');
+    expect(css).toContain('--ui-gap: 16px;');
+  });
+
+  it('W3 types the result by what it resolves to', () => {
+    const w3 = new Renderer(book3(), 'w3-design-tokens').renderW3DesignTokensObject() as any;
+
+    expect(w3.ui.up.$type).toBe('color');
+    expect(w3.ui.up.$value).toEqual(w3.ramp.b.$value);
+    expect(w3.ui.gap.$type).toBe('dimension');
+    expect(w3.ui.gap.$value).toEqual({ value: 16, unit: 'px' });
+    expect(w3.ui.pick.$type).toBe('color');
   });
 });
