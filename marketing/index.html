@@ -73,11 +73,12 @@
   <div class="graph-text">
     <h2 id="graph-title">Pull one thread. The system follows.</h2>
     <p>
-      A token is a node. A rule is an edge. Every relationship in a
-      Design Book — references, computed values, scope-iterating
-      selectors — is a tracked edge in a graph. Change one input and
-      the library knows exactly what to recompute, refusing cycles
-      at write time.
+      A token is a node. A rule is an edge. References, computed values
+      and scope-iterating selectors are all tracked, so when an input
+      changes the library knows exactly what to recompute — straight
+      away, or all at once with <code>flush()</code> in batch mode.
+      Cycles are refused at write time; <code>watch(key, fn)</code>
+      calls you back when a value changes.
     </p>
     <p>
       The diagram on the right is the actual graph for the book that
@@ -96,7 +97,7 @@
   <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
 </section>
 
-<!-- ─── Selector functions (trimmed prose) ──────────────────────── -->
+<!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
 <main class="sections">
 
   <header class="sections-head">
@@ -108,8 +109,32 @@
     </p>
   </header>
 
+  <div class="fn-tabs" role="tablist" aria-label="Selectors">
+    <span class="fn-tabs-set" role="presentation">
+      <span class="fn-tabs-group" aria-hidden="true">Contrast</span>
+      <button type="button" role="tab" id="tab-best-contrast" aria-controls="best-contrast" aria-selected="true" tabindex="0" class="is-active">bestContrastWith</button>
+      <button type="button" role="tab" id="tab-min-contrast" aria-controls="min-contrast" aria-selected="false" tabindex="-1">minContrastWith</button>
+    </span>
+    <span class="fn-tabs-set" role="presentation">
+      <span class="fn-tabs-group" aria-hidden="true">Color</span>
+      <button type="button" role="tab" id="tab-closest" aria-controls="closest" aria-selected="false" tabindex="-1">closestColor</button>
+      <button type="button" role="tab" id="tab-furthest" aria-controls="furthest" aria-selected="false" tabindex="-1">furthestFrom</button>
+      <button type="button" role="tab" id="tab-vivid" aria-controls="vivid" aria-selected="false" tabindex="-1">mostVivid · leastVivid</button>
+      <button type="button" role="tab" id="tab-lightness" aria-controls="lightness" aria-selected="false" tabindex="-1">lightest · darkest</button>
+    </span>
+    <span class="fn-tabs-set" role="presentation">
+      <span class="fn-tabs-group" aria-hidden="true">Position</span>
+      <button type="button" role="tab" id="tab-nth" aria-controls="nth" aria-selected="false" tabindex="-1">nth</button>
+      <button type="button" role="tab" id="tab-sibling" aria-controls="sibling" aria-selected="false" tabindex="-1">sibling</button>
+      <button type="button" role="tab" id="tab-next-step" aria-controls="next-step" aria-selected="false" tabindex="-1">nextLarger · nextSmaller</button>
+      <button type="button" role="tab" id="tab-random" aria-controls="random" aria-selected="false" tabindex="-1">random</button>
+    </span>
+  </div>
+
+  <div class="fn-panels">
+
   <!-- bestContrastWith -->
-  <article class="fn" id="best-contrast">
+  <article class="fn is-active" id="best-contrast" role="tabpanel" aria-labelledby="tab-best-contrast" tabindex="0">
     <header class="fn-head">
       <h3>bestContrastWith</h3>
       <code class="sig">bestContrastWith( target, scope, { not? } )</code>
@@ -132,7 +157,7 @@
   </article>
 
   <!-- closestColor -->
-  <article class="fn" id="closest">
+  <article class="fn" id="closest" role="tabpanel" aria-labelledby="tab-closest" tabindex="0">
     <header class="fn-head">
       <h3>closestColor</h3>
       <code class="sig">closestColor( target, scope, { readableOn?, minContrast?, not? } )</code>
@@ -160,7 +185,7 @@
   </article>
 
   <!-- furthestFrom -->
-  <article class="fn" id="furthest">
+  <article class="fn" id="furthest" role="tabpanel" aria-labelledby="tab-furthest" tabindex="0">
     <header class="fn-head">
       <h3>furthestFrom</h3>
       <code class="sig">furthestFrom( scope, { readableOn?, minContrast?, not? } )</code>
@@ -182,7 +207,7 @@
   </article>
 
   <!-- minContrastWith -->
-  <article class="fn" id="min-contrast">
+  <article class="fn" id="min-contrast" role="tabpanel" aria-labelledby="tab-min-contrast" tabindex="0">
     <header class="fn-head">
       <h3>minContrastWith</h3>
       <code class="sig">minContrastWith( target, scope, { ratio?, not? } )</code>
@@ -218,7 +243,7 @@
   </article>
 
   <!-- nextLarger / nextSmaller -->
-  <article class="fn" id="next-step">
+  <article class="fn" id="next-step" role="tabpanel" aria-labelledby="tab-next-step" tabindex="0">
     <header class="fn-head">
       <h3>nextLarger · nextSmaller</h3>
       <code class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } )</code>
@@ -269,7 +294,7 @@
   </article>
 
   <!-- mostVivid / leastVivid -->
-  <article class="fn" id="vivid">
+  <article class="fn" id="vivid" role="tabpanel" aria-labelledby="tab-vivid" tabindex="0">
     <header class="fn-head">
       <h3>mostVivid · leastVivid</h3>
       <code class="sig">mostVivid|leastVivid( scope, { readableOn?, minContrast?, not? } )</code>
@@ -289,7 +314,7 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
   </article>
 
   <!-- lightest / darkest -->
-  <article class="fn" id="lightness">
+  <article class="fn" id="lightness" role="tabpanel" aria-labelledby="tab-lightness" tabindex="0">
     <header class="fn-head">
       <h3>lightest · darkest</h3>
       <code class="sig">lightest|darkest( scope, { readableOn?, minContrast?, not? } )</code>
@@ -319,7 +344,7 @@ ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>
   </article>
 
   <!-- random -->
-  <article class="fn" id="random">
+  <article class="fn" id="random" role="tabpanel" aria-labelledby="tab-random" tabindex="0">
     <header class="fn-head">
       <h3>random</h3>
       <code class="sig">random( scope, { type, seed?, not? } )</code>
@@ -342,13 +367,15 @@ ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>
       <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,
   <span class="c-fn">random</span>(brand, { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
 
-ui.set(<span class="c-str">'promo-bg'</span>,
-  <span class="c-fn">random</span>(brand, { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
+ui.set(<span class="c-str">'promo-bg'</span>, <span class="c-fn">random</span>(brand, {
+  <span class="c-key">type</span>: <span class="c-str">'color'</span>,
+  <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span>,
+}))</code></pre>
     </div>
   </article>
 
   <!-- nth -->
-  <article class="fn" id="nth">
+  <article class="fn" id="nth" role="tabpanel" aria-labelledby="tab-nth" tabindex="0">
     <header class="fn-head">
       <h3>nth</h3>
       <code class="sig">nth( scope, index, { not? } )</code>
@@ -375,15 +402,15 @@ ui.set(<span class="c-str">'promo-bg'</span>,
         </div>
       </figure>
       <pre class="code"><code><span class="c-dim">// ramp generated lightest → darkest</span>
-ui.set(<span class="c-str">'surface'</span>,  <span class="c-fn">nth</span>(ramp, <span class="c-num">0</span>))       <span class="c-dim">// lightest</span>
-ui.set(<span class="c-str">'text'</span>,     <span class="c-fn">nth</span>(ramp, <span class="c-num">-1</span>))      <span class="c-dim">// darkest</span>
-ui.set(<span class="c-str">'muted'</span>,    <span class="c-fn">nth</span>(ramp, <span class="c-num">0.5</span>))    <span class="c-dim">// midtone</span>
-ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(ramp, <span class="c-num">0.1</span>))    <span class="c-dim">// just off white</span></code></pre>
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">nth</span>(ramp, <span class="c-num">0</span>))    <span class="c-dim">// lightest</span>
+ui.set(<span class="c-str">'text'</span>,    <span class="c-fn">nth</span>(ramp, <span class="c-num">-1</span>))   <span class="c-dim">// darkest</span>
+ui.set(<span class="c-str">'muted'</span>,   <span class="c-fn">nth</span>(ramp, <span class="c-num">0.5</span>)) <span class="c-dim">// midtone</span>
+ui.set(<span class="c-str">'subtle'</span>,  <span class="c-fn">nth</span>(ramp, <span class="c-num">0.1</span>)) <span class="c-dim">// off-white</span></code></pre>
     </div>
   </article>
 
   <!-- sibling -->
-  <article class="fn" id="sibling">
+  <article class="fn" id="sibling" role="tabpanel" aria-labelledby="tab-sibling" tabindex="0">
     <header class="fn-head">
       <h3>sibling</h3>
       <code class="sig">sibling( ref, offset, { wrap?, not? } )</code>
@@ -412,7 +439,49 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
     </div>
   </article>
 
+  </div>
 </main>
+
+
+<!-- ─── readableOn: contrast as a filter ─────────────────────────── -->
+<section class="readable-feature" aria-labelledby="readable-title">
+  <div class="readable-feature-body">
+    <div class="readable-feature-text">
+      <h2 id="readable-title"><em>Readable</em> is a filter, not a hope.</h2>
+      <p>
+        Every color selector apart from the two contrast ones takes
+        <code>readableOn</code> and <code>minContrast</code> (4.5 by
+        default). Members that don't reach the ratio against that
+        backdrop leave the pool before ranking — so <code>mostVivid</code>
+        returns the loudest color that still reads, <code>closestColor</code>
+        the nearest readable one. If nothing passes, the token fails
+        loudly instead of shipping an unreadable color. The backdrop is
+        a reference, so a theme switch re-runs the filter.
+      </p>
+      <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>, <span class="c-fn">mostVivid</span>(brand, {
+  <span class="c-key">readableOn</span>:  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  <span class="c-key">minContrast</span>: <span class="c-num">4.5</span>,
+}));</code></pre>
+    </div>
+
+    <figure class="readable-stage">
+      <div class="readable-controls">
+        <label class="readable-surface">
+          <color-input id="readable-surface" value="#fcf6ee" initial-colorspace="hsl" no-alpha></color-input>
+          <span>ui.surface</span>
+        </label>
+        <div class="readable-ratios" id="readable-ratios" role="group" aria-label="minContrast">
+          <button type="button" data-ratio="3">3</button>
+          <button type="button" data-ratio="4.5" class="is-active">4.5</button>
+          <button type="button" data-ratio="7">7</button>
+        </div>
+      </div>
+      <div class="readable-pool" id="readable-pool"></div>
+      <div class="readable-results" id="readable-results" aria-live="polite"></div>
+      <figcaption>Faded members fail the ratio and never reach the ranking.</figcaption>
+    </figure>
+  </div>
+</section>
 
 <!-- ─── ramp: single color → full tonal scale ────────────────────── -->
 <section class="ramp-feature" aria-labelledby="ramp-title">
@@ -430,7 +499,8 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
 
 <span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>);
 <span class="c-fn">for</span> (<span class="c-fn">const</span> shade <span class="c-fn">of</span> [<span class="c-str">'50'</span>,<span class="c-str">'100'</span>,...,<span class="c-str">'950'</span>]) {
-  palette.<span class="c-fn">set</span>(shade, <span class="c-fn">ramp</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), { <span class="c-key">shade</span> }));
+  palette.<span class="c-fn">set</span>(shade,
+    <span class="c-fn">ramp</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), { <span class="c-key">shade</span> }));
 }</code></pre>
     </div>
 
@@ -443,13 +513,10 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
       <div class="ramp-bars" id="ramp-bars"></div>
     </div>
   </div>
-</section>
 
-<!-- ─── setOrder: a scope that keeps itself sorted ───────────────── -->
-<section class="order-feature" aria-labelledby="order-title">
-  <div class="order-feature-body">
+  <div class="order-feature-body feature-sub">
     <div class="order-feature-text">
-      <h2 id="order-title"><em>Don't arrange the palette.</em> Let it sort itself.</h2>
+      <h3 id="order-title"><em>Don't arrange the palette.</em> Let it sort itself.</h3>
       <p>
         Give a scope an <code>order</code> and it stays sorted — by
         <code>value</code>, <code>name</code> or <code>type</code>, composed as
@@ -462,14 +529,17 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
         unless they set their own.
       </p>
       <pre class="code"><code><span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>, {
-  <span class="c-key">order</span>: [{ <span class="c-key">by</span>: <span class="c-str">'value'</span> }]      <span class="c-dim">// perceptual color order</span>
+  <span class="c-key">order</span>: [{ <span class="c-key">by</span>: <span class="c-str">'value'</span> }],  <span class="c-dim">// perceptual</span>
 });
 
-<span class="c-dim">// insert in any order — the scope keeps itself sorted</span>
-palette.<span class="c-fn">set</span>(<span class="c-str">'teal'</span>,  <span class="c-fn">relativeTo</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+190'</span>]));
-palette.<span class="c-fn">set</span>(<span class="c-str">'coral'</span>, <span class="c-fn">relativeTo</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+20'</span>]));
+<span class="c-dim">// insert in any order — it stays sorted</span>
+<span class="c-fn">const</span> p = <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>);
+palette.<span class="c-fn">set</span>(<span class="c-str">'teal'</span>,
+  <span class="c-fn">relativeTo</span>(p, <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+190'</span>]));
+palette.<span class="c-fn">set</span>(<span class="c-str">'coral'</span>,
+  <span class="c-fn">relativeTo</span>(p, <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+20'</span>]));
 
-palette.<span class="c-fn">getAllKeys</span>();   <span class="c-dim">// → one smooth perceptual order</span></code></pre>
+palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smooth order</span></code></pre>
     </div>
 
     <div class="order-stage">
@@ -488,88 +558,6 @@ palette.<span class="c-fn">getAllKeys</span>();   <span class="c-dim">// → one
       <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
       <figcaption class="order-caption">Eight colors, inserted scrambled. Pick a rule — the scope re-sorts itself. Change the seed — the whole order recolors.</figcaption>
     </div>
-  </div>
-</section>
-
-<!-- ─── colorMix: two colors, pick the interpolation path ────────── -->
-<section class="mix-feature" aria-labelledby="mix-title">
-  <div class="mix-feature-body">
-    <div class="mix-feature-text">
-      <h2 id="mix-title"><em>Two colors.</em> Pick the path.</h2>
-      <p>
-        <code>colorMix()</code> interpolates between two colors. The space
-        you pick changes the path: <code>rgb</code> goes straight through
-        whatever sits between the endpoints in cube coordinates;
-        <code>lab</code> and <code>oklab</code> follow perceptual lines;
-        <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate
-        around hue. Same endpoints — wildly different middles.
-      </p>
-      <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
-  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
-  <span class="c-fn">ref</span>(<span class="c-str">'brand.surface'</span>),
-  { <span class="c-key">ratio</span>: <span class="c-num">0.5</span>, <span class="c-key">colorSpace</span>: <span class="c-str">'oklch'</span> }
-));</code></pre>
-    </div>
-
-    <div class="mix-stage">
-      <div class="mix-row">
-        <color-input id="mix-a" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
-        <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
-        <color-input id="mix-b" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
-      </div>
-      <label class="mix-space">
-        <span>interpolated in</span>
-        <select id="mix-space-sel">
-          <option value="oklch">oklch</option>
-          <option value="oklab">oklab</option>
-          <option value="lch">lch</option>
-          <option value="lab" selected>lab</option>
-          <option value="hsl">hsl</option>
-          <option value="okhsl">okhsl</option>
-          <option value="hsv">hsv</option>
-          <option value="hwb">hwb</option>
-          <option value="rgb">rgb</option>
-          <option value="lrgb">lrgb (linear)</option>
-          <option value="cubehelix">cubehelix</option>
-        </select>
-      </label>
-    </div>
-  </div>
-</section>
-
-<!-- ─── Typography: a style is a scope ─────────────────────────── -->
-<section class="typo-feature" aria-labelledby="typo-title">
-  <div class="typo-feature-body">
-    <div class="typo-feature-text">
-      <h2 id="typo-title">A style is <em>a scope.</em></h2>
-      <p>
-        A type style is a collection of properties — family, size,
-        weight, line-height, tracking. Design Book treats it as a
-        <em>scope</em> with a <code>compose: 'typography'</code> marker,
-        so every property stays a real, ref-able token in the graph.
-        Renderers re-aggregate the scope at output time — a CSS class
-        for the browser, a <code>$type: 'typography'</code> composite
-        for the W3 Design Tokens spec.
-      </p>
-      <pre class="code"><code>book.<span class="c-fn">addTypography</span>(<span class="c-str">'heading-lg'</span>, {
-  <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
-  <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
-  <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
-  <span class="c-key">lineHeight</span>:    <span class="c-str">'1'</span>,
-  <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
-});
-
-<span class="c-dim">// Variant via extends — inherits the compose marker.</span>
-book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</span>,
-  { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
-  { <span class="c-key">extends</span>: <span class="c-str">'heading-lg'</span> });</code></pre>
-    </div>
-
-    <figure class="typo-stage">
-      <div class="typo-sample typo-sample--heading">A style is a scope.</div>
-      <div class="typo-sample typo-sample--hero">Variants extend.</div>
-      <figcaption>Same book. Two scopes. One inherits the other.</figcaption>
-    </figure>
   </div>
 </section>
 
@@ -592,8 +580,10 @@ light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span 
 light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#ff8800'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#888888'</span>));
 
-<span class="c-dim">// dark inherits everything, then overrides two tokens.</span>
-<span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, { <span class="c-key">extends</span>: <span class="c-str">'light'</span> });
+<span class="c-dim">// dark inherits all five, overrides two</span>
+<span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'light'</span>,
+});
 dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
 dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));</code></pre>
     </div>
@@ -635,149 +625,42 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
       <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
     </figure>
   </div>
-</section>
 
-<!-- ─── One source, many outputs ─────────────────────────────────── -->
-<section class="renderers">
-  <header class="renderers-head">
-    <h2><em>One source,</em> many outputs.</h2>
-    <p>
-      The same book renders to whatever target you need. CSS variables
-      and JSON ship in the box; the
-      <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
-      format too. Custom renderers register through one call —
-      <code>book.registerRenderer(name, fn)</code> — and twenty lines
-      of TypeScript turn the graph into Tailwind config, Swift
-      extensions, SwiftUI, Kotlin, a JSON dialect of your choice.
-    </p>
-  </header>
-
-  <div class="renderer-tabs" role="tablist">
-    <button class="r-tab is-active" data-target="r-css"      type="button">CSS variables</button>
-    <button class="r-tab"           data-target="r-json"     type="button">JSON</button>
-    <button class="r-tab"           data-target="r-w3"       type="button">W3 Design Tokens</button>
-    <button class="r-tab"           data-target="r-tailwind" type="button">Tailwind <em>(custom)</em></button>
-  </div>
-
-  <div class="renderer-panes">
-    <pre class="r-pane is-active" id="r-css"></pre>
-    <pre class="r-pane"           id="r-json"></pre>
-    <pre class="r-pane"           id="r-w3"></pre>
-    <pre class="r-pane"           id="r-tailwind"></pre>
-  </div>
-
-  <details class="renderer-source">
-    <summary>The custom Tailwind renderer in full</summary>
-<pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
-<span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
-  <span class="c-fn">const</span> colors = {}, spacing = {};
-  <span class="c-fn">const</span> isColor     = (s) =&gt; <span class="c-fn">parse</span>(s) != <span class="c-num">null</span>;
-  <span class="c-fn">const</span> isDimension = (s) =&gt; <span class="c-str">/^-?\d+(\.\d+)?[a-z%]+$/i</span>.<span class="c-fn">test</span>(s);
-
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> scope <span class="c-fn">of</span> book.<span class="c-fn">getAllScopes</span>()) {
-    <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
-      <span class="c-fn">const</span> v = scope.<span class="c-fn">resolve</span>(k);
-      <span class="c-fn">const</span> key = <span class="c-str">`${</span>scope.name<span class="c-str">}-${</span>k<span class="c-str">}`</span>;
-      <span class="c-fn">if</span> (<span class="c-fn">isColor</span>(v))     colors[key]  = v;
-      <span class="c-fn">else if</span> (<span class="c-fn">isDimension</span>(v)) spacing[key] = v;
-    }
-  }
-  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ colors, spacing }, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } }`</span>;
-}
-
-<span class="c-dim">// Register it under any name — it's now a peer of the built-ins.</span>
-book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</span>, tailwindRenderer);
-<span class="c-fn">const</span> config = book.<span class="c-fn">render</span>(<span class="c-str">'tailwind'</span>);</code></pre>
-  </details>
-</section>
-
-<!-- ─── Bring your own everything ─────────────────────────────────── -->
-<section class="extend">
-  <header class="extend-head">
-    <h2>Bring your own rules. Bring your own libraries.</h2>
-    <p>
-      The built-in selectors are a starting set. Register any function
-      that takes the token's resolved arguments (scopes arrive as
-      scopes) plus its options and returns a value. Tokens that call it
-      take part in the graph like the built-ins: dependency tracking,
-      cycle checks, reactive recomputation.
-    </p>
-  </header>
-
-  <div class="extend-grid">
-    <article class="extend-card">
-      <h3>A custom function</h3>
+  <div class="typo-feature-body feature-sub">
+    <div class="typo-feature-text">
+      <h3 id="typo-title">A style is <em>a scope.</em></h3>
       <p>
-        Register a new selector — <code>warmest</code> — that picks the
-        member leaning hardest towards orange: chroma times how close
-        its hue sits to 50°. It runs on this page against the palette
-        above.
+        A type style is a collection of properties — family, size,
+        weight, line-height, tracking. Design Book treats it as a
+        <em>scope</em> with a <code>compose: 'typography'</code> marker,
+        so every property stays a real, ref-able token in the graph.
+        Renderers re-aggregate the scope at output time — a CSS class
+        for the browser, a <code>$type: 'typography'</code> composite
+        for the W3 Design Tokens spec.
       </p>
-      <pre class="code"><code><span class="c-dim">// Resolved args come first, the token's options last.</span>
-book.<span class="c-fn">registerFunction</span>(<span class="c-str">'warmest'</span>, (scope) =&gt; {
-  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestScore = -<span class="c-num">Infinity</span>;
-  <span class="c-fn">for</span> (<span class="c-fn">const</span> key <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
-    <span class="c-fn">const</span> hex = scope.<span class="c-fn">resolve</span>(key);
-    <span class="c-fn">const</span> { c = <span class="c-num">0</span>, h = <span class="c-num">0</span> } = <span class="c-fn">oklch</span>(hex);
-    <span class="c-fn">const</span> score = c * Math.<span class="c-fn">cos</span>((h - <span class="c-num">50</span>) * Math.PI / <span class="c-num">180</span>);
-    <span class="c-fn">if</span> (score &gt; bestScore) { bestScore = score; best = hex; }
-  }
-  <span class="c-fn">return</span> best;
+      <pre class="code"><code>book.<span class="c-fn">addTypography</span>(<span class="c-str">'heading-lg'</span>, {
+  <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
+  <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
+  <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
+  <span class="c-key">lineHeight</span>:    <span class="c-str">'1'</span>,
+  <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
 });
 
-ui.<span class="c-fn">set</span>(<span class="c-str">'warm'</span>, <span class="c-fn">createFunctionToken</span>(<span class="c-str">'warmest'</span>, [values]));</code></pre>
-      <p class="extend-result" id="extend-fn-result">
-        <span class="extend-result-label">ui.warm = warmest( values )</span>
-        <span class="extend-result-swatch" id="extend-fn-swatch"></span>
-        <code id="extend-fn-hex">—</code>
-      </p>
-    </article>
+<span class="c-dim">// a variant extends it, compose included</span>
+book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</span>,
+  { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
+  { <span class="c-key">extends</span>: <span class="c-str">'heading-lg'</span> });</code></pre>
+    </div>
 
-    <article class="extend-card">
-      <h3>Integration with a library</h3>
-      <p>
-        <a href="https://meodai.github.io/poline/" target="_blank" rel="noopener">Poline</a>
-        generates a perceptual ramp from two anchor colors. Pipe it
-        straight into a scope; selectors work on it just like any
-        other palette.
-      </p>
-      <pre class="code"><code><span class="c-dim">// anchors as [hue, saturation, lightness], s and l in 0–1</span>
-<span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
-  anchorColors: [[<span class="c-num">20</span>, <span class="c-num">.3</span>, <span class="c-num">.08</span>], [<span class="c-num">12</span>, <span class="c-num">.85</span>, <span class="c-num">.45</span>], [<span class="c-num">42</span>, <span class="c-num">.4</span>, <span class="c-num">.92</span>]],
-  numPoints: <span class="c-num">7</span>,
-});
-<span class="c-fn">const</span> ramp = book.<span class="c-fn">addScope</span>(<span class="c-str">'ramp'</span>);
-poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
-
-ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
-  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">ratio</span>: <span class="c-num">3</span> },
-));</code></pre>
-      <div class="extend-result poline" id="extend-poline-result">
-        <div class="poline-strip" id="extend-poline-strip"></div>
-        <p class="extend-result-line">
-          <span class="extend-result-label">minContrastWith( ui.surface, ramp, { ratio: 3 } ) → </span>
-          <span class="extend-result-swatch" id="extend-poline-swatch"></span>
-          <code id="extend-poline-hex">—</code>
-        </p>
-      </div>
-    </article>
+    <figure class="typo-stage">
+      <div class="typo-sample typo-sample--heading">A style is a scope.</div>
+      <div class="typo-sample typo-sample--hero">Variants extend.</div>
+      <figcaption>Same book. Two scopes. One inherits the other.</figcaption>
+    </figure>
   </div>
 </section>
 
-<!-- ─── Reactivity in one paragraph ───────────────────────────────── -->
-<section class="reactivity">
-  <h2>Reactive by default.</h2>
-  <p>
-    The graph is live. Set a token and every dependent re-resolves
-    straight away — or switch the book to <code>batch</code> mode and
-    apply everything at once with <code>flush()</code>. Subscribe to a
-    key with <code>watch(key, fn)</code> and the library calls you
-    back with its new value whenever it changes. Cycles are refused
-    at write time, not discovered at render.
-  </p>
-</section>
-
-<!-- ─── Modifiers (reframed) ─────────────────────────────────────── -->
+<!-- ─── Value transforms ──────────────────────────────────────────── -->
 <section class="coda">
   <h2>Value transforms.</h2>
   <p>
@@ -872,7 +755,179 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
       </span>
     </li>
   </ul>
+
+  <div class="mix-feature-body feature-sub">
+    <div class="mix-feature-text">
+      <h3 id="mix-title"><em>Two colors.</em> Pick the path.</h3>
+      <p>
+        <code>colorMix()</code> interpolates between two colors. The space
+        you pick changes the path: <code>rgb</code> goes straight through
+        whatever sits between the endpoints in cube coordinates;
+        <code>lab</code> and <code>oklab</code> follow perceptual lines;
+        <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate
+        around hue. Same endpoints — wildly different middles.
+      </p>
+      <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.surface'</span>),
+  { <span class="c-key">ratio</span>: <span class="c-num">0.5</span>, <span class="c-key">colorSpace</span>: <span class="c-str">'oklch'</span> }
+));</code></pre>
+    </div>
+
+    <div class="mix-stage">
+      <div class="mix-row">
+        <color-input id="mix-a" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
+        <color-input id="mix-b" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
+      </div>
+      <label class="mix-space">
+        <span>interpolated in</span>
+        <select id="mix-space-sel">
+          <option value="oklch">oklch</option>
+          <option value="oklab">oklab</option>
+          <option value="lch">lch</option>
+          <option value="lab" selected>lab</option>
+          <option value="hsl">hsl</option>
+          <option value="okhsl">okhsl</option>
+          <option value="hsv">hsv</option>
+          <option value="hwb">hwb</option>
+          <option value="rgb">rgb</option>
+          <option value="lrgb">lrgb (linear)</option>
+          <option value="cubehelix">cubehelix</option>
+        </select>
+      </label>
+    </div>
+  </div>
 </section>
+
+<!-- ─── One source, many outputs ─────────────────────────────────── -->
+<section class="renderers">
+  <header class="renderers-head">
+    <h2><em>One source,</em> many outputs.</h2>
+    <p>
+      The same book renders to whatever target you need. CSS variables
+      and JSON ship in the box; the
+      <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
+      format too. Custom renderers register through one call —
+      <code>book.registerRenderer(name, fn)</code> — and twenty lines
+      of TypeScript turn the graph into Tailwind config, Swift
+      extensions, SwiftUI, Kotlin, a JSON dialect of your choice.
+    </p>
+  </header>
+
+  <div class="renderer-tabs" role="tablist">
+    <button class="r-tab is-active" data-target="r-css"      type="button">CSS variables</button>
+    <button class="r-tab"           data-target="r-json"     type="button">JSON</button>
+    <button class="r-tab"           data-target="r-w3"       type="button">W3 Design Tokens</button>
+    <button class="r-tab"           data-target="r-tailwind" type="button">Tailwind <em>(custom)</em></button>
+  </div>
+
+  <div class="renderer-panes">
+    <pre class="r-pane is-active" id="r-css"></pre>
+    <pre class="r-pane"           id="r-json"></pre>
+    <pre class="r-pane"           id="r-w3"></pre>
+    <pre class="r-pane"           id="r-tailwind"></pre>
+  </div>
+
+  <details class="renderer-source">
+    <summary>The custom Tailwind renderer in full</summary>
+<pre class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
+<span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
+  <span class="c-fn">const</span> colors = {}, spacing = {};
+  <span class="c-fn">const</span> isColor     = (s) =&gt; <span class="c-fn">parse</span>(s) != <span class="c-num">null</span>;
+  <span class="c-fn">const</span> isDimension = (s) =&gt; <span class="c-str">/^-?\d+(\.\d+)?[a-z%]+$/i</span>.<span class="c-fn">test</span>(s);
+
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> scope <span class="c-fn">of</span> book.<span class="c-fn">getAllScopes</span>()) {
+    <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+      <span class="c-fn">const</span> v = scope.<span class="c-fn">resolve</span>(k);
+      <span class="c-fn">const</span> key = <span class="c-str">`${</span>scope.name<span class="c-str">}-${</span>k<span class="c-str">}`</span>;
+      <span class="c-fn">if</span> (<span class="c-fn">isColor</span>(v))     colors[key]  = v;
+      <span class="c-fn">else if</span> (<span class="c-fn">isDimension</span>(v)) spacing[key] = v;
+    }
+  }
+  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ colors, spacing }, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } }`</span>;
+}
+
+<span class="c-dim">// Register it under any name — it's now a peer of the built-ins.</span>
+book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</span>, tailwindRenderer);
+<span class="c-fn">const</span> config = book.<span class="c-fn">render</span>(<span class="c-str">'tailwind'</span>);</code></pre>
+  </details>
+</section>
+
+
+<!-- ─── Bring your own everything ─────────────────────────────────── -->
+<section class="extend">
+  <header class="extend-head">
+    <h2>Bring your own rules. Bring your own libraries.</h2>
+    <p>
+      The built-in selectors are a starting set. Register any function
+      that takes the token's resolved arguments (scopes arrive as
+      scopes) plus its options and returns a value. Tokens that call it
+      take part in the graph like the built-ins: dependency tracking,
+      cycle checks, reactive recomputation.
+    </p>
+  </header>
+
+  <div class="extend-grid">
+    <article class="extend-card">
+      <h3>A custom function</h3>
+      <p>
+        Register a new selector — <code>warmest</code> — that picks the
+        member leaning hardest towards orange: chroma times how close
+        its hue sits to 50°. It runs on this page against the palette
+        above.
+      </p>
+      <pre class="code"><code><span class="c-dim">// Resolved args come first, the token's options last.</span>
+book.<span class="c-fn">registerFunction</span>(<span class="c-str">'warmest'</span>, (scope) =&gt; {
+  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestScore = -<span class="c-num">Infinity</span>;
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> key <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+    <span class="c-fn">const</span> hex = scope.<span class="c-fn">resolve</span>(key);
+    <span class="c-fn">const</span> { c = <span class="c-num">0</span>, h = <span class="c-num">0</span> } = <span class="c-fn">oklch</span>(hex);
+    <span class="c-fn">const</span> score = c * Math.<span class="c-fn">cos</span>((h - <span class="c-num">50</span>) * Math.PI / <span class="c-num">180</span>);
+    <span class="c-fn">if</span> (score &gt; bestScore) { bestScore = score; best = hex; }
+  }
+  <span class="c-fn">return</span> best;
+});
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'warm'</span>, <span class="c-fn">createFunctionToken</span>(<span class="c-str">'warmest'</span>, [values]));</code></pre>
+      <p class="extend-result" id="extend-fn-result">
+        <span class="extend-result-label">ui.warm = warmest( values )</span>
+        <span class="extend-result-swatch" id="extend-fn-swatch"></span>
+        <code id="extend-fn-hex">—</code>
+      </p>
+    </article>
+
+    <article class="extend-card">
+      <h3>Integration with a library</h3>
+      <p>
+        <a href="https://meodai.github.io/poline/" target="_blank" rel="noopener">Poline</a>
+        generates a perceptual ramp from two anchor colors. Pipe it
+        straight into a scope; selectors work on it just like any
+        other palette.
+      </p>
+      <pre class="code"><code><span class="c-dim">// anchors as [hue, saturation, lightness], s and l in 0–1</span>
+<span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
+  anchorColors: [[<span class="c-num">20</span>, <span class="c-num">.3</span>, <span class="c-num">.08</span>], [<span class="c-num">12</span>, <span class="c-num">.85</span>, <span class="c-num">.45</span>], [<span class="c-num">42</span>, <span class="c-num">.4</span>, <span class="c-num">.92</span>]],
+  numPoints: <span class="c-num">7</span>,
+});
+<span class="c-fn">const</span> ramp = book.<span class="c-fn">addScope</span>(<span class="c-str">'ramp'</span>);
+poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">ratio</span>: <span class="c-num">3</span> },
+));</code></pre>
+      <div class="extend-result poline" id="extend-poline-result">
+        <div class="poline-strip" id="extend-poline-strip"></div>
+        <p class="extend-result-line">
+          <span class="extend-result-label">minContrastWith( ui.surface, ramp, { ratio: 3 } ) → </span>
+          <span class="extend-result-swatch" id="extend-poline-swatch"></span>
+          <code id="extend-poline-hex">—</code>
+        </p>
+      </div>
+    </article>
+  </div>
+</section>
+
 
 <!-- ─── Outro ─────────────────────────────────────────────────────── -->
 <section class="outro">

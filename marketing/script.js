@@ -927,6 +927,105 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   paint();
 })();
 
+// ══════════════════════════════════════════════════════════════════════
+//  SELECTOR SWITCHER — one panel at a time (ARIA tabs, #hash aware)
+// ══════════════════════════════════════════════════════════════════════
+(function selectorTabs () {
+  const list = document.querySelector(".fn-tabs");
+  if (!list) return;
+  const tabs = [...list.querySelectorAll('[role="tab"]')];
+  const panelOf = (tab) => document.getElementById(tab.getAttribute("aria-controls"));
+
+  function select (tab, { focus = false, updateHash = true } = {}) {
+    for (const t of tabs) {
+      const on = t === tab;
+      t.setAttribute("aria-selected", String(on));
+      t.tabIndex = on ? 0 : -1;
+      t.classList.toggle("is-active", on);
+      panelOf(t)?.classList.toggle("is-active", on);
+    }
+    if (focus) tab.focus();
+    tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (updateHash) history.replaceState(null, "", `#${tab.getAttribute("aria-controls")}`);
+  }
+
+  list.addEventListener("click", (e) => {
+    const tab = e.target.closest('[role="tab"]');
+    if (tab) select(tab);
+  });
+  list.addEventListener("keydown", (e) => {
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const next = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    select(tabs[(next + tabs.length) % tabs.length], { focus: true });
+  });
+
+  // A link to #closest (or any selector id) opens that panel.
+  const fromHash = () => {
+    const tab = tabs.find((t) => `#${t.getAttribute("aria-controls")}` === location.hash);
+    if (tab) select(tab, { updateHash: false });
+  };
+  addEventListener("hashchange", fromHash);
+  fromHash();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  READABLE ON — contrast as a filter before ranking
+// ══════════════════════════════════════════════════════════════════════
+(function readableSection () {
+  const surfaceIn = document.getElementById("readable-surface");
+  const ratiosEl  = document.getElementById("readable-ratios");
+  const poolEl    = document.getElementById("readable-pool");
+  const resultsEl = document.getElementById("readable-results");
+  if (!surfaceIn || !ratiosEl || !poolEl || !resultsEl) return;
+
+  const BRAND = ["#c8391a", "#ff7a1a", "#d49623", "#f2c14e", "#3b6dd3", "#1c3a9a", "#2f8a7a", "#7a3c8e"];
+  const INITIAL = surfaceIn.getAttribute("value") || "#fcf6ee";
+  surfaceIn.value = INITIAL;
+  let ratio = 4.5;
+
+  const result = (call, surface, value, failMsg) => value
+    ? `<div class="rd-result" style="background:${surface};color:${value}">
+         <span class="rd-call" style="color:${contrast(surface, value) >= 3 ? value : "inherit"}">${call}</span>
+         <span class="rd-sample">Read the docs →</span>
+         <span class="rd-meta">${value} · ${contrast(surface, value).toFixed(2)}:1</span>
+       </div>`
+    : `<div class="rd-result is-fail" style="background:${surface}">
+         <span class="rd-call">${call}</span>
+         <span class="rd-sample" style="color:${contrast(surface, "#1d1c1c") > 4.5 ? "#1d1c1c" : "#fcf6ee"}">${failMsg}</span>
+       </div>`;
+
+  function paint () {
+    const surface = surfaceIn.value || INITIAL;
+    if (!parse(surface)) return;
+    poolEl.style.background = surface;
+    poolEl.innerHTML = BRAND.map((c) => {
+      const r = contrast(surface, c);
+      return `<span class="rd-tile${r < ratio ? " is-out" : ""}" style="background:${c};color:${lch(c).l > 0.6 ? "#1d1c1c" : "#fcf6ee"}" title="${c} · ${r.toFixed(2)}:1">${r.toFixed(1)}</span>`;
+    }).join("");
+
+    const plain    = pick(BRAND, (s) => mostVivid(s));
+    const readable = pick(BRAND, (s) => mostVivid(s, { readableOn: color(surface), minContrast: ratio }));
+    resultsEl.innerHTML =
+      result("mostVivid(brand)", surface, plain) +
+      result(`mostVivid(brand, { readableOn, minContrast: ${ratio} })`, surface, readable,
+             `throws — no member reaches ${ratio}:1`);
+  }
+
+  ratiosEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-ratio]");
+    if (!btn) return;
+    ratio = Number(btn.dataset.ratio);
+    ratiosEl.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
+    paint();
+  });
+  surfaceIn.addEventListener("input", paint);
+  surfaceIn.addEventListener("change", paint);
+  paint();
+})();
+
 // — copy buttons —
 document.querySelectorAll(".install-copy, .copy").forEach((btn) => {
   btn.addEventListener("click", async () => {

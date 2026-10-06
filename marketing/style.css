@@ -21,6 +21,14 @@
 
 * { box-sizing: border-box; }
 
+/* Single-column grids by default; a long code line or a nowrap pill must
+   not stretch a column wider than the phone. */
+:where(.fn-body, .graph, .hero, .ramp-feature-body, .order-feature-body,
+       .mix-feature-body, .typo-feature-body, .extends-feature-body,
+       .readable-feature-body) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -217,7 +225,7 @@ h1, h2, h3 {
 .hi-fn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @media (max-width: 899px) {
-  .hero { grid-template-columns: 1fr; }
+  .hero { grid-template-columns: minmax(0, 1fr); }
   .hero-illustration { max-width: 420px; margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -367,7 +375,7 @@ h1, h2, h3 {
 .graph-viz svg { width: 100%; height: auto; max-width: 100%; }
 
 @media (max-width: 899px) {
-  .graph { grid-template-columns: 1fr; }
+  .graph { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Sections header (intro to the function list) ───────────────── */
@@ -477,11 +485,11 @@ h1, h2, h3 {
    Matches .fn-claim / .fn-detail (display heading with italic accent,
    muted lead paragraph) so the bottom half of the page reads as
    continuation of the function plates rather than a different rhythm. */
-.ramp-feature-text h2,
-.mix-feature-text h2,
-.order-feature-text h2,
-.typo-feature-text h2,
-.extends-feature-text h2,
+.ramp-feature-text :is(h2, h3),
+.mix-feature-text :is(h2, h3),
+.order-feature-text :is(h2, h3),
+.typo-feature-text :is(h2, h3),
+.extends-feature-text :is(h2, h3),
 .renderers-head h2 {
   font-family: var(--font-display);
   font-size: clamp(26px, 3vw, 36px);
@@ -490,11 +498,11 @@ h1, h2, h3 {
   margin: 0 0 18px;
   color: var(--text);
 }
-.ramp-feature-text h2 em,
-.mix-feature-text h2 em,
-.order-feature-text h2 em,
-.typo-feature-text h2 em,
-.extends-feature-text h2 em,
+.ramp-feature-text :is(h2, h3) em,
+.mix-feature-text :is(h2, h3) em,
+.order-feature-text :is(h2, h3) em,
+.typo-feature-text :is(h2, h3) em,
+.extends-feature-text :is(h2, h3) em,
 .renderers-head h2 em {
   color: var(--accent);
   font-style: italic;
@@ -905,7 +913,7 @@ h1, h2, h3 {
 }
 
 @media (max-width: 899px) {
-  .step-controls { grid-template-columns: 1fr; }
+  .step-controls { grid-template-columns: minmax(0, 1fr); }
   .step-controls label { grid-template-columns: 80px 1fr 50px; }
 }
 
@@ -967,7 +975,7 @@ h1, h2, h3 {
 }
 
 /* — lightest / darkest — */
-.lightness-caption { text-transform: none; letter-spacing: 0; }
+.demo .lightness-caption { text-transform: none; letter-spacing: 0; }
 .lightness-toggle,
 .sibling-wrap {
   display: inline-flex;
@@ -1254,9 +1262,7 @@ h1, h2, h3 {
 }
 
 /* ── ramp: single-color → tonal scale demo ──────────────────────── */
-.ramp-feature,
-.mix-feature,
-.order-feature {
+.ramp-feature {
   max-width: var(--max);
   margin: 0 auto;
   padding: clamp(60px, 8vw, 100px) var(--gutter);
@@ -1392,7 +1398,7 @@ h1, h2, h3 {
   .mix-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .mix-feature-text { max-width: 56ch; }
-.mix-feature-text h2 {
+.mix-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
   line-height: 1.12;
   margin: 0 0 0.5em;
@@ -1488,7 +1494,7 @@ h1, h2, h3 {
 }
 
 .ramp-feature-text { max-width: 56ch; }
-.ramp-feature-text h2 {
+.ramp-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
   line-height: 1.12;
   margin: 0 0 0.5em;
@@ -1584,7 +1590,7 @@ h1, h2, h3 {
 
 @media (max-width: 720px) {
   .ramp-stage {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     justify-items: center;
   }
   .ramp-arrow { transform: rotate(90deg); }
@@ -1592,12 +1598,6 @@ h1, h2, h3 {
 }
 
 /* ── Typography: a style is a scope ─────────────────────────────── */
-.typo-feature {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: clamp(60px, 8vw, 100px) var(--gutter);
-  border-top: 1px solid var(--rule);
-}
 .typo-feature-body {
   display: grid;
   gap: clamp(20px, 2.4vw, 32px);
@@ -1610,7 +1610,7 @@ h1, h2, h3 {
   .typo-stage { align-self: start; }
 }
 .typo-feature-text { max-width: 56ch; }
-.typo-feature-text h2 {
+.typo-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
   line-height: 1.12;
   margin: 0 0 0.5em;
@@ -1682,7 +1682,7 @@ h1, h2, h3 {
   .extends-stage { align-self: start; }
 }
 .extends-feature-text { max-width: 56ch; }
-.extends-feature-text h2 {
+.extends-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
   line-height: 1.12;
   margin: 0 0 0.5em;
@@ -1838,7 +1838,7 @@ h1, h2, h3 {
   line-height: 1.55;
   padding: 22px 24px;
   border-radius: 0 0 6px 6px;
-  max-height: 480px;
+  max-height: 360px;
   overflow: auto;
   white-space: pre;
 }
@@ -1967,32 +1967,10 @@ h1, h2, h3 {
 }
 
 @media (max-width: 899px) {
-  .extend-grid { grid-template-columns: 1fr; }
+  .extend-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── Reactivity blurb ───────────────────────────────────────────── */
-.reactivity {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: clamp(48px, 6vw, 80px) var(--gutter);
-  border-top: 1px solid var(--rule);
-}
-.reactivity h2 {
-  font-size: clamp(24px, 2.8vw, 32px);
-  line-height: 1.12;
-  margin-bottom: 0.5em;
-}
-.reactivity p {
-  font-size: 17px;
-  line-height: 1.65;
-  max-width: 64ch;
-}
-.reactivity code {
-  font-size: 0.9em;
-  background: var(--surface-2);
-  padding: 1px 6px;
-  border-radius: 3px;
-}
 
 /* ── Coda ───────────────────────────────────────────────────────── */
 .coda {
@@ -2005,7 +1983,7 @@ h1, h2, h3 {
   font-size: clamp(28px, 3.4vw, 36px);
   margin-bottom: 0.6em;
 }
-.coda p {
+.coda > p {
   max-width: 64ch;
   color: var(--muted);
   font-size: 17px;
@@ -2102,12 +2080,240 @@ h1, h2, h3 {
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 899px) {
   .top-nav { gap: 14px; font-size: 14px; }
-  .closest-stage { grid-template-columns: 1fr; }
+  .closest-stage { grid-template-columns: minmax(0, 1fr); }
   .closest-arrow { transform: rotate(90deg); justify-self: start; }
   .closest-ranked { grid-template-columns: repeat(4, 1fr); }
-  .min-stage { grid-template-columns: 1fr; }
+  .min-stage { grid-template-columns: minmax(0, 1fr); }
   .contrast-row { grid-template-columns: repeat(3, 1fr); }
   .vivid-stage { grid-template-columns: repeat(4, 1fr); }
   .furthest-stage { grid-template-columns: repeat(4, 1fr); }
   .coda-list { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Selector switcher ─────────────────────────────────────────── */
+.fn-tabs {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 28px var(--gutter) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.fn-tabs-set {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-right: 14px;
+}
+.fn-tabs-group {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.fn-tabs [role="tab"] {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.fn-tabs [role="tab"]:hover { border-color: var(--text); }
+.fn-tabs [role="tab"][aria-selected="true"] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+}
+.fn-tabs [role="tab"]:focus-visible,
+.fn-panels [role="tabpanel"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Panels share one grid cell, so the block is as tall as the tallest
+   panel and switching never shifts the page below it. */
+.fn-panels { display: grid; grid-template-columns: minmax(0, 1fr); }
+.fn-panels > .fn {
+  grid-area: 1 / 1;
+  min-width: 0;
+  border-top: none;
+  padding-top: clamp(28px, 4vw, 48px);
+}
+.fn-panels > .fn:not(.is-active) { visibility: hidden; }
+.fn-panels > .fn.is-active { animation: fn-in .25s ease-out; }
+@keyframes fn-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .fn-panels > .fn.is-active { animation: none; }
+}
+@media (max-width: 899px) {
+  /* One row that scrolls sideways instead of a wall of pills. */
+  .fn-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+  }
+  .fn-tabs::-webkit-scrollbar { display: none; }
+  .fn-tabs-set { flex-wrap: nowrap; flex: none; }
+  .fn-tabs [role="tab"], .fn-tabs-group { flex: none; }
+}
+
+/* ── Merged sections: a second block under the first ────────────── */
+.feature-sub {
+  margin-top: clamp(48px, 6vw, 72px);
+  padding-top: clamp(40px, 5vw, 60px);
+  border-top: 1px solid var(--hair);
+}
+.feature-sub :is(h2, h3) { font-size: clamp(24px, 2.6vw, 32px); }
+
+/* ── readableOn ─────────────────────────────────────────────────── */
+.readable-feature {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(60px, 8vw, 100px) var(--gutter);
+  border-top: 1px solid var(--rule);
+}
+.readable-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .readable-feature-body { grid-template-columns: 5fr 7fr; }
+}
+.readable-feature-text { max-width: 56ch; }
+.readable-feature-text h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0 0 0.5em;
+}
+.readable-feature-text h2 em { color: var(--accent); font-style: italic; }
+.readable-feature-text > p {
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+.readable-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.readable-stage { margin: 0; }
+.readable-stage figcaption {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.readable-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-bottom: 14px;
+}
+.readable-surface {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.readable-ratios { display: inline-flex; align-items: center; gap: 6px; }
+.readable-ratios::before {
+  content: "minContrast";
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.readable-ratios button {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  min-width: 40px;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--text);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.readable-ratios button:hover { border-color: var(--text); }
+.readable-ratios button.is-active { background: var(--text); color: var(--surface); border-color: var(--text); }
+.readable-pool {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  transition: background .2s;
+}
+.rd-tile {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  transition: opacity .2s, transform .2s;
+}
+.rd-tile.is-out { opacity: .22; transform: scale(.88); }
+.readable-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.rd-result {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+.rd-result .rd-call {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 10px;
+}
+.rd-result .rd-sample {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.1;
+}
+.rd-result .rd-meta {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: .8;
+}
+.rd-result.is-fail .rd-sample { font-family: var(--font-mono); font-size: 13px; }
+@media (max-width: 560px) {
+  .readable-pool { grid-template-columns: repeat(4, 1fr); }
+  .readable-results { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 599px) {
+  .fn-head .sig { white-space: normal; top: 0; }
+}
+.ltile, .stile { min-width: 0; overflow: hidden; }
+@media (max-width: 599px) {
+  .lightness-stage,
+  .sibling-stage { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ltile, .stile { aspect-ratio: 1; }
 }
