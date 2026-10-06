@@ -347,9 +347,11 @@ function safeResolve(scopeName: string, tokenName: string): { value: string; err
 // --- Check if a resolved value looks like a color ---
 
 function looksLikeColor(value: string): boolean {
-  return /^#[0-9a-fA-F]{3,8}$/.test(value)
-    || value.startsWith('rgb')
-    || value.startsWith('hsl');
+  // Any CSS colour culori understands: named, oklch(), color(display-p3 …), …
+  // culori also reads bare hex digits ('700', 'bad') as colours; a font
+  // weight or a word is not one, so '#'-less hex is rejected.
+  if (!value || /^[0-9a-fA-F]+$/.test(value)) return false;
+  return culoriParse(value) !== undefined;
 }
 
 // --- Dimension serialization ---
@@ -936,7 +938,7 @@ function getAllQualifiedKeys(): { key: string; color?: string }[] {
       let color: string | undefined;
       try {
         const resolved = book.resolve(qualifiedKey);
-        if (resolved && (resolved.startsWith('#') || resolved.startsWith('rgb') || resolved.startsWith('hsl'))) {
+        if (looksLikeColor(resolved)) {
           color = resolved;
         }
       } catch {
