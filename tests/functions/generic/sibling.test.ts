@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, createFunctionToken, px, ref } from '../../../src/tokens';
-import { sibling, scopeOfKey } from '../../../src/functions/generic/sibling';
+import { sibling, siblingImpl, scopeOfKey } from '../../../src/functions/generic/sibling';
 import { lighten } from '../../../src/functions/color/lighten';
 import { FunctionError } from '../../../src/errors';
 import { Renderer } from '../../../src/renderers/renderer';
@@ -250,5 +250,55 @@ describe('sibling anchor validation', () => {
   it('scopeOfKey throws on a key without a scope', () => {
     expect(() => scopeOfKey('g100')).toThrow(FunctionError);
     expect(scopeOfKey('gray.g100')).toBe('gray');
+  });
+});
+
+describe('siblingImpl laziness and skipping', () => {
+  function withBroken() {
+    const book = new DesignBook('test');
+    const s = book.addScope('s');
+    s.set('a', px(1));
+    s.set('broken', ref('nowhere.at-all'));
+    s.set('b', px(2));
+    s.set('c', px(3));
+    s.set('d', px(4));
+    return { book, s };
+  }
+
+  it('resolves only the anchor and the members it steps over', () => {
+    const { ramp: s } = setup();
+    const spy = vi.spyOn(s, 'resolve');
+    expect(siblingImpl(s, 'ramp.s100', 1)).toBe('#cccccc');
+    expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['s100', 's200']);
+  });
+
+  it('steps over an unresolvable member without counting it', () => {
+    const { s } = withBroken();
+    expect(siblingImpl(s, 's.a', 1)).toBe('2px');
+    expect(siblingImpl(s, 's.b', -1)).toBe('1px');
+    expect(siblingImpl(s, 's.a', 3)).toBe('4px');
+  });
+
+  it('clamps to the last resolvable member past the end', () => {
+    const { s } = withBroken();
+    s.set('e', ref('nowhere.else'));
+    expect(siblingImpl(s, 's.b', 99)).toBe('4px');
+    expect(siblingImpl(s, 's.c', -99)).toBe('1px');
+  });
+
+  it('wraps by the number of resolvable members, even for large offsets', () => {
+    const { s } = withBroken();
+    // Resolvable pool: a b c d (4 members).
+    expect(siblingImpl(s, 's.d', 1, true)).toBe('1px');
+    expect(siblingImpl(s, 's.a', -1, true)).toBe('4px');
+    expect(siblingImpl(s, 's.a', 5, true)).toBe('2px');
+    expect(siblingImpl(s, 's.a', 4, true)).toBe('1px');
+    expect(siblingImpl(s, 's.b', -9, true)).toBe('1px');
+    expect(siblingImpl(s, 's.c', 4001, true)).toBe('4px');
+  });
+
+  it('throws when the anchor itself does not resolve', () => {
+    const { s } = withBroken();
+    expect(() => siblingImpl(s, 's.broken', 1)).toThrow(/not in the pool/);
   });
 });

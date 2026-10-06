@@ -9,7 +9,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { resolvePool } from '../scope-members';
+import { poolKeys } from '../scope-members';
 
 export interface SiblingOptions {
   /** Wrap around past either end (modulo) instead of stopping there. */
@@ -50,23 +50,63 @@ export function siblingImpl(
   wrap: boolean = false,
   not: string[] = [],
 ): string {
-  const pool = resolvePool(scope, not);
-  const keys = pool.map((m) => m.key);
-  const values = pool.map((m) => m.value);
+  // Membership is cheap to decide; resolving is not. Only the anchor and the
+  // members actually stepped over are resolved. A member that fails to
+  // resolve is not part of the pool: it is stepped over without counting.
+  const keys = poolKeys(scope, not);
+  const memo = new Map<number, string | null>();
+  const valueAt = (i: number): string | null => {
+    if (!memo.has(i)) {
+      let value: string | null;
+      try {
+        value = scope.resolve(keys[i]);
+      } catch {
+        value = null;
+      }
+      memo.set(i, value);
+    }
+    return memo.get(i)!;
+  };
 
   const at = keys.indexOf(anchor.slice(scope.name.length + 1));
-  if (at === -1) {
+  if (at === -1 || valueAt(at) === null) {
     throw new FunctionError(
       `sibling: "${anchor}" is not in the pool of scope "${scope.name}"`,
       'sibling',
     );
   }
 
-  const n = keys.length;
-  const i = wrap
-    ? (((at + offset) % n) + n) % n
-    : Math.min(n - 1, Math.max(0, at + offset));
-  return values[i];
+  const dir = Math.sign(offset);
+  let steps = Math.abs(offset);
+  let i = at;
+
+  if (wrap) {
+    // Reduce a long walk modulo the number of resolvable members; that
+    // count needs every member resolved, so only pay for it when the walk
+    // could go round more than once.
+    if (steps >= keys.length) {
+      let n = 0;
+      for (let k = 0; k < keys.length; k++) if (valueAt(k) !== null) n++;
+      steps %= n;
+    }
+    while (steps > 0) {
+      i = (i + dir + keys.length) % keys.length;
+      if (valueAt(i) !== null) steps--;
+    }
+    return valueAt(i)!;
+  }
+
+  // Without wrap, stop at the last resolvable member in that direction.
+  let last = at;
+  while (steps > 0) {
+    i += dir;
+    if (i < 0 || i >= keys.length) break;
+    if (valueAt(i) !== null) {
+      last = i;
+      steps--;
+    }
+  }
+  return valueAt(last)!;
 }
 
 /**
