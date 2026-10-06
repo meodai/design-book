@@ -85,8 +85,9 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
   greek: list('greek', ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa',
     'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega']),
   paper: list('paper', ['a10', 'a9', 'a8', 'a7', 'a6', 'a5', 'a4', 'a3', 'a2', 'a1', 'a0']),
-  creatures: list('creatures', ['flea', 'ant', 'bee', 'mouse', 'rabbit', 'cat', 'fox', 'dog', 'wolf',
-    'deer', 'horse', 'elephant', 'whale']),
+  // Smallest to largest by typical adult size, from a tardigrade to a blue whale.
+  creatures: list('creatures', ['tardigrade', 'mite', 'flea', 'ant', 'fly', 'bee', 'beetle', 'mouse', 'hamster', 'rat',
+    'rabbit', 'cat', 'fox', 'dog', 'wolf', 'deer', 'bear', 'horse', 'giraffe', 'hippo', 'rhino', 'elephant', 'whale']),
   tshirt: { name: 'tshirt', anchor: 'base', kind: 'tshirt' } as Tshirt,
   intensity: baseList('intensity',
     ['hint', 'faint', 'subtle', 'soft', 'mid', 'firm', 'bold', 'strong', 'intense'], 'mid'),

@@ -311,7 +311,7 @@ Every scheme has an **anchor**, which decides which names a count gets:
 
 | Anchor | Behaviour | Schemes |
 |---|---|---|
-| start | the first `count` names | `ordinal` (1, 2, 3 …; `start`, `step`), `roman` (i, ii, iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (flea … whale) |
+| start | the first `count` names | `ordinal` (1, 2, 3 …; `start`, `step`), `roman` (i, ii, iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (tardigrade … whale, 23 sizes) |
 | base | grows outward from a base name; `base` picks which value gets it | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
 | range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100) |
 

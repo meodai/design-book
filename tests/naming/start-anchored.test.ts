@@ -41,14 +41,14 @@ describe('scaleNames — start-anchored schemes', () => {
     expect(scaleNames(24, 'greek').at(-1)).toBe('omega');
     expect(scaleNames(3, 'paper')).toEqual(['a10', 'a9', 'a8']);
     expect(scaleNames(11, 'paper').at(-1)).toBe('a0');
-    expect(scaleNames(4, 'creatures')).toEqual(['flea', 'ant', 'bee', 'mouse']);
-    expect(scaleNames(13, 'creatures').at(-1)).toBe('whale');
+    expect(scaleNames(4, 'creatures')).toEqual(['tardigrade', 'mite', 'flea', 'ant']);
+    expect(scaleNames(23, 'creatures').at(-1)).toBe('whale');
   });
 
   it('throws past the end of a fixed list, saying how many names it has', () => {
     expect(() => scaleNames(25, 'greek')).toThrow(TokenError);
     expect(() => scaleNames(25, 'greek')).toThrow(/greek.*24/);
     expect(() => scaleNames(12, 'paper')).toThrow(/11/);
-    expect(() => scaleNames(14, 'creatures')).toThrow(/13/);
+    expect(() => scaleNames(24, 'creatures')).toThrow(/23/);
   });
 });
