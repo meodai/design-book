@@ -64,7 +64,9 @@ export function nthImpl(
       i = index;
     }
   } else {
-    // Float mode: relative position, 0.0 = first, 1.0 = last
+    // Relative mode, for non-integers only: 0.5 is the middle, 0.999 rounds
+    // to the last member. Integers never get here — `1.0 === 1` is index 1,
+    // not "last"; use -1 for that. Values outside (0, 1) are clamped.
     const clamped = Math.max(0, Math.min(1, index));
     i = Math.round(clamped * (candidates.length - 1));
   }
@@ -79,6 +81,15 @@ export function nthImpl(
   return candidates[i];
 }
 
+/**
+ * Picks a member of `scope` by position.
+ *
+ * - An integer `index` (including `0.0` and `1.0`, which JS cannot tell
+ *   apart from `0` and `1`) is a direct index; negative ones count from the
+ *   end like `Array.at()`, so `-1` is the last member.
+ * - A non-integer `index` is a relative position, `0.5` being the middle
+ *   member; it is clamped to [0, 1] and rounded to the nearest member.
+ */
 export function nth(
   scope: Scope,
   index: number,

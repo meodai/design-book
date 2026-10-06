@@ -72,12 +72,28 @@ describe('nth', () => {
     expect(book.resolve('ui.first')).toBe('#000000');
   });
 
-  it('picks the last item with index 1.0', () => {
+  it('treats index 1.0 as the integer index 1, not the last item', () => {
     const { book, ramp } = makeColorScope();
     const ui = book.addScope('ui');
     ui.set('last', nth(ramp, 1.0));
     // 1.0 is integer — treated as index 1
     expect(book.resolve('ui.last')).toBe('#333333');
+  });
+
+  it('picks the last item with -1 (not 1.0)', () => {
+    const { book, ramp } = makeColorScope();
+    const ui = book.addScope('ui');
+    ui.set('one', nth(ramp, 1.0));
+    ui.set('last', nth(ramp, -1));
+    expect(book.resolve('ui.one')).toBe('#333333');
+    expect(book.resolve('ui.last')).toBe('#cccccc');
+  });
+
+  it('clamps a non-integer above 1 to the last item', () => {
+    const { book, ramp } = makeColorScope();
+    const ui = book.addScope('ui');
+    ui.set('clamped', nth(ramp, 1.5));
+    expect(book.resolve('ui.clamped')).toBe('#cccccc');
   });
 
   it('picks the middle item with index 0.5', () => {
@@ -103,7 +119,7 @@ describe('nth', () => {
     expect(book.resolve('ui.q1')).toBe('#333333');
   });
 
-  it('clamps float above 1.0 to the last item', () => {
+  it('rounds 0.99 to the last item', () => {
     const { book, ramp } = makeColorScope();
     const ui = book.addScope('ui');
     ui.set('clamped', nth(ramp, 0.99));
