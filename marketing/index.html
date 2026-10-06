@@ -765,7 +765,9 @@ book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</s
         whatever sits between the endpoints in cube coordinates;
         <code>lab</code> and <code>oklab</code> follow perceptual lines;
         <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate
-        around hue. Same endpoints — wildly different middles.
+        around hue. Same endpoints — wildly different middles. Any
+        <code>color-mix()</code> space works, and the CSS renderer emits
+        the matching <code>color-mix()</code>.
       </p>
       <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
@@ -788,12 +790,10 @@ book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</s
           <option value="lch">lch</option>
           <option value="lab" selected>lab</option>
           <option value="hsl">hsl</option>
-          <option value="okhsl">okhsl</option>
-          <option value="hsv">hsv</option>
           <option value="hwb">hwb</option>
-          <option value="rgb">rgb</option>
-          <option value="lrgb">lrgb (linear)</option>
-          <option value="cubehelix">cubehelix</option>
+          <option value="srgb">srgb</option>
+          <option value="srgb-linear">srgb-linear</option>
+          <option value="display-p3">display-p3</option>
         </select>
       </label>
     </div>

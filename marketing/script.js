@@ -7,7 +7,6 @@ import {
   formatHex,
   converter,
   wcagContrast,
-  interpolate,
 } from "https://esm.sh/culori@4?bundle";
 
 import "hdr-color-input";
@@ -42,6 +41,7 @@ import {
   ramp,
   relativeTo,
   createFunctionToken,
+  colorMix,
   bestContrastWith,
   minContrastWith,
   closestColor,
@@ -843,21 +843,25 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 
   const STOPS = 5;
 
+  // The strip is the library's colorMix at five ratios — the same maths
+  // the CSS renderer's color-mix() output produces in the browser.
+  const mixBook = new DesignBook("mix-demo");
+  const ends = mixBook.addScope("ends");
+  const stops = mixBook.addScope("stops");
+
   function paint () {
     const a = aIn.value || INITIAL_A;
     const b = bIn.value || INITIAL_B;
-    const space = spaceS.value;
-    let mixer;
     try {
-      mixer = interpolate([a, b], space);
-    } catch {
-      mixer = interpolate([a, b], "lab");
-    }
+      ends.set("a", color(a));
+      ends.set("b", color(b));
+    } catch { return; }
     const cells = [];
     for (let i = 0; i < STOPS; i++) {
-      const t = i / (STOPS - 1);
-      const hex = formatHex(mixer(t)) ?? a;
-      cells.push(`<span style="background:${hex}" title="${hex}"></span>`);
+      const ratio = i / (STOPS - 1);
+      stops.set(`s${i}`, colorMix(ref("ends.a"), ref("ends.b"), { ratio, colorSpace: spaceS.value }));
+      const out = mixBook.resolve(`stops.s${i}`);
+      cells.push(`<span style="background:${out}" title="${out}"></span>`);
     }
     strip.innerHTML = cells.join("");
   }
