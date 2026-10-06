@@ -1,5 +1,6 @@
 import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
+import { ReferenceResolver } from './reference-resolver';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
@@ -136,6 +137,7 @@ export class DesignBook {
   private _mode: 'auto' | 'batch';
   private scopeManager: ScopeManager;
   private graph: DependencyGraph;
+  private referenceResolver: ReferenceResolver;
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
@@ -195,6 +197,7 @@ export class DesignBook {
     };
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
+    this.referenceResolver = new ReferenceResolver(this);
     registerBuiltinFunctions(this);
     registerBuiltinOrderers(this);
     this.registerFunction('ramp', (seedValue: string, options?: { shade: string }) => {
@@ -1022,13 +1025,13 @@ export class DesignBook {
     this.graph.removeNode(qualifiedKey);
   }
 
+  /** Refresh the cached resolution of every reference that reads
+   *  `qualifiedKey`. Goes through the book's own resolver rather than the
+   *  key's scope: by the time a batch-mode `deleteScope` is flushed that
+   *  scope is no longer registered, and its dependents must still hear. */
   private _updateReferenceCaches(qualifiedKey: string, dependentKeys?: string[]): void {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return;
-
-    const scopeName = qualifiedKey.substring(0, dotIndex);
-    const scope = this.scopeManager.getScope(scopeName);
-    scope?.updateReferenceCaches(qualifiedKey, dependentKeys);
+    if (qualifiedKey.indexOf('.') === -1) return;
+    this.referenceResolver.updateAllReferencesTo(qualifiedKey, dependentKeys);
   }
 
   private _updateOwnReferenceCaches(qualifiedKey: string): void {
