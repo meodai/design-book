@@ -1,5 +1,6 @@
 import {
   getReferenceResolution,
+  isFunctionTokenValue,
   isReferenceValue,
   setReferenceResolution,
 } from './tokens';
@@ -42,15 +43,20 @@ export class ReferenceResolver {
     }
   }
 
+  /** Refresh every reference that reads `key`, directly or through a chain
+   *  of other tokens: a reference's resolvability depends on the whole path
+   *  to a value, so the walk carries on through every dependent rather than
+   *  stopping at the first token that holds a reference. */
   updateAllReferencesTo(key: string, dependentKeys?: string[]): void {
-    const seeds = dependentKeys ?? this.book.getDependencyGraph().getDependentsOf(key);
-    const queue = seeds.map(dependent => ({ key: dependent, via: key }));
+    const graph = this.book.getDependencyGraph();
+    const queue = [...(dependentKeys ?? graph.getDependentsOf(key))];
     const seen = new Set<string>([key]);
 
     while (queue.length > 0) {
-      const { key: depKey, via } = queue.shift()!;
+      const depKey = queue.shift()!;
       if (seen.has(depKey)) continue;
       seen.add(depKey);
+      for (const next of graph.getDependentsOf(depKey)) queue.push(next);
 
       // A key that resolves through `extends` owns no token of its own — it
       // is a hop on the way to the tokens that actually reference it, and
@@ -58,27 +64,25 @@ export class ReferenceResolver {
       // us so. Walk past it, or a `ref('child.a')` would never hear about
       // `parent.a` changing or going away.
       const source = this.book.getSourceKey?.(depKey);
-      const isInheritedHop = source !== undefined && source !== depKey;
-      const token = isInheritedHop ? undefined : this.book.getTokenByKey(depKey);
+      if (source !== undefined && source !== depKey) continue;
 
-      if (!token) {
-        for (const next of this.book.getDependencyGraph().getDependentsOf(depKey)) {
-          queue.push({ key: next, via: depKey });
-        }
-        continue;
+      const token = this.book.getTokenByKey(depKey);
+      if (isReferenceValue(token)) {
+        this.updateReferenceMetadata(token);
+      } else if (isFunctionTokenValue(token)) {
+        this.updateFunctionArgs(token);
       }
+    }
+  }
 
-      if (token.type === 'reference') {
-        this.updateReferenceMetadata(token as ReferenceValue);
-      }
-
-      if (token.type === 'function') {
-        const fn = token as FunctionTokenValue;
-        for (const arg of fn.args) {
-          if (isReferenceValue(arg) && arg.key === via) {
-            this.updateReferenceMetadata(arg as ReferenceValue);
-          }
-        }
+  /** Refresh the reference arguments of a function token, nested function
+   *  tokens included. */
+  updateFunctionArgs(fn: FunctionTokenValue): void {
+    for (const arg of fn.args) {
+      if (isReferenceValue(arg)) {
+        this.updateReferenceMetadata(arg);
+      } else if (isFunctionTokenValue(arg)) {
+        this.updateFunctionArgs(arg);
       }
     }
   }

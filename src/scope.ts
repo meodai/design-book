@@ -194,17 +194,7 @@ export class Scope {
     if (isReferenceValue(token)) {
       this.referenceResolver.updateReferenceMetadata(token);
     } else if (isFunctionTokenValue(token)) {
-      this.updateFunctionArgReferenceCaches(token);
-    }
-  }
-
-  private updateFunctionArgReferenceCaches(fn: FunctionTokenValue): void {
-    for (const arg of fn.args) {
-      if (isReferenceValue(arg)) {
-        this.referenceResolver.updateReferenceMetadata(arg);
-      } else if (isFunctionTokenValue(arg)) {
-        this.updateFunctionArgReferenceCaches(arg);
-      }
+      this.referenceResolver.updateFunctionArgs(token);
     }
   }
 
