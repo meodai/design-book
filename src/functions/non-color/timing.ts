@@ -18,6 +18,7 @@ export function timing(
     'timing',
     [duration, easing],
     {
+      description: options?.description,
       options: { delay },
       metadata: {
         dependencies: extractDependencies([duration]),

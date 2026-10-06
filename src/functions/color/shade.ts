@@ -53,6 +53,7 @@ export function shade(
     'shade',
     [color],
     {
+      description: options?.description,
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),

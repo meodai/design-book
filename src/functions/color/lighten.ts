@@ -42,6 +42,7 @@ export function lighten(
     'lighten',
     [color],
     {
+      description: options?.description,
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),

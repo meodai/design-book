@@ -42,6 +42,7 @@ export function darken(
     'darken',
     [color],
     {
+      description: options?.description,
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),

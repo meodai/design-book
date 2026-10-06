@@ -128,6 +128,7 @@ export function relativeTo(
     'relativeTo',
     [baseColor],
     {
+      description: options?.description,
       options: { colorSpace, modifications },
       metadata: {
         dependencies: extractDependencies([baseColor]),

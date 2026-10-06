@@ -102,6 +102,7 @@ export function colorMix(
     'colorMix',
     [color1, color2],
     {
+      description: options?.description,
       options: { ratio, colorSpace },
       metadata: {
         dependencies: extractDependencies([color1, color2]),

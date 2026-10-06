@@ -24,6 +24,7 @@ export function typographyScale(
     'typographyScale',
     [baseSize],
     {
+      description: options?.description,
       options: { ratio, step },
       metadata: {
         dependencies: extractDependencies([baseSize]),

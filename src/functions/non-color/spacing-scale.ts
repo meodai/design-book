@@ -23,6 +23,7 @@ export function spacingScale(
     'spacingScale',
     [baseValue],
     {
+      description: options?.description,
       options: { multiplier },
       metadata: {
         dependencies: extractDependencies([baseValue]),
