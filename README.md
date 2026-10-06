@@ -291,56 +291,57 @@ resolve time if zero candidates match `type`.
 
 ## Naming Primitives
 
-Generated primitives still need keys. `scaleNames(count, scheme, options?)` returns `count` keys from a naming convention, ordered smallest / lightest first. It only produces names — fill the scope yourself:
+Generated primitives still need keys. `nameValues(values, scheme, options?)` pairs each value with a name from a naming convention, smallest / lightest first, and `scaleNames(count, scheme, options?)` returns just the names. They only produce names — never values:
 
 ```typescript
-import { scaleNames, nameBetween, namingScheme } from 'design-book';
+import { nameValues, scaleNames, nameBetween, namingScheme } from 'design-book';
 
-const stops = rampColors;                       // 7 colours you generated
-scaleNames(stops.length, 'hundreds')
-  .forEach((name, i) => gray.set(name, color(stops[i])));
-// gray.50, gray.200, gray.300, gray.500, gray.700, gray.800, gray.950
+for (const [name, hex] of nameValues(shades, 'hundreds')) gray.set(name, color(hex));
+// 7 shades → gray.50, gray.200, gray.300, gray.500, gray.700, gray.800, gray.950
 
 scaleNames(5, 'tshirt')                          // ['xs', 's', 'm', 'l', 'xl']
-scaleNames(6, 'tshirt', { base: 1 })             // ['s', 'm', 'l', 'xl', '2xl', '3xl']
 scaleNames(4, 'ordinal', { step: 10 })           // ['10', '20', '30', '40']
 scaleNames(3, 'tshirt', { prefix: 'space-' })    // ['space-s', 'space-m', 'space-l']
 ```
+
+### Schemes and anchors
 
 Every scheme has an **anchor**, which decides which names a count gets:
 
 | Anchor | Behaviour | Schemes |
 |---|---|---|
-| start | the first `count` names | `ordinal` (1, 2, 3 …; `start`, `step`), `roman` (i, ii, iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (tardigrade … whale, 23 sizes) |
-| base | grows outward from a base name; `base` picks which value gets it | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
-| range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100) |
+| start | the first `count` names | `ordinal` (1 2 3 …; `from`, `step`), `roman` (i ii iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (tardigrade … whale, 23), `objects` (atom … universe, 100 things of distinctly different size) |
+| base | grows outward from a centre name | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
+| range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100), `unit` (0 … 1), `signed` (-1 … 1) |
 
-**Putting a shade on a specific name** — `base: [index, name]` says which of your values gets which name. On a range scheme the values below spread from the low end up to that name and the ones above from it to the high end; on a base-anchored scheme it moves the base name:
+Fixed lists keep their outermost names and spread evenly towards the centre, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists and ranges throw when asked for more names than they have. Number names are written as keys: `0_25` is 0.25, `-1` is -1.
+
+### Options
+
+| Option | Meaning |
+|---|---|
+| `base: n` | value *n* gets the scheme's centre: `m`, `mid`, `mf`, `regular`, or `0` for `ordinal` and the ranges, which then count outward both ways (`scaleNames(5, 'hundreds', { base: 2 })` → `-200 -100 0 100 200`) |
+| `base: [n, name]` | value *n* gets that name; on a range the values spread from the low end to it and from it to the high end (`scaleNames(7, 'hundreds', { base: [2, '500'] })` → `50 300 500 600 700 900 950`), on a list the rest spread out around it (`scaleNames(3, 'creatures', { base: [1, 'cat'] })` → `tardigrade cat whale`) |
+| `from`, `to` | the first number for `ordinal`; the ends of a range (`scaleNames(5, 'hundreds', { from: -500, to: 500 })` → `-500 -200 0 200 500`) |
+| `step` | distance between `ordinal` numbers |
+| `case` | `'upper'` for `roman` |
+| `overflow` | `'throw'` (default) or `'between'`: keep every name and add the missing steps as fractions (`scaleNames(12, 'paper', { overflow: 'between' })` → `… a6 a6_5 a5 …`) |
+| `prefix`, `suffix` | added to every name |
+
+Options that do not apply to a scheme throw instead of being ignored. Your own list becomes a scheme with `namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' })` (without `base` it is start-anchored).
+
+### Re-run first; insert only for stable names
+
+When a scale changes, the best names come from simply **running `scaleNames` / `nameValues` again** with the new count — every step gets a clean, evenly spread name. In-between names are a compromise for when **names must stay stable**, because CSS, components or a published token set already depend on the existing keys:
 
 ```typescript
-const shades = generateShades(brand);           // 7 colours, brand is index 2
-scaleNames(7, 'hundreds', { base: [2, '500'] })  // ['50', '300', '500', '600', '700', '900', '950']
-scaleNames(3, 'intensity', { base: [1, 'soft'] }) // ['hint', 'soft', 'intense']
+nameBetween('100', '200', 'hundreds')     // '150'
+nameBetween('soft', 'mid', 'intensity')   // 'soft_5'
+nameBetween('hint', 'mid', 'intensity')   // 'subtle' (a real name sits in the middle)
+nameBetween('soft', 'soft_5', 'intensity') // 'soft_25' (in-between names can be split again)
 ```
 
-A plain number (`base: 2`) only works on base-anchored schemes and keeps the scheme's own base name.
-
-Fixed lists keep their outermost names and spread evenly towards the base, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists throw when asked for more names than they have.
-
-**When a list runs out** — fixed lists and ranges throw by default. With `overflow: 'between'` they keep every name and put the extra steps in the gaps, named as a fraction of the way to the next name:
-
-```typescript
-scaleNames(12, 'paper', { overflow: 'between' })
-// a10 a9 a8 a7 a6 a6_5 a5 a4 a3 a2 a1 a0
-scaleNames(13, 'intensity', { overflow: 'between' })
-// hint hint_5 faint subtle subtle_5 soft mid mid_5 firm bold bold_5 strong intense
-scaleNames(40, 'hundreds', { overflow: 'between' })
-// 50 … 62_5 … 950 (the step keeps halving)
-```
-
-**Room to grow** — `nameBetween(lower, upper, scheme)` names a step inserted later, so existing keys never change: `nameBetween('100', '200', 'hundreds')` → `'150'`, `nameBetween('1', '2', 'ordinal')` → `'1_5'`, `nameBetween('m', 'l', 'tshirt')` → `'m-l'`.
-
-**Your own list** — `namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' })` makes a base-anchored scheme; without `base` it is start-anchored.
+Each insertion adds fractions, so a scale grown this way drifts away from the clean names a re-run would give. The same goes for `overflow: 'between'`: prefer a scheme with enough names.
 
 ## Custom Functions
 

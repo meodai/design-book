@@ -24,7 +24,7 @@ export interface NamingScheme {
 }
 
 export type BuiltinSchemeName =
-  | 'ordinal' | 'roman' | 'greek' | 'paper' | 'creatures'
+  | 'ordinal' | 'roman' | 'greek' | 'paper' | 'creatures' | 'objects'
   | 'tshirt' | 'intensity' | 'dynamics' | 'weights'
   | 'hundreds' | 'tones' | 'unit' | 'signed';
 
@@ -50,7 +50,8 @@ export interface ScaleNamesOptions {
   /** What to do when a fixed list or range runs out of names. `'throw'`
    *  (default) fails; `'between'` keeps every name and adds the extra steps
    *  in the gaps as fractions of the way to the next name (`soft_5`,
-   *  `62_5`). Not for `ordinal`, `roman` or `tshirt`, which never run out. */
+   *  `62_5`). Not for `ordinal`, `roman` or `tshirt`, which never run out.
+   *  Prefer a scheme with enough names; fractional names are a fallback. */
   overflow?: 'throw' | 'between';
 }
 
@@ -103,6 +104,19 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
   // Smallest to largest by typical adult size, from a tardigrade to a blue whale.
   creatures: list('creatures', ['tardigrade', 'mite', 'flea', 'ant', 'fly', 'bee', 'beetle', 'mouse', 'hamster', 'rat',
     'rabbit', 'cat', 'fox', 'dog', 'wolf', 'deer', 'bear', 'horse', 'giraffe', 'hippo', 'rhino', 'elephant', 'whale']),
+  // 100 things everyone has a sense of the size of, each at least 15% bigger
+  // than the one before (typical largest dimension), from an atom to the
+  // observable universe.
+  objects: list('objects', ['atom', 'molecule', 'protein', 'virus', 'bacterium', 'bloodcell', 'cell', 'pollen',
+    'dust', 'flour', 'salt', 'sand', 'pinhead', 'sesame', 'lentil', 'rice', 'pea', 'bead', 'button', 'dice',
+    'marble', 'coin', 'grape', 'walnut', 'golfball', 'egg', 'tennisball', 'card', 'mug', 'can', 'phone', 'banana',
+    'football', 'plate', 'ruler', 'laptop', 'keyboard', 'pillow', 'suitcase', 'skateboard', 'chair', 'desk',
+    'bicycle', 'door', 'ladder', 'car', 'van', 'limousine', 'truck', 'bus', 'house', 'barn', 'tree', 'lighthouse',
+    'plane', 'pool', 'church', 'castle', 'field', 'cathedral', 'stadium', 'ship', 'skyscraper', 'dam', 'harbor',
+    'bridge', 'runway', 'airport', 'town', 'forest', 'city', 'metropolis', 'lake', 'valley', 'island', 'canyon',
+    'peninsula', 'country', 'sea', 'moon', 'mercury', 'continent', 'earth', 'neptune', 'saturn', 'jupiter', 'sun',
+    'bluegiant', 'redgiant', 'orbit', 'supergiant', 'solarsystem', 'nebula', 'cluster', 'dwarfgalaxy', 'galaxy',
+    'localgroup', 'supercluster', 'void', 'universe']),
   tshirt: { name: 'tshirt', anchor: 'base', kind: 'tshirt' } as Tshirt,
   intensity: baseList('intensity',
     ['hint', 'faint', 'subtle', 'soft', 'mid', 'firm', 'bold', 'strong', 'intense'], 'mid'),
@@ -479,6 +493,14 @@ function nameAt(p: number, s: AnyScheme, upper = false): string {
   return frac === 0 ? base : `${base}_${fractionDigits(frac)}`;
 }
 
+/**
+ * A name for a step inserted between two existing keys.
+ *
+ * Only reach for this when names must stay stable — keys other code, CSS or
+ * a published token set already depends on. Otherwise re-run `scaleNames`
+ * with the new count: it gives the whole scale clean, evenly spread names,
+ * where inserted steps pile up fractions (`soft_5`, `soft_75`).
+ */
 export function nameBetween(lower: string, upper: string, scheme: BuiltinSchemeName | NamingScheme): string {
   const s = resolveScheme(scheme);
   const a = positionOf(lower, s), b = positionOf(upper, s);

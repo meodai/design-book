@@ -43,6 +43,9 @@ describe('scaleNames — start-anchored schemes', () => {
     expect(scaleNames(11, 'paper').at(-1)).toBe('a0');
     expect(scaleNames(4, 'creatures')).toEqual(['tardigrade', 'mite', 'flea', 'ant']);
     expect(scaleNames(23, 'creatures').at(-1)).toBe('whale');
+    expect(scaleNames(4, 'objects')).toEqual(['atom', 'molecule', 'protein', 'virus']);
+    expect(scaleNames(100, 'objects').at(-1)).toBe('universe');
+    expect(() => scaleNames(101, 'objects')).toThrow(/100/);
   });
 
   it('throws past the end of a fixed list, saying how many names it has', () => {
