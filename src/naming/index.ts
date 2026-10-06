@@ -29,8 +29,10 @@ export type BuiltinSchemeName =
   | 'hundreds' | 'tones';
 
 export interface ScaleNamesOptions {
-  /** Base-anchored schemes: index of the value that gets the base name. */
-  base?: number;
+  /** Which value gets the base name. A number is an index (base-anchored
+   *  schemes). `[index, name]` also picks the name: any name of a
+   *  base-anchored scheme, or a step of a range scheme (`[2, '500']`). */
+  base?: number | readonly [number, string];
   prefix?: string;
   suffix?: string;
   /** `ordinal` only: first number (default: the step, so 1 or 10, 20 …). */
@@ -202,8 +204,21 @@ export function scaleNames(
       fail(`scaleNames: option "${opt}" does not apply to the "${s.name}" scheme`);
     }
   }
-  if (options.base !== undefined && s.anchor !== 'base') {
-    fail(`scaleNames: option "base" only applies to base-anchored schemes; "${s.name}" is ${s.anchor}-anchored`);
+  const pair = Array.isArray(options.base) ? options.base as readonly [number, string] : null;
+  if (options.base !== undefined) {
+    if (s.anchor === 'start') {
+      fail(`scaleNames: option "base" does not apply to "${s.name}", which is start-anchored`);
+    }
+    if (pair && (pair.length !== 2 || typeof pair[1] !== 'string')) {
+      fail('scaleNames: base must be an index or an [index, name] pair');
+    }
+    if (s.anchor === 'range' && !pair) {
+      fail(`scaleNames: on the range scheme "${s.name}", base needs an [index, name] pair, e.g. [2, '500']`);
+    }
+  }
+  const baseIndex = pair ? pair[0] : options.base as number | undefined;
+  if (baseIndex !== undefined && count > 0 && (!Number.isInteger(baseIndex) || baseIndex < 0 || baseIndex >= count)) {
+    fail(`scaleNames: base must be an integer index from 0 to ${count - 1}, got ${baseIndex}`);
   }
 
   let names: string[];
@@ -230,13 +245,13 @@ export function scaleNames(
         names = s.names.slice(0, count);
         break;
       }
-      names = baseNames(count, s, options.base ?? defaultBase(count, s));
+      names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1]);
       break;
     case 'tshirt':
-      names = baseNames(count, s, options.base ?? defaultBase(count, s));
+      names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1]);
       break;
     case 'range':
-      names = rangeNames(count, s);
+      names = pair ? rangeNamesAround(count, s, pair[0], pair[1]) : rangeNames(count, s);
       break;
   }
 
@@ -246,22 +261,23 @@ export function scaleNames(
   return out;
 }
 
-function baseNames(count: number, s: BaseList | Tshirt, base: number): string[] {
-  if (!Number.isInteger(base) || base < 0 || base >= count) {
-    fail(`scaleNames: base must be an integer index from 0 to ${count - 1}, got ${base}`);
-  }
+function baseNames(count: number, s: BaseList | Tshirt, base: number, baseName?: string): string[] {
   const below = base, above = count - 1 - base;
   if (s.kind === 'tshirt') {
-    return Array.from({ length: count }, (_, i) => tshirtAt(i - base));
+    const shift = baseName === undefined ? 0 : tshirtOffset(baseName);
+    if (shift === null) fail(`scaleNames: "${baseName}" is not a t-shirt size`);
+    return Array.from({ length: count }, (_, i) => tshirtAt(i - base + shift));
   }
-  const haveBelow = s.baseIndex, haveAbove = s.names.length - 1 - s.baseIndex;
+  const at = baseName === undefined ? s.baseIndex : s.names.indexOf(baseName);
+  if (at < 0) fail(`scaleNames: "${baseName}" is not a name of the "${s.name}" scheme`);
+  const haveBelow = at, haveAbove = s.names.length - 1 - at;
   if (below > haveBelow || above > haveAbove) {
-    fail(`scaleNames: "${s.name}" has ${haveBelow} below its base "${s.names[s.baseIndex]}" and ` +
+    fail(`scaleNames: "${s.name}" has ${haveBelow} below its base "${s.names[at]}" and ` +
       `${haveAbove} above; ${below} below and ${above} above were asked for`);
   }
-  const lower = spread(below, haveBelow).map((p) => s.names[s.baseIndex - p]).reverse();
-  const upper = spread(above, haveAbove).map((p) => s.names[s.baseIndex + p]);
-  return [...lower, s.names[s.baseIndex], ...upper];
+  const lower = spread(below, haveBelow).map((p) => s.names[at - p]).reverse();
+  const upper = spread(above, haveAbove).map((p) => s.names[at + p]);
+  return [...lower, s.names[at], ...upper];
 }
 
 function rangeNames(count: number, s: Range): string[] {
@@ -273,6 +289,36 @@ function rangeNames(count: number, s: Range): string[] {
   const R = tier.length - 1;
   if (count === 1) return [String(tier[roundTowards(R / 2, R / 2)])];
   return Array.from({ length: count }, (_, i) => String(tier[roundTowards((i * R) / (count - 1), R / 2)]));
+}
+
+/** Range names with `name` on value `index`: the values below spread over
+ *  the rungs from the low end up to `name`, the ones above from `name` to
+ *  the high end, using the coarsest tier where both sides fit. An exact .5
+ *  rounds towards the base, so both sides stay symmetric. */
+function rangeNamesAround(count: number, s: Range, index: number, name: string): string[] {
+  const value = /^\d+$/.test(name) ? Number(name) : NaN;
+  const below = index, above = count - 1 - index;
+  let inAnyTier = false;
+  for (const tier of s.tiers) {
+    const b = tier.indexOf(value);
+    if (b < 0) continue;
+    inAnyTier = true;
+    const R = tier.length - 1;
+    if (b < below || R - b < above) continue;
+    const lower = Array.from({ length: below }, (_, j) => {
+      const x = (j * b) / below;
+      return tier[x % 1 === 0.5 ? Math.ceil(x) : Math.round(x)];
+    });
+    const upper = Array.from({ length: above }, (_, j) => {
+      const x = ((j + 1) * (R - b)) / above;
+      return tier[b + (x % 1 === 0.5 ? Math.floor(x) : Math.round(x))];
+    });
+    return [...lower, value, ...upper].map(String);
+  }
+  if (!inAnyTier) {
+    fail(`scaleNames: "${name}" is not a step of the "${s.name}" scheme (${s.min}–${s.max})`);
+  }
+  fail(`scaleNames: "${s.name}" cannot fit ${below} below and ${above} above "${name}"`);
 }
 
 // ── Room to grow ───────────────────────────────────────────────────────

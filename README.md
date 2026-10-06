@@ -315,6 +315,16 @@ Every scheme has an **anchor**, which decides which names a count gets:
 | base | grows outward from a base name; `base` picks which value gets it | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
 | range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100) |
 
+**Putting a shade on a specific name** — `base: [index, name]` says which of your values gets which name. On a range scheme the values below spread from the low end up to that name and the ones above from it to the high end; on a base-anchored scheme it moves the base name:
+
+```typescript
+const shades = generateShades(brand);           // 7 colours, brand is index 2
+scaleNames(7, 'hundreds', { base: [2, '500'] })  // ['50', '300', '500', '600', '700', '900', '950']
+scaleNames(3, 'intensity', { base: [1, 'soft'] }) // ['hint', 'soft', 'intense']
+```
+
+A plain number (`base: 2`) only works on base-anchored schemes and keeps the scheme's own base name.
+
 Fixed lists keep their outermost names and spread evenly towards the base, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists throw when asked for more names than they have.
 
 **Room to grow** — `nameBetween(lower, upper, scheme)` names a step inserted later, so existing keys never change: `nameBetween('100', '200', 'hundreds')` → `'150'`, `nameBetween('1', '2', 'ordinal')` → `'1_5'`, `nameBetween('m', 'l', 'tshirt')` → `'m-l'`.
