@@ -1,4 +1,4 @@
-import { parse, formatHex, wcagLuminance } from 'culori';
+import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import type {
   AnyTokenValue,
@@ -57,10 +57,12 @@ interface DotInfo {
 
 function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string): string {
   try {
-    const resolved = book.resolve(`${scopeName}.${tokenName}`);
-    if (resolved && (resolved.startsWith('#') || resolved.startsWith('rgb') || resolved.startsWith('hsl'))) {
-      return resolved;
-    }
+    // Any CSS colour Culori understands (`red`, `oklch(…)`, `color(…)`),
+    // normalised to hex so it is a valid SVG fill. Translucent colours keep
+    // their alpha as 8-digit hex.
+    const parsed = parse(book.resolve(`${scopeName}.${tokenName}`));
+    const hex = parsed && ((parsed.alpha ?? 1) < 1 ? formatHex8(parsed) : formatHex(parsed));
+    if (hex) return hex;
   } catch {
     // fallback
   }
