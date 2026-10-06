@@ -42,7 +42,9 @@ describe('closestColor', () => {
     const ui = book.addScope('ui');
     ui.set('match', closestColor(ref('palette.accent'), palette));
 
-    // oklch(0.7 0.3 150) is out of sRGB; its clamped hex is #00cb00.
-    expect(book.resolve('ui.match')).toBe('#00cb00');
+    // oklch(0.7 0.3 150) is out of sRGB; gamut-mapped in OKLCH it is #00c248
+    // (clipping would give #00cb00). Either way it is closer to itself than
+    // to mint.
+    expect(book.resolve('ui.match')).toBe('#00c248');
   });
 });

@@ -82,6 +82,7 @@ terminate on the `seen` set; a selector never notifies itself.
 #### Colour behaviour worth knowing
 
 - Selectors judge translucent candidates composited over the target and can return 8-digit hex.
+- Selector pools (`collectScopeColors`) gamut-map wide-gamut members in OKLCH like the transforms do, rather than clipping them.
 - `readableOn` + `minContrast` (default 4.5) filter a colour selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
 - `lightest` / `darkest` rank by OKLCH L, ignoring alpha.
 - `closestColor` / `furthestFrom` measure Euclidean distance in OKLab.

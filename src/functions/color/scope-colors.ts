@@ -115,17 +115,17 @@ export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []
       const tv = token as TokenValue;
       const processors = getTokenProcessors(tv);
       if (processors && processors[0]) {
-        const formatted = formatColor(processors[0].instance);
+        const formatted = formatColor(gamutMapSrgb(processors[0].instance));
         if (formatted) colorHex = formatted;
       }
       if (!colorHex) {
         const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatColor(parsed) ?? null;
+        if (parsed) colorHex = formatColor(gamutMapSrgb(parsed)) ?? null;
       }
     } else {
       try {
         const parsed = parse(scope.resolve(key));
-        if (parsed) colorHex = formatColor(parsed) ?? null;
+        if (parsed) colorHex = formatColor(gamutMapSrgb(parsed)) ?? null;
       } catch {
         continue;
       }

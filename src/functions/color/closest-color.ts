@@ -1,4 +1,4 @@
-import { parse, formatHex } from 'culori';
+import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
@@ -7,7 +7,7 @@ import {
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
-import { collectScopeColors, perceptualDistance } from './scope-colors';
+import { collectScopeColors, formatColor, gamutMapSrgb, perceptualDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
 
@@ -22,10 +22,10 @@ export function closestColorImpl(
   if (!targetRaw) {
     return '#00000000';
   }
-  // Candidates are compared in their sRGB hex form (that is what the function
-  // returns), so clamp the target the same way. Otherwise a wide-gamut token
-  // measured against its own clamped hex would not be at distance zero.
-  const targetParsed = parse(formatHex(targetRaw));
+  // Candidates are compared in their gamut-mapped sRGB hex form (that is what
+  // the function returns), so map the target the same way. Otherwise a
+  // wide-gamut token measured against its own hex would not be at distance zero.
+  const targetParsed = parse(formatColor(gamutMapSrgb(targetRaw)) ?? '');
   if (!targetParsed) {
     return '#00000000';
   }
