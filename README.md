@@ -332,6 +332,8 @@ A scheme is a **vocabulary** — its names, smallest first — plus a default **
 | `paper` | a10 … a0 (11) | start |
 | `creatures` | tardigrade … whale (23, by size) | range |
 | `objects` | atom … universe (100 things, each at least 15% bigger than the last) | range |
+| `things` | nothing glitter pinhead key-cap … cup … umbrella chair table car … earth (21, a ladder for UI sizes, `nothing` = 0) | range |
+| `value` | each value named by its own number — `nameValues([1, 2, 3, 4, 6, 8, 9], 'value')` → `1 2 3 4 6 8 9`; needs values, so only through `nameValues` | — |
 | `tshirt` | … 2xs xs s **m** l xl 2xl … (open-ended) | base |
 | `intensity` | hint faint subtle soft **mid** firm bold strong intense | range, `mid` kept on its value |
 | `dynamics` | ppp pp p mp **mf** f ff fff | range, `mf` kept on its value |

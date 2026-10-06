@@ -63,7 +63,7 @@ describe('scaleNames options and errors', () => {
 
   it('lists every built-in scheme', () => {
     expect(Object.keys(schemes).sort()).toEqual(
-      ['creatures', 'dynamics', 'greek', 'hundreds', 'intensity', 'objects', 'ordinal', 'paper', 'roman', 'signed', 'tones', 'tshirt', 'unit', 'weights'],
+      ['creatures', 'dynamics', 'greek', 'hundreds', 'intensity', 'objects', 'ordinal', 'paper', 'roman', 'signed', 'things', 'tones', 'tshirt', 'unit', 'value', 'weights'],
     );
     expect(Object.isFrozen(schemes)).toBe(true);
   });

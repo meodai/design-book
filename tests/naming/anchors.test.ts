@@ -7,7 +7,7 @@ describe('every scheme has a default strategy', () => {
     const anchors = Object.fromEntries(Object.entries(schemes).map(([k, s]) => [k, s.anchor]));
     expect(anchors).toEqual({
       ordinal: 'start', roman: 'start', greek: 'start', paper: 'start',
-      creatures: 'range', objects: 'range',
+      creatures: 'range', objects: 'range', things: 'range', value: 'start',
       tshirt: 'base',
       intensity: 'range', dynamics: 'range', weights: 'range',
       hundreds: 'range', tones: 'range', unit: 'range', signed: 'range',

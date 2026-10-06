@@ -30,7 +30,7 @@ export interface NamingScheme {
 }
 
 export type BuiltinSchemeName =
-  | 'ordinal' | 'roman' | 'greek' | 'paper' | 'creatures' | 'objects'
+  | 'ordinal' | 'roman' | 'greek' | 'paper' | 'creatures' | 'objects' | 'things' | 'value'
   | 'tshirt' | 'intensity' | 'dynamics' | 'weights'
   | 'hundreds' | 'tones' | 'unit' | 'signed';
 
@@ -74,12 +74,14 @@ interface List extends NamingScheme {
   pinCentre: boolean;
 }
 interface Ordinal extends NamingScheme { kind: 'ordinal' }
+/** Names each value by its own number — only through `nameValues`. */
+interface ValueScheme extends NamingScheme { kind: 'value' }
 interface Roman extends NamingScheme { kind: 'roman' }
 interface Tshirt extends NamingScheme { kind: 'tshirt' }
 /** Fixed ends and step sizes from coarse to fine. Each step gives a tier:
  *  the two ends plus every multiple of the step between them. */
 interface Range extends NamingScheme { kind: 'range'; from: number; to: number; steps: readonly number[] }
-type AnyScheme = List | Ordinal | Roman | Tshirt | Range;
+type AnyScheme = List | Ordinal | ValueScheme | Roman | Tshirt | Range;
 
 function fail(message: string): never {
   throw new TokenError(message);
@@ -128,6 +130,15 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
     'peninsula', 'country', 'sea', 'moon', 'mercury', 'continent', 'earth', 'neptune', 'saturn', 'jupiter', 'sun',
     'bluegiant', 'redgiant', 'orbit', 'supergiant', 'solarsystem', 'nebula', 'cluster', 'dwarfgalaxy', 'galaxy',
     'localgroup', 'supercluster', 'void', 'universe'], 'range'),
+  // A hand-picked ladder for UI sizes: memorable, each step clearly bigger,
+  // dense in the everyday middle — not proportional to real size. Starts at
+  // nothing, a name for 0.
+  things: list('things', ['nothing', 'glitter', 'pinhead', 'key-cap', 'lipstick', 'poker-card', 'cup',
+    'wine-glass', 'champagne-bottle', 'umbrella', 'chair', 'table', 'car', 'camper-van', 'godzilla',
+    'eiffel-tower', 'matterhorn', 'switzerland', 'europe', 'moon', 'earth'], 'range'),
+  // Each value named by its own number (`1 2 3 4 6 8 9` for an irregular
+  // hairline scale). Needs the values, so it works through nameValues.
+  value: { name: 'value', anchor: 'start', kind: 'value' } as ValueScheme,
   tshirt: { name: 'tshirt', anchor: 'base', kind: 'tshirt' } as Tshirt,
   // Ladders with a named middle: by default both ends are kept and the
   // centre name stays on its value (`hint … mid … intense`).
@@ -266,6 +277,7 @@ export function scaleNames(
 ): string[] {
   const s = resolveScheme(scheme);
   if (!Number.isInteger(count) || count < 0) fail(`scaleNames: count must be a non-negative integer, got ${count}`);
+  if (s.kind === 'value') fail('scaleNames: the "value" scheme names values by their own number — use nameValues(values, \'value\')');
 
   const pair = Array.isArray(options.base) ? options.base as readonly [number, string] : null;
   if (pair && (pair.length !== 2 || typeof pair[1] !== 'string')) {
@@ -314,7 +326,28 @@ export function nameValues<T>(
   options: ScaleNamesOptions = {},
 ): [string, T][] {
   if (!Array.isArray(values)) fail('nameValues: values must be an array');
+  const s = resolveScheme(scheme);
+  if (s.kind === 'value') return valueNames(values, options);
   return scaleNames(values.length, scheme, options).map((name, i) => [name, values[i]]);
+}
+
+/** The `value` scheme: each value's own number as its key (`0.5rem` → `0_5`). */
+function valueNames<T>(values: readonly T[], o: ScaleNamesOptions): [string, T][] {
+  for (const opt of ['anchor', 'base', 'from', 'to', 'step', 'case', 'overflow'] as const) {
+    if (o[opt] !== undefined) fail(`nameValues: option "${opt}" does not apply to the "value" scheme — the values are the names`);
+  }
+  const prefix = o.prefix ?? '', suffix = o.suffix ?? '';
+  const seen = new Set<string>();
+  const out = values.map((v): [string, T] => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
+    if (!Number.isFinite(n)) fail(`nameValues: "${String(v)}" has no number to name it by`);
+    const name = `${prefix}${stepName(clean(n))}${suffix}`;
+    if (seen.has(name)) fail(`nameValues: the name "${name}" would be used twice — the "value" scheme needs distinct numbers`);
+    seen.add(name);
+    return [name, v];
+  });
+  checkKeys(out.map(([n]) => n), 'nameValues');
+  return out;
 }
 
 /** Options that do not apply to this scheme and strategy throw. */
@@ -585,6 +618,7 @@ const fractionDigits = (f: number) => String(Number(f.toFixed(6))).replace(/^0\.
 function exactPosition(name: string, s: AnyScheme): number | null {
   switch (s.kind) {
     case 'ordinal':
+    case 'value':
     case 'range': { const n = stepValue(name); return Number.isNaN(n) ? null : n; }
     case 'roman': {
       const lower = name.toLowerCase();
@@ -599,7 +633,7 @@ function exactPosition(name: string, s: AnyScheme): number | null {
 /** Position of a name, including in-between names like `soft_5`. */
 function positionOf(name: string, s: AnyScheme): number | null {
   const exact = exactPosition(name, s);
-  if (exact !== null || s.kind === 'ordinal' || s.kind === 'range') return exact;
+  if (exact !== null || s.kind === 'ordinal' || s.kind === 'value' || s.kind === 'range') return exact;
   const m = /^(.+)_(\d+)$/.exec(name);
   if (!m) return null;
   const whole = exactPosition(m[1], s);
@@ -608,7 +642,7 @@ function positionOf(name: string, s: AnyScheme): number | null {
 
 /** The name at a position. `upper` keeps Roman names in capitals. */
 function nameAt(p: number, s: AnyScheme, upper = false): string {
-  if (s.kind === 'ordinal' || s.kind === 'range') return stepName(p);
+  if (s.kind === 'ordinal' || s.kind === 'value' || s.kind === 'range') return stepName(p);
   const whole = Math.floor(p), frac = p - whole;
   let base: string;
   if (s.kind === 'list') base = s.names[whole];

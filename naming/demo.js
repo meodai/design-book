@@ -24,6 +24,8 @@ const ABOUT = {
   paper: "a10 … a0 (11)",
   creatures: "tardigrade … whale (23, by size)",
   objects: "atom … universe (100, each ≥ 15% bigger)",
+  things: "nothing glitter pinhead … cup … car … earth (21, a ladder for UI sizes)",
+  value: "each value named by its own number (fed an irregular px scale here)",
   tshirt: "… xs s m l xl … — open-ended, centre m",
   intensity: "hint … mid … intense",
   dynamics: "ppp … mf … fff",
@@ -82,6 +84,7 @@ function applicable () {
   const s = schemeName();
   const a = effectiveAnchor();
   const explicit = state.anchor !== "default";
+  if (s === "value") return { anchor: "start", centre: false, pair: false, from: false, to: false, step: false, caseOpt: false, overflow: false, valueOnly: true };
   return {
     anchor: a,
     centre: !explicit || a === "base",
@@ -140,7 +143,8 @@ function syncControls (can) {
   const s = schemeName();
   $("count-val").textContent = $("count").value;
   $("scheme-hint").textContent = ABOUT[s] ?? "";
-  $("anchor-hint").textContent = `${can.anchor}: ${ANCHOR_ABOUT[can.anchor]}`;
+  $("anchor-hint").textContent = can.valueOnly ? "the values are the names — no strategy" : `${can.anchor}: ${ANCHOR_ABOUT[can.anchor]}`;
+  $("anchor").closest(".field").hidden = Boolean(can.valueOnly);
   $("base-field").hidden = !can.centre && !can.pair;
   for (const b of $("base-mode").querySelectorAll("button")) {
     b.disabled = (b.dataset.mode === "centre" && !can.centre) || (b.dataset.mode === "pair" && !can.pair);
@@ -178,6 +182,12 @@ function setSeg (id, value, key = "v") {
   if (id === "base-mode") state.baseMode = value;
 }
 
+/** An irregular px scale for the "value" scheme: 1 2 3 4 6 8 9 12 16 … */
+function sizesFor (n) {
+  const base = [1, 2, 3, 4, 6, 8, 9, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128];
+  return Array.from({ length: n }, (_, i) => base[i] ?? base[base.length - 1] + (i - base.length + 1) * 32);
+}
+
 function regenerate () {
   const can = applicable();
   syncControls(can);
@@ -193,7 +203,11 @@ function regenerate () {
     def = define;
     state.scheme = scheme;
     renderCode(label, o, define);
-    pairs = nameValues(values, scheme, o);
+    // "value" names each value by its own number, so it is fed the sizes
+    // (an irregular hairline scale) rather than the colors.
+    pairs = scheme === "value"
+      ? nameValues(sizesFor(count).map((n) => `${n}px`), "value", o).map(([n], i) => [n, values[i]])
+      : nameValues(values, scheme, o);
   } catch (e) {
     renderCode(def ? "myScheme" : `'${schemeName()}'`, o, def);
     showError(e);
@@ -205,7 +219,8 @@ function regenerate () {
     const centre = `${o.prefix ?? ""}${CENTRES[schemeName()]}${o.suffix ?? ""}`;
     state.baseIdx = pairs.findIndex(([n]) => n === centre);
   }
-  state.items = pairs.map(([name, hex], i) => ({ name, hex, size: 4 * (i + 1), isNew: false, isBase: i === state.baseIdx }));
+  const sizes = schemeName() === "value" ? sizesFor(count) : null;
+  state.items = pairs.map(([name, hex], i) => ({ name, hex, size: sizes ? sizes[i] : 4 * (i + 1), isNew: false, isBase: i === state.baseIdx }));
   state.grown = [];
   draw();
 }
