@@ -51,6 +51,15 @@ export function cssColorMix(
   return gamutMapSrgb(mixed as Color);
 }
 
+/** Constructor-side check for a 0..1 fraction (a mix ratio, a lighten /
+ *  darken amount), so a bad value fails where it is written rather than
+ *  producing a nonsense colour at resolve time. */
+export function assertFraction(fn: string, label: string, value: unknown): void {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+    throw new FunctionError(`${fn}: \`${label}\` must be a number between 0 and 1, got ${String(value)}`, fn);
+  }
+}
+
 export function colorMixImpl(
   color1Value: string,
   color2Value: string,
@@ -98,6 +107,7 @@ export function colorMix(
 ): FunctionTokenValue {
   const ratio = options?.ratio ?? 0.5;
   const colorSpace = options?.colorSpace ?? 'lab';
+  assertFraction('colorMix', 'ratio', ratio);
   return createFunctionToken(
     'colorMix',
     [color1, color2],

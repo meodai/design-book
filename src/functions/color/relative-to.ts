@@ -124,6 +124,7 @@ export function relativeTo(
   modifications: (null | number | string)[],
   options?: { description?: string }
 ): FunctionTokenValue {
+  relativeToChannels(colorSpace);
   return createFunctionToken(
     'relativeTo',
     [baseColor],

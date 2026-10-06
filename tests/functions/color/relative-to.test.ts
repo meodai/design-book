@@ -127,11 +127,10 @@ describe('relativeTo', () => {
     });
 
     it('throws for an unsupported color space', () => {
-      const book = new DesignBook('test');
-      const ui = book.addScope('ui');
-      ui.set('bad', relativeTo(color('#0066cc'), 'hwb', [null, null, null]));
-
-      expect(() => book.resolve('ui.bad')).toThrow(/unsupported color space/i);
+      // Rejected at construction; the resolve-time check stays for tokens
+      // built by hand or deserialized.
+      expect(() => relativeTo(color('#0066cc'), 'hwb', [null, null, null])).toThrow(/unsupported color space/i);
+      expect(() => relativeToImpl('#0066cc', 'hwb', [null, null, null])).toThrow(/unsupported color space/i);
     });
   });
 });

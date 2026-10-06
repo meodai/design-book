@@ -53,6 +53,8 @@ Function argument type: `FunctionArg = TokenValue | ReferenceValue | ScopeFuncti
 
 Each function exports a **constructor** (returns `FunctionTokenValue` via `createFunctionToken`) and an **implementation** (the actual computation). Implementations are auto-registered on DesignBook construction via `registerBuiltinFunctions()`.
 
+Constructors validate what they can up front and throw `FunctionError`: `colorMix` `ratio` and `lighten` / `darken` `amount` must lie in [0, 1], `relativeTo` needs a supported colour space.
+
 At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the registry and calls `implementation(...resolvedArgs, fn.options)`.
 
 **With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`

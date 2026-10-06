@@ -2,7 +2,7 @@ import { parse } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
-import { cssColorMix } from './color-mix';
+import { assertFraction, cssColorMix } from './color-mix';
 import { formatColor } from './scope-colors';
 
 /**
@@ -38,6 +38,7 @@ export function lighten(
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
   const amount = options?.amount ?? 0.1;
+  assertFraction('lighten', 'amount', amount);
   return createFunctionToken(
     'lighten',
     [color],
