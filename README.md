@@ -692,6 +692,62 @@ Options: `className` (root element class), `inlineColorSwatches`
 (default `true`), `showInheritance` (default `true` — annotates inherited
 rows with the source key).
 
+### Themes, contexts and breakpoints
+
+A variation — an inverted context, a dark theme, another brand, a phone breakpoint — is just another book. Build it with the same setup function, override what differs, and render it as overrides of the base:
+
+```typescript
+function buildBook() {
+  const book = new DesignBook('site');
+  // … every scope and token …
+  return book;
+}
+
+const base = buildBook();
+const inverted = buildBook();
+inverted.getScope('surface').set('normal', ref('brand.shade'));
+
+const phone = buildBook();
+phone.getScope('type').set('body', rem(1.6));
+
+const css = [
+  base.render('css-variables'),
+  inverted.render('css-variables', { selector: '.inverted', changedFrom: base }),
+  phone.render('css-variables', { media: '(max-width: 620px)', changedFrom: base }),
+].join('\n\n');
+```
+
+```css
+:root { --surface-normal: var(--brand-paper); --ui-text: #111111; /* … */ }
+
+.inverted {
+  --surface-normal: var(--brand-shade);
+  --ui-text: #ffffff;
+}
+
+@media (max-width: 620px) {
+  :root {
+    --type-body: 1.6rem;
+  }
+}
+```
+
+Because the variation is a real book, computed tokens are recomputed for it: `ui.text = bestContrastWith(ref('surface.normal'), brand)` picks a new color for the dark surface, and `changedFrom` emits it. Tokens that only reference others (`var(--surface-normal)`) are left out — the cascade already updates them.
+
+| Option (css-variables) | Meaning |
+|---|---|
+| `selector` | the rule to write into, default `:root` |
+| `media` | wrap the output in `@media …` (combine with `selector` for "inverted on phones") |
+| `scopes` | only these scopes (also for `json`) |
+| `changedFrom` | only declarations that differ from another book (also for `json`, by resolved value) |
+
+`diffBooks(a, b)` reports the same differences as data — `{ changed, added, removed }` by resolved value — for auditing a brand against its base:
+
+```typescript
+diffBooks(base, inverted).changed
+// [{ key: 'surface.normal', from: '#ffffff', to: '#1d2b5c' }, { key: 'ui.text', from: '#111111', to: '#ffffff' }, …]
+```
+
 ## Events
 
 ```typescript

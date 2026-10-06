@@ -52,6 +52,10 @@ export type {
 // Errors
 export { TokenError, ScopeError, CircularDependencyError, FunctionError } from './errors';
 
+// Comparing books — brands, contexts, breakpoints built as variations
+export { diffBooks } from './diff-books';
+export type { BookDiff } from './diff-books';
+
 // Naming schemes for primitive token keys
 export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming';
 export type { NamingScheme, NamingAnchor, BuiltinSchemeName, ScaleNamesOptions } from './naming';

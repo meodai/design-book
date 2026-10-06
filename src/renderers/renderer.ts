@@ -15,7 +15,22 @@ export interface RendererOptions {
    *  (or other composed) scopes. Defaults to an empty string, so a
    *  `heading-lg` scope renders as `.heading-lg { … }`. */
   classPrefix?: string;
+  /** css-variables: the rule the declarations go into (default `:root`) —
+   *  `.inverted`, `[data-theme=dark]`, a brand class. */
+  selector?: string;
+  /** css-variables: wrap the output in `@media <media> { … }`. */
+  media?: string;
+  /** css-variables / json: only these scopes. */
+  scopes?: readonly string[];
+  /** css-variables / json: only what differs from another book — the way a
+   *  variation (built as its own book) is written as overrides. CSS compares
+   *  the rendered declaration, so `var()` references that follow on their
+   *  own are skipped and recomputed values are kept; JSON compares
+   *  resolved values. */
+  changedFrom?: DesignBook;
 }
+
+interface CssDeclaration { prop: string; value: string }
 
 export interface W3ColorValue {
   colorSpace: string;
@@ -163,15 +178,13 @@ function getTokenType(token: AnyTokenValue, book: DesignBook): string {
 export class Renderer {
   protected book: DesignBook;
   protected format: RenderFormat;
-  protected options: Required<RendererOptions>;
+  protected options: RendererOptions & { classPrefix: string };
   private functionRenderers: Map<string, FunctionRenderer> = new Map();
 
   constructor(book: DesignBook, format: RenderFormat = 'css-variables', options?: RendererOptions) {
     this.book = book;
     this.format = format;
-    this.options = {
-      classPrefix: options?.classPrefix ?? '',
-    };
+    this.options = { ...options, classPrefix: options?.classPrefix ?? '' };
     registerBuiltinFunctionRenderers(this);
   }
 
@@ -245,17 +258,26 @@ export class Renderer {
     );
   }
 
-  private renderCssVariables(): string {
-    this.assertNoVarNameCollisions();
+  /** The scopes to render: all, or the `scopes` option (unknown names throw). */
+  private scopesToRender() {
+    const all = this.book.getAllScopes();
+    const wanted = this.options.scopes;
+    if (!wanted) return all;
+    for (const name of wanted) {
+      if (!this.book.getScope(name)) throw new Error(`Renderer: unknown scope "${name}" in the scopes option`);
+    }
+    return all.filter((scope) => wanted.includes(scope.name));
+  }
 
-    const lines: string[] = [':root {'];
-
-    for (const scope of this.book.getAllScopes()) {
+  /** One `--scope-key: value` declaration per token, in book order. */
+  private cssDeclarations(): CssDeclaration[] {
+    const out: CssDeclaration[] = [];
+    for (const scope of this.scopesToRender()) {
       for (const key of scope.getAllKeys()) {
         const token = scope.get(key);
         if (!token) continue;
 
-        const cssPropName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+        const prop = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
         let value: string;
 
         if (token.type === 'reference') {
@@ -273,31 +295,56 @@ export class Renderer {
           value = resolveTokenValue(this.book, scope.name, key);
         }
 
-        lines.push(`  ${cssPropName}: ${value};`);
+        out.push({ prop, value });
       }
     }
+    return out;
+  }
 
-    lines.push('}');
+  /** A renderer for another book with this one's function renderers, so
+   *  both sides of a `changedFrom` comparison render the same way. */
+  private rendererFor(other: DesignBook): Renderer {
+    const r = new Renderer(other, this.format, { classPrefix: this.options.classPrefix });
+    for (const [name, fn] of this.functionRenderers) r.registerFunctionRenderer(name, fn);
+    return r;
+  }
+
+  private renderCssVariables(): string {
+    this.assertNoVarNameCollisions();
+
+    let declarations = this.cssDeclarations();
+    const base = this.options.changedFrom;
+    if (base) {
+      const before = new Map(this.rendererFor(base).cssDeclarations().map((d) => [d.prop, d.value]));
+      declarations = declarations.filter((d) => before.get(d.prop) !== d.value);
+    }
+
+    const blocks: string[][] = [[
+      `${this.options.selector ?? ':root'} {`,
+      ...declarations.map((d) => `  ${d.prop}: ${d.value};`),
+      '}',
+    ]];
 
     // For each composed-as-typography scope, emit a class block that
     // re-aggregates the scope's tokens into CSS properties. Each property
-    // points back at the corresponding `--scope-key` custom property.
-    for (const scope of this.book.getAllScopes()) {
-      if (scope.compose !== 'typography') continue;
-      const keys = scope.getAllKeys();
-      if (keys.length === 0) continue;
-
-      lines.push('');
-      lines.push(`.${this.options.classPrefix}${scope.name} {`);
-      for (const key of keys) {
-        const cssProp = camelToKebab(key);
-        const varName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
-        lines.push(`  ${cssProp}: var(${varName});`);
+    // points back at the corresponding `--scope-key` custom property, so a
+    // variation (changedFrom) never needs to repeat them.
+    if (!base) {
+      for (const scope of this.scopesToRender()) {
+        if (scope.compose !== 'typography') continue;
+        const keys = scope.getAllKeys();
+        if (keys.length === 0) continue;
+        blocks.push([
+          `.${this.options.classPrefix}${scope.name} {`,
+          ...keys.map((key) => `  ${camelToKebab(key)}: var(--${keyToHyphen(scope.name)}-${keyToHyphen(key)});`),
+          '}',
+        ]);
       }
-      lines.push('}');
     }
 
-    return lines.join('\n');
+    const body = blocks.map((b) => b.join('\n')).join('\n\n');
+    if (!this.options.media) return body;
+    return `@media ${this.options.media} {\n${body.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n')}\n}`;
   }
 
   private renderJson(): string {
@@ -307,11 +354,17 @@ export class Renderer {
   renderJsonObject(): ResolvedTokenMap {
     const result: ResolvedTokenMap = {};
 
-    for (const scope of this.book.getAllScopes()) {
+    for (const scope of this.scopesToRender()) {
       for (const key of scope.getAllKeys()) {
         const qualifiedKey = `${scope.name}.${key}`;
         result[qualifiedKey] = resolveTokenValue(this.book, scope.name, key);
       }
+    }
+
+    const base = this.options.changedFrom;
+    if (base) {
+      const before = this.rendererFor(base).renderJsonObject();
+      for (const key of Object.keys(result)) if (before[key] === result[key]) delete result[key];
     }
 
     return result;
