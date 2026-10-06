@@ -117,8 +117,6 @@ function bootDesignSystem() {
   dark.set('neutral-dark',  ref('semantic.background'));
   dark.set('neutral-light', ref('semantic.text'));
 
-  scopeExtendsMap.set('dark', 'brand');
-
   // Card palette — tokens consumed by the Example tab
   const card = book.addScope('card');
   card.set('surface', ref('brand.neutral-light'));
@@ -488,12 +486,11 @@ function serializePlainToken(tv: any): string {
   return String(tv.rawValue);
 }
 
-// --- Scope extends tracking ---
+// --- Scope extends ---
 
-const scopeExtendsMap = new Map<string, string>();
-
+/** The scope `name` extends, read from the scope itself. */
 function getScopeExtends(name: string): string | undefined {
-  return scopeExtendsMap.get(name);
+  return book.getScope(name)?.extendsScope;
 }
 
 // --- Convert scope tokens to text for CodeMirror ---
@@ -1156,7 +1153,6 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
             setTimeout(() => {
               try {
                 _book.deleteScope(scope.name);
-                scopeExtendsMap.delete(scope.name);
               } catch {
                 // scope may already be gone
               }
@@ -1296,9 +1292,6 @@ function showAddScopeForm() {
     const extendsVal = extendsSelect.value || undefined;
     try {
       book.addScope(name, extendsVal ? { extends: extendsVal } : undefined);
-      if (extendsVal) {
-        scopeExtendsMap.set(name, extendsVal);
-      }
     } catch (err) {
       logEvent('error', { scope: name, message: (err as Error).message });
     }
