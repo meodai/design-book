@@ -34,28 +34,47 @@ https://www.gnu.org/licenses/agpl-3.0.html
 
 ADDITIONAL PERMISSION (under section 7 of the GNU AGPL version 3)
 
-As the copyright holder, David Aerne grants the following additional
-permission.
+1. Grant. As the copyright holder, David Aerne grants the following
+   additional permission for Design Book.
 
-When David Aerne — personally or through Elastiq — has been engaged by a
-client and has used Design Book in the work done under that engagement,
-the client may use, modify and run Design Book only within the scope of
-that engagement: the specific project, product or system David Aerne was
-hired to work on. Within that scope, the client does not have to comply
-with the conditions of the GNU AGPL version 3 — in particular, they do
-not have to publish or provide the source code of that project, including
-to users who interact with it over a network.
+   Where David Aerne, personally or through Elastiq, was engaged to work on
+   a project and used Design Book in that work, the Client may use, modify,
+   run and convey Design Book as part of that Project — including in
+   compiled or bundled form delivered to the Project's users — without
+   complying with the conditions of the GNU AGPL version 3. In particular,
+   the Client does not have to publish or provide the source code of the
+   Project, including to users who interact with it over a network.
 
-This permission:
+2. Definitions.
+   - "Project" means the project, product or system David Aerne was
+     engaged to work on, as described in the written agreement, offer or
+     order for that engagement.
+   - "Client" means the party that engaged David Aerne and, if different,
+     the party for whom the Project was built.
 
-- is limited to the project, product or system the engagement was for,
-  including keeping it running and fixing it;
-- does not extend to any other project, product or system of the client,
-  nor to new projects built on or derived from the original work;
-- does not allow distributing Design Book on its own, or using it outside
-  that scope, except under the GNU AGPL version 3 or a separate commercial
-  license;
-- may be relied on by people working on that project on the client's
-  behalf, within the same scope;
-- does not transfer copyright; this copyright and permission notice must
-  be kept with any copy of Design Book.
+3. Scope. This permission:
+   - covers maintaining and further developing the Project;
+   - does not extend to any other project, product or system, nor to a
+     new project, product or system built from or derived from the
+     Project;
+   - does not allow conveying Design Book on its own, or using it outside
+     the Project, except under the GNU AGPL version 3 or a separate
+     commercial license;
+   - may be relied on by anyone working on the Project on the Client's
+     behalf, within the same scope;
+   - applies to every version of Design Book released with this
+     permission.
+
+4. Term. This permission is perpetual, worldwide, royalty-free and
+   irrevocable. Use outside its scope is not covered by it, but does not
+   end it for the Project. It transfers together with the Project — for
+   example when the Project or the Client's business is sold — and with
+   nothing else.
+
+5. Warranty and liability. Sections 15 and 16 of the GNU AGPL version 3
+   (Disclaimer of Warranty, Limitation of Liability) continue to apply.
+
+6. Copyright. This permission does not transfer copyright. This copyright
+   and permission notice must be kept with every copy of Design Book.
+
+7. Governing law. This permission is governed by Swiss law.
