@@ -538,6 +538,12 @@ function orderToSelectValue(order: ScopeOrder | undefined): string {
 
 // --- Sync editor content to scope ---
 
+/** Whether `scope` extends a scope that has `key` to inherit. */
+function parentProvides(scope: Scope, key: string): boolean {
+  const parent = scope.extendsScope ? book.getScope(scope.extendsScope) : undefined;
+  return parent?.has(key) ?? false;
+}
+
 /** `scope.key` → the line text whose write last failed (parse error or a
  *  set() the book rejected, e.g. a cycle). Used to underline that line. */
 const failedLines = new Map<string, string>();
@@ -561,9 +567,13 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       if (!key || !valueStr) continue;
       failedLines.delete(`${scope.name}.${key}`);
 
-      // "inherit" keyword — delete local override, revert to parent
+      // "inherit" keyword — delete local override, revert to parent. Only
+      // when the parent provides the key: otherwise the token would vanish
+      // while its line stays, so the line is kept as an error instead.
       if (valueStr === 'inherit') {
-        if (scope.hasOwn(key)) {
+        if (!parentProvides(scope, key)) {
+          failedLines.set(`${scope.name}.${key}`, valueStr);
+        } else if (scope.hasOwn(key)) {
           scope.delete(key);
         }
         continue;
@@ -831,6 +841,8 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
       } catch {
         errorLines.add(line.from);
       }
+    } else if (_scope && !parentProvides(_scope, key)) {
+      errorLines.add(line.from); // nothing to inherit
     }
 
     // Mark inherited lines (key exists in scope but not locally owned)
