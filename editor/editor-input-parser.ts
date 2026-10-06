@@ -568,6 +568,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
       if (key === 'wrap') options.wrap = valueStr === 'true';
       else if (key === 'not') options.not = parseNotList(valueStr, book);
       else if (key === 'description') options.description = parseQuotedString(valueStr);
+      else throw new Error(`sibling: unknown option \`${key}\` (expected wrap, not or description)`);
     }
     return sibling(anchor as ReferenceValue, offsetParsed.value as number, options);
   },
@@ -633,18 +634,18 @@ function parseSelectorTail(
   if (rest.length === 0) return undefined;
 
   const options: SelectorTailOptions = {};
-  let optsStr = rest.join(',').trim();
-  if (!optsStr.startsWith('{')) {
-    options.readableOn = getTokenArg(parseArg(rest[0].trim(), book));
-    optsStr = rest.slice(1).join(',').trim();
+  let tail = rest.map((a) => a.trim());
+  if (!tail[0].startsWith('{')) {
+    options.readableOn = getTokenArg(parseArg(tail[0], book));
+    tail = tail.slice(1);
+  }
+  // At most one options object may follow — anything else is a typo that
+  // would otherwise be dropped silently.
+  if (tail.length > 1 || (tail.length === 1 && !(tail[0].startsWith('{') && tail[0].endsWith('}')))) {
+    throw new Error(`${name}: unexpected extra argument "${tail.join(', ')}"`);
   }
 
-  for (const pair of splitArgs(optsStr.replace(/^\{|\}$/g, '').trim())) {
-    const colonIdx = pair.indexOf(':');
-    if (colonIdx === -1) continue;
-    const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
-    const valueStr = pair.slice(colonIdx + 1).trim();
-
+  for (const [key, valueStr] of optionPairs(tail[0] ?? '')) {
     if (key === 'not') {
       options.not = parseNotList(valueStr, book);
     } else if (key === 'readableOn') {
@@ -655,6 +656,8 @@ function parseSelectorTail(
       options.description = parseQuotedString(valueStr);
     } else if (key === 'against') {
       throw new Error(`${name}: \`against\` was renamed to \`readableOn\``);
+    } else {
+      throw new Error(`${name}: unknown option \`${key}\` (expected not, readableOn, minContrast or description)`);
     }
   }
   return options;
