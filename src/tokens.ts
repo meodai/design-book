@@ -178,8 +178,10 @@ export function extractDependencies(args: FunctionArg[]): string[] {
       deps.push(arg.key);
     } else if (isFunctionTokenValue(arg)) {
       // Nested function token — its dependencies are transitively this
-      // function's dependencies, so the graph propagates correctly.
+      // function's dependencies, so the graph propagates correctly. Include
+      // the ones it declares outside its args too (`sibling`'s anchor).
       for (const dep of extractDependencies(arg.args)) deps.push(dep);
+      for (const dep of arg.metadata?.dependencies ?? []) deps.push(dep);
     }
   }
   return deps;
