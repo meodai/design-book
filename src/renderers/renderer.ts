@@ -3,6 +3,7 @@ import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens'
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
+import { gamutMapSrgb } from '../functions/color/scope-colors';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRendererOptions = Record<string, unknown>;
@@ -476,17 +477,18 @@ export class Renderer {
   private formatW3Value(internalType: string, resolvedStr: string, token?: TokenValue): W3TokenValue {
     if (internalType === 'color') {
       // W3 color: { colorSpace, components, alpha, hex }
+      // `srgb` components must lie in [0, 1], so a wide-gamut colour is
+      // gamut-mapped (chroma reduction in OKLCH) before its channels are
+      // read; the hex comes from the same mapped colour.
       const parsed = parse(resolvedStr);
-      const rgb = parsed ? toRgb(parsed) : null;
+      const rgb = parsed ? toRgb(gamutMapSrgb(parsed)) : null;
       if (parsed && rgb) {
         const hex = formatHex(rgb) ?? resolvedStr;
+        const component = (c: number | undefined) =>
+          Math.round(Math.min(1, Math.max(0, c ?? 0)) * 1000) / 1000;
         return {
           colorSpace: 'srgb',
-          components: [
-            Math.round((rgb.r ?? 0) * 1000) / 1000,
-            Math.round((rgb.g ?? 0) * 1000) / 1000,
-            Math.round((rgb.b ?? 0) * 1000) / 1000,
-          ],
+          components: [component(rgb.r), component(rgb.g), component(rgb.b)],
           alpha: rgb.alpha ?? 1,
           hex,
         };
