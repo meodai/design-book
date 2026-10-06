@@ -61,6 +61,8 @@
         <option value="furthestFrom">furthestFrom</option>
         <option value="mostVivid">mostVivid</option>
         <option value="leastVivid">leastVivid</option>
+        <option value="lightest">lightest</option>
+        <option value="darkest">darkest</option>
       </select>
     </div>
   </div>
@@ -100,8 +102,9 @@
   <header class="sections-head">
     <h2>Kinds of decision</h2>
     <p>
-      Ten built-in selectors. Each one takes a scope of candidates
-      and returns the member that fits a rule.
+      Thirteen built-in selectors. Each one takes a scope of candidates
+      and returns the member that fits a rule — re-deciding whenever a
+      member changes, joins or leaves.
     </p>
   </header>
 
@@ -123,7 +126,7 @@
       </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
+  brand,
 ))</code></pre>
     </div>
   </article>
@@ -132,7 +135,7 @@
   <article class="fn" id="closest">
     <header class="fn-head">
       <h3>closestColor</h3>
-      <code class="sig">closestColor( target, scope, { not? } )</code>
+      <code class="sig">closestColor( target, scope, { readableOn?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -151,7 +154,7 @@
       </figure>
       <pre class="code"><code>brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</span>(
   <span class="c-fn">color</span>(<span class="c-str">'#7f4dc4'</span>),
-  <span class="c-fn">scope</span>(<span class="c-str">'palette'</span>),
+  palette,
 ))</code></pre>
     </div>
   </article>
@@ -160,21 +163,21 @@
   <article class="fn" id="furthest">
     <header class="fn-head">
       <h3>furthestFrom</h3>
-      <code class="sig">furthestFrom( scope, { not? } )</code>
+      <code class="sig">furthestFrom( scope, { readableOn?, minContrast?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
-        <p class="fn-claim"><em>The accent that can't be confused with the brand.</em></p>
-        <p class="fn-detail">Maximum perceptual distance from an anchor. Pick the swatch designed for "look here, not there" — and let it re-pick itself when the anchor moves.</p>
+        <p class="fn-claim"><em>The odd one out.</em> The color that stands apart from the rest.</p>
+        <p class="fn-detail">The member with the greatest average OKLab distance to every other member — the swatch nothing else can be confused with. Exclude members with <code>not</code> and the pick moves to the next outsider.</p>
       </div>
       <figure class="demo">
-        <figcaption>Hover any swatch · the furthest member is marked.</figcaption>
+        <figcaption>Click a swatch to exclude it · the odd one out re-picks.</figcaption>
         <div class="furthest-stage" id="furthest-stage"></div>
         <div class="furthest-readout" id="furthest-readout"></div>
       </figure>
-      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>, <span class="c-fn">furthestFrom</span>(
-  <span class="c-fn">scope</span>(<span class="c-str">'brand'</span>),
-))</code></pre>
+      <pre class="code"><code>ui.set(<span class="c-str">'highlight'</span>, <span class="c-fn">furthestFrom</span>(brand, {
+  <span class="c-key">not</span>: [<span class="c-fn">ref</span>(<span class="c-str">'brand.ink'</span>)],
+}))</code></pre>
     </div>
   </article>
 
@@ -182,34 +185,34 @@
   <article class="fn" id="min-contrast">
     <header class="fn-head">
       <h3>minContrastWith</h3>
-      <code class="sig">minContrastWith( target, scope, { threshold?, not? } )</code>
+      <code class="sig">minContrastWith( target, scope, { ratio?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
         <p class="fn-claim"><em>As subtle as you can get away with.</em> And still legible.</p>
-        <p class="fn-detail">The lowest contrast that still clears a threshold. Hairlines, captions, dim labels — the quiet stuff that survives the next contrast audit because the audit is built in.</p>
+        <p class="fn-detail">The lowest contrast that still clears a ratio (4.5 by default). Hairlines, captions, dim labels — the quiet stuff that survives the next contrast audit because the audit is built in.</p>
       </div>
       <figure class="demo">
-        <figcaption>Same surface, same palette — three thresholds, three answers.</figcaption>
+        <figcaption>Same surface, same palette — three ratios, three answers.</figcaption>
         <div class="min-stage">
           <div class="min-card">
-            <div class="min-label">threshold 3.0</div>
+            <div class="min-label">ratio 3 — AA large</div>
             <div class="min-sample" id="min-sample-3"><span class="min-text"></span></div>
           </div>
           <div class="min-card">
-            <div class="min-label">threshold 4.5 — AA</div>
+            <div class="min-label">ratio 4.5 — AA</div>
             <div class="min-sample" id="min-sample-45"><span class="min-text"></span></div>
           </div>
           <div class="min-card">
-            <div class="min-label">threshold 7.0 — AAA</div>
+            <div class="min-label">ratio 7 — AAA</div>
             <div class="min-sample" id="min-sample-7"><span class="min-text"></span></div>
           </div>
         </div>
       </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
-  <span class="c-fn">scope</span>(<span class="c-str">'neutral'</span>),
-  { <span class="c-key">threshold</span>: <span class="c-num">4.5</span> },
+  neutral,
+  { <span class="c-key">ratio</span>: <span class="c-num">4.5</span> },
 ))</code></pre>
     </div>
   </article>
@@ -218,7 +221,7 @@
   <article class="fn" id="next-step">
     <header class="fn-head">
       <h3>nextLarger · nextSmaller</h3>
-      <code class="sig">nextLarger( target, scope, { minDistance? } )</code>
+      <code class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } )</code>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -259,7 +262,7 @@
       </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
   <span class="c-fn">ref</span>(<span class="c-str">'space.m'</span>),
-  <span class="c-fn">scope</span>(<span class="c-str">'space'</span>),
+  space,
   { <span class="c-key">minDistance</span>: <span class="c-num">6</span> },
 ))</code></pre>
     </div>
@@ -280,8 +283,38 @@
         <figcaption>Same palette, sorted by chroma — both ends marked.</figcaption>
         <div class="vivid-stage" id="vivid-stage"></div>
       </figure>
-      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))
-ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>)))</code></pre>
+      <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(brand))
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(brand))</code></pre>
+    </div>
+  </article>
+
+  <!-- lightest / darkest -->
+  <article class="fn" id="lightness">
+    <header class="fn-head">
+      <h3>lightest · darkest</h3>
+      <code class="sig">lightest|darkest( scope, { readableOn?, minContrast?, not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>The ends of the scale,</em> wherever they moved to.</p>
+        <p class="fn-detail">The members with the highest and lowest OKLCH lightness. Name your surface after <code>lightest</code> and your ink after <code>darkest</code>, and a re-generated palette can't strand them. Add <code>readableOn</code> and the pick is limited to members that still read on that surface.</p>
+      </div>
+      <figure class="demo">
+        <figcaption class="lightness-caption">
+          <label class="lightness-toggle">
+            <input type="checkbox" id="lightness-readable" />
+            readableOn the page surface (4.5:1)
+          </label>
+        </figcaption>
+        <div class="lightness-stage" id="lightness-stage"></div>
+      </figure>
+      <pre class="code"><code>ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">lightest</span>(brand))
+ui.set(<span class="c-str">'ink'</span>,     <span class="c-fn">darkest</span>(brand))
+
+<span class="c-dim">// the lightest member that still reads on the page</span>
+ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>(brand, {
+  <span class="c-key">readableOn</span>: <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+}))</code></pre>
     </div>
   </article>
 
@@ -307,10 +340,10 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
         <div class="random-stage" id="random-stage"></div>
       </figure>
       <pre class="code"><code>ui.set(<span class="c-str">'accent'</span>,
-  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
+  <span class="c-fn">random</span>(brand, { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
 
 ui.set(<span class="c-str">'promo-bg'</span>,
-  <span class="c-fn">random</span>(<span class="c-fn">scope</span>(<span class="c-str">'brand'</span>), { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
+  <span class="c-fn">random</span>(brand, { <span class="c-key">type</span>: <span class="c-str">'color'</span>, <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span> }))</code></pre>
     </div>
   </article>
 
@@ -323,7 +356,7 @@ ui.set(<span class="c-str">'promo-bg'</span>,
     <div class="fn-body">
       <div class="fn-pitch">
         <p class="fn-claim"><em>Pick by position, not by name.</em></p>
-        <p class="fn-detail">When a ramp or scale generates your palette, the order is the meaning — lightest first, darkest last. <code>nth</code> addresses that order directly: integers work like <code>Array.at()</code> (negative wraps from the end), and floats between 0 and 1 select <em>relatively</em> — so <code>0.5</code> is always the midtone, regardless of how many stops were generated.</p>
+        <p class="fn-detail">When a ramp or scale generates your palette, the order is the meaning — lightest first, darkest last. <code>nth</code> addresses that order directly: integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 select <em>relatively</em> — so <code>0.5</code> is always the midtone, however many stops were generated. (<code>1.0</code> is the integer 1; reach the end with <code>-1</code>.)</p>
       </div>
       <figure class="demo">
         <figcaption class="nth-caption">
@@ -342,10 +375,40 @@ ui.set(<span class="c-str">'promo-bg'</span>,
         </div>
       </figure>
       <pre class="code"><code><span class="c-dim">// ramp generated lightest → darkest</span>
-ui.set(<span class="c-str">'surface'</span>,  <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0</span>))       <span class="c-dim">// lightest</span>
-ui.set(<span class="c-str">'text'</span>,     <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">-1</span>))      <span class="c-dim">// darkest</span>
-ui.set(<span class="c-str">'muted'</span>,    <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.5</span>))    <span class="c-dim">// midtone</span>
-ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(<span class="c-fn">scope</span>(<span class="c-str">'ramp'</span>), <span class="c-num">0.1</span>))    <span class="c-dim">// just off white</span></code></pre>
+ui.set(<span class="c-str">'surface'</span>,  <span class="c-fn">nth</span>(ramp, <span class="c-num">0</span>))       <span class="c-dim">// lightest</span>
+ui.set(<span class="c-str">'text'</span>,     <span class="c-fn">nth</span>(ramp, <span class="c-num">-1</span>))      <span class="c-dim">// darkest</span>
+ui.set(<span class="c-str">'muted'</span>,    <span class="c-fn">nth</span>(ramp, <span class="c-num">0.5</span>))    <span class="c-dim">// midtone</span>
+ui.set(<span class="c-str">'subtle'</span>,   <span class="c-fn">nth</span>(ramp, <span class="c-num">0.1</span>))    <span class="c-dim">// just off white</span></code></pre>
+    </div>
+  </article>
+
+  <!-- sibling -->
+  <article class="fn" id="sibling">
+    <header class="fn-head">
+      <h3>sibling</h3>
+      <code class="sig">sibling( ref, offset, { wrap?, not? } )</code>
+    </header>
+    <div class="fn-body">
+      <div class="fn-pitch">
+        <p class="fn-claim"><em>One step lighter than whatever the surface is.</em></p>
+        <p class="fn-detail">Steps through the scope a token lives in, relative to that token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. Steps stop at the ends, or go round with <code>wrap</code>.</p>
+      </div>
+      <figure class="demo">
+        <figcaption>Click a tile to move the anchor · pick an offset.</figcaption>
+        <div class="sibling-stage" id="sibling-stage"></div>
+        <div class="sibling-controls">
+          <div class="sibling-offsets" id="sibling-offsets" role="group" aria-label="Offset">
+            <button type="button" data-offset="-2">−2</button>
+            <button type="button" data-offset="-1">−1</button>
+            <button type="button" data-offset="1" class="is-active">+1</button>
+            <button type="button" data-offset="2">+2</button>
+          </div>
+          <label class="sibling-wrap"><input type="checkbox" id="sibling-wrap" /> wrap</label>
+        </div>
+      </figure>
+      <pre class="code"><code>ui.set(<span class="c-str">'surface'</span>,       <span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>))
+ui.set(<span class="c-str">'surface-hover'</span>, <span class="c-fn">sibling</span>(<span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>), <span class="c-num">1</span>))
+ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</span>(<span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>), <span class="c-num">2</span>))</code></pre>
     </div>
   </article>
 
@@ -633,10 +696,11 @@ book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</
   <header class="extend-head">
     <h2>Bring your own rules. Bring your own libraries.</h2>
     <p>
-      The built-in selectors are a starting set. Anything that fits the
-      shape <code>(scope, options) → string</code> can be registered as
-      a function token — full participation in the graph, dependency
-      tracking, reactive recomputation.
+      The built-in selectors are a starting set. Register any function
+      that takes the token's resolved arguments (scopes arrive as
+      scopes) plus its options and returns a value. Tokens that call it
+      take part in the graph like the built-ins: dependency tracking,
+      cycle checks, reactive recomputation.
     </p>
   </header>
 
@@ -644,23 +708,26 @@ book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</
     <article class="extend-card">
       <h3>A custom function</h3>
       <p>
-        Register a new selector — <code>darkestReadable</code> — that
-        picks the darkest scope member still clearing AA against a
-        surface. Twelve lines.
+        Register a new selector — <code>warmest</code> — that picks the
+        member leaning hardest towards orange: chroma times how close
+        its hue sits to 50°. It runs on this page against the palette
+        above.
       </p>
-      <pre class="code"><code><span class="c-fn">function</span> <span class="c-key">darkestReadableImpl</span>(against, scope, ratio = <span class="c-num">4.5</span>) {
-  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestL = <span class="c-num">2</span>;
+      <pre class="code"><code><span class="c-dim">// Resolved args come first, the token's options last.</span>
+book.<span class="c-fn">registerFunction</span>(<span class="c-str">'warmest'</span>, (scope) =&gt; {
+  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestScore = -<span class="c-num">Infinity</span>;
   <span class="c-fn">for</span> (<span class="c-fn">const</span> key <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
     <span class="c-fn">const</span> hex = scope.<span class="c-fn">resolve</span>(key);
-    <span class="c-fn">if</span> (<span class="c-fn">wcagContrast</span>(against, hex) &lt; ratio) <span class="c-fn">continue</span>;
-    <span class="c-fn">const</span> L = <span class="c-fn">oklch</span>(hex).l;
-    <span class="c-fn">if</span> (L &lt; bestL) { bestL = L; best = hex; }
+    <span class="c-fn">const</span> { c = <span class="c-num">0</span>, h = <span class="c-num">0</span> } = <span class="c-fn">oklch</span>(hex);
+    <span class="c-fn">const</span> score = c * Math.<span class="c-fn">cos</span>((h - <span class="c-num">50</span>) * Math.PI / <span class="c-num">180</span>);
+    <span class="c-fn">if</span> (score &gt; bestScore) { bestScore = score; best = hex; }
   }
   <span class="c-fn">return</span> best;
-}
-book.<span class="c-fn">registerFunction</span>(<span class="c-str">'darkestReadable'</span>, darkestReadableImpl);</code></pre>
+});
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'warm'</span>, <span class="c-fn">createFunctionToken</span>(<span class="c-str">'warmest'</span>, [values]));</code></pre>
       <p class="extend-result" id="extend-fn-result">
-        <span class="extend-result-label">darkestReadable( ui.surface, values )</span>
+        <span class="extend-result-label">ui.warm = warmest( values )</span>
         <span class="extend-result-swatch" id="extend-fn-swatch"></span>
         <code id="extend-fn-hex">—</code>
       </p>
@@ -674,20 +741,21 @@ book.<span class="c-fn">registerFunction</span>(<span class="c-str">'darkestRead
         straight into a scope; selectors work on it just like any
         other palette.
       </p>
-      <pre class="code"><code><span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
-  anchorColors: [[<span class="c-num">14</span>,<span class="c-num">17</span>,<span class="c-num">14</span>], [<span class="c-num">200</span>,<span class="c-num">57</span>,<span class="c-num">26</span>]],
+      <pre class="code"><code><span class="c-dim">// anchors as [hue, saturation, lightness], s and l in 0–1</span>
+<span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
+  anchorColors: [[<span class="c-num">20</span>, <span class="c-num">.3</span>, <span class="c-num">.08</span>], [<span class="c-num">12</span>, <span class="c-num">.85</span>, <span class="c-num">.45</span>], [<span class="c-num">42</span>, <span class="c-num">.4</span>, <span class="c-num">.92</span>]],
   numPoints: <span class="c-num">7</span>,
 });
 <span class="c-fn">const</span> ramp = book.<span class="c-fn">addScope</span>(<span class="c-str">'ramp'</span>);
 poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
 
 ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
-  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp,
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">ratio</span>: <span class="c-num">3</span> },
 ));</code></pre>
       <div class="extend-result poline" id="extend-poline-result">
         <div class="poline-strip" id="extend-poline-strip"></div>
         <p class="extend-result-line">
-          <span class="extend-result-label">minContrastWith( ui.surface, ramp ) → </span>
+          <span class="extend-result-label">minContrastWith( ui.surface, ramp, { ratio: 3 } ) → </span>
           <span class="extend-result-swatch" id="extend-poline-swatch"></span>
           <code id="extend-poline-hex">—</code>
         </p>
@@ -700,12 +768,12 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
 <section class="reactivity">
   <h2>Reactive by default.</h2>
   <p>
-    The graph is live. Mutate a token in a scope and every dependent
-    re-resolves on the next tick — or all at once if you batch.
-    Subscribe to a key with <code>watch(key, fn)</code> and the
-    library will call you back with the new value and the chain of
-    changes that produced it. Cycles are caught at write time, not
-    at render.
+    The graph is live. Set a token and every dependent re-resolves
+    straight away — or switch the book to <code>batch</code> mode and
+    apply everything at once with <code>flush()</code>. Subscribe to a
+    key with <code>watch(key, fn)</code> and the library calls you
+    back with its new value whenever it changes. Cycles are refused
+    at write time, not discovered at render.
   </p>
 </section>
 
@@ -713,7 +781,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
 <section class="coda">
   <h2>Value transforms.</h2>
   <p>
-    Ten one-shot operations that take an input and apply a formula.
+    Eight one-shot operations that take an input and apply a formula.
     Useful for the small decisions — a hover shade, a scale step, a
     timing curve — without leaving the graph.
   </p>
@@ -730,7 +798,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>lighten</b>
-        <span>Increase OKLCh lightness.</span>
+        <span>Mix toward white in OKLCH.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#1d3a6c"/><circle cx="28" cy="12" r="9" fill="#a5c0e6"/></svg>
@@ -739,7 +807,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>darken</b>
-        <span>Decrease OKLCh lightness.</span>
+        <span>Mix toward black in OKLCH.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#a5c0e6"/><circle cx="28" cy="12" r="9" fill="#1d3a6c"/></svg>
@@ -748,7 +816,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>shade</b>
-        <span>Mix toward black, perceptually.</span>
+        <span>A visible step: darker on light, lighter on dark.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 48 24" width="48" height="24"><circle cx="12" cy="12" r="8" fill="#f0e8d8"/><circle cx="12" cy="12" r="10" fill="none" stroke="#cbb89a" stroke-width="1.2"/><circle cx="36" cy="12" r="8" fill="#2d3033"/><circle cx="36" cy="12" r="10" fill="none" stroke="#5a6065" stroke-width="1.2"/></svg>
@@ -779,7 +847,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>spacingScale</b>
-        <span>Modular spacing steps.</span>
+        <span>A base size times a multiplier.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 56 24" width="56" height="24" fill="currentColor"><rect x="0" y="10" width="4" height="4"/><rect x="6" y="9" width="6" height="6"/><rect x="14" y="8" width="8" height="8"/><rect x="24" y="6" width="12" height="12"/><rect x="38" y="4" width="16" height="16"/></svg>
@@ -788,7 +856,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>typographyScale</b>
-        <span>Type ramps from a ratio.</span>
+        <span>A base size times ratio<sup>step</sup>.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 60 24" width="60" height="24" fill="currentColor"><text x="2" y="20" font-size="22" font-family="Libertinus Serif, serif">A</text><text x="22" y="20" font-size="14" font-family="Libertinus Serif, serif">A</text><text x="40" y="20" font-size="9" font-family="Libertinus Serif, serif">A</text></svg>
@@ -797,7 +865,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
     <li>
       <div class="coda-text">
         <b>timing</b>
-        <span>Animation curves &amp; multiples.</span>
+        <span>Duration, easing and delay as one value.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
         <svg viewBox="0 0 40 24" width="40" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M 3 20 C 8 20, 14 6, 37 4"/></svg>

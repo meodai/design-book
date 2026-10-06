@@ -36,11 +36,25 @@ import "hdr-color-input";
 import {
   DesignBook,
   SVGRenderer,
-  Renderer,
   color,
   ref,
+  px,
   ramp,
   relativeTo,
+  createFunctionToken,
+  bestContrastWith,
+  minContrastWith,
+  closestColor,
+  furthestFrom,
+  mostVivid,
+  leastVivid,
+  lightest,
+  darkest,
+  nextLarger,
+  nextSmaller,
+  random,
+  nth,
+  sibling,
 } from "../src/index";
 
 import { Poline } from "poline";
@@ -66,40 +80,32 @@ function contrast(a, b) { return wcagContrast(a, b); }
   if (y) y.textContent = new Date().getFullYear();
 }
 
-// ── Inline selector implementations (drive the small plates) ───────
-// These mirror the library's selectors so the per-section demos stay
-// self-contained. The big sections (graph, renderers, extend) use the
-// real DesignBook directly.
+// ── Demos run the real library ─────────────────────────────────────
+// Each plate builds a throwaway book with the palette in a scope, sets one
+// token that calls the selector, and reads back what the library resolved.
+// So what you see is what `design-book` does, not a re-implementation.
 
-function bestContrastWith (target, scope) {
-  let best = null, bestR = -Infinity;
-  for (const c of scope) { const r = contrast(target, c); if (r > bestR) { bestR = r; best = c; } }
-  return { color: best, ratio: bestR };
+/** Put `values` into scope `pool` as p0, p1, … and resolve `make(pool)`.
+ *  `make` returns the function token; returns null if the selector throws
+ *  (an empty pool, nothing readable, …). */
+function pick (values, make, toToken = color) {
+  const b = new DesignBook("demo");
+  const pool = b.addScope("pool");
+  values.forEach((v, i) => pool.set(`p${i}`, toToken(v)));
+  const out = b.addScope("out");
+  try {
+    out.set("pick", make(pool));
+    return b.resolve("out.pick");
+  } catch {
+    return null;
+  }
 }
-function minContrastWith (target, scope, { threshold = 0 } = {}) {
-  let best = null, bestR = Infinity;
-  for (const c of scope) { const r = contrast(target, c); if (r >= threshold && r < bestR) { bestR = r; best = c; } }
-  return { color: best, ratio: bestR };
-}
-function closestColor (target, scope) {
-  return scope
-    .map((c) => ({ color: c, d: deltaE(target, c) }))
-    .sort((a, b) => a.d - b.d);
-}
-function furthestFrom (anchor, scope) {
-  let best = null, bestD = -Infinity;
-  for (const c of scope) { if (c === anchor) continue; const d = deltaE(anchor, c); if (d > bestD) { bestD = d; best = c; } }
-  return { color: best, d: bestD };
-}
-function mostVivid (scope) {
-  let best = null, bestC = -Infinity;
-  for (const c of scope) { const C = lch(c).c; if (C > bestC) { bestC = C; best = c; } }
-  return { color: best, chroma: bestC };
-}
-function leastVivid (scope) {
-  let best = null, bestC = Infinity;
-  for (const c of scope) { const C = lch(c).c; if (C < bestC) { bestC = C; best = c; } }
-  return { color: best, chroma: bestC };
+
+/** Index of `hex` in `values`, comparing as colours. */
+function indexOfColor (values, hex) {
+  if (!hex) return -1;
+  const want = formatHex(parse(hex));
+  return values.findIndex((v) => formatHex(parse(v)) === want);
 }
 
 // ── Shared palettes for plates ─────────────────────────────────────
@@ -153,18 +159,22 @@ const PALETTE_CONTRAST_SURFACES = [
     return dot;
   });
 
+  // Every option runs the real selector over the ring. `furthestFrom` and
+  // the vivid/lightness ones ignore the centre — they rank the ring itself.
   const selectors = {
-    bestContrastWith: (palette) => palette.indexOf(bestContrastWith(CENTER, palette).color),
-    minContrastWith:  (palette) => palette.indexOf(minContrastWith(CENTER, palette, { threshold: 1.5 }).color),
-    closestColor:     (palette) => palette.indexOf((closestColor(CENTER, palette).find((r) => r.d > 0.1) ?? closestColor(CENTER, palette)[0]).color),
-    furthestFrom:     (palette) => palette.indexOf(furthestFrom(CENTER, palette).color),
-    mostVivid:        (palette) => palette.indexOf(mostVivid(palette).color),
-    leastVivid:       (palette) => palette.indexOf(leastVivid(palette).color),
+    bestContrastWith: (s) => bestContrastWith(color(CENTER), s),
+    minContrastWith:  (s) => minContrastWith(color(CENTER), s, { ratio: 3 }),
+    closestColor:     (s) => closestColor(color(CENTER), s),
+    furthestFrom:     (s) => furthestFrom(s),
+    mostVivid:        (s) => mostVivid(s),
+    leastVivid:       (s) => leastVivid(s),
+    lightest:         (s) => lightest(s),
+    darkest:          (s) => darkest(s),
   };
 
   function update () {
     const fn = selectors[fnSel.value] || selectors.bestContrastWith;
-    const winnerIdx = fn(PALETTE);
+    const winnerIdx = indexOfColor(PALETTE, pick(PALETTE, fn));
 
     dots.forEach((d, i) => {
       d.classList.toggle("is-winner", i === winnerIdx);
@@ -172,7 +182,7 @@ const PALETTE_CONTRAST_SURFACES = [
     });
 
     const p = positions[winnerIdx];
-    curve.setAttribute("d", `M 0 0 L ${p.x} ${p.y}`);
+    curve.setAttribute("d", p ? `M 0 0 L ${p.x} ${p.y}` : "");
   }
 
   function onCenterChange () {
@@ -317,23 +327,21 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 //  EXTEND — custom function + poline integration
 // ══════════════════════════════════════════════════════════════════════
 (function extendCustomFn () {
-  // A small custom selector: the darkest member that still clears AA
-  // against `against`. Not a registered function on the book — just a
-  // self-contained illustration that mirrors the in-graph version.
-  function darkestReadable (againstHex, scope, ratio = 4.5) {
-    let best = null, bestL = 2;
-    for (const c of scope) {
-      if (contrast(againstHex, c) < ratio) continue;
-      const L = lch(c).l;
-      if (L < bestL) { bestL = L; best = c; }
+  // The `warmest` selector from the code sample, registered on a copy of
+  // the demo book and called through a real function token.
+  const ext = buildBook();
+  ext.registerFunction("warmest", (scope) => {
+    let best = null, bestScore = -Infinity;
+    for (const key of scope.getAllKeys()) {
+      const v = scope.resolve(key);
+      const { c = 0, h = 0 } = lch(v) ?? {};
+      const score = c * Math.cos(((h - 50) * Math.PI) / 180);
+      if (score > bestScore) { bestScore = score; best = v; }
     }
     return best;
-  }
-
-  const surface = book.getScope("ui").resolve("surface");
-  const values  = [...book.getScope("values").getAllKeys()]
-    .map((k) => book.getScope("values").resolve(k));
-  const winner  = darkestReadable(surface, values, 4.5) ?? values[0];
+  });
+  ext.getScope("ui").set("warm", createFunctionToken("warmest", [ext.getScope("values")]));
+  const winner = ext.resolve("ui.warm");
 
   document.getElementById("extend-fn-swatch").style.background = winner;
   document.getElementById("extend-fn-hex").textContent = winner;
@@ -368,13 +376,13 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
     .map((c) => `<span style="background:${c}"></span>`)
     .join("");
 
-  // Convert poline css colors (hsl strings) to hex for contrast math.
+  // Convert poline css colors (hsl strings) to hex and let the library pick.
   const hexes = cssColors.map((c) => hex(parse(c))).filter(Boolean);
   const surface = book.getScope("ui").resolve("surface");
-  const { color: pick } = minContrastWith(surface, hexes, { threshold: 1.5 });
-  if (pick) {
-    swatchOut.style.background = pick;
-    hexOut.textContent = pick;
+  const border = pick(hexes, (s) => minContrastWith(color(surface), s, { ratio: 3 }));
+  if (border) {
+    swatchOut.style.background = border;
+    hexOut.textContent = border;
   } else if (hexes.length) {
     // Fallback: show the first member so the demo doesn't read as broken.
     swatchOut.style.background = hexes[0];
@@ -399,7 +407,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
     return                  { label: "fails", cls: "is-fail" };
   };
   row.innerHTML = PALETTE_CONTRAST_SURFACES.map((surface) => {
-    const { color: text, ratio } = bestContrastWith(surface, PALETTE_BRAND);
+    const text = pick(PALETTE_BRAND, (s) => bestContrastWith(color(surface), s));
+    const ratio = contrast(surface, text);
     const badge = wcagBadge(ratio);
     return `
       <div class="contrast-tile" style="background:${surface};color:${text}">
@@ -417,6 +426,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 (function demoClosest () {
   const swatchHost = document.getElementById("closest-target-swatch");
   const stage = document.getElementById("closest-ranked");
+  if (!swatchHost || !stage) return;
 
   const picker = document.createElement("color-input");
   picker.setAttribute("initial-colorspace", "hsl");
@@ -427,38 +437,52 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   picker.id = "closest-target-swatch";
 
   function render (target) {
-    const ranked = closestColor(target, PALETTE_BRAND).slice(0, 7);
+    // The winner is the library's answer; the rest are ordered by the same
+    // OKLab distance so the ranking reads left to right.
+    const winner = pick(PALETTE_BRAND, (s) => closestColor(color(target), s));
+    const ranked = PALETTE_BRAND
+      .map((c) => ({ color: c, d: deltaE(target, c) }))
+      .sort((a, b) => (a.color === winner ? -1 : b.color === winner ? 1 : a.d - b.d))
+      .slice(0, 7);
     stage.innerHTML = ranked.map((r, i) => `
-      <div class="rank${i === 0 ? " winner" : ""}" style="background:${r.color}" title="ΔE ${r.d.toFixed(3)}">
+      <div class="rank${r.color === winner ? " winner" : ""}" style="background:${r.color}" title="ΔE ${r.d.toFixed(3)}">
         <span class="num">${i + 1}</span><span>${r.color}</span>
       </div>`).join("");
   }
   picker.addEventListener("change", () => { if (picker.value) render(picker.value); });
-  render(picker.value);
+  render(picker.getAttribute("value"));
 })();
 
-// — furthestFrom —
+// — furthestFrom: the odd one out; click to exclude —
 (function demoFurthest () {
   const stage = document.getElementById("furthest-stage");
   const readout = document.getElementById("furthest-readout");
   if (!stage) return;
   const palette = PALETTE_BRAND.slice(0, 7);
-  let anchor = palette[1];
+  const excluded = new Set();
 
   function render () {
-    const { color: far, d } = furthestFrom(anchor, palette);
+    const pool = palette.filter((c) => !excluded.has(c));
+    const far = pool.length ? pick(pool, (s) => furthestFrom(s)) : null;
     stage.innerHTML = palette.map((c) => {
       const cls = [];
-      if (c === anchor) cls.push("anchor");
-      if (c === far)    cls.push("furthest");
-      return `<div class="swatch-fr ${cls.join(" ")}" data-c="${c}" style="background:${c}">
-        <span class="hex">${c}</span></div>`;
+      if (excluded.has(c)) cls.push("excluded");
+      if (c === far)       cls.push("furthest");
+      return `<button type="button" class="swatch-fr ${cls.join(" ")}" data-c="${c}" style="background:${c}"
+        aria-pressed="${excluded.has(c)}" aria-label="${excluded.has(c) ? "Include" : "Exclude"} ${c}">
+        <span class="hex">${c}</span></button>`;
     }).join("");
-    readout.innerHTML = `<span>anchor <b>${anchor}</b></span><span>furthest <b>${far}</b></span><span>ΔE <b>${d.toFixed(3)}</b></span>`;
-    stage.querySelectorAll(".swatch-fr").forEach((el) => {
-      el.addEventListener("mouseenter", () => { anchor = el.dataset.c; render(); });
-    });
+    const notList = [...excluded].map((c) => `<b>${c}</b>`).join(" ") || "—";
+    readout.innerHTML = `<span>odd one out <b>${far ?? "none"}</b></span><span>not ${notList}</span>`;
   }
+  stage.addEventListener("click", (e) => {
+    const el = e.target.closest(".swatch-fr");
+    if (!el) return;
+    const c = el.dataset.c;
+    if (excluded.has(c)) excluded.delete(c);
+    else if (excluded.size < palette.length - 1) excluded.add(c);
+    render();
+  });
   render();
 })();
 
@@ -466,36 +490,27 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 (function demoMin () {
   const surface = "#ece5d3";
   const ramp = ["#ece5d3", "#d5cdb5", "#beb497", "#9c907a", "#766b5b", "#564f44", "#3a342c", "#14110d"];
-  function paint (id, threshold) {
+  function paint (id, ratio) {
     const el = document.getElementById(id);
-    const { color, ratio } = minContrastWith(surface, ramp, { threshold });
-    if (!color || !isFinite(ratio)) {
+    if (!el) return;
+    const text = pick(ramp, (s) => minContrastWith(color(surface), s, { ratio }));
+    el.style.background = surface;
+    const out = el.querySelector(".min-text");
+    if (!text) {
       el.classList.add("fail");
-      el.style.background = surface;
-      el.querySelector(".min-text").style.color = surface;
-      el.querySelector(".min-text").textContent = "—";
+      out.style.color = "var(--muted)";
+      out.textContent = "no member reaches it";
       return;
     }
-    el.style.background = surface;
-    el.querySelector(".min-text").style.color = color;
-    el.querySelector(".min-text").innerHTML =
+    out.style.color = text;
+    out.innerHTML =
       `Aa — Body, caption, label.<br>
-       <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">${color} · ${ratio.toFixed(1)}:1</span>`;
+       <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">${text} · ${contrast(surface, text).toFixed(1)}:1</span>`;
   }
   paint("min-sample-3", 3); paint("min-sample-45", 4.5); paint("min-sample-7", 7);
 })();
 
 // — nextLarger / nextSmaller —
-function nextLargerLocal (target, scope, minD = 0) {
-  let best = null;
-  for (const v of scope) { if (v <= target + minD) continue; if (best === null || v < best) best = v; }
-  return best;
-}
-function nextSmallerLocal (target, scope, minD = 0) {
-  let best = null;
-  for (const v of scope) { if (v >= target - minD) continue; if (best === null || v > best) best = v; }
-  return best;
-}
 (function demoStep () {
   const scale = [4, 8, 12, 16, 24, 32, 48];
   const scaleEl = document.getElementById("step-scale");
@@ -515,12 +530,17 @@ function nextSmallerLocal (target, scope, minD = 0) {
   scaleEl.querySelectorAll(".bar").forEach((b) =>
     b.addEventListener("click", () => { tSlider.value = b.dataset.i; tSlider.dispatchEvent(new Event("input")); }));
 
+  const step = (fn, t, minDistance) => {
+    const out = pick(scale, (s) => fn(px(t), s, { minDistance }), px);
+    return out === null ? null : parseFloat(out);
+  };
+
   function render () {
     const t = scale[Number(tSlider.value)];
     const md = Number(mSlider.value);
     tVal.textContent = `${t}px`; mVal.textContent = `${md}px`; targetOut.textContent = `${t}px`;
-    const larger = nextLargerLocal(t, scale, md);
-    const smaller = nextSmallerLocal(t, scale, md);
+    const larger = step(nextLarger, t, md);
+    const smaller = step(nextSmaller, t, md);
     largerOut.textContent  = larger  === null ? "no match" : `${larger}px`;
     smallerOut.textContent = smaller === null ? "no match" : `${smaller}px`;
     largerOut.parentElement.classList.toggle("error", larger === null);
@@ -544,8 +564,8 @@ function nextSmallerLocal (target, scope, minD = 0) {
   const stage = document.getElementById("vivid-stage");
   if (!stage) return;
   const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
-  const { color: crown } = mostVivid(palette);
-  const { color: floor } = leastVivid(palette);
+  const crown = pick(palette, (s) => mostVivid(s));
+  const floor = pick(palette, (s) => leastVivid(s));
   // Sort by chroma so the highlighted tiles sit at opposite ends of the row.
   const sorted = [...palette].sort((a, b) => (lch(b).c || 0) - (lch(a).c || 0));
   stage.innerHTML = sorted.map((c) => {
@@ -554,6 +574,31 @@ function nextSmallerLocal (target, scope, minD = 0) {
     return `<div class="vtile ${mark}" style="background:${c}">
       <span class="chroma">${C.toFixed(2)}</span><span>${c}</span></div>`;
   }).join("");
+})();
+
+// — lightest / darkest —
+(function demoLightness () {
+  const stage = document.getElementById("lightness-stage");
+  const toggle = document.getElementById("lightness-readable");
+  if (!stage || !toggle) return;
+  const palette = ["#c8391a","#d49623","#1c3a9a","#dcd2b8","#4f6033","#f3ead8","#7a3c8e","#14110d"];
+  const SURFACE = "#fcf6ee";
+
+  function render () {
+    const opts = toggle.checked ? { readableOn: color(SURFACE), minContrast: 4.5 } : undefined;
+    const hi = pick(palette, (s) => lightest(s, opts));
+    const lo = pick(palette, (s) => darkest(s, opts));
+    stage.innerHTML = palette.map((c) => {
+      const readable = contrast(SURFACE, c) >= 4.5;
+      const cls = [c === hi ? "is-lightest" : "", c === lo ? "is-darkest" : "",
+                   toggle.checked && !readable ? "is-filtered" : ""].join(" ");
+      const L = lch(c).l;
+      return `<div class="ltile ${cls}" style="background:${c};color:${L > 0.6 ? "#1d1c1c" : "#fcf6ee"}">
+        <span class="lval">L ${L.toFixed(2)}</span><span>${c}</span></div>`;
+    }).join("");
+  }
+  toggle.addEventListener("change", render);
+  render();
 })();
 
 // — random —
@@ -566,32 +611,9 @@ function nextSmallerLocal (target, scope, minD = 0) {
   // Same palette as the vivid demo so the two read as a pair.
   const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
 
-  // djb2 + mulberry32 — mirrors src/functions/generic/random.ts so the
-  // visual matches what the library would resolve to.
-  const djb2 = (str) => {
-    let h = 5381;
-    for (let i = 0; i < str.length; i++) h = (((h << 5) + h) ^ str.charCodeAt(i)) >>> 0;
-    return h >>> 0;
-  };
-  const seedToInt = (s) => typeof s === "number" ? (s >>> 0) : djb2(s);
-  const mulberry32 = (seed) => {
-    let a = seed >>> 0;
-    return () => {
-      a = (a + 0x6d2b79f5) >>> 0;
-      let t = a;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t = (t ^ (t + Math.imul(t ^ (t >>> 7), t | 61))) >>> 0;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  };
-
-  function pickIndex (seedStr) {
-    const rng = mulberry32(seedToInt(seedStr || "0"));
-    return Math.floor(rng() * palette.length);
-  }
-
   function render () {
-    const picked = pickIndex(seedEl.value);
+    const seed = seedEl.value || "0";
+    const picked = indexOfColor(palette, pick(palette, (s) => random(s, { type: "color", seed })));
     stage.innerHTML = palette.map((c, i) => `
       <div class="rtile ${i === picked ? "picked" : ""}" style="background:${c}">
         <span>${c}</span>
@@ -601,7 +623,6 @@ function nextSmallerLocal (target, scope, minD = 0) {
 
   seedEl.addEventListener("input", render);
   shufEl.addEventListener("click", () => {
-    // Random English-ish seed so the input stays readable.
     seedEl.value = Math.random().toString(36).slice(2, 10);
     render();
   });
@@ -622,45 +643,80 @@ function nextSmallerLocal (target, scope, minD = 0) {
     "#533417", "#352112", "#1a110a",
   ];
 
-  function resolveIndex (value) {
-    const n = parseFloat(value);
-    if (Number.isNaN(n)) return -1;
-    if (Number.isInteger(n)) {
-      return n < 0 ? ramp.length + n : n;
-    }
-    const clamped = Math.max(0, Math.min(1, n));
-    return Math.round(clamped * (ramp.length - 1));
-  }
-
   function render () {
-    const picked = resolveIndex(indexEl.value);
+    const n = parseFloat(indexEl.value);
+    const picked = Number.isNaN(n) ? -1 : indexOfColor(ramp, pick(ramp, (s) => nth(s, n)));
     stage.style.setProperty("--nth-cols", ramp.length);
     stage.innerHTML = ramp.map((c, i) => {
-      const isPicked = i === picked && picked >= 0 && picked < ramp.length;
       const label = `nth(${indexEl.value.trim()})`;
-      return `<div class="ntile ${isPicked ? "picked" : ""}" data-label="${label}" style="background:${c}"><span>${c}</span></div>`;
+      return `<div class="ntile ${i === picked ? "picked" : ""}" data-label="${label}" style="background:${c}"><span>${c}</span></div>`;
     }).join("");
   }
 
   indexEl.addEventListener("input", () => {
-    if (presets) {
-      presets.querySelectorAll("button").forEach(b =>
-        b.classList.toggle("is-active", b.dataset.value === indexEl.value.trim()));
-    }
+    presets?.querySelectorAll("button").forEach((b) =>
+      b.classList.toggle("is-active", b.dataset.value === indexEl.value.trim()));
     render();
   });
 
-  if (presets) {
-    presets.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-value]");
-      if (!btn) return;
-      indexEl.value = btn.dataset.value;
-      presets.querySelectorAll("button").forEach(b => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
-      render();
-    });
+  presets?.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-value]");
+    if (!btn) return;
+    indexEl.value = btn.dataset.value;
+    presets.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
+    render();
+  });
+
+  render();
+})();
+
+// — sibling —
+(function demoSibling () {
+  const stage   = document.getElementById("sibling-stage");
+  const offsets = document.getElementById("sibling-offsets");
+  const wrapEl  = document.getElementById("sibling-wrap");
+  if (!stage || !offsets || !wrapEl) return;
+
+  const GRAY = [
+    ["g50", "#faf7f2"], ["g100", "#efe9df"], ["g200", "#ddd4c6"], ["g300", "#c4b8a6"],
+    ["g500", "#8f8372"], ["g700", "#5b5246"], ["g900", "#2a251f"],
+  ];
+  let anchor = "g100";
+  let offset = 1;
+
+  const b = new DesignBook("sibling-demo");
+  const gray = b.addScope("gray");
+  for (const [k, v] of GRAY) gray.set(k, color(v));
+  const ui = b.addScope("ui");
+
+  function render () {
+    let result = null;
+    try {
+      ui.set("pick", sibling(ref(`gray.${anchor}`), offset, { wrap: wrapEl.checked }));
+      result = b.resolve("ui.pick");
+    } catch { /* leave unmarked */ }
+    stage.innerHTML = GRAY.map(([k, v]) => {
+      const cls = [k === anchor ? "is-anchor" : "", v === result && k !== anchor ? "is-pick" : ""].join(" ");
+      const L = lch(v).l;
+      return `<button type="button" class="stile ${cls}" data-key="${k}" style="background:${v};color:${L > 0.6 ? "#1d1c1c" : "#fcf6ee"}"
+        aria-pressed="${k === anchor}"><span class="skey">${k}</span><span>${v}</span></button>`;
+    }).join("");
   }
 
+  stage.addEventListener("click", (e) => {
+    const el = e.target.closest(".stile");
+    if (!el) return;
+    anchor = el.dataset.key;
+    render();
+  });
+  offsets.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-offset]");
+    if (!btn) return;
+    offset = Number(btn.dataset.offset);
+    offsets.querySelectorAll("button").forEach((x) => x.classList.toggle("is-active", x === btn));
+    render();
+  });
+  wrapEl.addEventListener("change", render);
   render();
 })();
 
