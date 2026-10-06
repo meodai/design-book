@@ -4,6 +4,7 @@ import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, Fun
 import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/scope-colors';
+import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRendererOptions = Record<string, unknown>;
@@ -77,7 +78,7 @@ const TYPOGRAPHY_NUMBER_KEYS = new Set(['fontWeight', 'lineHeight']);
 /** Split a resolved value such as `16px`, `-0.02em`, `200ms` or `1.5` into
  *  its number and its (possibly empty) unit. */
 function parseDimensionString(value: string): W3DimensionValue | null {
-  const match = value.trim().match(/^(-?(?:\d+\.?\d*|\.\d+))([a-z%]*)$/i);
+  const match = value.trim().match(DIMENSION_VALUE_PATTERN);
   if (!match) return null;
   return { value: parseFloat(match[1]), unit: match[2] };
 }
@@ -130,13 +131,6 @@ const camelToKebab = keyToHyphen;
 
 function resolveTokenValue(book: DesignBook, scopeName: string, tokenName: string): string {
   return book.resolve(`${scopeName}.${tokenName}`);
-}
-
-/** Best-effort type of a resolved value whose token does not declare one. */
-function inferTypeFromValue(resolved: string): string {
-  if (parse(resolved)) return 'color';
-  if (parseDimensionString(resolved)) return 'dimension';
-  return 'string';
 }
 
 function getTokenType(token: AnyTokenValue, book: DesignBook): string {
@@ -364,7 +358,7 @@ export class Renderer {
         // typed by what it resolved to, so it still gets a W3 type and a
         // structured value instead of `"$type": "unknown"`.
         const declaredType = getTokenType(token, this.book);
-        const internalType = declaredType === 'unknown' ? inferTypeFromValue(resolved) : declaredType;
+        const internalType = declaredType === 'unknown' ? detectValueType(resolved) : declaredType;
         const plain = token.type === 'reference' || token.type === 'function'
           ? undefined
           : token as TokenValue;
