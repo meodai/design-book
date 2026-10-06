@@ -1,6 +1,7 @@
 import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
+import { FunctionError } from '../../errors';
 import { collectScopeColors, perceptualDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
@@ -16,7 +17,7 @@ export function furthestFromImpl(
   const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, minContrast);
 
   if (colors.length === 0) {
-    return '#00000000';
+    throw new FunctionError('furthestFrom: no valid colour candidates found in scope', 'furthestFrom');
   }
 
   if (colors.length === 1) {

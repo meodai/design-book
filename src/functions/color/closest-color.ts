@@ -7,6 +7,7 @@ import {
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
+import { FunctionError } from '../../errors';
 import { collectScopeColors, formatColor, gamutMapSrgb, perceptualDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
@@ -20,14 +21,14 @@ export function closestColorImpl(
 ): string {
   const targetRaw = parse(targetValue);
   if (!targetRaw) {
-    return '#00000000';
+    throw new FunctionError(`closestColor: cannot parse target colour "${targetValue}"`, 'closestColor');
   }
   // Candidates are compared in their gamut-mapped sRGB hex form (that is what
   // the function returns), so map the target the same way. Otherwise a
   // wide-gamut token measured against its own hex would not be at distance zero.
   const targetParsed = parse(formatColor(gamutMapSrgb(targetRaw)) ?? '');
   if (!targetParsed) {
-    return '#00000000';
+    throw new FunctionError(`closestColor: cannot format target colour "${targetValue}"`, 'closestColor');
   }
 
   let closestHex: string | null = null;
@@ -42,7 +43,10 @@ export function closestColorImpl(
     }
   }
 
-  return closestHex ?? '#00000000';
+  if (!closestHex) {
+    throw new FunctionError('closestColor: no valid colour candidates found in scope', 'closestColor');
+  }
+  return closestHex;
 }
 
 export function closestColor(
