@@ -9,6 +9,7 @@ import {
   dimension,
   string,
   extractDependencies,
+  createFunctionToken,
   extractVisualDependencies,
   getReferenceResolution,
   getTokenProcessors,
@@ -171,6 +172,13 @@ describe('extractDependencies', () => {
 
   it('returns empty array for no references', () => {
     expect(extractDependencies([color('#fff'), 42])).toEqual([]);
+  });
+
+  it('lists a nested function token\'s dependency once, in first-seen order', () => {
+    const inner = createFunctionToken('lighten', [ref('a.x')], {
+      metadata: { dependencies: ['a.x', 'a.z'], visualDependencies: [] },
+    });
+    expect(extractDependencies([ref('a.y'), inner, ref('a.x')])).toEqual(['a.y', 'a.x', 'a.z']);
   });
 });
 
