@@ -191,6 +191,8 @@ h1, h2, h3 {
   border-radius: 0;
 }
 .hi-center::part(output) { display: none; }
+.hi-center::part(input) { display: none; }
+.hi-center::part(chip) { inline-size: 100%; block-size: 100%; border: 0; box-shadow: none; }
 .hi-pill {
   position: absolute;
   left: 50%;
@@ -2323,13 +2325,43 @@ color-input::part(controls),
 color-input::part(input),
 color-input::part(gamut) { border-radius: 0; }
 
-/* Colour pickers read as controls: a white + black ring around the
-   swatch shows up on any surface, and thickens on hover/focus. */
+/* ── Colour pickers: one look everywhere ────────────────────────
+   A square swatch joined to a white hex field of the same height, both
+   inside one black outline (the swatch keeps a white inner ring so dark
+   colours still read as a swatch). Fixed font so the surrounding text
+   size can't make one picker taller than another. */
+color-input {
+  --picker-h: 32px;
+  gap: 0;
+  align-items: stretch;
+  font: 12px/1 var(--font-mono);
+}
+color-input::part(trigger) {
+  border-radius: 0;
+  align-self: stretch;
+}
 color-input::part(chip) {
-  box-shadow: 0 0 0 1px #fff, 0 0 0 2px #000;
-  transition: box-shadow .15s;
+  box-sizing: border-box;
+  inline-size: var(--picker-h);
+  block-size: var(--picker-h);
+  border-radius: 0;
+  border: 1px solid #000;
+  border-right: 0;
+  box-shadow: inset 0 0 0 1px #fff;
+  scale: 1;
+}
+color-input::part(input) {
+  box-sizing: border-box;
+  block-size: var(--picker-h);
+  inline-size: 10.5ch;
+  padding: 0 8px;
+  border: 1px solid #000;
+  border-radius: 0;
+  background: #fff;
+  color: #1d1c1c;
+  font: 12px/1 var(--font-mono);
 }
 color-input:hover::part(chip),
-color-input:focus-within::part(chip) {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #000;
-}
+color-input:hover::part(input) { border-width: 2px 0 2px 2px; }
+color-input:hover::part(input) { border-width: 2px; }
+color-input:focus-within::part(input) { outline: 2px solid var(--accent); outline-offset: 1px; }
