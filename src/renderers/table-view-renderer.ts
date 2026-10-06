@@ -3,7 +3,7 @@ import { DesignBook } from '../design-book';
 export interface TableViewRenderOptions {
   /** Class to apply to the root `<table>` element. */
   className?: string;
-  /** When true, prepend a small swatch box before colour values. Defaults
+  /** When true, prepend a small swatch box before color values. Defaults
    *  to true. */
   inlineColorSwatches?: boolean;
   /** When true (default), nodes inherited from a parent scope show the
@@ -27,7 +27,7 @@ function isHexColor(value: string): boolean {
 /**
  * Renders the entire token catalogue as an HTML `<table>` — one row per
  * token, with columns for the qualified key, the type, the resolved value
- * (optionally with a colour swatch), and the dependencies the token reads
+ * (optionally with a color swatch), and the dependencies the token reads
  * from. Useful for design-system documentation pages or admin tools.
  *
  * Plays nice with all token kinds (value, reference, function) and with

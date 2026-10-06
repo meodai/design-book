@@ -14,7 +14,7 @@ import type { ReadableOnOptions } from './readable';
 const toOklch = converter('oklch');
 
 /**
- * Returns the colour from a scope with the highest OKLCH chroma — the
+ * Returns the color from a scope with the highest OKLCH chroma — the
  * perceptually "most vivid" candidate. OKLCH chroma is the right axis here
  * because HSL saturation conflates lightness and saturation, so a pale blue
  * and a vivid mid-blue can score the same. Ties go to the first candidate in
@@ -42,7 +42,7 @@ export function mostVividImpl(
 
   if (!bestHex) {
     throw new FunctionError(
-      'mostVivid: no valid colour candidates found in scope',
+      'mostVivid: no valid color candidates found in scope',
       'mostVivid',
     );
   }
@@ -53,7 +53,7 @@ export function mostVividImpl(
 export interface MostVividOptions extends ReadableOnOptions {
   /** Keys to exclude from the candidate pool. Pass `ref('scope.token')`
    *  or a literal `'scope.token'` string. Useful for keeping role-loaded
-   *  tokens like `values.error` out of accent-colour picking. */
+   *  tokens like `values.error` out of accent-color picking. */
   not?: ReadonlyArray<string | ReferenceValue>;
   description?: string;
   [key: string]: unknown;

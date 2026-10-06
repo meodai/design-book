@@ -14,7 +14,7 @@ const toRgbGamut = toGamut('rgb', 'oklch');
  * always visible against the input — `darken(color.surface)` fails on a
  * dark surface, but `shade(color.surface)` keeps working.
  *
- * The shifted colour is gamut-mapped back into sRGB before formatting:
+ * The shifted color is gamut-mapped back into sRGB before formatting:
  * `formatHex` alone clips out-of-gamut channels, which skews the hue. The
  * input's alpha rides along untouched — a translucent input comes back as
  * 8-digit hex.
@@ -22,13 +22,13 @@ const toRgbGamut = toGamut('rgb', 'oklch');
 export function shadeImpl(colorValue: string, amount: number): string {
   const parsed = parse(colorValue);
   if (!parsed) {
-    throw new FunctionError(`shade: cannot parse colour "${colorValue}"`, 'shade');
+    throw new FunctionError(`shade: cannot parse color "${colorValue}"`, 'shade');
   }
 
   const lch = toOklch(parsed);
   if (!lch || typeof lch.l !== 'number') {
     throw new FunctionError(
-      `shade: cannot convert colour to OKLCH "${colorValue}"`,
+      `shade: cannot convert color to OKLCH "${colorValue}"`,
       'shade',
     );
   }
@@ -39,7 +39,7 @@ export function shadeImpl(colorValue: string, amount: number): string {
 
   const result = formatColor(toRgbGamut({ ...lch, l: newL }));
   if (!result) {
-    throw new FunctionError('shade: failed to format shaded colour', 'shade');
+    throw new FunctionError('shade: failed to format shaded color', 'shade');
   }
   return result;
 }

@@ -104,7 +104,7 @@ function pick (values, make, toToken = color) {
   }
 }
 
-/** Index of `hex` in `values`, comparing as colours. */
+/** Index of `hex` in `values`, comparing as colors. */
 function indexOfColor (values, hex) {
   if (!hex) return -1;
   const want = formatHex(parse(hex));

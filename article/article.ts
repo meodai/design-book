@@ -33,7 +33,7 @@ import './style.css';
 const book = new DesignBook('article');
 
 // The values layer is the atom layer: every token here is named after WHAT
-// it is (a colour, a length), not what it MEANS. No semantics, no roles —
+// it is (a color, a length), not what it MEANS. No semantics, no roles —
 // just raw material the rest of the system can reference.
 const values = book.addScope('values');
 values.set('gray50',   color('#fafafa'));
@@ -129,13 +129,13 @@ function activateProceduralPalette() {
   // lightest step. brand and interaction both stop being fixed slots and
   // become procedural: mostVivid scans the palette and picks the
   // highest-chroma candidate that still clears a 4.5 WCAG contrast against
-  // the surface. The two coincide — a single readable accent colour driving
+  // the surface. The two coincide — a single readable accent color driving
   // both the button background and the links — which is the usual
   // real-world pattern.
   colorScope.set('surface', ref('values.poline100'));
   // `not` keeps the procedural accent from landing on role-loaded values
   // like values.red500 — those have their own semantic meaning (error /
-  // alert) and shouldn't be reused as the brand / link colour.
+  // alert) and shouldn't be reused as the brand / link color.
   colorScope.set('brand', mostVivid(values, {
     readableOn: ref('color.surface'),
     not: [ref('values.red500')],
@@ -556,7 +556,7 @@ function openPopover(chip: HTMLElement) {
 
     // Ref chips with `data-quick-color` skip the re-point list and open the
     // picker for the underlying primitive value instead. Useful inline in
-    // prose where the point is "change this colour" rather than "choose
+    // prose where the point is "change this color" rather than "choose
     // which token to point at."
     if (tok.type === 'reference' && chip.dataset.quickColor !== undefined) {
       const prim = resolveToPrimitive(info.scopeName, info.name);

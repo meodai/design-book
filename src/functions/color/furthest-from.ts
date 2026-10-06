@@ -18,14 +18,14 @@ export function furthestFromImpl(
   const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, minContrast);
 
   if (colors.length === 0) {
-    throw new FunctionError('furthestFrom: no valid colour candidates found in scope', 'furthestFrom');
+    throw new FunctionError('furthestFrom: no valid color candidates found in scope', 'furthestFrom');
   }
 
   if (colors.length === 1) {
     return colors[0].hex;
   }
 
-  // Translucent colours are compared as they are seen: over the readableOn
+  // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
   let furthestHex: string = colors[0].hex;

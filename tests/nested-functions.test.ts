@@ -14,7 +14,7 @@ describe('nested function tokens', () => {
     palette.set('base', color('#0066cc'));
 
     const ui = book.addScope('ui');
-    // Compare to building the same colour via an intermediate token.
+    // Compare to building the same color via an intermediate token.
     ui.set('inlined', darken(lighten(ref('palette.base'), { amount: 0.10 }), { amount: 0.20 }));
 
     ui.set('lighter', lighten(ref('palette.base'), { amount: 0.10 }));

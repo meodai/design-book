@@ -99,7 +99,7 @@ function bootDesignSystem() {
   ui.set('ink', darkest(gray));                             // → g900
   // readableOn drops members that don't reach minContrast (default 4.5)
   // against a backdrop before ranking: the lightest grey that still reads
-  // on the page — the softest usable text colour.
+  // on the page — the softest usable text color.
   ui.set('text-soft', lightest(gray, { readableOn: ref('semantic.background') }));  // → g500
 
   // Font families — plain string tokens reused by typography scopes.
@@ -130,7 +130,7 @@ function bootDesignSystem() {
   const card = book.addScope('card');
   card.set('surface', ref('brand.neutral-light'));
   card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
-  // mostVivid picks the highest-chroma colour in `brand` that still reads
+  // mostVivid picks the highest-chroma color in `brand` that still reads
   // on the card surface — `readableOn` drops the orange secondary, which is
   // too light for white. `not` keeps role-loaded tokens like brand.error /
   // brand.success from being mistaken for the accent (red happens to have
@@ -354,14 +354,14 @@ function safeResolve(scopeName: string, tokenName: string): { value: string; err
 // --- Check if a resolved value looks like a color ---
 
 function looksLikeColor(value: string): boolean {
-  // Any CSS colour culori understands: named, oklch(), color(display-p3 …), …
-  // culori also reads bare hex digits ('700', 'bad') as colours; a font
+  // Any CSS color culori understands: named, oklch(), color(display-p3 …), …
+  // culori also reads bare hex digits ('700', 'bad') as colors; a font
   // weight or a word is not one, so '#'-less hex is rejected.
   if (!value || /^[0-9a-fA-F]+$/.test(value)) return false;
   return culoriParse(value) !== undefined;
 }
 
-// --- Colour literals in the editor text ---
+// --- Color literals in the editor text ---
 
 /** color('…') / color("…") / color(bare) — shared by the swatch decorations
  *  and the picker write-back so both see the same calls. Group 2 is the
@@ -421,7 +421,7 @@ function serializeFunctionToken(fn: any): string {
     return `sibling(ref('${from}'), ${offset}${tail})`;
   }
 
-  // The colour selectors' `readableOn` backdrop is stored as a trailing
+  // The color selectors' `readableOn` backdrop is stored as a trailing
   // argument; the token itself says where (readableOnArgIndex). It is
   // printed back inside the options object, the way it is typed.
   const args: any[] = fn.args ?? [];
@@ -1421,7 +1421,7 @@ document.addEventListener('click', (e) => {
   // Create a fresh picker element positioned at the swatch
   const picker = document.createElement('color-input') as any;
   picker.value = colorValue;
-  // Keep the alpha slider for translucent colours so picking does not
+  // Keep the alpha slider for translucent colors so picking does not
   // write them back opaque.
   if (!isTranslucent(colorValue)) picker.setAttribute('no-alpha', '');
 

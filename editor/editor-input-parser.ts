@@ -463,7 +463,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
   },
 
   // mostVivid(scope, readableOn?, { not?, readableOn?, minContrast? }) — same
-  // tail as every colour selector, see parseSelectorTail.
+  // tail as every color selector, see parseSelectorTail.
   mostVivid(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
     if (args.length < 1) throw new Error('mostVivid requires 1 argument');
@@ -637,7 +637,7 @@ for (const name of SCOPE_ARG_FUNCTIONS) {
  * falling back to the caller's defaults.
  */
 /**
- * Everything after a colour selector's fixed arguments: an optional
+ * Everything after a color selector's fixed arguments: an optional
  * positional `readableOn` (what the serializer writes, since the backdrop is
  * stored as a trailing function argument) followed by an optional options
  * object. Hand-parsed rather than through parseOptionsArg because `not` and

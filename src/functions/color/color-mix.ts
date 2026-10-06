@@ -29,8 +29,8 @@ export function toCssColorSpace(colorSpace: string): string {
   return CULORI_TO_CSS_COLOR_SPACE[colorSpace] ?? colorSpace;
 }
 
-/** The colour CSS `color-mix(in <mode>, c1, c2)` computes at `ratio`:
- *  premultiplied-alpha interpolation — so a transparent colour contributes
+/** The color CSS `color-mix(in <mode>, c1, c2)` computes at `ratio`:
+ *  premultiplied-alpha interpolation — so a transparent color contributes
  *  nothing but its alpha — with the hue left unweighted because it is
  *  angular, then mapped into sRGB if (and only if) it landed outside it.
  *  Shared with lighten/darken so they stay the JS twin of the
@@ -53,7 +53,7 @@ export function cssColorMix(
 
 /** Constructor-side check for a 0..1 fraction (a mix ratio, a lighten /
  *  darken amount), so a bad value fails where it is written rather than
- *  producing a nonsense colour at resolve time. */
+ *  producing a nonsense color at resolve time. */
 export function assertFraction(fn: string, label: string, value: unknown): void {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
     throw new FunctionError(`${fn}: \`${label}\` must be a number between 0 and 1, got ${String(value)}`, fn);

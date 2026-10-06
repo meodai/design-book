@@ -484,9 +484,9 @@ export class Renderer {
   private formatW3Value(internalType: string, resolvedStr: string, token?: TokenValue): W3TokenValue {
     if (internalType === 'color') {
       // W3 color: { colorSpace, components, alpha, hex }
-      // `srgb` components must lie in [0, 1], so a wide-gamut colour is
+      // `srgb` components must lie in [0, 1], so a wide-gamut color is
       // gamut-mapped (chroma reduction in OKLCH) before its channels are
-      // read; the hex comes from the same mapped colour.
+      // read; the hex comes from the same mapped color.
       const parsed = parse(resolvedStr);
       const rgb = parsed ? toRgb(gamutMapSrgb(parsed)) : null;
       if (parsed && rgb) {

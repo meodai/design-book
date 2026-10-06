@@ -14,13 +14,13 @@ import type { ReadableOnOptions } from './readable';
 const toOklch = converter('oklch');
 
 /**
- * Returns the colour from a scope at one end of the OKLCH lightness axis.
+ * Returns the color from a scope at one end of the OKLCH lightness axis.
  * OKLCH L rather than HSL lightness, which calls #ffff00 and #0000ff equally
  * light, and rather than WCAG luminance, which is a contrast measure and not
  * perceptually uniform. Ties go to the first candidate in scope order.
  *
  * Alpha is not factored in: there is no backdrop to composite over, so a
- * translucent candidate is ranked by the lightness of its colour and
+ * translucent candidate is ranked by the lightness of its color and
  * returned with its alpha intact. (`readableOn` does composite, but only to
  * decide which candidates stay in the pool.)
  */
@@ -47,7 +47,7 @@ function extremeLightness(
   }
 
   if (!bestHex) {
-    throw new FunctionError(`${name}: no valid colour candidates found in scope`, name);
+    throw new FunctionError(`${name}: no valid color candidates found in scope`, name);
   }
   return bestHex;
 }
@@ -95,12 +95,12 @@ function lightnessSelector(
   });
 }
 
-/** The colour in `scope` with the highest OKLCH lightness. */
+/** The color in `scope` with the highest OKLCH lightness. */
 export function lightest(scope: Scope, options?: LightnessSelectorOptions): FunctionTokenValue {
   return lightnessSelector('lightest', scope, options);
 }
 
-/** The colour in `scope` with the lowest OKLCH lightness. */
+/** The color in `scope` with the lowest OKLCH lightness. */
 export function darkest(scope: Scope, options?: LightnessSelectorOptions): FunctionTokenValue {
   return lightnessSelector('darkest', scope, options);
 }

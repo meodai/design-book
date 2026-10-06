@@ -71,7 +71,7 @@ describe('book.inspect', () => {
     expect(info!.options).toEqual({ amount: 0.15 });
     expect(info!.args).toHaveLength(1);
     expect(info!.dependencies).toContain('palette.brand');
-    // The resolved value should be a darkened brand colour.
+    // The resolved value should be a darkened brand color.
     expect(info!.value).toMatch(/^#[0-9a-f]{6}$/);
     expect(info!.value).not.toBe('#0066cc');
   });
@@ -106,9 +106,9 @@ describe('book.inspect', () => {
   it('surfaces a token description', () => {
     const book = new DesignBook('test');
     const palette = book.addScope('palette');
-    palette.set('brand', color('#0066cc', { description: 'Primary brand colour' }));
+    palette.set('brand', color('#0066cc', { description: 'Primary brand color' }));
 
-    expect(book.inspect('palette.brand')!.description).toBe('Primary brand colour');
+    expect(book.inspect('palette.brand')!.description).toBe('Primary brand color');
   });
 
   it('returns undefined value when a token cannot resolve', () => {

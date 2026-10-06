@@ -85,7 +85,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   });
 
   // relativeTo(color, colorSpace, modifications, options?)
-  // CSS relative-colour syntax: `<space>(from <color> <ch> <ch> <ch>)`.
+  // CSS relative-color syntax: `<space>(from <color> <ch> <ch> <ch>)`.
   // `color(from …)` is rejected by browsers for these spaces.
   renderer.registerFunctionRenderer('relativeTo', (args, options) => {
     const relativeToOptions = getOptions<{

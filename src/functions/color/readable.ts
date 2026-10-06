@@ -6,7 +6,7 @@ import { contrastAgainst } from './scope-colors';
 import type { ScopeColor } from './scope-colors';
 
 /**
- * Readability filter shared by the colour selectors. Like `not`, it narrows
+ * Readability filter shared by the color selectors. Like `not`, it narrows
  * the candidate pool before the selector ranks anything: every candidate
  * that does not reach `minContrast` against `readableOn` is dropped. The
  * selector's own rule (chroma, lightness, distance, …) then picks from what
@@ -82,7 +82,7 @@ export function splitReadableArgs<O extends { minContrast?: number }>(
  * against `readableOn`. Translucent candidates are judged composited over the
  * backdrop. An empty pool passes through so each selector keeps its own
  * empty-scope behaviour; a pool that empties *because of* the filter throws,
- * so a selector never hands back a colour the caller asked to be readable
+ * so a selector never hands back a color the caller asked to be readable
  * but is not.
  */
 export function filterReadable(
@@ -95,7 +95,7 @@ export function filterReadable(
 
   const backdrop = parse(readableOn);
   if (!backdrop) {
-    throw new FunctionError(`${name}: cannot parse \`readableOn\` colour "${readableOn}"`, name);
+    throw new FunctionError(`${name}: cannot parse \`readableOn\` color "${readableOn}"`, name);
   }
 
   const readable = pool.filter((c) => contrastAgainst(backdrop, c.parsed) >= minContrast);

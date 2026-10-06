@@ -138,7 +138,7 @@ describe('SVGRenderer', () => {
       expect(svg).toMatch(/prefers-reduced-motion[\s\S]*animation: none/);
     });
 
-    it('picks the outline colour per-connection by curve luminance', () => {
+    it('picks the outline color per-connection by curve luminance', () => {
       const book = new DesignBook('test-outline');
       const palette = book.addScope('palette');
       palette.set('dark', color('#101010'));
@@ -147,7 +147,7 @@ describe('SVGRenderer', () => {
       ui.set('uses-dark', ref('palette.dark'));
       ui.set('uses-light', ref('palette.light'));
       const svg = new SVGRenderer(book, { interactive: true }).render();
-      // Curves take the owning token's colour, so the dark curve gets a
+      // Curves take the owning token's color, so the dark curve gets a
       // light outline on hover and vice versa.
       expect(svg).toMatch(/<g class="connection"[^>]*data-from="ui\.uses-dark"[^>]*style="--active-outline: var\(--surface\)"/);
       expect(svg).toMatch(/<g class="connection"[^>]*data-from="ui\.uses-light"[^>]*style="--active-outline: var\(--on-surface\)"/);

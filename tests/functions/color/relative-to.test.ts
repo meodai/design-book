@@ -76,7 +76,7 @@ describe('relativeTo', () => {
     it('treats the first hsl channel as hue, not saturation', () => {
       const book = new DesignBook('test');
       const ui = book.addScope('ui');
-      // Culori omits `h` for achromatic colours, so the channel order has
+      // Culori omits `h` for achromatic colors, so the channel order has
       // to come from a table, not from Object.keys(converted).
       ui.set('rotated', relativeTo(color('#808080'), 'hsl', ['+30', null, null]));
 

@@ -86,7 +86,7 @@ describe('colorMix gamut mapping and alpha', () => {
   });
 
   it('premultiplies alpha the way CSS color-mix does', () => {
-    // Mixing an invisible colour in must not drag the result towards it:
+    // Mixing an invisible color in must not drag the result towards it:
     // 50% of transparent red over blue is blue at half alpha, not purple.
     expect(mix('#ff000000', '#0000ff', { colorSpace: 'srgb' })).toBe('#0000ff80');
   });
@@ -96,14 +96,14 @@ describe('colorMix gamut mapping and alpha', () => {
   });
 
   it('does not touch a mix that is already inside sRGB', () => {
-    // toGamut round-trips through OKLCH even for a displayable colour, and a
+    // toGamut round-trips through OKLCH even for a displayable color, and a
     // channel sitting exactly at 0 or 1 comes back marginally out of range,
     // so the chroma reduction kicks in and costs 1/255. The browser computes
     // #008080 here.
     expect(mix('#000000', '#00ffff', { colorSpace: 'srgb' })).toBe('#008080');
   });
 
-  it('mixing a colour with itself is the identity', () => {
+  it('mixing a color with itself is the identity', () => {
     // Unguarded gamut mapping turned this into #01bd91. (In a polar mode the
     // interpolation itself round-trips through OKLCH, so a channel pinned at
     // 0 or 1 can still land epsilon outside sRGB there — that is inherent to

@@ -15,7 +15,7 @@ describe('collectScopeColors and wide-gamut members', () => {
     return { book, s };
   }
 
-  it('gamut-maps a wide-gamut colour token instead of clipping it', () => {
+  it('gamut-maps a wide-gamut color token instead of clipping it', () => {
     const { s } = makeBook();
     expect(collectScopeColors(s).map((c) => c.hex)).toEqual(['#00c300']);
   });

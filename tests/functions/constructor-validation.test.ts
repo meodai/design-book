@@ -21,7 +21,7 @@ describe('constructors reject bad options up front', () => {
     expect(() => darken(c(), { amount })).toThrow(FunctionError);
   });
 
-  it('relativeTo with an unknown colour space', () => {
+  it('relativeTo with an unknown color space', () => {
     expect(() => relativeTo(c(), 'cmyk', [null, null, null])).toThrow(/relativeTo: unsupported color space "cmyk"/);
   });
 

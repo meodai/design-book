@@ -5,7 +5,7 @@ import { Renderer } from '../../src/renderers/renderer';
 import { gamutMapSrgb } from '../../src/functions/color/scope-colors';
 import { parse, formatHex } from 'culori';
 
-describe('w3 colours outside sRGB', () => {
+describe('w3 colors outside sRGB', () => {
   function w3Color(value: string) {
     const book = new DesignBook('test');
     book.addScope('brand').set('c', color(value));
@@ -28,7 +28,7 @@ describe('w3 colours outside sRGB', () => {
     expect(fromComponents).toBe(v.hex);
   });
 
-  it('leaves in-gamut colours untouched', () => {
+  it('leaves in-gamut colors untouched', () => {
     expect(w3Color('#0066cc')).toEqual({
       colorSpace: 'srgb',
       components: [0, 0.4, 0.8],

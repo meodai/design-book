@@ -88,7 +88,7 @@ describe('sibling', () => {
     expect(book.resolve('ramp.top')).toBe('#333333'); // not hover, not itself
   });
 
-  it('works on any token type, not only colours', () => {
+  it('works on any token type, not only colors', () => {
     const book = new DesignBook('test');
     const space = book.addScope('space');
     space.set('s', px(4));

@@ -14,10 +14,10 @@ import type { ReadableOnOptions } from './readable';
 const toOklch = converter('oklch');
 
 /**
- * Returns the colour from a scope with the lowest OKLCH chroma — the
+ * Returns the color from a scope with the lowest OKLCH chroma — the
  * perceptually "most muted" candidate. Mirror of `mostVivid`: same axis,
  * inverted. Useful for deriving subtle surfaces or low-emphasis text from a
- * curated palette without inventing a new colour. Ties go to the first
+ * curated palette without inventing a new color. Ties go to the first
  * candidate in scope order. Pass `readableOn` to rank only candidates
  * readable on a backdrop.
  */
@@ -42,7 +42,7 @@ export function leastVividImpl(
 
   if (!bestHex) {
     throw new FunctionError(
-      'leastVivid: no valid colour candidates found in scope',
+      'leastVivid: no valid color candidates found in scope',
       'leastVivid',
     );
   }

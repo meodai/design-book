@@ -57,22 +57,22 @@ describe('SVGRenderer palette-linker classification', () => {
   });
 });
 
-describe('SVGRenderer colour dots', () => {
-  it('colours a named-colour token instead of the grey fallback', () => {
+describe('SVGRenderer color dots', () => {
+  it('colors a named-color token instead of the grey fallback', () => {
     const book = new DesignBook('named');
     book.addScope('brand').set('accent', color('red'));
     const svg = new SVGRenderer(book).render();
     expect(svg).toContain('#ff0000');
   });
 
-  it('colours oklch tokens with their hex', () => {
+  it('colors oklch tokens with their hex', () => {
     const book = new DesignBook('oklch');
     book.addScope('brand').set('accent', color('oklch(0.6 0.1 250)'));
     const svg = new SVGRenderer(book).render();
     expect(svg).not.toMatch(/fill="#888888"/);
   });
 
-  it('keeps the alpha of a translucent colour', () => {
+  it('keeps the alpha of a translucent color', () => {
     const book = new DesignBook('alpha');
     book.addScope('brand').set('veil', color('rgb(255 0 0 / 0.5)'));
     const svg = new SVGRenderer(book).render();

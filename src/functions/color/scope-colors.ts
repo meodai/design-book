@@ -5,7 +5,7 @@ import type { TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { isExcluded } from '../scope-members';
 
-/** A candidate colour drawn from a scope's token pool. */
+/** A candidate color drawn from a scope's token pool. */
 export interface ScopeColor {
   /** Unqualified token key within the iterated scope. */
   key: string;
@@ -19,33 +19,33 @@ export interface ScopeColor {
 const toRgb = converter('rgb');
 const toRgbGamut = toGamut('rgb', 'oklch');
 
-/** True when the colour is displayable in sRGB. */
+/** True when the color is displayable in sRGB. */
 export const isInSrgb = inGamut('rgb');
 
 /**
- * Bring a colour into sRGB, reducing chroma in OKLCH rather than clipping
+ * Bring a color into sRGB, reducing chroma in OKLCH rather than clipping
  * channels — but only when it is actually outside the gamut. `toGamut`
- * hands a displayable colour back through a round trip via OKLCH, and a
+ * hands a displayable color back through a round trip via OKLCH, and a
  * channel sitting exactly at 0 or 1 comes back marginally out of range,
  * which trips the chroma reduction and costs 1/255: a 50/50 sRGB mix of
  * black and cyan came out `#007f7f` instead of the `#008080` the browser
- * computes, and mixing a colour with itself stopped being the identity.
+ * computes, and mixing a color with itself stopped being the identity.
  */
 export function gamutMapSrgb(color: Color): Color {
   return isInSrgb(color) ? color : toRgbGamut(color);
 }
 
 /**
- * Hex form of a colour, keeping alpha when it has any. Selectors return this,
+ * Hex form of a color, keeping alpha when it has any. Selectors return this,
  * so a translucent token in the pool stays translucent in the result instead
- * of being handed back as an opaque colour it never was.
+ * of being handed back as an opaque color it never was.
  */
 export function formatColor(color: Color): string | undefined {
   return (color.alpha ?? 1) < 1 ? formatHex8(color) : formatHex(color);
 }
 
 /**
- * Source-over compositing in sRGB: what a translucent colour actually looks
+ * Source-over compositing in sRGB: what a translucent color actually looks
  * like on a given backdrop.
  */
 export function compositeOver(color: Color, backdrop: Color): Color {
@@ -89,10 +89,10 @@ const BLACK: Color = { mode: 'rgb', r: 0, g: 0, b: 0 };
 /**
  * Perceptual distance that takes alpha into account. OKLab distance alone is
  * alpha-blind, so a 5% black hairline would count as identical to opaque
- * black. With a known `backdrop` both colours are composited over it and
+ * black. With a known `backdrop` both colors are composited over it and
  * compared as they would be seen there. Without one, they are compared over
- * white and over black and the larger distance wins: two colours are only
- * close if they look close on any backdrop. Opaque colours are unaffected.
+ * white and over black and the larger distance wins: two colors are only
+ * close if they look close on any backdrop. Opaque colors are unaffected.
  */
 export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): number {
   if ((a.alpha ?? 1) >= 1 && (b.alpha ?? 1) >= 1) return perceptualDistance(a, b);
@@ -104,13 +104,13 @@ export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): nu
 }
 
 /**
- * Collects every colour a scope can offer as a selector candidate.
+ * Collects every color a scope can offer as a selector candidate.
  *
- * Colour tokens are read from their cached Culori processor when present and
+ * Color tokens are read from their cached Culori processor when present and
  * re-parsed from `rawValue` otherwise; references and function tokens are
- * resolved through the scope, so the pool includes computed colours
+ * resolved through the scope, so the pool includes computed colors
  * (colorMix, lighten, darken, …) and not just hand-written ones. Tokens that
- * are not colours, or that fail to resolve, are skipped.
+ * are not colors, or that fail to resolve, are skipped.
  *
  * @param scope Scope to iterate.
  * @param not Fully-qualified keys to exclude from the pool. An inherited

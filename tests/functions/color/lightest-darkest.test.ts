@@ -78,11 +78,11 @@ describe('lightest / darkest', () => {
     expect(book.resolve('ui.bg')).toBe('#ffffff80');
   });
 
-  it('throws when the scope has no colours', () => {
+  it('throws when the scope has no colors', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     const ui = book.addScope('ui');
     ui.set('bg', lightest(empty));
-    expect(() => book.resolve('ui.bg')).toThrow(/lightest: no valid colour candidates/);
+    expect(() => book.resolve('ui.bg')).toThrow(/lightest: no valid color candidates/);
   });
 });

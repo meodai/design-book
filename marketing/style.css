@@ -2314,7 +2314,7 @@ h1, h2, h3 {
   .ltile, .stile { aspect-ratio: 1; }
 }
 
-/* No rounded corners anywhere — including inside the colour pickers.
+/* No rounded corners anywhere — including inside the color pickers.
    (Circles stay circles: swatch dots are shapes, not corners.) */
 color-input::part(trigger),
 color-input::part(chip),
@@ -2325,10 +2325,10 @@ color-input::part(controls),
 color-input::part(input),
 color-input::part(gamut) { border-radius: 0; }
 
-/* ── Colour pickers: one look everywhere ────────────────────────
+/* ── Color pickers: one look everywhere ────────────────────────
    A square swatch joined to a white hex field of the same height, both
    inside one black outline (the swatch keeps a white inner ring so dark
-   colours still read as a swatch). Fixed font so the surrounding text
+   colors still read as a swatch). Fixed font so the surrounding text
    size can't make one picker taller than another. */
 color-input {
   --picker-h: 32px;

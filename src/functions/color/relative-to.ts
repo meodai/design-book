@@ -4,9 +4,9 @@ import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../token
 import { FunctionError } from '../../errors';
 import { formatColor, gamutMapSrgb } from './scope-colors';
 
-/** Channel order per colour space. Culori's object key order is not a
+/** Channel order per color space. Culori's object key order is not a
  *  reliable channel order — `hsl` comes out `s, l, h`, and achromatic
- *  colours omit `h` entirely — so the order is pinned here and shared with
+ *  colors omit `h` entirely — so the order is pinned here and shared with
  *  the CSS renderer, which emits the same channels in the same slots. */
 export const RELATIVE_TO_CHANNELS: Record<string, readonly [string, string, string]> = {
   oklch: ['l', 'c', 'h'],
@@ -19,7 +19,7 @@ export const RELATIVE_TO_CHANNELS: Record<string, readonly [string, string, stri
 
 /** Factor between the JS channel range (Culori's) and the CSS one, per
  *  channel. Culori keeps `hsl` s/l and `rgb` r/g/b in 0..1, while CSS
- *  relative-colour syntax uses 0..100 and 0..255 respectively. Everything
+ *  relative-color syntax uses 0..100 and 0..255 respectively. Everything
  *  else (OKLab/OKLCH/Lab/LCH channels, hue degrees) already matches. */
 export const RELATIVE_TO_CSS_SCALES: Record<string, readonly [number, number, number]> = {
   oklch: [1, 1, 1],
@@ -68,7 +68,7 @@ export function relativeToImpl(
   }
 
   const modified = { ...converted } as any;
-  // Culori leaves `h` undefined for achromatic colours; CSS relative-colour
+  // Culori leaves `h` undefined for achromatic colors; CSS relative-color
   // syntax resolves the same case to 0, so match that.
   for (const channel of channels) {
     if (modified[channel] === undefined) modified[channel] = 0;
@@ -105,7 +105,7 @@ export function relativeToImpl(
   // Out-of-sRGB results are gamut-mapped in OKLCH rather than clipped
   // channel-wise; a displayable one is left exactly as it is (see
   // gamutMapSrgb — the round trip costs 1/255 for the sRGB-based spaces).
-  // Alpha rides along untouched, as in CSS relative-colour syntax, so a
+  // Alpha rides along untouched, as in CSS relative-color syntax, so a
   // translucent input comes back as 8-digit hex.
   const result = formatColor(gamutMapSrgb(modified));
   if (!result) {

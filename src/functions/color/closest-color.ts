@@ -21,21 +21,21 @@ export function closestColorImpl(
 ): string {
   const targetRaw = parse(targetValue);
   if (!targetRaw) {
-    throw new FunctionError(`closestColor: cannot parse target colour "${targetValue}"`, 'closestColor');
+    throw new FunctionError(`closestColor: cannot parse target color "${targetValue}"`, 'closestColor');
   }
   // Candidates are compared in their gamut-mapped sRGB hex form (that is what
   // the function returns), so map the target the same way. Otherwise a
   // wide-gamut token measured against its own hex would not be at distance zero.
   const targetParsed = parse(formatColor(gamutMapSrgb(targetRaw)) ?? '');
   if (!targetParsed) {
-    throw new FunctionError(`closestColor: cannot format target colour "${targetValue}"`, 'closestColor');
+    throw new FunctionError(`closestColor: cannot format target color "${targetValue}"`, 'closestColor');
   }
 
   let closestHex: string | null = null;
   let closestDistance = Infinity;
 
   const pool = filterReadable('closestColor', collectScopeColors(scope, not), readableOn, minContrast);
-  // Translucent colours are compared as they are seen: over the readableOn
+  // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
   for (const candidate of pool) {
@@ -47,7 +47,7 @@ export function closestColorImpl(
   }
 
   if (!closestHex) {
-    throw new FunctionError('closestColor: no valid colour candidates found in scope', 'closestColor');
+    throw new FunctionError('closestColor: no valid color candidates found in scope', 'closestColor');
   }
   return closestHex;
 }

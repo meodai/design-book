@@ -23,7 +23,7 @@ describe('lighten / darken match the CSS renderer', () => {
   it('gamut-maps a saturated result instead of clipping channels', () => {
     // Mixing pure green towards white leaves OKLCH chroma outside sRGB.
     // Formatting the raw mix clips the channels; gamut mapping reduces
-    // chroma instead and lands on a different colour.
+    // chroma instead and lands on a different color.
     const raw = interpolate([parse('#00ff00')!, 'white'], 'oklch')(0.05);
     const clipped = formatHex(raw);
     const mapped = formatHex(toRgbGamut(raw));
@@ -57,14 +57,14 @@ describe('lighten / darken / shade keep alpha', () => {
     expect(shadeImpl('#0066cc80', 0.1)).toBe('#0047aa80');
   });
 
-  it('leaves an opaque colour six digits long', () => {
+  it('leaves an opaque color six digits long', () => {
     expect(lightenImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
     expect(darkenImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
     expect(shadeImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  it('mixes a translucent colour with premultiplied alpha', () => {
-    // A fully transparent colour must not drag the hue anywhere: lightening
+  it('mixes a translucent color with premultiplied alpha', () => {
+    // A fully transparent color must not drag the hue anywhere: lightening
     // it is pure white at the mixed alpha.
     expect(lightenImpl('#ff000000', 0.5)).toBe('#ffffff80');
   });

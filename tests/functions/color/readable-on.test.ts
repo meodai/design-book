@@ -9,7 +9,7 @@ import { closestColor } from '../../../src/functions/color/closest-color';
 import { furthestFrom } from '../../../src/functions/color/furthest-from';
 import { FunctionError } from '../../../src/errors';
 
-// `readableOn` + `minContrast` filter a colour selector's candidate pool
+// `readableOn` + `minContrast` filter a color selector's candidate pool
 // down to the members that reach the ratio against a backdrop, the same way
 // `not` filters it by key. The selector then ranks only what is left.
 
@@ -85,7 +85,7 @@ describe('readableOn', () => {
 
   it('throws when the backdrop does not parse', () => {
     const { book, pool, ui } = setup();
-    const tok = createFunctionToken('mostVivid', [pool, 'not-a-colour'], { options: { minContrast: 4.5, not: [] } });
+    const tok = createFunctionToken('mostVivid', [pool, 'not-a-color'], { options: { minContrast: 4.5, not: [] } });
     expect(() => {
       ui.set('x', tok);
       book.resolve('ui.x');

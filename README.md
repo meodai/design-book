@@ -103,7 +103,7 @@ darkest(scope)                              // Lowest OKLCH lightness
 `closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
 **Translucent candidates.** Selectors keep alpha. A candidate is judged as it
-would actually look — composited over the target colour — so a 5%-black
+would actually look — composited over the target color — so a 5%-black
 hairline scores as the near-invisible line it is rather than as pure black,
 and the winner is returned with its own alpha as 8-digit hex
 (`#00000080`). Feed that into a renderer and you get the translucent token
@@ -114,7 +114,7 @@ back, not an opaque approximation of it.
 Every scope-iterating function above accepts a `not` option — an array of
 fully-qualified token keys (or `ref(...)` calls) that should be skipped during
 the search. Useful when a value carries a role you don't want to reuse
-elsewhere — `values.error` shouldn't be the accent colour even if it happens
+elsewhere — `values.error` shouldn't be the accent color even if it happens
 to have the highest chroma.
 
 ```typescript
@@ -131,11 +131,11 @@ Plain strings work too — `not: ['palette.error']` is equivalent to
 
 ### Keeping only readable candidates with `readableOn`
 
-The colour selectors `mostVivid`, `leastVivid`, `lightest`, `darkest`,
-`closestColor` and `furthestFrom` also take `readableOn` — a backdrop colour —
+The color selectors `mostVivid`, `leastVivid`, `lightest`, `darkest`,
+`closestColor` and `furthestFrom` also take `readableOn` — a backdrop color —
 and `minContrast` (default 4.5). Like `not`, it narrows the pool before the
 selector ranks anything: candidates below the WCAG ratio against the backdrop
-are dropped, so the vivid pick is the most vivid *readable* colour.
+are dropped, so the vivid pick is the most vivid *readable* color.
 
 ```typescript
 ui.set('accent', mostVivid(palette, {
@@ -148,7 +148,7 @@ ui.set('accent', mostVivid(palette, {
 The backdrop is a real dependency — change `ui.surface` and the pick follows.
 Translucent candidates are judged composited over it. If no candidate reaches
 the ratio the selector throws instead of falling back, so it never hands back
-a colour you asked to be readable that is not. `bestContrastWith` and
+a color you asked to be readable that is not. `bestContrastWith` and
 `minContrastWith` already pick by contrast and do not take it.
 
 ### Color transforms
@@ -165,9 +165,9 @@ relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
 
 `lighten` and `darken` are OKLCH mixes towards white and black — the JS twin
 of the `color-mix(in oklch, <color> N%, white | black)` the CSS renderer
-emits, so a token resolves to the same colour whether JS or the browser
+emits, so a token resolves to the same color whether JS or the browser
 computes it. `colorMix` matches CSS `color-mix()` too: premultiplied-alpha
-interpolation (a fully transparent colour contributes nothing but its
+interpolation (a fully transparent color contributes nothing but its
 alpha), with the result gamut-mapped in OKLCH instead of clipped
 channel-wise — mixing `#ff0000` and `#00ff00` in `oklch` gives `#dda200`,
 not the clipped `#f99500`. All four keep alpha and emit 8-digit hex when the
@@ -404,7 +404,7 @@ import {
 } from 'design-book';
 import type { TokenValue, ReferenceValue, FunctionTokenValue } from 'design-book';
 
-// 1. Implementation. Receives the resolved colour as a string and the options.
+// 1. Implementation. Receives the resolved color as a string and the options.
 function multiplyAlphaImpl(colorValue: string, alpha: number): string {
   // (Use any parser you like — culori, chroma-js, your own. Returns CSS.)
   return colorValue.replace(/#([0-9a-f]{6})$/i, (_, hex) => {
@@ -677,7 +677,7 @@ If you want the structured token object directly, use `renderW3DesignTokensObjec
 
 For documentation pages or admin UIs, `TableViewRenderer` outputs an HTML
 `<table>` with one row per token — qualified key, type, resolved value
-(with an optional inline colour swatch), and the dependency list.
+(with an optional inline color swatch), and the dependency list.
 
 ```typescript
 import { TableViewRenderer } from 'design-book';

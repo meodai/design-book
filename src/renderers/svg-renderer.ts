@@ -57,8 +57,8 @@ interface DotInfo {
 
 function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string): string {
   try {
-    // Any CSS colour Culori understands (`red`, `oklch(…)`, `color(…)`),
-    // normalised to hex so it is a valid SVG fill. Translucent colours keep
+    // Any CSS color Culori understands (`red`, `oklch(…)`, `color(…)`),
+    // normalised to hex so it is a valid SVG fill. Translucent colors keep
     // their alpha as 8-digit hex.
     const parsed = parse(book.resolve(`${scopeName}.${tokenName}`));
     const hex = parsed && ((parsed.alpha ?? 1) < 1 ? formatHex8(parsed) : formatHex(parsed));
@@ -95,7 +95,7 @@ function normalizeColor(value: string): string | null {
 /** Returns the theme variable (`--on-surface` or `--surface`) whose value
  *  contrasts better with the given fill — used to outline the colored
  *  edge stroke so the animated dashes stay readable against the curve's
- *  own colour. */
+ *  own color. */
 function pickActiveOutline(fillValue: string): string {
   const parsed = parse(fillValue);
   if (!parsed) return 'var(--on-surface)';
@@ -373,7 +373,7 @@ export class SVGRenderer {
         lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-to="${sel}"] { opacity: 1; }`);
         lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-from="${sel}"], svg.interactive:has([data-token-key="${sel}"]:hover) .conn-label[data-to="${sel}"] { opacity: 1; }`);
         // Swap the outline only on the highlighted connections so the
-        // animated dashes contrast with the colour of each curve.
+        // animated dashes contrast with the color of each curve.
         lines.push(`svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-from="${sel}"] .conn-bg, svg.interactive:has([data-token-key="${sel}"]:hover) .connection[data-to="${sel}"] .conn-bg { stroke: var(--active-outline); }`);
       }
       // Animated marching dashes show data-flow direction. The animation
@@ -525,9 +525,9 @@ export class SVGRenderer {
         const toAttr   = ` data-to="${escapeXml(to.qualifiedKey)}"`;
         const flowAttr = ` data-flow="${consumerAtStart ? 'start' : 'end'}"`;
         // The "active outline" is what we swap to under :hover so the
-        // animated dashes contrast with the curve's own colour. Computed
-        // per-connection — light colours get a dark outline, dark
-        // colours get a light one.
+        // animated dashes contrast with the curve's own color. Computed
+        // per-connection — light colors get a dark outline, dark
+        // colors get a light one.
         const activeOutline = pickActiveOutline(from.color);
         const styleAttr = ` style="--active-outline: ${activeOutline}"`;
         const pathD = `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;

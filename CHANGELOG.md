@@ -11,7 +11,7 @@ All notable changes to Design Book are recorded here. The format follows
 - **The `mostVivid` / `leastVivid` readability gate is now a shared pool
   filter, `readableOn`.** `against` is renamed `readableOn` (passing
   `against` throws and names the new option), `minContrast` defaults to 4.5
-  once a backdrop is given, and the filter is available on every colour
+  once a backdrop is given, and the filter is available on every color
   selector — `mostVivid`, `leastVivid`, `lightest`, `darkest`,
   `closestColor`, `furthestFrom`. Like `not`, it drops candidates from the
   pool before ranking. **Behaviour change:** when no candidate reaches the
@@ -24,7 +24,7 @@ All notable changes to Design Book are recorded here. The format follows
 ### Added
 
 - `lightest(scope, { not, readableOn })` and `darkest(...)` select the
-  colour with the highest / lowest OKLCH lightness from a scope.
+  color with the highest / lowest OKLCH lightness from a scope.
 - `sibling(ref('ramp.s300'), offset, { wrap, not })` returns the member
   `offset` steps away from a token in its own scope's key order. It stops at
   the first / last member by default and wraps around with `wrap: true`.
@@ -36,9 +36,9 @@ All notable changes to Design Book are recorded here. The format follows
 ### Fixed
 
 - **W3 output for functions without a fixed return type.** `nth`, `random`
-  and `sibling` came out as `"$type": "unknown"` with the colour as a plain
-  string. They are now typed by what they resolve to — a colour gets
-  `color` and the structured W3 colour value, `16px` gets `dimension` —
+  and `sibling` came out as `"$type": "unknown"` with the color as a plain
+  string. They are now typed by what they resolve to — a color gets
+  `color` and the structured W3 color value, `16px` gets `dimension` —
   and `$type` is left off for a plain string.
 - **Selector candidate pools are no longer dependency-graph edges.** A
   scope-iterating selector (`bestContrastWith`, `minContrastWith`,
@@ -56,15 +56,15 @@ All notable changes to Design Book are recorded here. The format follows
   (`colorMix(#ff0000, #00ff00, { colorSpace: 'oklch' })` is `#dda200`, not
   `#f99500`) and keeps alpha, interpolating premultiplied the way CSS
   `color-mix()` does. The map only runs when the mix is actually outside
-  sRGB: `toGamut` round-trips a displayable colour through OKLCH, which
+  sRGB: `toGamut` round-trips a displayable color through OKLCH, which
   nudges a channel pinned at 0 or 1 out of range and desaturates it by
   1/255 — a 50/50 sRGB mix of black and cyan is `#008080`, and mixing a
-  colour with itself is the identity.
+  color with itself is the identity.
 - `lighten`, `darken` and `shade` keep alpha instead of dropping it, and
   emit 8-digit hex when the result is translucent. `lighten`/`darken` mix
   the alpha the way the browser does; `shade` carries the input's through.
 - The CSS renderer emits exact `lighten`/`darken` percentages — an amount of
-  `1/3` rendered as `67%` and computed a different colour than JS.
+  `1/3` rendered as `67%` and computed a different color than JS.
 - The editor's argument parser accepts a signed number, so a hand-typed
   `nth(brand, -1)` parses instead of failing with "nth requires a numeric
   index".

@@ -8,7 +8,7 @@ description: Migrate or retrofit a static design system onto Design Book — a r
 Design Book is a reactive design-token framework. Tokens hold a value, a
 reference to another token, or a rule that computes a value from inputs.
 The migration goal is to turn a static set of tokens (hex codes, lengths,
-named colours) into a graph that re-evaluates when any input changes —
+named colors) into a graph that re-evaluates when any input changes —
 without producing 17,000 redundant component-level tokens along the way.
 
 This skill is the practical workflow for that migration. It works for any
@@ -53,7 +53,7 @@ input:
 - **JSON design tokens**: `*.tokens.json`, `tokens/*.json`, files matching the
   W3C draft format (`{ "$value": …, "$type": … }`)
 - **Tailwind**: `tailwind.config.{js,ts}` `theme` and `theme.extend`
-- **TypeScript theme objects**: const exports with colour/spacing maps
+- **TypeScript theme objects**: const exports with color/spacing maps
 - **Figma**: see the Figma section below
 
 Record name + value + (if available) any description, type hint, or
@@ -63,7 +63,7 @@ reference target. Don't transform yet.
 
 Bucket every entry by domain:
 
-- colour
+- color
 - spacing / dimension
 - typography (font size, weight, line height, family)
 - radius / corner
@@ -79,7 +79,7 @@ A single Design Book scope per domain is a sensible default
 For each entry, decide: is it a unique raw material, or does it duplicate
 an existing one?
 
-- **Colour**: two `#0066cc` entries collapse into one `values.blue500`. Pull
+- **Color**: two `#0066cc` entries collapse into one `values.blue500`. Pull
   every distinct hex into a `values` scope with descriptive names.
 - **Dimensions**: separate base units from multiples. `8px`, `16px`, `24px`,
   `32px` → either four values, or one base + three multiples.
@@ -123,7 +123,7 @@ didn't need to. Each one is a candidate for a procedural token.
 | `--press: <even darker>` | `darken(ref('color.brand'), { amount: 0.3 })` |
 | `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), ramp)` |
 | `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ramp, { ratio: 1.5 })` |
-| `--accent: <one of the brand colours>` | `mostVivid(values, { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
+| `--accent: <one of the brand colors>` | `mostVivid(values, { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
 | `--space-sm/md/lg/xl`: multiples of a base | `spacingScale(ref('space.base'), { multiplier })` |
 | `--font-h1/h2/h3`: modular scale | `typographyScale(ref('type.base'), { ratio, step })` |
@@ -377,9 +377,9 @@ entry — inheritance handles it.
 Figma doesn't store rules. But naming conventions usually leak them:
 
 - Pairs like `color.button.bg` + `color.button.text` → consider
-  `bestContrastWith(button.bg, values)` instead of a fixed text colour.
+  `bestContrastWith(button.bg, values)` instead of a fixed text color.
 - Sequences like `color.brand.100, 200, …, 900` → likely a colorMix ramp.
-  Check the colours: are they perceptually-spaced steps? Replace with
+  Check the colors: are they perceptually-spaced steps? Replace with
   `colorMix(anchor, anchor2, { ratio })` per step.
 - States like `color.brand.hover`, `color.brand.pressed`, `color.brand.disabled`
   with progressive darkness → `darken(color.brand, { amount: 0.1/0.2/0.4 })`.
@@ -419,7 +419,7 @@ After importing:
   smell. The value layer holds material; the role goes in `color`.
 - **Forgetting `not` on `mostVivid` / `bestContrastWith` / etc.** Without
   `not: [ref('values.error')]`, the procedural accent often lands on the
-  red error colour (highest chroma).
+  red error color (highest chroma).
 - **Re-creating tokens on Figma sync instead of mutating.** `scope.set` is
   idempotent; calling it on the same key updates the value and preserves
   the existing dependents.
@@ -430,7 +430,7 @@ After importing:
 
 ---
 
-## Beyond colour
+## Beyond color
 
 The same workflow applies for typography, motion, content strings, and
 icon roles. Use `typographyScale` for modular type, `timing` for

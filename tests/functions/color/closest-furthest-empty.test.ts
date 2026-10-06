@@ -5,16 +5,16 @@ import { FunctionError } from '../../../src/errors';
 import { closestColor, closestColorImpl } from '../../../src/functions/color/closest-color';
 import { furthestFrom, furthestFromImpl } from '../../../src/functions/color/furthest-from';
 
-// Like every other colour selector, closestColor / furthestFrom throw instead
+// Like every other color selector, closestColor / furthestFrom throw instead
 // of handing back a transparent '#00000000' nobody asked for.
 describe('closestColor / furthestFrom with nothing to pick', () => {
-  it('closestColor throws on a scope without colours', () => {
+  it('closestColor throws on a scope without colors', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     empty.set('label', string('hello'));
     const ui = book.addScope('ui');
     ui.set('match', closestColor(color('#ff0000'), empty));
-    expect(() => book.resolve('ui.match')).toThrow(/closestColor: no valid colour candidates/);
+    expect(() => book.resolve('ui.match')).toThrow(/closestColor: no valid color candidates/);
   });
 
   it('closestColor throws when `not` empties the pool', () => {
@@ -28,15 +28,15 @@ describe('closestColor / furthestFrom with nothing to pick', () => {
     const book = new DesignBook('test');
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
-    expect(() => closestColorImpl('not-a-colour', p)).toThrow(/closestColor: cannot parse/);
+    expect(() => closestColorImpl('not-a-color', p)).toThrow(/closestColor: cannot parse/);
   });
 
-  it('furthestFrom throws on a scope without colours', () => {
+  it('furthestFrom throws on a scope without colors', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     const ui = book.addScope('ui');
     ui.set('far', furthestFrom(empty));
-    expect(() => book.resolve('ui.far')).toThrow(/furthestFrom: no valid colour candidates/);
+    expect(() => book.resolve('ui.far')).toThrow(/furthestFrom: no valid color candidates/);
   });
 
   it('furthestFrom throws when `not` empties the pool', () => {

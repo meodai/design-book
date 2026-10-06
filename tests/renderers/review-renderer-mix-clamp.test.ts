@@ -13,13 +13,13 @@ describe('css color-mix percentages are clamped like the JS side', () => {
     return { css: new Renderer(book, 'css-variables').render(), js: book.resolve('ui.x') };
   }
 
-  it('colorMix ratio above 1 renders as 0% of the first colour', () => {
+  it('colorMix ratio above 1 renders as 0% of the first color', () => {
     const { css, js } = cssFor('colorMix', { ratio: 1.2 });
     expect(css).toContain('color-mix(in lab, #ff0000 0%, #0000ff)');
     expect(js).toBe('#0000ff');
   });
 
-  it('colorMix ratio below 0 renders as 100% of the first colour', () => {
+  it('colorMix ratio below 0 renders as 100% of the first color', () => {
     const { css, js } = cssFor('colorMix', { ratio: -1 });
     expect(css).toContain('color-mix(in lab, #ff0000 100%, #0000ff)');
     expect(js).toBe('#ff0000');
@@ -31,7 +31,7 @@ describe('css color-mix percentages are clamped like the JS side', () => {
     expect(js).toBe('#ffffff');
   });
 
-  it('darken amount below 0 leaves the colour unchanged', () => {
+  it('darken amount below 0 leaves the color unchanged', () => {
     const { css, js } = cssFor('darken', { amount: -0.5 }, [color('#ff0000')]);
     expect(css).toContain('color-mix(in oklch, #ff0000 100%, black)');
     expect(js).toBe('#ff0000');

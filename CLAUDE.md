@@ -65,7 +65,7 @@ A scheme is a vocabulary (kinds: `list`, open-ended `ordinal` / `roman` / `tshir
 
 Each function exports a **constructor** (returns `FunctionTokenValue` via `createFunctionToken`) and an **implementation** (the actual computation). Implementations are auto-registered on DesignBook construction via `registerBuiltinFunctions()`.
 
-Constructors validate what they can up front and throw `FunctionError`: `colorMix` `ratio` and `lighten` / `darken` `amount` must lie in [0, 1], `relativeTo` needs a supported colour space.
+Constructors validate what they can up front and throw `FunctionError`: `colorMix` `ratio` and `lighten` / `darken` `amount` must lie in [0, 1], `relativeTo` needs a supported color space.
 
 At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the registry and calls `implementation(...resolvedArgs, fn.options)`.
 
@@ -77,7 +77,7 @@ A function token's graph edges are `functionDependencies(fn)` (`src/tokens.ts`):
 
 `nth` index: integers (including `1.0`, which *is* `1`) are direct indices, negative ones count from the end (`-1` = last); only non-integers are relative positions (`0.5` = middle), clamped to [0, 1].
 
-The generic selectors (`nth`, `random`, `nextLarger`, `nextSmaller`, `sibling`) build their pool through `src/functions/scope-members.ts` (`poolKeys` / `resolvePool`), so they agree on positions: `not` matches a member's qualified key or, for an inherited member, its source key; members that themselves walk the scope (`iteratedScopesOf(tok)` includes it — selectors, nested ones, `sibling`) are skipped; unresolvable members are skipped. Colour selectors share only the `not` rule (`isExcluded`).
+The generic selectors (`nth`, `random`, `nextLarger`, `nextSmaller`, `sibling`) build their pool through `src/functions/scope-members.ts` (`poolKeys` / `resolvePool`), so they agree on positions: `not` matches a member's qualified key or, for an inherited member, its source key; members that themselves walk the scope (`iteratedScopesOf(tok)` includes it — selectors, nested ones, `sibling`) are skipped; unresolvable members are skipped. Color selectors share only the `not` rule (`isExcluded`).
 
 **Scope from the anchor key**: `sibling(ref, offset, { wrap, not })` — keeps the anchor key in `fn.options.from` (it needs the key's position, not its value) and declares its scope in `metadata.iteratedScopes`, which the selector-pool index reads alongside scope arguments (`iteratedScopesOf()` in `src/tokens.ts`). Its registry closure looks the scope up via `book.getScope`, so `registerBuiltinFunctions` needs `getScope`. The editor serializer special-cases it back to `sibling(ref('…'), n)`.
 
@@ -97,19 +97,19 @@ changed or deleted, resolved along the `extends` chain) notifies every
 selector iterating S and then continues the normal DFS. Mutual pools
 terminate on the `seen` set; a selector never notifies itself.
 
-#### Colour behaviour worth knowing
+#### Color behaviour worth knowing
 
 - Selectors judge translucent candidates composited over the target and can return 8-digit hex.
 - Selector pools (`collectScopeColors`) gamut-map wide-gamut members in OKLCH like the transforms do, rather than clipping them.
-- `readableOn` + `minContrast` (default 4.5) filter a colour selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
+- `readableOn` + `minContrast` (default 4.5) filter a color selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
 - `lightest` / `darkest` rank by OKLCH L, ignoring alpha.
-- `closestColor` / `furthestFrom` measure Euclidean distance in OKLab. Translucent colours are compared composited over the `readableOn` backdrop, or without one over both white and black, taking the larger distance (`visibleDistance` in `scope-colors.ts`).
+- `closestColor` / `furthestFrom` measure Euclidean distance in OKLab. Translucent colors are compared composited over the `readableOn` backdrop, or without one over both white and black, taking the larger distance (`visibleDistance` in `scope-colors.ts`).
 - `lighten` / `darken` are OKLCH mixes towards white / black through `cssColorMix` (`src/functions/color/color-mix.ts`) — the JS twin of the `color-mix()` the CSS renderer emits, premultiplied alpha included. `colorMix` uses the same helper. `shade` shifts OKLCH lightness and carries alpha through; `relativeTo` carries it through too. All gamut-map in OKLCH before formatting and emit 8-digit hex only when translucent.
 - `nextLarger` / `nextSmaller` skip members whose unit differs from the target's instead of throwing.
 
 ### Renderers (`src/renderers/`)
 
-- **Renderer** — Outputs CSS variables (with `var()` refs, `color-mix()`, `calc()`, `color(from ...)`), JSON (resolved values), or W3 Design Tokens (structured objects per spec with proper color/dimension/duration formats). Built-in function renderers auto-registered in constructor. The CSS pass throws when two keys mangle to the same custom-property name. W3 output groups `addTypography` scopes as `typography.<scope>` composites, so it throws if a plain scope is also named `typography`, and a `ref()` into a composed scope emits the resolved sub-value (with `fontWeight` / `fontFamily` / `dimension` / `number` `$type`) instead of an alias that would point at nothing. W3 `dimension` is emitted only for `px` / `rem` (`ms` / `s` → `duration`, unitless → `number`); other units (`em`, `%`, `vw`, …) have no W3 type, so they get no `$type` and keep their CSS text as `$value`, like a string — inside typography composites too. Colours are gamut-mapped into sRGB before their components are read. `$type` can be overridden per token with `metadata.w3Type`; because `val()` shallow-merges options, pass `metadata: { unit, w3Type }` in one object or the constructor's `unit` is lost.
+- **Renderer** — Outputs CSS variables (with `var()` refs, `color-mix()`, `calc()`, `color(from ...)`), JSON (resolved values), or W3 Design Tokens (structured objects per spec with proper color/dimension/duration formats). Built-in function renderers auto-registered in constructor. The CSS pass throws when two keys mangle to the same custom-property name. W3 output groups `addTypography` scopes as `typography.<scope>` composites, so it throws if a plain scope is also named `typography`, and a `ref()` into a composed scope emits the resolved sub-value (with `fontWeight` / `fontFamily` / `dimension` / `number` `$type`) instead of an alias that would point at nothing. W3 `dimension` is emitted only for `px` / `rem` (`ms` / `s` → `duration`, unitless → `number`); other units (`em`, `%`, `vw`, …) have no W3 type, so they get no `$type` and keep their CSS text as `$value`, like a string — inside typography composites too. Colors are gamut-mapped into sRGB before their components are read. `$type` can be overridden per token with `metadata.w3Type`; because `val()` shallow-merges options, pass `metadata: { unit, w3Type }` in one object or the constructor's `unit` is lost.
 - **SVGRenderer** — Circular table layout with Bezier dependency curves. Dashed lines for function dependencies. A token is a palette-linker only when it iterates a scope itself — a top-level scope arg or its own `metadata.iteratedScopes` (`sibling`) — so a selector nested in a value deriver doesn't hide the outer token's graph edges. The pool is read live from the book, not from the construction-time `metadata.visualDependencies` snapshot; the edge comes from the member that matches the output (never the token itself), and a linker with no matching member falls back to its graph edges. Inherits CSS variables from the editor for theming.
 
 ### Editor (`editor/`)

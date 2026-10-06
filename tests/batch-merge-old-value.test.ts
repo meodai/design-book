@@ -22,7 +22,7 @@ describe('batch writes to one key merge', () => {
 
     expect(errors[0]).toBeInstanceOf(CircularDependencyError);
     expect(a.get('y')).toBe(green);
-    // Stored token and graph agree: a plain colour has no prerequisites.
+    // Stored token and graph agree: a plain color has no prerequisites.
     expect(book.getDependencyGraph().getIncoming('a.y')).toEqual([]);
   });
 

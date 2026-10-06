@@ -4,7 +4,7 @@ import { color } from '../../../src/tokens';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
 
 describe('mostVivid', () => {
-  it('picks the highest-chroma colour in the scope', () => {
+  it('picks the highest-chroma color in the scope', () => {
     const book = new DesignBook('test');
     const palette = book.addScope('palette');
     palette.set('gray',   color('#808080')); // chroma ~ 0

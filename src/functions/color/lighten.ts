@@ -6,9 +6,9 @@ import { assertFraction, cssColorMix } from './color-mix';
 import { formatColor } from './scope-colors';
 
 /**
- * Mixes a colour towards white in OKLCH — the JS twin of what the CSS
+ * Mixes a color towards white in OKLCH — the JS twin of what the CSS
  * renderer emits, `color-mix(in oklch, <color> (1-amount)*100%, white)`, so a
- * token resolves to the same colour whether it is computed here or by the
+ * token resolves to the same color whether it is computed here or by the
  * browser — premultiplied alpha and all, so a translucent input comes back
  * translucent as 8-digit hex. The mix is gamut-mapped before formatting:
  * `formatHex` alone would clip out-of-sRGB channels and shift the hue.
