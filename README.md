@@ -289,6 +289,38 @@ Pass `seed` explicitly for cross-session / cross-machine reproducibility.
 Hashed internally with djb2 and run through a Mulberry32 PRNG. Throws at
 resolve time if zero candidates match `type`.
 
+## Naming Primitives
+
+Generated primitives still need keys. `scaleNames(count, scheme, options?)` returns `count` keys from a naming convention, ordered smallest / lightest first. It only produces names — fill the scope yourself:
+
+```typescript
+import { scaleNames, nameBetween, namingScheme } from 'design-book';
+
+const stops = rampColors;                       // 7 colours you generated
+scaleNames(stops.length, 'hundreds')
+  .forEach((name, i) => gray.set(name, color(stops[i])));
+// gray.50, gray.200, gray.300, gray.500, gray.700, gray.800, gray.950
+
+scaleNames(5, 'tshirt')                          // ['xs', 's', 'm', 'l', 'xl']
+scaleNames(6, 'tshirt', { base: 1 })             // ['s', 'm', 'l', 'xl', '2xl', '3xl']
+scaleNames(4, 'ordinal', { step: 10 })           // ['10', '20', '30', '40']
+scaleNames(3, 'tshirt', { prefix: 'space-' })    // ['space-s', 'space-m', 'space-l']
+```
+
+Every scheme has an **anchor**, which decides which names a count gets:
+
+| Anchor | Behaviour | Schemes |
+|---|---|---|
+| start | the first `count` names | `ordinal` (1, 2, 3 …; `start`, `step`), `roman` (i, ii, iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (flea … whale) |
+| base | grows outward from a base name; `base` picks which value gets it | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
+| range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100) |
+
+Fixed lists keep their outermost names and spread evenly towards the base, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists throw when asked for more names than they have.
+
+**Room to grow** — `nameBetween(lower, upper, scheme)` names a step inserted later, so existing keys never change: `nameBetween('100', '200', 'hundreds')` → `'150'`, `nameBetween('1', '2', 'ordinal')` → `'1_5'`, `nameBetween('m', 'l', 'tshirt')` → `'m-l'`.
+
+**Your own list** — `namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' })` makes a base-anchored scheme; without `base` it is start-anchored.
+
 ## Custom Functions
 
 You can register your own functions and use them as procedural tokens the

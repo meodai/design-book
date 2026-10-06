@@ -49,6 +49,10 @@ Type guards: `isReferenceValue(arg)`, `isTokenValue(arg)`
 
 Function argument type: `FunctionArg = TokenValue | ReferenceValue | ScopeFunctionArg | string | number`
 
+### Naming (`src/naming/`)
+
+`scaleNames(count, scheme, options?)`, `nameBetween(lower, upper, scheme)`, `namingScheme(names, { base? })` and the frozen `schemes` record produce token **keys** only — they never create or touch values or a DesignBook. Schemes are start-, base- or range-anchored (see the spec's anchor rules): start takes the first names, base grows outward from a base name (`base` option = index of the value that gets it; fixed lists keep the outermost names and spread towards the base, default base follows the list's proportions), range spreads over fixed ends using coarse-to-fine tiers (`hundreds`: 50/100…900/950 → every 50 → every 25). Options that do not apply to a scheme throw. Every name passes `assertValidTokenKey`.
+
 ### Functions (`src/functions/`)
 
 Each function exports a **constructor** (returns `FunctionTokenValue` via `createFunctionToken`) and an **implementation** (the actual computation). Implementations are auto-registered on DesignBook construction via `registerBuiltinFunctions()`.
