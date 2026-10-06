@@ -314,31 +314,60 @@ scaleNames(4, 'ordinal', { step: 10 })           // ['10', '20', '30', '40']
 scaleNames(3, 'tshirt', { prefix: 'space-' })    // ['space-s', 'space-m', 'space-l']
 ```
 
-### Schemes and anchors
+### Schemes and strategies
 
-Every scheme has an **anchor**, which decides which names a count gets:
+A scheme is a **vocabulary** — its names, smallest first — plus a default **strategy** (`anchor`) for picking `count` of them. Any scheme can use any strategy:
 
-| Anchor | Behaviour | Schemes |
+| `anchor` | What it does | Options |
 |---|---|---|
-| start | the first `count` names | `ordinal` (1 2 3 …; `from`, `step`), `roman` (i ii iii …; `case`), `greek` (alpha … omega), `paper` (a10 … a0), `creatures` (tardigrade … whale, 23), `objects` (atom … universe, 100 things of distinctly different size) |
-| base | grows outward from a centre name | `tshirt` (… xs s **m** l xl …), `intensity` (hint faint subtle soft **mid** firm bold strong intense), `dynamics` (ppp … **mf** … fff), `weights` (thin … **regular** … black) |
-| range | fixed ends, spread evenly between | `hundreds` (50 … 950), `tones` (0 … 100), `unit` (0 … 1), `signed` (-1 … 1) |
+| `'start'` | consecutive steps up from a first name | `from`, `step` |
+| `'base'` | consecutive steps both ways from a centre name | `base`, `step` |
+| `'range'` | both ends fixed, the values spread evenly between | `from`, `to`, `base: [n, name]` to pin one value, `overflow` |
 
-Fixed lists keep their outermost names and spread evenly towards the centre, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists and ranges throw when asked for more names than they have. Number names are written as keys: `0_25` is 0.25, `-1` is -1.
+| Scheme | Names | Default |
+|---|---|---|
+| `ordinal` | 1 2 3 … (open-ended, centre 0) | start |
+| `roman` | i ii iii iv … (`case: 'upper'`) | start |
+| `greek` | alpha … omega (24) | start |
+| `paper` | a10 … a0 (11) | start |
+| `creatures` | tardigrade … whale (23, by size) | range |
+| `objects` | atom … universe (100 things, each at least 15% bigger than the last) | range |
+| `tshirt` | … 2xs xs s **m** l xl 2xl … (open-ended) | base |
+| `intensity` | hint faint subtle soft **mid** firm bold strong intense | range, `mid` kept on its value |
+| `dynamics` | ppp pp p mp **mf** f ff fff | range, `mf` kept on its value |
+| `weights` | thin extralight light **regular** medium semibold bold extrabold black | range, `regular` kept on its value |
+| `hundreds` | 50 … 950 (steps of 100, then 50, then 25) | range |
+| `tones` | 0 … 100 | range |
+| `unit` | 0 … 1 | range |
+| `signed` | -1 … 1 | range |
+
+```typescript
+scaleNames(5, 'creatures')                               // tardigrade beetle cat bear whale
+scaleNames(3, 'creatures', { anchor: 'start', from: 'cat' }) // cat fox dog
+scaleNames(3, 'creatures', { anchor: 'base' })           // rabbit cat fox
+scaleNames(4, 'intensity')                               // hint mid bold intense
+scaleNames(3, 'intensity', { anchor: 'base' })           // soft mid firm
+scaleNames(4, 'tshirt', { anchor: 'start' })             // xs s m l
+scaleNames(3, 'tshirt', { anchor: 'range', from: 'xs', to: 'xl' }) // xs m xl
+scaleNames(5, 'hundreds', { anchor: 'base' })            // -200 -100 0 100 200
+```
+
+Ranges keep their outermost names and spread evenly between them. Open-ended vocabularies (`ordinal`, `roman`, `tshirt`) never run out with `start` and `base`; a range over them needs `from` and `to`. Number names are written as keys: `0_25` is 0.25, `-1` is -1.
 
 ### Options
 
 | Option | Meaning |
 |---|---|
-| `base: n` | value *n* gets the scheme's centre: `m`, `mid`, `mf`, `regular`, or `0` for `ordinal` and the ranges, which then count outward both ways (`scaleNames(5, 'hundreds', { base: 2 })` → `-200 -100 0 100 200`) |
-| `base: [n, name]` | value *n* gets that name; on a range the values spread from the low end to it and from it to the high end (`scaleNames(7, 'hundreds', { base: [2, '500'] })` → `50 300 500 600 700 900 950`), on a list the rest spread out around it (`scaleNames(3, 'creatures', { base: [1, 'cat'] })` → `tardigrade cat whale`) |
-| `from`, `to` | the first number for `ordinal`; the ends of a range (`scaleNames(5, 'hundreds', { from: -500, to: 500 })` → `-500 -200 0 200 500`) |
-| `step` | distance between `ordinal` numbers |
+| `anchor` | `'start'`, `'base'` or `'range'` — overrides the scheme's default |
+| `base: n` | value *n* gets the centre (`m`, `mid`, the middle of a list, `0` for numbers) and the rest step outward — implies `anchor: 'base'` |
+| `base: [n, name]` | value *n* gets that name. With ends (lists, ranges) the rest spread to them (`scaleNames(7, 'hundreds', { base: [2, '500'] })` → `50 300 500 600 700 900 950`); open-ended vocabularies step outward |
+| `from`, `to` | `start`: the first name or number. `range`: the ends (`scaleNames(5, 'hundreds', { from: -500, to: 500 })` → `-500 -200 0 200 500`) |
+| `step` | `start` / `base`: distance between steps, in names or in units |
 | `case` | `'upper'` for `roman` |
-| `overflow` | `'throw'` (default) or `'between'`: keep every name and add the missing steps as fractions (`scaleNames(12, 'paper', { overflow: 'between' })` → `… a6 a6_5 a5 …`) |
+| `overflow` | `range` (and `start` on a list): `'throw'` (default) or `'between'` — keep every name and add the missing steps as fractions (`… a6 a6_5 a5 …`) |
 | `prefix`, `suffix` | added to every name |
 
-Options that do not apply to a scheme throw instead of being ignored. Your own list becomes a scheme with `namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' })` (without `base` it is start-anchored).
+Options that do not fit the scheme and strategy throw instead of being ignored. Your own list becomes a scheme with `namingScheme(names, { base?, anchor? })`: with a `base` name it behaves like `intensity`, without one it starts at the first name.
 
 ### Re-run first; insert only for stable names
 

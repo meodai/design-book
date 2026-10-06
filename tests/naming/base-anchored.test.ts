@@ -39,17 +39,20 @@ describe('scaleNames — base-anchored schemes', () => {
 
   it('keeps the outermost names and spreads evenly towards the base', () => {
     expect(scaleNames(3, 'intensity')).toEqual(['hint', 'mid', 'intense']);
-    expect(scaleNames(4, 'intensity', { base: 1 })).toEqual(['hint', 'mid', 'bold', 'intense']);
+    expect(scaleNames(4, 'intensity', { base: [1, 'mid'] })).toEqual(['hint', 'mid', 'bold', 'intense']);
     expect(scaleNames(5, 'intensity')).toEqual(['hint', 'subtle', 'mid', 'bold', 'intense']);
     // three of the four names above mid: positions round(4/3)=1, round(8/3)=3, 4
-    expect(scaleNames(4, 'intensity', { base: 0 })).toEqual(['mid', 'firm', 'strong', 'intense']);
+    expect(scaleNames(4, 'intensity', { base: [0, 'mid'] })).toEqual(['mid', 'firm', 'strong', 'intense']);
+    // a bare index steps outward from the centre instead
+    expect(scaleNames(4, 'intensity', { base: 1 })).toEqual(['soft', 'mid', 'firm', 'bold']);
   });
 
   it('throws when one side needs more names than the list has there', () => {
     expect(() => scaleNames(10, 'intensity')).toThrow(TokenError);
     // dynamics has 4 names below mf and 3 above
+    expect(() => scaleNames(5, 'dynamics', { base: [0, 'mf'] })).toThrow(/3 above/);
+    expect(() => scaleNames(6, 'dynamics', { base: [5, 'mf'] })).toThrow(/4 below/);
     expect(() => scaleNames(5, 'dynamics', { base: 0 })).toThrow(/3 above/);
-    expect(() => scaleNames(6, 'dynamics', { base: 5 })).toThrow(/4 below/);
   });
 
   it('rejects base on roman, which has no middle', () => {

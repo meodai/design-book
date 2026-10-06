@@ -15,7 +15,8 @@ describe('namingScheme', () => {
   it('makes a base-anchored scheme when given a base', () => {
     const ink = namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' });
     expect(scaleNames(3, ink)).toEqual(['hint', 'mid', 'heavy']);
-    expect(scaleNames(2, ink, { base: 0 })).toEqual(['mid', 'heavy']);
+    expect(scaleNames(2, ink, { base: [0, 'mid'] })).toEqual(['mid', 'heavy']);
+    expect(scaleNames(2, ink, { base: 0 })).toEqual(['mid', 'bold']);
   });
 
   it('validates its list', () => {
@@ -37,7 +38,8 @@ describe('scaleNames options and errors', () => {
   });
 
   it('rejects options that do not apply to the scheme', () => {
-    expect(() => scaleNames(3, 'tshirt', { step: 2 })).toThrow(/step/);
+    expect(() => scaleNames(3, 'tshirt', { to: 'xl' })).toThrow(/to/);
+    expect(() => scaleNames(3, 'intensity', { step: 2 })).toThrow(/step/);
     expect(() => scaleNames(3, 'greek', { case: 'upper' })).toThrow(/case/);
     expect(() => scaleNames(3, 'hundreds', { step: 1 })).toThrow(/step/);
     expect(() => scaleNames(3, 'tshirt', { from: 0 })).toThrow(/from/);

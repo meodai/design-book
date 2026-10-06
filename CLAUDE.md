@@ -53,12 +53,13 @@ Function argument type: `FunctionArg = TokenValue | ReferenceValue | ScopeFuncti
 
 Published twice: from the package root and as the standalone subpath `design-book/naming` (second Vite lib entry → `dist/naming.js`, types at `dist/naming/index.d.ts`). It must stay dependency-free — it may import only `src/errors.ts` and `src/keys.ts` (the token-key check, re-exported by `scope.ts`); `tests/naming/standalone.test.ts` enforces this.
 
-`nameValues(values, scheme, options?)` (→ `[name, value][]`), `scaleNames(count, scheme, options?)`, `nameBetween(lower, upper, scheme)`, `namingScheme(names, { base? })` and the frozen `schemes` record produce token **keys** only — they never create or touch values or a DesignBook. Schemes are start-anchored (`ordinal`, `roman`, `greek`, `paper`, `creatures`, `objects`), base-anchored (`tshirt`, `intensity`, `dynamics`, `weights`) or range-anchored (`hundreds`, `tones`, `unit`, `signed`; tiers of coarse-to-fine steps between `from` / `to`).
+`nameValues(values, scheme, options?)` (→ `[name, value][]`), `scaleNames(count, scheme, options?)`, `nameBetween(lower, upper, scheme)`, `namingScheme(names, { base?, anchor? })` and the frozen `schemes` record produce token **keys** only — they never create or touch values or a DesignBook.
 
-- `base: n` gives value *n* the scheme's centre name; `ordinal` and the ranges centre on 0 and count outward both ways. `base: [n, name]` picks the name too: on ranges each side of the named step is spread to its end (coarsest tier where both fit, exact .5 rounds towards the base); on lists the rest spread around it (fixed lists keep their outermost names).
-- `overflow: 'between'` (lists and ranges) keeps every name and fills extra steps as fractions (`fillGaps`: `soft_5`, `low_33 low_67`); ranges keep halving their step (`62_5`).
+A scheme is a vocabulary (kinds: `list`, open-ended `ordinal` / `roman` / `tshirt`, numeric `range` with coarse-to-fine step tiers) plus a default strategy, reported as `anchor`. Strategies: `start` (consecutive from `from`, by `step`), `base` (consecutive both ways from a centre), `range` (ends fixed, spread evenly; a pinned `[n, name]` spreads each side to its end; lists with a centre name pin it by default, in proportion). Without `anchor`, a bare `base` index implies `base`; a `[n, name]` pin implies `range` on bounded vocabularies and `base` on open-ended ones. Ranges over open-ended vocabularies need `from` and `to` and are spread as a materialised list.
+
+- `overflow: 'between'` (range, and start on a list) keeps every name and fills extra steps as fractions (`fillGaps`: `soft_5`, `low_33 low_67`); numeric ranges keep halving their step (`62_5`).
 - `nameBetween` maps names to positions (list index, t-shirt offset, Roman value, the number) and returns the name at the midpoint: a real name when one sits there, else `<name below>_<fraction>`; it accepts its own output. The docs steer users to re-run `scaleNames` and use `nameBetween` only when existing keys must stay stable.
-- Options that do not apply to a scheme throw. Number names are keys: `0_25`, `-1`. Every name passes `assertValidTokenKey`.
+- Options that do not fit the scheme and strategy throw. Number names are keys: `0_25`, `-1`. Every name passes `assertValidTokenKey`.
 
 ### Functions (`src/functions/`)
 

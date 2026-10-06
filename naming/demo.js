@@ -8,20 +8,23 @@ const $ = (id) => document.getElementById(id);
 const toOklch = converter("oklch");
 const toRgb = toGamut("rgb", "oklch");
 
-// What each scheme accepts — mirrors the library's own option checks.
-const CENTRE = { tshirt: "m", intensity: "mid", dynamics: "mf", weights: "regular" };
-const NUMBERED = ["ordinal", "hundreds", "tones", "unit", "signed"];
+// What each scheme and strategy accepts — mirrors the library's own checks.
 const RANGES = ["hundreds", "tones", "unit", "signed"];
-const PLAIN_LISTS = ["greek", "paper", "creatures", "objects"];
-const NEVER_RUN_OUT = ["ordinal", "roman", "tshirt"];
+const OPEN_ENDED = ["ordinal", "roman", "tshirt"];
+const LISTS = ["greek", "paper", "creatures", "objects", "intensity", "dynamics", "weights", "custom"];
+const ANCHOR_ABOUT = {
+  start: "consecutive steps up from a first name (from, step)",
+  base: "consecutive steps both ways from a centre (base, step)",
+  range: "both ends fixed, spread evenly between (from, to, a pinned [n, name], overflow)",
+};
 const ABOUT = {
-  ordinal: "1 2 3 … — or centred on 0 with a base",
+  ordinal: "1 2 3 … — open-ended, centre 0",
   roman: "i ii iii iv …",
   greek: "alpha … omega (24)",
   paper: "a10 … a0 (11)",
-  creatures: "tardigrade … whale (23)",
+  creatures: "tardigrade … whale (23, by size)",
   objects: "atom … universe (100, each ≥ 15% bigger)",
-  tshirt: "… xs s m l xl …, grows both ways",
+  tshirt: "… xs s m l xl … — open-ended, centre m",
   intensity: "hint … mid … intense",
   dynamics: "ppp … mf … fff",
   weights: "thin … regular … black",
@@ -33,14 +36,14 @@ const ABOUT = {
 };
 
 const state = {
-  baseMode: "none", caseV: "lower", overflow: "throw", view: "colors",
+  baseMode: "none", anchor: "default", caseV: "lower", overflow: "throw", view: "colors",
   items: [], grown: [], scheme: null, opts: {}, baseIdx: -1,
 };
 
-// Scheme picker, grouped by default anchor.
+// Scheme picker, grouped by default strategy.
 for (const anchor of ["start", "base", "range"]) {
   const group = document.createElement("optgroup");
-  group.label = `${anchor}-anchored`;
+  group.label = `default: ${anchor}`;
   for (const [name, s] of Object.entries(schemes)) if (s.anchor === anchor) group.append(new Option(name, name));
   $("scheme").append(group);
 }
@@ -62,32 +65,49 @@ function currentScheme () {
   };
 }
 
-/** Which controls make sense for the current scheme. */
+/** The strategy the library will use — the same rule scaleNames applies:
+ *  explicit anchor, else a bare base index → base, a pinned name → range on
+ *  vocabularies with ends and base on open-ended ones, else the default. */
+function effectiveAnchor () {
+  const s = schemeName();
+  if (state.anchor !== "default") return state.anchor;
+  if (state.baseMode === "centre") return "base";
+  if (state.baseMode === "pair" && $("base-name").value.trim()) return OPEN_ENDED.includes(s) ? "base" : "range";
+  if (s !== "custom") return schemes[s].anchor;
+  try { return currentScheme().scheme.anchor; } catch { return "start"; }
+}
+
+/** Which controls make sense for the current scheme and strategy. */
 function applicable () {
   const s = schemeName();
-  const customCentre = s === "custom" && $("custom-base").value.trim();
+  const a = effectiveAnchor();
+  const explicit = state.anchor !== "default";
   return {
-    centre: s in CENTRE || NUMBERED.includes(s) || Boolean(customCentre),
-    pair: s !== "roman",
-    fromTo: RANGES.includes(s),
-    from: s === "ordinal",
-    step: s === "ordinal",
+    anchor: a,
+    centre: !explicit || a === "base",
+    pair: !(explicit && a === "start"),
+    from: a === "start" || a === "range",
+    to: a === "range",
+    step: a === "start" || a === "base",
     caseOpt: s === "roman",
-    overflow: !NEVER_RUN_OUT.includes(s),
+    overflow: (a === "range" && !OPEN_ENDED.includes(s)) || (a === "start" && LISTS.includes(s)),
   };
 }
 
+/** A from/to field: numbers as numbers, names as strings. */
+const fieldValue = (id) => {
+  const v = $(id).value.trim();
+  return v === "" ? undefined : /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v;
+};
+
 function options (can) {
   const o = {};
+  if (state.anchor !== "default") o.anchor = state.anchor;
   const n = Number($("base-index").value);
   if (state.baseMode === "centre" && can.centre) o.base = n;
   if (state.baseMode === "pair" && can.pair && $("base-name").value.trim()) o.base = [n, $("base-name").value.trim()];
-  const centred = state.baseMode === "centre";
-  if (can.fromTo && !centred) {
-    if ($("from").value !== "") o.from = Number($("from").value);
-    if ($("to").value !== "") o.to = Number($("to").value);
-  }
-  if (can.from && !centred && state.baseMode === "none" && $("from").value !== "") o.from = Number($("from").value);
+  if (can.from && fieldValue("from") !== undefined) o.from = fieldValue("from");
+  if (can.to && fieldValue("to") !== undefined) o.to = fieldValue("to");
   if (can.step && $("step").value !== "") o.step = Number($("step").value);
   if (can.caseOpt && state.caseV === "upper") o.case = "upper";
   if (can.overflow && state.overflow === "between") o.overflow = "between";
@@ -120,6 +140,7 @@ function syncControls (can) {
   const s = schemeName();
   $("count-val").textContent = $("count").value;
   $("scheme-hint").textContent = ABOUT[s] ?? "";
+  $("anchor-hint").textContent = `${can.anchor}: ${ANCHOR_ABOUT[can.anchor]}`;
   $("base-field").hidden = !can.centre && !can.pair;
   for (const b of $("base-mode").querySelectorAll("button")) {
     b.disabled = (b.dataset.mode === "centre" && !can.centre) || (b.dataset.mode === "pair" && !can.pair);
@@ -129,22 +150,27 @@ function syncControls (can) {
   $("base-name").hidden = state.baseMode !== "pair";
   $("base-index").max = Math.max(0, Number($("count").value) - 1);
   $("base-index-val").textContent = $("base-index").value;
-  const centreName = s in CENTRE ? CENTRE[s] : NUMBERED.includes(s) ? "0" : $("custom-base").value.trim();
+  let centreName = "";
+  try { centreName = scaleNamesSafe(1, { anchor: "base" })[0]; } catch { /* roman: no centre */ }
   $("base-hint").textContent =
-    state.baseMode === "centre" ? `value ${$("base-index").value} gets "${centreName}"` +
-      (NUMBERED.includes(s) ? ", the rest count outward both ways" : "") :
+    state.baseMode === "centre" ? (centreName ? `value ${$("base-index").value} gets "${centreName}", the rest step outward` : "this scheme has no centre — use [n, name]") :
     state.baseMode === "pair" ? (RANGES.includes(s) ? "a step inside the range, e.g. 500" :
-      s === "ordinal" ? "a whole number, e.g. 10" : PLAIN_LISTS.includes(s) ? "a name from the list, e.g. cat" : "a name of the scheme") : "";
-  const showFromTo = can.fromTo && state.baseMode !== "centre";
-  const showFrom = can.from && state.baseMode === "none";
-  $("range-field").hidden = !showFromTo && !showFrom;
-  $("to").hidden = !showFromTo;
-  $("range-lbl").textContent = showFromTo ? "from / to" : "from";
+      s === "ordinal" ? "a whole number, e.g. 10" : s === "roman" ? "a numeral, e.g. v" : "a name of the scheme, e.g. cat") : "";
+  $("range-field").hidden = !can.from;
+  $("to").hidden = !can.to;
+  $("range-lbl").textContent = can.to ? "from / to" : "from";
+  $("from").placeholder = RANGES.includes(s) || s === "ordinal" || s === "roman" ? "from (number)" : "from (name)";
+  $("to").placeholder = RANGES.includes(s) || s === "ordinal" || s === "roman" ? "to (number)" : "to (name)";
   $("step-field").hidden = !can.step;
   $("case-field").hidden = !can.caseOpt;
   $("overflow-field").hidden = !can.overflow;
   $("custom-field").hidden = s !== "custom";
   $("seed-field").hidden = state.view !== "colors";
+}
+
+function scaleNamesSafe (count, extra) {
+  const { scheme } = currentScheme();
+  return nameValues(Array.from({ length: count }), scheme, extra).map(([n]) => n);
 }
 
 function setSeg (id, value, key = "v") {
@@ -174,8 +200,9 @@ function regenerate () {
   }
   state.opts = o;
   state.baseIdx = o.base === undefined ? -1 : Array.isArray(o.base) ? o.base[0] : o.base;
-  if (state.baseIdx === -1 && schemeName() in CENTRE) {
-    const centre = `${o.prefix ?? ""}${CENTRE[schemeName()]}${o.suffix ?? ""}`;
+  const CENTRES = { tshirt: "m", intensity: "mid", dynamics: "mf", weights: "regular" };
+  if (state.baseIdx === -1 && CENTRES[schemeName()] && effectiveAnchor() !== "start") {
+    const centre = `${o.prefix ?? ""}${CENTRES[schemeName()]}${o.suffix ?? ""}`;
     state.baseIdx = pairs.findIndex(([n]) => n === centre);
   }
   state.items = pairs.map(([name, hex], i) => ({ name, hex, size: 4 * (i + 1), isNew: false, isBase: i === state.baseIdx }));
@@ -283,11 +310,11 @@ $("base-mode").addEventListener("click", (e) => {
   setSeg("base-mode", b.dataset.mode, "mode");
   if (b.dataset.mode === "pair" && !$("base-name").value) {
     const s = schemeName();
-    $("base-name").value = { hundreds: "500", tones: "50", unit: "0_5", signed: "0", ordinal: "0", creatures: "cat", objects: "car" }[s] ?? (CENTRE[s] ?? "");
+    $("base-name").value = { hundreds: "500", tones: "50", unit: "0_5", signed: "0", ordinal: "0", roman: "v", creatures: "cat", objects: "car", tshirt: "m", intensity: "mid", dynamics: "mf", weights: "regular", greek: "mu", paper: "a4" }[s] ?? "";
   }
   regenerate();
 });
-for (const [id, key] of [["case", "caseV"], ["overflow", "overflow"], ["view", "view"]]) {
+for (const [id, key] of [["anchor", "anchor"], ["case", "caseV"], ["overflow", "overflow"], ["view", "view"]]) {
   $(id).addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]");
     if (!b) return;

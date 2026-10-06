@@ -40,7 +40,7 @@ describe("scaleNames — overflow: 'between'", () => {
       'mid_5', 'firm', 'bold', 'bold_5', 'strong', 'intense',
     ]);
     // dynamics has 3 names above mf; ask for 5 above
-    const d = scaleNames(6, 'dynamics', { base: 0, overflow: 'between' });
+    const d = scaleNames(6, 'dynamics', { base: [0, 'mf'], overflow: 'between' });
     expect(d[0]).toBe('mf');
     expect(d.at(-1)).toBe('fff');
     expect(d).toHaveLength(6);

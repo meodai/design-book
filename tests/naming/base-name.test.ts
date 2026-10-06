@@ -53,9 +53,9 @@ describe('scaleNames — base as [index, name]', () => {
     expect(() => scaleNames(3, 'intensity', { base: [1, 'loud'] })).toThrow(/loud/);
   });
 
-  it('rejects base on roman and a bare index on a plain list', () => {
+  it('needs a name for roman, and centres a plain list on its middle name', () => {
     expect(() => scaleNames(3, 'roman', { base: 1 })).toThrow(/base/);
-    expect(() => scaleNames(3, 'creatures', { base: 1 })).toThrow(/\[index, name\]/);
+    expect(scaleNames(3, 'creatures', { base: 1 })).toEqual(['rabbit', 'cat', 'fox']);
   });
 
   it('validates the pair', () => {

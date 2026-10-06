@@ -121,6 +121,16 @@
         <input type="range" id="count" min="0" max="40" value="7" />
       </label>
 
+      <div class="field"><span class="lbl">Strategy (anchor)</span>
+        <div class="seg" id="anchor">
+          <button type="button" data-v="default" class="is-active">default</button>
+          <button type="button" data-v="start">start</button>
+          <button type="button" data-v="base">base</button>
+          <button type="button" data-v="range">range</button>
+        </div>
+        <span class="hint" id="anchor-hint"></span>
+      </div>
+
       <div class="field" id="base-field"><span class="lbl">Base</span>
         <div class="seg" id="base-mode">
           <button type="button" data-mode="none" class="is-active">none</button>
@@ -137,8 +147,8 @@
 
       <div class="field" id="range-field"><span class="lbl" id="range-lbl">from / to</span>
         <div class="row">
-          <input type="number" id="from" placeholder="from" step="any" />
-          <input type="number" id="to" placeholder="to" step="any" />
+          <input type="text" id="from" placeholder="from" />
+          <input type="text" id="to" placeholder="to" />
         </div>
       </div>
       <label class="field" id="step-field"><span class="lbl">step</span>

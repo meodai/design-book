@@ -41,9 +41,9 @@ describe('scaleNames — start-anchored schemes', () => {
     expect(scaleNames(24, 'greek').at(-1)).toBe('omega');
     expect(scaleNames(3, 'paper')).toEqual(['a10', 'a9', 'a8']);
     expect(scaleNames(11, 'paper').at(-1)).toBe('a0');
-    expect(scaleNames(4, 'creatures')).toEqual(['tardigrade', 'mite', 'flea', 'ant']);
+    expect(scaleNames(4, 'creatures', { anchor: 'start' })).toEqual(['tardigrade', 'mite', 'flea', 'ant']);
     expect(scaleNames(23, 'creatures').at(-1)).toBe('whale');
-    expect(scaleNames(4, 'objects')).toEqual(['atom', 'molecule', 'protein', 'virus']);
+    expect(scaleNames(4, 'objects', { anchor: 'start' })).toEqual(['atom', 'molecule', 'protein', 'virus']);
     expect(scaleNames(100, 'objects').at(-1)).toBe('universe');
     expect(() => scaleNames(101, 'objects')).toThrow(/100/);
   });

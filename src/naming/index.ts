@@ -6,18 +6,24 @@
  * create, store or transform token values and never touch a DesignBook —
  * name your array, then `scope.set(name, value)` in your own loop.
  *
- * Every scheme has an anchor, which decides which names a count receives:
- * - start — names grow from the first one (ordinals, Greek letters);
- * - base  — names grow outward from a base in the middle (`m`, `mid`);
- * - range — fixed end names, values spread evenly between them (`50`–`950`).
+ * A scheme is a vocabulary (its names, in order) plus a default strategy —
+ * its anchor — for picking `count` of them:
+ * - start — consecutive steps up from a first name (`1 2 3`, `alpha beta`);
+ * - base  — consecutive steps both ways from a centre name (`s m l`);
+ * - range — both ends fixed, spread evenly between (`50 … 950`).
+ * Any scheme can use any strategy: pass `anchor` to override the default.
+ *
+ * This module must stay dependency-free (it is published on its own as
+ * `design-book/naming`): import only `../errors` and `../keys`.
  */
 import { TokenError } from '../errors';
 import { assertValidTokenKey } from '../keys';
 
 export type NamingAnchor = 'start' | 'base' | 'range';
 
-/** A naming scheme. Built-ins live in `schemes`; make your own with
- *  `namingScheme()`. The internals are not part of the public API. */
+/** A naming scheme: a vocabulary and its default `anchor`. Built-ins live
+ *  in `schemes`; make your own with `namingScheme()`. The internals are not
+ *  part of the public API. */
 export interface NamingScheme {
   readonly name: string;
   readonly anchor: NamingAnchor;
@@ -29,49 +35,51 @@ export type BuiltinSchemeName =
   | 'hundreds' | 'tones' | 'unit' | 'signed';
 
 export interface ScaleNamesOptions {
-  /** Which value gets the base name.
-   *  - A number is an index. Base-anchored schemes keep their base name;
-   *    `ordinal` and range schemes centre on 0 and count outward
-   *    (`base: 2` → `-2 -1 0 1 2`, on `hundreds` `-200 … 200`).
-   *  - `[index, name]` also picks the name: any name of a list scheme, a
-   *    number for `ordinal`, or a step inside a range scheme (`[2, '500']`). */
+  /** The strategy, overriding the scheme's default. */
+  anchor?: NamingAnchor;
+  /** Which value gets the centre or a chosen name.
+   *  - A number is an index: that value gets the scheme's centre (`m`,
+   *    `mid`, `regular`, the middle of a list, `0` for numbers) and the rest
+   *    step outward both ways — the `base` strategy.
+   *  - `[index, name]` puts that name on that value. Vocabularies with ends
+   *    (lists, ranges) spread the rest to their ends; open-ended ones
+   *    (`ordinal`, `roman`, `tshirt`) step outward. */
   base?: number | readonly [number, string];
-  /** Number schemes. `ordinal`: the first number (default: the step, so
-   *  1 — or 10 with `step: 10`; may be negative). Range schemes: the low
-   *  end, with `to` as the high end (`hundreds` from -500 to 500). */
-  from?: number;
-  to?: number;
-  prefix?: string;
-  suffix?: string;
-  /** `ordinal` only: distance between numbers (default 1). */
+  /** `start`: the first name or number. `range`: the low end, with `to` as
+   *  the high end. Names for lists (`'cat'`), numbers for number schemes. */
+  from?: number | string;
+  to?: number | string;
+  /** `start` / `base`: distance between steps (in names for lists, in units
+   *  for numbers). */
   step?: number;
   /** `roman` only (default 'lower'). */
   case?: 'lower' | 'upper';
-  /** What to do when a fixed list or range runs out of names. `'throw'`
-   *  (default) fails; `'between'` keeps every name and adds the extra steps
-   *  in the gaps as fractions of the way to the next name (`soft_5`,
-   *  `62_5`). Not for `ordinal`, `roman` or `tshirt`, which never run out.
+  /** `range` (and `start` on a list): what to do when there are more values
+   *  than names. `'throw'` (default) fails; `'between'` keeps every name and
+   *  adds the missing steps in the gaps as fractions (`soft_5`, `62_5`).
    *  Prefer a scheme with enough names; fractional names are a fallback. */
   overflow?: 'throw' | 'between';
+  prefix?: string;
+  suffix?: string;
 }
 
 // ── Internal scheme shapes ─────────────────────────────────────────────
 
-type OptionName = 'step' | 'case' | 'from' | 'to';
-
-interface StartList extends NamingScheme { anchor: 'start'; kind: 'list'; names: readonly string[] }
-interface BaseList extends NamingScheme { anchor: 'base'; kind: 'list'; names: readonly string[]; baseIndex: number }
-interface Ordinal extends NamingScheme { anchor: 'start'; kind: 'ordinal' }
-interface Roman extends NamingScheme { anchor: 'start'; kind: 'roman' }
-interface Tshirt extends NamingScheme { anchor: 'base'; kind: 'tshirt' }
+interface List extends NamingScheme {
+  kind: 'list';
+  names: readonly string[];
+  /** Index of the scheme's own centre name, or -1 (use the middle). */
+  centre: number;
+  /** The default range strategy pins the centre name (`hint … mid … intense`). */
+  pinCentre: boolean;
+}
+interface Ordinal extends NamingScheme { kind: 'ordinal' }
+interface Roman extends NamingScheme { kind: 'roman' }
+interface Tshirt extends NamingScheme { kind: 'tshirt' }
 /** Fixed ends and step sizes from coarse to fine. Each step gives a tier:
  *  the two ends plus every multiple of the step between them. */
-interface Range extends NamingScheme { anchor: 'range'; kind: 'range'; from: number; to: number; steps: readonly number[] }
-type AnyScheme = StartList | BaseList | Ordinal | Roman | Tshirt | Range;
-
-const OPTIONS_OF: Record<AnyScheme['kind'], readonly OptionName[]> = {
-  list: [], ordinal: ['from', 'step'], roman: ['case'], tshirt: [], range: ['from', 'to'],
-};
+interface Range extends NamingScheme { kind: 'range'; from: number; to: number; steps: readonly number[] }
+type AnyScheme = List | Ordinal | Roman | Tshirt | Range;
 
 function fail(message: string): never {
   throw new TokenError(message);
@@ -86,11 +94,12 @@ function checkKeys(names: readonly string[], what: string): void {
 
 // ── Built-in schemes ───────────────────────────────────────────────────
 
-function list(name: string, names: string[]): StartList {
-  return { name, anchor: 'start', kind: 'list', names: Object.freeze(names) };
-}
-function baseList(name: string, names: string[], base: string): BaseList {
-  return { name, anchor: 'base', kind: 'list', names: Object.freeze(names), baseIndex: names.indexOf(base) };
+function list(name: string, names: string[], anchor: NamingAnchor, centre?: string): List {
+  return {
+    name, anchor, kind: 'list', names: Object.freeze(names),
+    centre: centre === undefined ? -1 : names.indexOf(centre),
+    pinCentre: centre !== undefined && anchor === 'range',
+  };
 }
 const range = (name: string, from: number, to: number, steps: number[]): Range =>
   ({ name, anchor: 'range', kind: 'range', from, to, steps: Object.freeze(steps) });
@@ -99,11 +108,13 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
   ordinal: { name: 'ordinal', anchor: 'start', kind: 'ordinal' } as Ordinal,
   roman: { name: 'roman', anchor: 'start', kind: 'roman' } as Roman,
   greek: list('greek', ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa',
-    'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega']),
-  paper: list('paper', ['a10', 'a9', 'a8', 'a7', 'a6', 'a5', 'a4', 'a3', 'a2', 'a1', 'a0']),
-  // Smallest to largest by typical adult size, from a tardigrade to a blue whale.
-  creatures: list('creatures', ['tardigrade', 'mite', 'flea', 'ant', 'fly', 'bee', 'beetle', 'mouse', 'hamster', 'rat',
-    'rabbit', 'cat', 'fox', 'dog', 'wolf', 'deer', 'bear', 'horse', 'giraffe', 'hippo', 'rhino', 'elephant', 'whale']),
+    'lambda', 'mu', 'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega'], 'start'),
+  paper: list('paper', ['a10', 'a9', 'a8', 'a7', 'a6', 'a5', 'a4', 'a3', 'a2', 'a1', 'a0'], 'start'),
+  // Smallest to largest by typical adult size, from a tardigrade to a blue
+  // whale. The order is the meaning, so the default spreads over all of it.
+  creatures: list('creatures', ['tardigrade', 'mite', 'flea', 'ant', 'fly', 'bee', 'beetle', 'mouse', 'hamster',
+    'rat', 'rabbit', 'cat', 'fox', 'dog', 'wolf', 'deer', 'bear', 'horse', 'giraffe', 'hippo', 'rhino', 'elephant',
+    'whale'], 'range'),
   // 100 things everyone has a sense of the size of, each at least 15% bigger
   // than the one before (typical largest dimension), from an atom to the
   // observable universe.
@@ -116,32 +127,42 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
     'bridge', 'runway', 'airport', 'town', 'forest', 'city', 'metropolis', 'lake', 'valley', 'island', 'canyon',
     'peninsula', 'country', 'sea', 'moon', 'mercury', 'continent', 'earth', 'neptune', 'saturn', 'jupiter', 'sun',
     'bluegiant', 'redgiant', 'orbit', 'supergiant', 'solarsystem', 'nebula', 'cluster', 'dwarfgalaxy', 'galaxy',
-    'localgroup', 'supercluster', 'void', 'universe']),
+    'localgroup', 'supercluster', 'void', 'universe'], 'range'),
   tshirt: { name: 'tshirt', anchor: 'base', kind: 'tshirt' } as Tshirt,
-  intensity: baseList('intensity',
-    ['hint', 'faint', 'subtle', 'soft', 'mid', 'firm', 'bold', 'strong', 'intense'], 'mid'),
-  dynamics: baseList('dynamics', ['ppp', 'pp', 'p', 'mp', 'mf', 'f', 'ff', 'fff'], 'mf'),
-  weights: baseList('weights',
-    ['thin', 'extralight', 'light', 'regular', 'medium', 'semibold', 'bold', 'extrabold', 'black'], 'regular'),
+  // Ladders with a named middle: by default both ends are kept and the
+  // centre name stays on its value (`hint … mid … intense`).
+  intensity: list('intensity',
+    ['hint', 'faint', 'subtle', 'soft', 'mid', 'firm', 'bold', 'strong', 'intense'], 'range', 'mid'),
+  dynamics: list('dynamics', ['ppp', 'pp', 'p', 'mp', 'mf', 'f', 'ff', 'fff'], 'range', 'mf'),
+  weights: list('weights',
+    ['thin', 'extralight', 'light', 'regular', 'medium', 'semibold', 'bold', 'extrabold', 'black'], 'range', 'regular'),
   hundreds: range('hundreds', 50, 950, [100, 50, 25]),
   tones: range('tones', 0, 100, [10, 5]),
   unit: range('unit', 0, 1, [0.25, 0.1, 0.05]),
   signed: range('signed', -1, 1, [0.5, 0.25, 0.1, 0.05]),
 });
 
-/** Define a scheme from a list of names, smallest first. With `base` it is
- *  base-anchored on that name; otherwise start-anchored. */
-export function namingScheme(names: readonly string[], options: { base?: string } = {}): NamingScheme {
+/** Define a scheme from a list of names, smallest first. `base` names its
+ *  centre — the default then keeps both ends with the centre on its value,
+ *  like `intensity`. Without it the default is `start`. `anchor` sets a
+ *  different default strategy. */
+export function namingScheme(
+  names: readonly string[],
+  options: { base?: string; anchor?: NamingAnchor } = {},
+): NamingScheme {
   if (!Array.isArray(names) || names.length === 0) fail('namingScheme: needs at least one name');
   if (new Set(names).size !== names.length) {
     const dup = names.find((n, i) => names.indexOf(n) !== i);
     fail(`namingScheme: duplicate name "${dup}"`);
   }
   checkKeys(names, 'namingScheme');
-  if (options.base === undefined) return list('custom', [...names]);
-  if (!names.includes(options.base)) fail(`namingScheme: base "${options.base}" is not in the list`);
-  return baseList('custom', [...names], options.base);
+  if (options.base !== undefined && !names.includes(options.base)) fail(`namingScheme: base "${options.base}" is not in the list`);
+  if (options.anchor !== undefined && !ANCHORS.includes(options.anchor)) fail(`namingScheme: anchor must be one of ${ANCHORS.join(', ')}`);
+  const anchor = options.anchor ?? (options.base !== undefined ? 'range' : 'start');
+  return list('custom', [...names], anchor, options.base);
 }
+
+const ANCHORS: readonly NamingAnchor[] = ['start', 'base', 'range'];
 
 function resolveScheme(scheme: BuiltinSchemeName | NamingScheme): AnyScheme {
   if (typeof scheme === 'string') {
@@ -152,6 +173,16 @@ function resolveScheme(scheme: BuiltinSchemeName | NamingScheme): AnyScheme {
   if (!scheme || !('kind' in scheme)) fail('Not a naming scheme — use a built-in name or namingScheme()');
   return scheme as AnyScheme;
 }
+
+/** A number option, or a number written as a key (`'0_5'`, `'-1'`). */
+function asNumber(v: number | string, what: string): number {
+  const n = typeof v === 'number' ? v : stepValue(v);
+  if (!Number.isFinite(n)) fail(`scaleNames: "${what}" must be a number here, got ${String(v)}`);
+  return n;
+}
+
+/** Drop floating-point noise from arithmetic on decimal steps. */
+const clean = (v: number) => Number(v.toFixed(10));
 
 // ── Generators ─────────────────────────────────────────────────────────
 
@@ -225,14 +256,8 @@ function roundTowards(x: number, mid: number): number {
   return x < mid ? f + 1 : f;
 }
 
-function defaultBase(count: number, s: AnyScheme): number {
-  if (s.kind === 'list' && s.anchor === 'base') {
-    // Keep the list's own proportions; an exact .5 leans to the larger side.
-    const x = ((count - 1) * s.baseIndex) / (s.names.length - 1);
-    return Math.ceil(x - 0.5);
-  }
-  return Math.floor((count - 1) / 2);
-}
+
+// ── scaleNames ─────────────────────────────────────────────────────────
 
 export function scaleNames(
   count: number,
@@ -242,98 +267,38 @@ export function scaleNames(
   const s = resolveScheme(scheme);
   if (!Number.isInteger(count) || count < 0) fail(`scaleNames: count must be a non-negative integer, got ${count}`);
 
-  for (const opt of ['step', 'case', 'from', 'to'] as const) {
-    if (options[opt] !== undefined && !OPTIONS_OF[s.kind].includes(opt)) {
-      fail(`scaleNames: option "${opt}" does not apply to the "${s.name}" scheme`);
-    }
-  }
-  const overflow = options.overflow ?? 'throw';
-  if (overflow !== 'throw' && overflow !== 'between') {
-    fail(`scaleNames: overflow must be "throw" or "between", got ${String(overflow)}`);
-  }
-  if (options.overflow !== undefined && s.kind !== 'list' && s.kind !== 'range') {
-    fail(`scaleNames: option "overflow" does not apply to "${s.name}", which never runs out of names`);
-  }
-  const fill = overflow === 'between';
-
   const pair = Array.isArray(options.base) ? options.base as readonly [number, string] : null;
-  if (options.base !== undefined) {
-    if (s.kind === 'roman') fail('scaleNames: option "base" does not apply to "roman"');
-    if (pair && (pair.length !== 2 || typeof pair[1] !== 'string')) {
-      fail('scaleNames: base must be an index or an [index, name] pair');
-    }
-    if (s.kind === 'list' && s.anchor === 'start' && !pair) {
-      fail(`scaleNames: "${s.name}" has no base name of its own; give one with [index, name], e.g. [3, '${s.names[Math.floor(s.names.length / 2)]}']`);
-    }
-    if (s.kind === 'ordinal' && options.from !== undefined) {
-      fail('scaleNames: ordinal "from" and "base" cannot be combined — the base value is the anchor');
-    }
-    if (s.kind === 'range' && !pair && (options.from !== undefined || options.to !== undefined)) {
-      fail('scaleNames: a bare base index centres the scale on 0, so "from" / "to" do not apply');
-    }
+  if (pair && (pair.length !== 2 || typeof pair[1] !== 'string')) {
+    fail('scaleNames: base must be an index or an [index, name] pair');
   }
   const baseIndex = pair ? pair[0] : options.base as number | undefined;
   if (baseIndex !== undefined && count > 0 && (!Number.isInteger(baseIndex) || baseIndex < 0 || baseIndex >= count)) {
     fail(`scaleNames: base must be an integer index from 0 to ${count - 1}, got ${baseIndex}`);
   }
 
-  let names: string[];
-  if (count === 0) names = [];
-  else switch (s.kind) {
-    case 'ordinal': {
-      const step = options.step ?? 1;
-      if (!Number.isInteger(step) || step < 1) fail(`scaleNames: ordinal step must be a positive integer, got ${step}`);
-      if (baseIndex !== undefined) {
-        // Centred: the base value (0 unless named) and whole steps both ways.
-        const at = pair ? Number(pair[1]) : 0;
-        if (!Number.isInteger(at) || !/^-?\d+$/.test(pair?.[1] ?? '0')) fail(`scaleNames: ordinal base name must be an integer, got "${pair?.[1]}"`);
-        names = Array.from({ length: count }, (_, i) => String(at + (i - baseIndex) * step));
-        break;
-      }
-      // Counting in steps starts at the first step: step 10 → 10, 20, 30.
-      const first = options.from ?? step;
-      if (!Number.isInteger(first)) fail(`scaleNames: ordinal "from" must be an integer, got ${first}`);
-      names = Array.from({ length: count }, (_, i) => String(first + i * step));
-      break;
-    }
-    case 'roman': {
-      if (count > 3999) fail(`scaleNames: "roman" goes up to 3999, ${count} values were asked for`);
-      names = Array.from({ length: count }, (_, i) => toRoman(i + 1));
-      if (options.case === 'upper') names = names.map((n) => n.toUpperCase());
-      else if (options.case !== undefined && options.case !== 'lower') fail(`scaleNames: case must be "lower" or "upper"`);
-      break;
-    }
-    case 'list':
-      if (s.anchor === 'start' && pair) {
-        // A plain list with a chosen base name behaves like a base-anchored one.
-        names = baseNames(count, { ...s, anchor: 'base', baseIndex: 0 }, pair[0], pair[1], fill);
-        break;
-      }
-      if (s.anchor === 'start') {
-        if (count > s.names.length) {
-          if (!fill || s.names.length < 2) fail(`scaleNames: "${s.name}" has ${s.names.length} names, ${count} were asked for`);
-          names = fillGaps(s.names, count);
-        } else {
-          names = s.names.slice(0, count);
-        }
-        break;
-      }
-      names = baseNames(count, s as BaseList, baseIndex ?? defaultBase(count, s), pair?.[1], fill);
-      break;
-    case 'tshirt':
-      names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1]);
-      break;
-    case 'range':
-      if (baseIndex !== undefined && !pair) {
-        // Centred on 0, counting outward in the coarsest step, both ways.
-        names = Array.from({ length: count }, (_, i) => stepName((i - baseIndex) * s.steps[0]));
-        break;
-      }
-      names = pair
-        ? rangeNamesAround(count, s, rangeEnds(s, options), pair[0], pair[1], fill)
-        : rangeNames(count, s, rangeEnds(s, options), fill);
-      break;
+  // The strategy: explicit, else implied by base, else the scheme's default.
+  // A bare index always steps outward from the centre; a pinned name spreads
+  // to the ends where the vocabulary has ends, and steps outward where not.
+  if (options.anchor !== undefined && !ANCHORS.includes(options.anchor)) {
+    fail(`scaleNames: anchor must be one of ${ANCHORS.join(', ')}, got ${String(options.anchor)}`);
   }
+  const bounded = s.kind === 'list' || s.kind === 'range';
+  const anchor: NamingAnchor = options.anchor
+    ?? (baseIndex !== undefined && !pair ? 'base'
+      : pair ? (bounded ? 'range' : 'base')
+      : s.anchor);
+  const isDefault = options.anchor === undefined && baseIndex === undefined;
+
+  checkOptions(s, anchor, options);
+  const fill = options.overflow === 'between';
+
+  let names: string[] = [];
+  if (count > 0) {
+    if (anchor === 'start') names = startNames(count, s, options, fill);
+    else if (anchor === 'base') names = centredNames(count, s, options, baseIndex ?? Math.floor((count - 1) / 2), pair?.[1]);
+    else names = spreadNames(count, s, options, pair, isDefault, fill);
+  }
+  if (s.kind === 'roman' && options.case === 'upper') names = names.map((n) => n.toUpperCase());
 
   const prefix = options.prefix ?? '', suffix = options.suffix ?? '';
   const out = names.map((n) => `${prefix}${n}${suffix}`);
@@ -341,29 +306,187 @@ export function scaleNames(
   return out;
 }
 
-function baseNames(count: number, s: BaseList | Tshirt, base: number, baseName?: string, fill = false): string[] {
-  const below = base, above = count - 1 - base;
-  if (s.kind === 'tshirt') {
-    const shift = baseName === undefined ? 0 : tshirtOffset(baseName);
-    if (shift === null) fail(`scaleNames: "${baseName}" is not a t-shirt size`);
-    return Array.from({ length: count }, (_, i) => tshirtAt(i - base + shift));
+/** Name every value of an array: `[name, value]` pairs, smallest first,
+ *  ready for `scope.set(name, …)`. Takes the same options as `scaleNames`. */
+export function nameValues<T>(
+  values: readonly T[],
+  scheme: BuiltinSchemeName | NamingScheme,
+  options: ScaleNamesOptions = {},
+): [string, T][] {
+  if (!Array.isArray(values)) fail('nameValues: values must be an array');
+  return scaleNames(values.length, scheme, options).map((name, i) => [name, values[i]]);
+}
+
+/** Options that do not apply to this scheme and strategy throw. */
+function checkOptions(s: AnyScheme, anchor: NamingAnchor, o: ScaleNamesOptions): void {
+  const reject = (opt: string, why: string) => fail(`scaleNames: option "${opt}" ${why}`);
+  if (o.step !== undefined && anchor === 'range') reject('step', 'does not apply to the range strategy — use from / to');
+  if (o.from !== undefined && anchor === 'base') reject('from', 'does not apply to the base strategy — the centre is the anchor');
+  if (o.to !== undefined && anchor !== 'range') reject('to', `only applies to the range strategy, not ${anchor}`);
+  if (o.case !== undefined && s.kind !== 'roman') reject('case', `does not apply to the "${s.name}" scheme`);
+  if (o.case !== undefined && o.case !== 'lower' && o.case !== 'upper') fail('scaleNames: case must be "lower" or "upper"');
+  if (o.overflow !== undefined) {
+    if (o.overflow !== 'throw' && o.overflow !== 'between') fail(`scaleNames: overflow must be "throw" or "between", got ${String(o.overflow)}`);
+    const canFill = (anchor === 'range' && s.kind !== 'tshirt' && s.kind !== 'ordinal' && s.kind !== 'roman')
+      || (anchor === 'start' && s.kind === 'list');
+    if (!canFill) reject('overflow', `does not apply to "${s.name}" with the ${anchor} strategy`);
   }
-  const at = baseName === undefined ? s.baseIndex : s.names.indexOf(baseName);
-  if (at < 0) fail(`scaleNames: "${baseName}" is not a name of the "${s.name}" scheme`);
-  const haveBelow = at, haveAbove = s.names.length - 1 - at;
+  if (o.base !== undefined && anchor === 'start') reject('base', 'does not apply to the start strategy — use from');
+  if (o.step !== undefined) {
+    const ok = s.kind === 'range' ? o.step > 0 && Number.isFinite(o.step) : Number.isInteger(o.step) && o.step >= 1;
+    if (!ok) fail(`scaleNames: step must be a positive ${s.kind === 'range' ? 'number' : 'integer'}, got ${o.step}`);
+  }
+}
+
+/** Integer position of a name in an open-ended or list vocabulary. */
+function positionIn(s: AnyScheme, v: number | string, what: string): number {
+  if (s.kind === 'list') {
+    const i = typeof v === 'string' ? s.names.indexOf(v) : -1;
+    if (i < 0) fail(`scaleNames: "${v}" is not a name of the "${s.name}" scheme`);
+    return i;
+  }
+  if (s.kind === 'tshirt') {
+    const d = typeof v === 'string' ? tshirtOffset(v) : null;
+    if (d === null) fail(`scaleNames: "${v}" is not a t-shirt size`);
+    return d;
+  }
+  if (s.kind === 'roman') {
+    const n = typeof v === 'number' ? v : fromRoman(v.toLowerCase()) ?? stepValue(v);
+    if (!Number.isInteger(n) || n < 1 || n > 3999) fail(`scaleNames: "${v}" is not a Roman numeral from i to mmmcmxcix`);
+    return n;
+  }
+  if (s.kind === 'ordinal') {
+    const n = typeof v === 'number' ? v : stepValue(v);
+    if (!Number.isInteger(n)) fail(`scaleNames: ordinal ${what} must be an integer, got "${v}"`);
+    return n;
+  }
+  return asNumber(v, what);
+}
+
+/** The name at an integer position of an open-ended or list vocabulary. */
+function nameOf(s: AnyScheme, p: number): string {
+  if (s.kind === 'list') return s.names[p];
+  if (s.kind === 'tshirt') return tshirtAt(p);
+  if (s.kind === 'roman') {
+    if (p < 1 || p > 3999) fail(`scaleNames: "roman" goes from 1 to 3999, position ${p} was asked for`);
+    return toRoman(p);
+  }
+  return stepName(clean(p));
+}
+
+/** start — consecutive steps up from `from`. */
+function startNames(count: number, s: AnyScheme, o: ScaleNamesOptions, fill: boolean): string[] {
+  if (s.kind === 'list') {
+    const first = o.from === undefined ? 0 : positionIn(s, o.from, 'from');
+    const step = o.step ?? 1;
+    const last = first + (count - 1) * step;
+    if (last > s.names.length - 1) {
+      if (fill && first === 0 && step === 1 && s.names.length > 1) return fillGaps(s.names, count);
+      fail(`scaleNames: "${s.name}" has ${s.names.length} names, ${count} were asked for` +
+        (first || step !== 1 ? ` from "${s.names[first]}" in steps of ${step}` : ''));
+    }
+    return Array.from({ length: count }, (_, i) => s.names[first + i * step]);
+  }
+  // Counting in steps starts at the first step: step 10 → 10, 20, 30.
+  const step = o.step ?? (s.kind === 'range' ? s.steps[0] : 1);
+  const first = o.from !== undefined ? positionIn(s, o.from, 'from')
+    : s.kind === 'tshirt' ? -2
+    : s.kind === 'roman' ? 1
+    : step;
+  if (s.kind === 'roman' && first + (count - 1) * step > 3999) {
+    fail(`scaleNames: "roman" goes up to 3999, ${count} values were asked for`);
+  }
+  return Array.from({ length: count }, (_, i) => nameOf(s, first + i * step));
+}
+
+/** base — the centre (or a chosen name) on value `base`, consecutive steps
+ *  both ways. */
+function centredNames(count: number, s: AnyScheme, o: ScaleNamesOptions, base: number, name?: string): string[] {
+  let centre: number;
+  if (name !== undefined) centre = positionIn(s, name, 'base');
+  else if (s.kind === 'list') centre = s.centre >= 0 ? s.centre : Math.floor((s.names.length - 1) / 2);
+  else if (s.kind === 'roman') fail('scaleNames: "roman" has no centre (no zero); give the base a name with [index, name], e.g. base: [2, "v"]');
+  else centre = 0;
+  const step = o.step ?? (s.kind === 'range' ? s.steps[0] : 1);
+  if (s.kind === 'list') {
+    const below = Math.floor(centre / step), above = Math.floor((s.names.length - 1 - centre) / step);
+    if (base > below || count - 1 - base > above) {
+      fail(`scaleNames: "${s.name}" has ${below} below "${s.names[centre]}" and ${above} above` +
+        `${step !== 1 ? ` in steps of ${step}` : ''}; ${base} below and ${count - 1 - base} above were asked for`);
+    }
+  }
+  return Array.from({ length: count }, (_, i) => nameOf(s, centre + (i - base) * step));
+}
+
+/** range — both ends fixed, the values spread evenly between them; with a
+ *  pinned name each side spreads to its own end. */
+function spreadNames(
+  count: number, s: AnyScheme, o: ScaleNamesOptions,
+  pair: readonly [number, string] | null, isDefault: boolean, fill: boolean,
+): string[] {
+  if (s.kind === 'range') {
+    const ends = rangeEnds(s, o);
+    return pair ? rangeNamesAround(count, s, ends, pair[0], pair[1], fill) : rangeNames(count, s, ends, fill);
+  }
+
+  // Lists, and open-ended vocabularies between explicit ends, are spread as
+  // a list of the names from `from` to `to`.
+  let names: readonly string[];
+  if (s.kind === 'list') {
+    const lo = o.from === undefined ? 0 : positionIn(s, o.from, 'from');
+    const hi = o.to === undefined ? s.names.length - 1 : positionIn(s, o.to, 'to');
+    if (!(lo < hi)) fail(`scaleNames: "from" must come before "to" in the "${s.name}" scheme`);
+    names = s.names.slice(lo, hi + 1);
+  } else {
+    if (o.from === undefined || o.to === undefined) {
+      fail(`scaleNames: the range strategy on "${s.name}" needs from and to, e.g. { from: ${
+        s.kind === 'tshirt' ? "'xs', to: '2xl'" : s.kind === 'roman' ? "1, to: 20" : '1, to: 100'} }`);
+    }
+    const lo = positionIn(s, o.from, 'from'), hi = positionIn(s, o.to, 'to');
+    if (!(lo < hi)) fail('scaleNames: "from" must be less than "to"');
+    if (hi - lo > 100_000) fail('scaleNames: from … to spans too many names');
+    names = Array.from({ length: hi - lo + 1 }, (_, i) => nameOf(s, lo + i));
+  }
+
+  // The scheme's own centre stays on its value by default (intensity & co).
+  const pin = pair
+    ?? (isDefault && s.kind === 'list' && s.pinCentre ? [proportionalBase(count, s), s.names[s.centre]] as const : null);
+  if (pin) return pinnedSpread(count, names, s.name, pin[0], pin[1], fill);
+
+  const last = names.length - 1;
+  if (count > names.length) {
+    if (fill && names.length > 1) return fillGaps(names, count);
+    fail(`scaleNames: "${s.name}" has ${names.length} names${o.from !== undefined || o.to !== undefined ? ' between from and to' : ''}, ${count} were asked for`);
+  }
+  if (count === 1) return [names[roundTowards(last / 2, last / 2)]];
+  return Array.from({ length: count }, (_, i) => names[roundTowards((i * last) / (count - 1), last / 2)]);
+}
+
+/** Where a list's centre name lands by default: in proportion to the list,
+ *  an exact .5 leaning to the larger side. */
+function proportionalBase(count: number, s: List): number {
+  return Math.ceil(((count - 1) * s.centre) / (s.names.length - 1) - 0.5);
+}
+
+/** `name` on value `base`; each side keeps its outermost name and spreads
+ *  evenly towards the base, or fills its gaps when it runs out. */
+function pinnedSpread(count: number, names: readonly string[], scheme: string, base: number, name: string, fill: boolean): string[] {
+  const at = names.indexOf(name);
+  if (at < 0) fail(`scaleNames: "${name}" is not a name of the "${scheme}" scheme${names.length ? '' : ''}`);
+  const below = base, above = count - 1 - base;
+  const haveBelow = at, haveAbove = names.length - 1 - at;
   const fits = (need: number, have: number) => need <= have || (fill && have > 0);
   if (!fits(below, haveBelow) || !fits(above, haveAbove)) {
-    fail(`scaleNames: "${s.name}" has ${haveBelow} below its base "${s.names[at]}" and ` +
-      `${haveAbove} above; ${below} below and ${above} above were asked for`);
+    fail(`scaleNames: "${scheme}" has ${haveBelow} below "${name}" and ${haveAbove} above; ` +
+      `${below} below and ${above} above were asked for`);
   }
-  // A side with too few names keeps them all (base included) and fills the gaps.
   const lower = below <= haveBelow
-    ? spread(below, haveBelow).map((p) => s.names[at - p]).reverse()
-    : fillGaps(s.names.slice(0, at + 1), below + 1).slice(0, -1);
+    ? spread(below, haveBelow).map((p) => names[at - p]).reverse()
+    : fillGaps(names.slice(0, at + 1), below + 1).slice(0, -1);
   const upper = above <= haveAbove
-    ? spread(above, haveAbove).map((p) => s.names[at + p])
-    : fillGaps(s.names.slice(at), above + 1).slice(1);
-  return [...lower, s.names[at], ...upper];
+    ? spread(above, haveAbove).map((p) => names[at + p])
+    : fillGaps(names.slice(at), above + 1).slice(1);
+  return [...lower, names[at], ...upper];
 }
 
 /** A number as a key: `62.5` → `62_5`, `-0.5` → `-0_5`. */
@@ -377,7 +500,8 @@ const decimals = (n: number) => (String(n).split('.')[1] ?? '').length;
 interface Ends { from: number; to: number }
 
 function rangeEnds(s: Range, o: ScaleNamesOptions): Ends {
-  const from = o.from ?? s.from, to = o.to ?? s.to;
+  const from = o.from === undefined ? s.from : asNumber(o.from, 'from');
+  const to = o.to === undefined ? s.to : asNumber(o.to, 'to');
   if (!Number.isFinite(from) || !Number.isFinite(to) || !(from < to)) {
     fail(`scaleNames: "${s.name}" needs from < to, got from ${from} and to ${to}`);
   }
@@ -514,13 +638,3 @@ export function nameBetween(lower: string, upper: string, scheme: BuiltinSchemeN
   return nameAt((a + b) / 2, s, s.kind === 'roman' && isUpper(lower));
 }
 
-/** Name every value of an array: `[name, value]` pairs, smallest first,
- *  ready for `scope.set(name, …)`. Takes the same options as `scaleNames`. */
-export function nameValues<T>(
-  values: readonly T[],
-  scheme: BuiltinSchemeName | NamingScheme,
-  options: ScaleNamesOptions = {},
-): [string, T][] {
-  if (!Array.isArray(values)) fail('nameValues: values must be an array');
-  return scaleNames(values.length, scheme, options).map((name, i) => [name, values[i]]);
-}
