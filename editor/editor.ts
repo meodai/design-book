@@ -518,6 +518,10 @@ function orderToSelectValue(order: ScopeOrder | undefined): string {
 
 // --- Sync editor content to scope ---
 
+/** `scope.key` → the line text whose write last failed (parse error or a
+ *  set() the book rejected, e.g. a cycle). Used to underline that line. */
+const failedLines = new Map<string, string>();
+
 function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
   syncingFromEditor = true;
   try {
@@ -535,6 +539,7 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
       if (key) newKeys.add(key);
 
       if (!key || !valueStr) continue;
+      failedLines.delete(`${scope.name}.${key}`);
 
       // "inherit" keyword — delete local override, revert to parent
       if (valueStr === 'inherit') {
@@ -556,7 +561,9 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
         const tokenValue = parseTokenInput(valueStr, _book, scope);
         scope.set(key, tokenValue);
       } catch (err) {
-        // Log but don't interrupt editing
+        // Log but don't interrupt editing; remember the rejected text so
+        // its line stays underlined (the scope still holds the old token).
+        failedLines.set(`${scope.name}.${key}`, valueStr);
         logEvent('parseError', { key: `${scope.name}.${key}`, message: (err as Error).message });
       }
     }
@@ -565,6 +572,11 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
     for (const existingKey of scope.getAllKeys()) {
       if (!newKeys.has(existingKey) && scope.hasOwn(existingKey)) {
         scope.delete(existingKey);
+      }
+    }
+    for (const qualified of failedLines.keys()) {
+      if (qualified.startsWith(`${scope.name}.`) && !newKeys.has(qualified.slice(scope.name.length + 1))) {
+        failedLines.delete(qualified);
       }
     }
   } finally {
@@ -782,10 +794,20 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
 
     if (!valueStr) continue; // empty value is OK while typing
 
-    // Parse check (skip for "inherit" keyword)
+    // Parse check (skip for "inherit" keyword), then: was this exact text
+    // rejected by scope.set (e.g. a cycle), or does the token fail to
+    // resolve (e.g. ref('nope.y'))? Either breaks the output tabs.
     if (valueStr !== 'inherit') {
       try {
         parseTokenInput(valueStr, _book, _scope);
+        if (_scope) {
+          const qualified = `${_scope.name}.${key}`;
+          if (failedLines.get(qualified) === valueStr) {
+            errorLines.add(line.from);
+          } else if (_scope.has(key)) {
+            book.resolve(qualified);
+          }
+        }
       } catch {
         errorLines.add(line.from);
       }
