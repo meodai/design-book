@@ -1,7 +1,6 @@
 import {
   createFunctionToken,
   isReferenceValue,
-  iteratedScopesOf,
   normalizeNotKeys,
 } from '../../tokens';
 import type {
@@ -10,6 +9,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { resolvePool } from '../scope-members';
 
 export interface SiblingOptions {
   /** Wrap around past either end (modulo) instead of stopping there. */
@@ -37,9 +37,11 @@ export function scopeOfKey(key: string): string {
  * resolved value. Past either end it stops at the first / last member, or
  * wraps around when `wrap` is set.
  *
- * Members that are themselves functions walking this scope — another `sibling`,
- * an `nth`, a selector — are skipped, the same way `nth` skips them, so a
- * `sibling` can live in the scope it walks without stepping onto itself.
+ * The pool follows the rules every scope-walking selector shares
+ * (`../scope-members`): members that are themselves functions walking this
+ * scope — another `sibling`, an `nth`, a selector — are skipped, so a
+ * `sibling` can live in the scope it walks without stepping onto itself and
+ * counts the same positions `nth` does.
  */
 export function siblingImpl(
   scope: Scope,
@@ -48,27 +50,9 @@ export function siblingImpl(
   wrap: boolean = false,
   not: string[] = [],
 ): string {
-  const excluded = new Set(not);
-  const keys: string[] = [];
-  const values: string[] = [];
-
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const sourceKey = scope.getSourceKey(key);
-    if (sourceKey && excluded.has(sourceKey)) continue;
-
-    const tok = scope.get(key);
-    if (tok && tok.type === 'function' && iteratedScopesOf(tok as FunctionTokenValue).includes(scope.name)) continue;
-
-    let resolved: string;
-    try {
-      resolved = scope.resolve(key);
-    } catch {
-      continue;
-    }
-    keys.push(key);
-    values.push(resolved);
-  }
+  const pool = resolvePool(scope, not);
+  const keys = pool.map((m) => m.key);
+  const values = pool.map((m) => m.value);
 
   const at = keys.indexOf(anchor.slice(scope.name.length + 1));
   if (at === -1) {

@@ -3,6 +3,7 @@ import type { Color } from 'culori';
 import { getTokenProcessors } from '../../tokens';
 import type { TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
+import { isExcluded } from '../scope-members';
 
 /** A candidate colour drawn from a scope's token pool. */
 export interface ScopeColor {
@@ -122,9 +123,7 @@ export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []
   const colors: ScopeColor[] = [];
 
   for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    const sourceKey = scope.getSourceKey(key);
-    if (sourceKey && excluded.has(sourceKey)) continue;
+    if (isExcluded(scope, key, excluded)) continue;
 
     const token = scope.get(key);
     if (!token) continue;

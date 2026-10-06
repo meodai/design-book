@@ -6,20 +6,11 @@ import {
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
+import { resolvePool } from '../scope-members';
 
 interface Parsed {
   num: number;
   unit: string;
-}
-
-/** A function token "iterates" a scope when that scope is one of its args
- *  (direct identity match). Used to break recursion when two scope-iterating
- *  selectors share a scope. */
-function iteratesScope(fn: FunctionTokenValue, scope: Scope): boolean {
-  for (const arg of fn.args) {
-    if (arg === scope) return true;
-  }
-  return false;
 }
 
 function parseDimension(value: string, label: string): Parsed {
@@ -41,27 +32,13 @@ export function nextLargerImpl(
   not: string[] = [],
 ): string {
   const target = parseDimension(targetValue, 'nextLarger');
-  const excluded = new Set(not);
 
   let best: Parsed | null = null;
   let bestRaw: string | null = null;
 
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-
-    // Skip function tokens that iterate this same scope — resolving
-    // them would recurse back through us. The graph's cycle detection
-    // only covers declared refs, not scope-iterating selectors.
-    const tok = scope.get(key);
-    if (tok && tok.type === 'function' && iteratesScope(tok as FunctionTokenValue, scope)) continue;
-
-    let resolved: string;
-    try {
-      resolved = scope.resolve(key);
-    } catch {
-      continue;
-    }
-
+  // Members walking this scope (another selector, a sibling) are not
+  // candidates — resolving them would recurse back through us.
+  for (const { value: resolved } of resolvePool(scope, not)) {
     let candidate: Parsed;
     try {
       candidate = parseDimension(resolved, 'nextLarger');

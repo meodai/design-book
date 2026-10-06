@@ -10,6 +10,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { resolvePool } from '../scope-members';
 
 export type RandomType = 'color' | 'dimension' | 'string';
 
@@ -72,20 +73,9 @@ export function randomImpl(
   seed: number | string,
   not: string[] = [],
 ): string {
-  const excluded = new Set(not);
-  const candidates: string[] = [];
-
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-    let resolved: string;
-    try {
-      resolved = scope.resolve(key);
-    } catch {
-      continue;
-    }
-    if (detectType(resolved) !== type) continue;
-    candidates.push(resolved);
-  }
+  const candidates = resolvePool(scope, not)
+    .map((m) => m.value)
+    .filter((value) => detectType(value) === type);
 
   if (candidates.length === 0) {
     throw new FunctionError(

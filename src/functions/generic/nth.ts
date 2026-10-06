@@ -9,6 +9,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { resolvePool } from '../scope-members';
 
 export interface NthOptions {
   /** Keys to exclude from the candidate pool. */
@@ -17,35 +18,12 @@ export interface NthOptions {
   [key: string]: any;
 }
 
-function iteratesScope(fn: FunctionTokenValue, scope: Scope): boolean {
-  for (const arg of fn.args) {
-    if (arg === scope) return true;
-  }
-  return false;
-}
-
 export function nthImpl(
   scope: Scope,
   index: number,
   not: string[] = [],
 ): string {
-  const excluded = new Set(not);
-  const candidates: string[] = [];
-
-  for (const key of scope.getAllKeys()) {
-    if (excluded.has(`${scope.name}.${key}`)) continue;
-
-    const tok = scope.get(key);
-    if (tok && tok.type === 'function' && iteratesScope(tok as FunctionTokenValue, scope)) continue;
-
-    let resolved: string;
-    try {
-      resolved = scope.resolve(key);
-    } catch {
-      continue;
-    }
-    candidates.push(resolved);
-  }
+  const candidates = resolvePool(scope, not).map((m) => m.value);
 
   if (candidates.length === 0) {
     throw new FunctionError(

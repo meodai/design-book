@@ -63,6 +63,8 @@ At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the r
 
 `nth` index: integers (including `1.0`, which *is* `1`) are direct indices, negative ones count from the end (`-1` = last); only non-integers are relative positions (`0.5` = middle), clamped to [0, 1].
 
+The generic selectors (`nth`, `random`, `nextLarger`, `nextSmaller`, `sibling`) build their pool through `src/functions/scope-members.ts` (`poolKeys` / `resolvePool`), so they agree on positions: `not` matches a member's qualified key or, for an inherited member, its source key; members that themselves walk the scope (`iteratedScopesOf(tok)` includes it — selectors, nested ones, `sibling`) are skipped; unresolvable members are skipped. Colour selectors share only the `not` rule (`isExcluded`).
+
 **Scope from the anchor key**: `sibling(ref, offset, { wrap, not })` — keeps the anchor key in `fn.options.from` (it needs the key's position, not its value) and declares its scope in `metadata.iteratedScopes`, which the selector-pool index reads alongside scope arguments (`iteratedScopesOf()` in `src/tokens.ts`). Its registry closure looks the scope up via `book.getScope`, so `registerBuiltinFunctions` needs `getScope`. The editor serializer special-cases it back to `sibling(ref('…'), n)`.
 
 **Without scope** (pure transforms): `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`, `spacingScale`, `typographyScale`, `timing`
