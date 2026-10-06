@@ -76,13 +76,45 @@ export function parseTokenInput(
     // Generic dimension shorthand: <unit>(number), e.g. em(2), vh(50).
     // dimension(n, 'unit') itself is already handled above via
     // FUNCTION_PARSERS.dimension.
+    // Only real CSS units qualify, so a mistyped function name such as
+    // lightn(0.5) is a parse error instead of a dimension in unit "lightn".
     const genericUnitMatch = argsStr.trim().match(/^-?[\d.]+$/);
-    if (genericUnitMatch) {
+    if (genericUnitMatch && isCssUnit(funcName)) {
       return dimension(parseFloat(argsStr.trim()), funcName);
     }
+    throw new Error(`Unknown function or unit: ${funcName}()`);
   }
 
   throw new Error(`Unknown value: ${trimmed}. Wrap colors in color(), dimensions in px()/rem()/ms()/dimension(), strings in string().`);
+}
+
+// --- CSS units accepted by the `<unit>(n)` shorthand ---
+
+/** CSS units (lengths, angles, times, frequencies, resolutions, flex).
+ *  Anything else written as `name(n)` is a parse error. The explicit
+ *  dimension(n, 'unit') form still accepts any unit. */
+const CSS_UNITS = new Set([
+  // absolute lengths
+  'px', 'cm', 'mm', 'q', 'in', 'pt', 'pc',
+  // font-relative lengths
+  'em', 'rem', 'ex', 'rex', 'ch', 'rch', 'cap', 'rcap', 'ic', 'ric', 'lh', 'rlh',
+  // viewport lengths
+  'vw', 'vh', 'vi', 'vb', 'vmin', 'vmax',
+  'svw', 'svh', 'svi', 'svb', 'svmin', 'svmax',
+  'lvw', 'lvh', 'lvi', 'lvb', 'lvmin', 'lvmax',
+  'dvw', 'dvh', 'dvi', 'dvb', 'dvmin', 'dvmax',
+  // container query lengths
+  'cqw', 'cqh', 'cqi', 'cqb', 'cqmin', 'cqmax',
+  // angles, times, frequencies, resolutions, flex
+  'deg', 'grad', 'rad', 'turn',
+  's', 'ms',
+  'hz', 'khz',
+  'dpi', 'dpcm', 'dppx', 'x',
+  'fr',
+]);
+
+function isCssUnit(name: string): boolean {
+  return CSS_UNITS.has(name.toLowerCase());
 }
 
 // --- Described plain tokens ---
@@ -233,7 +265,7 @@ function parseArg(
   // for units without a dedicated constructor. px/rem/ms above take
   // precedence, and dimension(...) is handled explicitly too.
   const genericUnitMatch = trimmed.match(/^([a-zA-Z]+)\(\s*(-?[\d.]+)\s*\)$/);
-  if (genericUnitMatch && !['px', 'rem', 'ms'].includes(genericUnitMatch[1])) {
+  if (genericUnitMatch && isCssUnit(genericUnitMatch[1]) && !['px', 'rem', 'ms'].includes(genericUnitMatch[1])) {
     return { type: 'token', value: dimension(parseFloat(genericUnitMatch[2]), genericUnitMatch[1]) };
   }
 
