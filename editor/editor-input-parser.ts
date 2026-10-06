@@ -612,6 +612,23 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
   },
 };
 
+/** Function names the input column accepts (value constructors excluded),
+ *  read off the parser table so autocomplete cannot drift from it. */
+export const FUNCTION_NAMES: readonly string[] = Object.keys(FUNCTION_PARSERS)
+  .filter((name) => !PLAIN_CONSTRUCTORS.has(name));
+
+/** Functions that take a scope argument — autocomplete offers scope names
+ *  inside their calls. Kept beside the parser table; every entry must be
+ *  one of its keys. */
+export const SCOPE_ARG_FUNCTIONS: ReadonlySet<string> = new Set([
+  'bestContrastWith', 'minContrastWith', 'closestColor', 'furthestFrom',
+  'mostVivid', 'leastVivid', 'lightest', 'darkest',
+  'nextLarger', 'nextSmaller', 'nth', 'random',
+]);
+for (const name of SCOPE_ARG_FUNCTIONS) {
+  if (!FUNCTION_PARSERS[name]) throw new Error(`SCOPE_ARG_FUNCTIONS: no parser for "${name}"`);
+}
+
 /**
  * Parse a simple options-like string: `{ ratio: 0.5, step: 3 }`. Normalises
  * a few hand-written forms that aren't valid JSON — unquoted keys, single

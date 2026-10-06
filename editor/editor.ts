@@ -8,7 +8,7 @@ import {
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
 import type { Scope, ScopeOrder } from '../src/index';
-import { parseTokenInput } from './editor-input-parser';
+import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';
 import { readableOnArgIndex } from '../src/functions/color/readable';
 
 import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
@@ -881,15 +881,43 @@ function colorSwatchPlugin(_book: DesignBook, _scope?: Scope) {
 
 // --- Autocomplete ---
 
-const FUNCTION_NAMES = [
-  'bestContrastWith', 'minContrastWith', 'colorMix',
-  'lighten', 'darken', 'shade', 'relativeTo', 'ramp',
-  'closestColor', 'furthestFrom', 'mostVivid', 'leastVivid',
-  'lightest', 'darkest',
-  'nextLarger', 'nextSmaller',
-  'spacingScale', 'typographyScale', 'timing',
-  'random', 'nth', 'sibling',
-];
+/** The innermost still-open call of a known function before the cursor,
+ *  and the argument text typed so far inside it. Quote-aware; parens of
+ *  value constructors (ref(, color(, px() and option objects/arrays do not
+ *  count as calls but do bound the current argument. */
+function innermostFunctionCall(text: string): { name: string; partial: string } | null {
+  const stack: Array<string | null> = [];
+  let argStart = 0;
+  let inQuote: string | null = null;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === '\\') i++;
+      else if (ch === inQuote) inQuote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      inQuote = ch;
+    } else if (ch === '(') {
+      const name = text.slice(0, i).match(/(\w+)\s*$/)?.[1] ?? null;
+      const known = name !== null && FUNCTION_NAMES.includes(name);
+      stack.push(known ? name : null);
+      if (known) argStart = i + 1;
+    } else if (ch === '{' || ch === '[') {
+      stack.push(null);
+      argStart = i + 1;
+    } else if (ch === ')' || ch === '}' || ch === ']') {
+      stack.pop();
+    } else if (ch === ',' || ch === ':') {
+      argStart = i + 1;
+    }
+  }
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const name = stack[i];
+    if (name) return { name, partial: text.slice(argStart).trimStart() };
+  }
+  return null;
+}
 
 const VALUE_CONSTRUCTORS = [
   { label: "color('#...')", apply: "color('#", type: 'keyword' as const },
@@ -955,26 +983,17 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       return { from: refFrom, options };
     }
 
-    // Check if we're inside a function call argument position
-    // Use a smarter match that handles nested parens (e.g. ref('...') inside the args)
-    const funcArgMatch = valueTextUpToCursor.match(/^(\w+)\((.*?)$/s);
-    if (funcArgMatch && FUNCTION_NAMES.includes(funcArgMatch[1])) {
-      // Extract the current (last) argument being typed
-      const argsText = funcArgMatch[2];
-      const lastComma = argsText.lastIndexOf(',');
-      const currentArgText = lastComma >= 0 ? argsText.slice(lastComma + 1).trim() : argsText.trim();
-      const partial = currentArgText;
+    // Inside a function call's arguments? Nested calls resolve to the
+    // innermost one: lighten(mostVivid(| offers scopes for mostVivid.
+    const call = innermostFunctionCall(valueTextUpToCursor);
+    if (call) {
+      const partial = call.partial;
       const wordFrom = context.pos - partial.length;
       const lowerPartial = partial.toLowerCase();
       const options: any[] = [];
 
       // Only suggest scope names for functions that take a scope argument
-      const SCOPE_ARG_FUNCTIONS = [
-        'bestContrastWith', 'minContrastWith', 'closestColor',
-        'furthestFrom', 'mostVivid', 'leastVivid', 'lightest', 'darkest',
-        'random', 'nth',
-      ];
-      if (SCOPE_ARG_FUNCTIONS.includes(funcArgMatch[1])) {
+      if (SCOPE_ARG_FUNCTIONS.has(call.name)) {
         for (const scope of book.getAllScopes()) {
           if (!partial || scope.name.toLowerCase().includes(lowerPartial)) {
             options.push({
