@@ -10,14 +10,14 @@ describe('scaleNames — start-anchored schemes', () => {
   });
 
   it('takes start and step for ordinals, leaving room to grow', () => {
-    expect(scaleNames(3, 'ordinal', { start: 0 })).toEqual(['0', '1', '2']);
+    expect(scaleNames(3, 'ordinal', { from: 0 })).toEqual(['0', '1', '2']);
+    expect(scaleNames(4, 'ordinal', { from: -2 })).toEqual(['-2', '-1', '0', '1']);
     expect(scaleNames(4, 'ordinal', { step: 10 })).toEqual(['10', '20', '30', '40']);
-    expect(scaleNames(3, 'ordinal', { start: 0, step: 100 })).toEqual(['0', '100', '200']);
+    expect(scaleNames(3, 'ordinal', { from: 0, step: 100 })).toEqual(['0', '100', '200']);
   });
 
   it('rejects ordinal options that would not make integer keys', () => {
-    expect(() => scaleNames(3, 'ordinal', { start: -1 })).toThrow(/start/);
-    expect(() => scaleNames(3, 'ordinal', { start: 1.5 })).toThrow(/start/);
+    expect(() => scaleNames(3, 'ordinal', { from: 1.5 })).toThrow(/from/);
     expect(() => scaleNames(3, 'ordinal', { step: 0 })).toThrow(/step/);
     expect(() => scaleNames(3, 'ordinal', { step: 0.5 })).toThrow(/step/);
   });

@@ -53,7 +53,7 @@ export type {
 export { TokenError, ScopeError, CircularDependencyError, FunctionError } from './errors';
 
 // Naming schemes for primitive token keys
-export { scaleNames, nameBetween, namingScheme, schemes } from './naming';
+export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming';
 export type { NamingScheme, NamingAnchor, BuiltinSchemeName, ScaleNamesOptions } from './naming';
 
 // Graph

@@ -53,9 +53,9 @@ describe('scaleNames — base as [index, name]', () => {
     expect(() => scaleNames(3, 'intensity', { base: [1, 'loud'] })).toThrow(/loud/);
   });
 
-  it('still rejects base on start-anchored schemes and a bare index on range schemes', () => {
-    expect(() => scaleNames(3, 'ordinal', { base: [1, '2'] })).toThrow(/base/);
-    expect(() => scaleNames(3, 'hundreds', { base: 1 })).toThrow(/\[index, name\]/);
+  it('rejects base on roman and a bare index on a plain list', () => {
+    expect(() => scaleNames(3, 'roman', { base: 1 })).toThrow(/base/);
+    expect(() => scaleNames(3, 'creatures', { base: 1 })).toThrow(/\[index, name\]/);
   });
 
   it('validates the pair', () => {

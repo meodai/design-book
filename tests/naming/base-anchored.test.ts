@@ -52,8 +52,7 @@ describe('scaleNames — base-anchored schemes', () => {
     expect(() => scaleNames(6, 'dynamics', { base: 5 })).toThrow(/4 below/);
   });
 
-  it('rejects base on schemes that are not base-anchored', () => {
-    expect(() => scaleNames(3, 'ordinal', { base: 1 })).toThrow(/base/);
-    expect(() => scaleNames(3, 'hundreds', { base: 1 })).toThrow(/base/);
+  it('rejects base on roman, which has no middle', () => {
+    expect(() => scaleNames(3, 'roman', { base: 1 })).toThrow(/base/);
   });
 });
