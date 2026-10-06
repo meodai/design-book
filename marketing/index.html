@@ -514,6 +514,42 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
     </div>
   </div>
 
+  <div class="names-feature-body feature-sub">
+    <div class="names-feature-text">
+      <h3 id="names-title"><em>Name it,</em> too.</h3>
+      <p>
+        Generated primitives still need keys. <code>scaleNames()</code> picks
+        them from a naming convention — <code>50 … 950</code>, t-shirt sizes,
+        an intensity ladder, 100 objects by size — and fits it to however
+        many steps you have, keeping the ends and the center where they belong.
+        Changed the count? Run it again: every step gets a fresh, evenly
+        spread name.
+      </p>
+      <pre class="code" id="names-code"></pre>
+    </div>
+
+    <div class="names-stage">
+      <div class="names-head">
+        <div class="names-seed">
+          <color-input id="names-seed-input" value="#ffdd00" initial-colorspace="hsl" no-alpha></color-input>
+          <span class="names-seed-lbl">brand.primary</span>
+        </div>
+        <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
+          <button type="button" data-scheme="intensity" class="is-active">intensity</button>
+          <button type="button" data-scheme="hundreds">hundreds</button>
+          <button type="button" data-scheme="tshirt">tshirt</button>
+          <button type="button" data-scheme="tones">tones</button>
+        </div>
+      </div>
+      <label class="names-count">
+        <span>steps</span>
+        <input type="range" id="names-count" min="3" max="11" value="9" />
+        <b id="names-count-val">9</b>
+      </label>
+      <div class="names-rows" id="names-rows" aria-live="polite"></div>
+    </div>
+  </div>
+
   <div class="order-feature-body feature-sub">
     <div class="order-feature-text">
       <h3 id="order-title"><em>Don't arrange the palette.</em> Let it sort itself.</h3>

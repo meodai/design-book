@@ -2365,3 +2365,86 @@ color-input:hover::part(chip),
 color-input:hover::part(input) { border-width: 2px 0 2px 2px; }
 color-input:hover::part(input) { border-width: 2px; }
 color-input:focus-within::part(input) { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── Names: keys for a generated ramp ───────────────────────────── */
+.names-feature-body {
+  display: grid;
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .names-feature-body { grid-template-columns: 5fr 7fr; }
+}
+.names-feature-text { max-width: 56ch; }
+.names-feature-text :is(h2, h3) {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 18px;
+}
+.names-feature-text :is(h2, h3) em { color: var(--accent); font-style: italic; }
+.names-feature-text > p { font-size: 17px; line-height: 1.6; margin: 0 0 24px; }
+.names-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+}
+.names-stage {
+  border: 1px solid var(--rule);
+  background: var(--surface-2);
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+}
+.names-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.names-seed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.names-schemes { display: inline-flex; border: 1px solid var(--rule); background: var(--surface); }
+.names-schemes button {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.names-schemes button + button { border-left: 1px solid var(--rule); }
+.names-schemes button.is-active { background: var(--accent); color: var(--surface); }
+.names-count {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.names-count input { flex: 1; accent-color: var(--accent); }
+.names-count b { color: var(--text); font-weight: 400; min-width: 2ch; }
+.names-rows { display: grid; }
+.names-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 14px;
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.names-row code { font-family: var(--font-mono); font-size: 12px; opacity: .8; }
+@media (max-width: 560px) {
+  .names-schemes { flex-wrap: wrap; }
+}

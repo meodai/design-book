@@ -3,7 +3,7 @@ import {
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
   spacingScale, typographyScale,
   nextLarger, nextSmaller,
-  lightest, darkest, sibling,
+  lightest, darkest, sibling, scaleNames,
   Renderer, SVGRenderer, TableViewRenderer,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
@@ -54,6 +54,15 @@ function bootDesignSystem() {
   gray.set('g500', color('#6e6e6e'));
   gray.set('g700', color('#555555'));
   gray.set('g900', color('#222222'));
+
+  // A ramp from a single color. ramp() builds each stop from brand.primary;
+  // scaleNames picks the keys — seven stops of the hundreds scheme, which
+  // keeps 50 and 950 as its ends: 50 200 300 500 700 800 950. Need nine?
+  // Re-run with 9 and every stop gets a fresh, evenly spread name.
+  const blue = book.addScope('blue');
+  for (const shade of scaleNames(7, 'hundreds')) {
+    blue.set(shade, ramp(ref('brand.primary'), { shade }));
+  }
 
   // Brand re-uses the canonical spacing scale instead of redefining values.
   brand.set('space-sm', ref('space.s'));

@@ -42,6 +42,9 @@ import {
   relativeTo,
   createFunctionToken,
   colorMix,
+  lighten,
+  darken,
+  scaleNames,
   bestContrastWith,
   minContrastWith,
   closestColor,
@@ -1027,6 +1030,71 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   });
   surfaceIn.addEventListener("input", paint);
   surfaceIn.addEventListener("change", paint);
+  paint();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  NAMES — one seed, a ramp of lighten/darken steps, keys from scaleNames
+// ══════════════════════════════════════════════════════════════════════
+(function namesSection () {
+  const seedIn  = document.getElementById("names-seed-input");
+  const schemes = document.getElementById("names-schemes");
+  const countIn = document.getElementById("names-count");
+  const countOut = document.getElementById("names-count-val");
+  const rows    = document.getElementById("names-rows");
+  const code    = document.getElementById("names-code");
+  if (!seedIn || !schemes || !countIn || !rows || !code) return;
+
+  const INITIAL = seedIn.getAttribute("value") || "#ffdd00";
+  seedIn.value = INITIAL;
+  let scheme = "intensity";
+
+  const b = new DesignBook("names-demo");
+  const brand = b.addScope("brand");
+  brand.set("primary", color(INITIAL));
+
+  function paint () {
+    const steps = Number(countIn.value);
+    countOut.textContent = steps;
+    try { brand.set("primary", color(seedIn.value || INITIAL)); } catch { return; }
+
+    // A fresh scope each time: re-running is how a scale gets new names.
+    if (b.getScope("palette")) b.deleteScope("palette");
+    const palette = b.addScope("palette");
+    const names = scaleNames(steps, scheme);
+    names.forEach((name, i) => {
+      const t = (i / (steps - 1)) * 2 - 1;          // -1 (lightest) … 1 (darkest)
+      palette.set(name, t < 0
+        ? lighten(ref("brand.primary"), { amount: -t * 0.9 })
+        : darken(ref("brand.primary"), { amount: t * 0.8 }));
+    });
+
+    rows.innerHTML = names.map((name) => {
+      const hex = b.resolve(`palette.${name}`);
+      const ink = (lch(hex)?.l ?? 0.5) > 0.62 ? "#1d1c1c" : "#fcf6ee";
+      return `<div class="names-row" style="background:${hex};color:${ink}"><span>${name}</span><code>${hex}</code></div>`;
+    }).join("");
+
+    const S = (x) => `<span class="c-str">'${x}'</span>`, F = (x) => `<span class="c-fn">${x}</span>`, N = (x) => `<span class="c-num">${x}</span>`;
+    code.innerHTML =
+`<span class="c-fn">const</span> seed = ${F("ref")}(${S("brand.primary")});
+${F("scaleNames")}(${N(steps)}, ${S(scheme)}).${F("forEach")}((name, i) =&gt; {
+  <span class="c-fn">const</span> t = i / ${N(steps - 1)} * ${N(2)} - ${N(1)};  <span class="c-dim">// -1 … 1</span>
+  palette.${F("set")}(name, t &lt; ${N(0)}
+    ? ${F("lighten")}(seed, { <span class="c-key">amount</span>: -t * ${N(".9")} })
+    : ${F("darken")}(seed, { <span class="c-key">amount</span>: t * ${N(".8")} }));
+});`;  }
+
+  schemes.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-scheme]");
+    if (!btn) return;
+    scheme = btn.dataset.scheme;
+    schemes.querySelectorAll("button").forEach((x) => x.classList.toggle("is-active", x === btn));
+    paint();
+  });
+  countIn.addEventListener("input", paint);
+  seedIn.addEventListener("input", paint);
+  seedIn.addEventListener("change", paint);
   paint();
 })();
 
