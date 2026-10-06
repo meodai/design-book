@@ -12,7 +12,7 @@
  * - range — fixed end names, values spread evenly between them (`50`–`950`).
  */
 import { TokenError } from '../errors';
-import { assertValidTokenKey } from '../scope';
+import { assertValidTokenKey } from '../keys';
 
 export type NamingAnchor = 'start' | 'base' | 'range';
 

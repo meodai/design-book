@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./naming": {
+      "import": "./dist/naming.js",
+      "types": "./dist/naming/index.d.ts"
     }
   },
   "files": [

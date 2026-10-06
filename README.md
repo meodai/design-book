@@ -293,6 +293,14 @@ resolve time if zero candidates match `type`.
 
 Try every scheme in the [naming playground](https://meodai.github.io/design-book/naming/).
 
+The naming helpers have no dependencies and are also published on their own, so a project that only needs key names can import just them (a few KB, no culori, no token engine):
+
+```typescript
+import { nameValues, scaleNames, nameBetween, namingScheme } from 'design-book/naming';
+```
+
+They are exported from `design-book` as well.
+
 Generated primitives still need keys. `nameValues(values, scheme, options?)` pairs each value with a name from a naming convention, smallest / lightest first, and `scaleNames(count, scheme, options?)` returns just the names. They only produce names — never values:
 
 ```typescript

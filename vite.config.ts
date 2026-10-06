@@ -65,9 +65,14 @@ export default defineConfig(({ mode }) => {
     plugins: [dts({ rollupTypes: true })],
     build: {
       lib: {
-        entry: resolve(__dirname, 'src/index.ts'),
+        // `design-book/naming` is its own entry: it has no dependencies,
+        // so projects that only need key names get a few KB.
+        entry: {
+          index: resolve(__dirname, 'src/index.ts'),
+          naming: resolve(__dirname, 'src/naming/index.ts'),
+        },
         formats: ['es'],
-        fileName: 'index',
+        fileName: (_format, name) => `${name}.js`,
       },
       rollupOptions: {
         external: ['culori'],

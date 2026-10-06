@@ -51,6 +51,8 @@ Function argument type: `FunctionArg = TokenValue | ReferenceValue | ScopeFuncti
 
 ### Naming (`src/naming/`)
 
+Published twice: from the package root and as the standalone subpath `design-book/naming` (second Vite lib entry → `dist/naming.js`, types at `dist/naming/index.d.ts`). It must stay dependency-free — it may import only `src/errors.ts` and `src/keys.ts` (the token-key check, re-exported by `scope.ts`); `tests/naming/standalone.test.ts` enforces this.
+
 `nameValues(values, scheme, options?)` (→ `[name, value][]`), `scaleNames(count, scheme, options?)`, `nameBetween(lower, upper, scheme)`, `namingScheme(names, { base? })` and the frozen `schemes` record produce token **keys** only — they never create or touch values or a DesignBook. Schemes are start-anchored (`ordinal`, `roman`, `greek`, `paper`, `creatures`, `objects`), base-anchored (`tshirt`, `intensity`, `dynamics`, `weights`) or range-anchored (`hundreds`, `tones`, `unit`, `signed`; tiers of coarse-to-fine steps between `from` / `to`).
 
 - `base: n` gives value *n* the scheme's centre name; `ordinal` and the ranges centre on 0 and count outward both ways. `base: [n, name]` picks the name too: on ranges each side of the named step is spread to its end (coarsest tier where both fit, exact .5 rounds towards the base); on lists the rest spread around it (fixed lists keep their outermost names).
