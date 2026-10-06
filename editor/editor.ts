@@ -19,7 +19,7 @@ import { autocompletion, CompletionContext, CompletionResult, acceptCompletion }
 // Register the <color-input> web component
 import 'hdr-color-input';
 
-import { parse as culoriParse, formatHex } from 'culori';
+import { parse as culoriParse, formatHex, formatHex8 } from 'culori';
 
 // --- Create the design system (populated after event listeners are attached) ---
 
@@ -352,6 +352,24 @@ function looksLikeColor(value: string): boolean {
   // weight or a word is not one, so '#'-less hex is rejected.
   if (!value || /^[0-9a-fA-F]+$/.test(value)) return false;
   return culoriParse(value) !== undefined;
+}
+
+// --- Colour literals in the editor text ---
+
+/** color('…') / color("…") / color(bare) — shared by the swatch decorations
+ *  and the picker write-back so both see the same calls. Group 2 is the
+ *  quoted value (may hold spaces and parens: color('oklch(0.6 0.1 200)')),
+ *  group 3 the bare one (color(red), color(#fff)). */
+const COLOR_CALL_SOURCE = /color\(\s*(?:(['"])((?:(?!\1).)*)\1|([^'"()\s]+))\s*\)/.source;
+const HEX_SOURCE = /#[0-9a-fA-F]{3,8}\b/.source;
+
+function colorCallValue(m: RegExpExecArray): string {
+  return m[2] ?? m[3];
+}
+
+function isTranslucent(value: string): boolean {
+  const alpha = culoriParse(value)?.alpha;
+  return alpha !== undefined && alpha < 1;
 }
 
 // --- Dimension serialization ---
@@ -732,29 +750,27 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
   for (const { from, to } of view.visibleRanges) {
     const text = doc.sliceString(from, to);
 
-    // Find color('...') calls — editable, opens picker
-    const colorCallRegex = /color\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;
+    // Find color('...') calls — editable, opens picker. The swatch shows
+    // the literal itself (alpha and wide gamut included).
+    const colorCallRegex = new RegExp(COLOR_CALL_SOURCE, 'g');
+    const covered: Array<[number, number]> = [];
     let match;
     while ((match = colorCallRegex.exec(text)) !== null) {
-      const colorVal = match[1];
-      const parsed = culoriParse(colorVal);
-      if (parsed) {
-        const hex = formatHex(parsed) ?? colorVal;
+      const colorVal = colorCallValue(match);
+      covered.push([match.index, match.index + match[0].length]);
+      if (culoriParse(colorVal)) {
         const pos = from + match.index;
-        widgets.push({ pos, widget: new ColorSwatchWidget(hex, pos, true) });
+        widgets.push({ pos, widget: new ColorSwatchWidget(colorVal, pos, true) });
       }
     }
 
     // Find bare #hex colors (inside function args) — editable
-    const hexRegex = /#[0-9a-fA-F]{3,8}\b/g;
+    const hexRegex = new RegExp(HEX_SOURCE, 'g');
     while ((match = hexRegex.exec(text)) !== null) {
       const pos = from + match.index;
-      // Skip if already covered by a color() call above
-      const alreadyCovered = widgets.some(w => {
-        const wPos = (w.widget as ColorSwatchWidget).pos;
-        return wPos !== undefined && pos > wPos && pos < wPos + 20;
-      });
-      if (!alreadyCovered) {
+      // Skip hexes inside a color() call above
+      const at = match.index;
+      if (!covered.some(([start, end]) => at >= start && at < end)) {
         widgets.push({ pos, widget: new ColorSwatchWidget(match[0], pos, true) });
       }
     }
@@ -1324,8 +1340,8 @@ function replaceColorInEditor(view: EditorView, pos: number, newColor: string) {
   const line = doc.lineAt(pos);
   const lineText = line.text;
 
-  const colorCallRegex = /color\(\s*['"]([^'"]+)['"]\s*\)/g;
-  const hexRegex = /#[0-9a-fA-F]{3,8}/g;
+  const colorCallRegex = new RegExp(COLOR_CALL_SOURCE, 'g');
+  const hexRegex = new RegExp(HEX_SOURCE, 'g');
 
   let m;
   while ((m = colorCallRegex.exec(lineText)) !== null) {
@@ -1343,8 +1359,11 @@ function replaceColorInEditor(view: EditorView, pos: number, newColor: string) {
     const absStart = line.from + m.index;
     const absEnd = absStart + m[0].length;
     if (pos >= absStart && pos < absEnd) {
+      // A bare hex must stay a hex to parse as an argument.
+      const parsed = culoriParse(newColor);
+      const hex = parsed ? (isTranslucent(newColor) ? formatHex8(parsed) : formatHex(parsed)) : newColor;
       view.dispatch({
-        changes: { from: absStart, to: absEnd, insert: newColor },
+        changes: { from: absStart, to: absEnd, insert: hex },
       });
       return;
     }
@@ -1388,7 +1407,9 @@ document.addEventListener('click', (e) => {
   // Create a fresh picker element positioned at the swatch
   const picker = document.createElement('color-input') as any;
   picker.value = colorValue;
-  picker.setAttribute('no-alpha', '');
+  // Keep the alpha slider for translucent colours so picking does not
+  // write them back opaque.
+  if (!isTranslucent(colorValue)) picker.setAttribute('no-alpha', '');
 
   // Position it absolutely near the swatch
   const wrapper = document.createElement('div');
