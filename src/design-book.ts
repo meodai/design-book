@@ -895,9 +895,7 @@ export class DesignBook {
    *  the inherited key — and so cycle detection can see through
    *  inheritance. */
   private _linkInheritedDependencies(dependencies: string[]): void {
-    for (const dep of dependencies) {
-      this._linkInheritedDependency(dep);
-    }
+    this._linkInheritedAll(dependencies);
   }
 
   private _linkInheritedDependency(dep: string): void {
@@ -905,6 +903,36 @@ export class DesignBook {
     if (!source || source === dep) return;
     this.graph.addNode(dep);
     this.graph.updateEdges(dep, [source]);
+  }
+
+  /** Link several inherited keys as one step: if any of them would close a
+   *  cycle, the ones already re-pointed get their previous edges back
+   *  before the error propagates. Otherwise the caller's cleanup (dropping
+   *  the rejected key's node) took the earlier links down with it and left
+   *  those keys with no edge at all. */
+  private _linkInheritedAll(keys: Iterable<string>): void {
+    const relinked: Array<{ key: string; hadNode: boolean; previous: string[] }> = [];
+    try {
+      for (const key of keys) {
+        relinked.push({
+          key,
+          hadNode: this.graph.hasNode(key),
+          previous: this.graph.getPrerequisitesFor(key),
+        });
+        this._linkInheritedDependency(key);
+      }
+    } catch (e) {
+      for (const { key, hadNode, previous } of relinked.reverse()) {
+        if (!hadNode) {
+          this.graph.removeNode(key);
+          continue;
+        }
+        try {
+          this.graph.updateEdges(key, previous);
+        } catch { /* they were acyclic a moment ago */ }
+      }
+      throw e;
+    }
   }
 
   /** A brand-new key may be the source that inheriting scopes were waiting
@@ -919,13 +947,15 @@ export class DesignBook {
     const scopeName = qualifiedKey.substring(0, dotIndex);
     const tokenName = qualifiedKey.substring(dotIndex + 1);
 
+    const shadows: string[] = [];
     for (const name of this._scopeAndDescendants(scopeName)) {
       if (name === scopeName) continue;
       const key = `${name}.${tokenName}`;
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length === 0) continue;
-      this._linkInheritedDependency(key);
+      shadows.push(key);
     }
+    this._linkInheritedAll(shadows);
   }
 
   /** After a scope starts extending another, any of its inherited keys that
