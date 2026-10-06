@@ -1,5 +1,6 @@
 import { Scope } from './scope';
 import { ScopeError } from './errors';
+import { functionDependencies } from './tokens';
 import type { ReferenceValue, FunctionTokenValue } from './tokens';
 
 export class ScopeManager {
@@ -145,7 +146,7 @@ export class ScopeManager {
         }
       } else if (token.type === 'function') {
         const fnToken = token as FunctionTokenValue;
-        const fnDeps = fnToken.metadata?.dependencies ?? [];
+        const fnDeps = functionDependencies(fnToken);
         for (const dep of fnDeps) {
           const depScope = dep.split('.')[0];
           if (depScope !== name) {

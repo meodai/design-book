@@ -188,6 +188,15 @@ export function extractDependencies(args: FunctionArg[]): string[] {
   return [...deps];
 }
 
+/** Every key a function token reads as a value: the references in its args
+ *  (nested function tokens included) plus whatever it declares in
+ *  `metadata.dependencies` (a key held in options, like `sibling`'s anchor).
+ *  A token built with `createFunctionToken` and no metadata still gets the
+ *  edges its args imply. Deduplicated, first-seen order. */
+export function functionDependencies(fn: FunctionTokenValue): string[] {
+  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? [])])];
+}
+
 /** Normalises a `not` option into an array of fully-qualified token keys.
  *  Accepts strings (already qualified keys) or `ReferenceValue` objects
  *  produced by `ref('scope.token')`. Used by scope-iterating analysis

@@ -57,6 +57,8 @@ Constructors validate what they can up front and throw `FunctionError`: `colorMi
 
 At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the registry and calls `implementation(...resolvedArgs, fn.options)`.
 
+A function token's graph edges are `functionDependencies(fn)` (`src/tokens.ts`): the refs in its args (nested tokens included) unioned with `metadata.dependencies`, deduplicated — so a bare `createFunctionToken(name, [ref(…)])` is tracked too.
+
 **With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
 
 **With scope argument** (generic selectors): `nth`, `random`, `nextLarger`, `nextSmaller`

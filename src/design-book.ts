@@ -6,7 +6,7 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
+import { functionDependencies, iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -710,8 +710,7 @@ export class DesignBook {
       return [(value as ReferenceValue).key];
     }
     if (value.type === 'function') {
-      const fn = value as FunctionTokenValue;
-      return fn.metadata?.dependencies ?? [];
+      return functionDependencies(value as FunctionTokenValue);
     }
     return [];
   }
