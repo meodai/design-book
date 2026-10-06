@@ -81,6 +81,26 @@ function parseDimensionString(value: string): W3DimensionValue | null {
   return { value: parseFloat(match[1]), unit: match[2] };
 }
 
+/** Format one sub-property of a W3 `typography` composite, along with the
+ *  W3 `$type` it would carry as a standalone token. */
+function formatW3TypographyProperty(
+  key: string,
+  resolved: string,
+): { value: string | number | W3DimensionValue; type?: string } {
+  if (TYPOGRAPHY_DIMENSION_KEYS.has(key)) {
+    const dim = parseDimensionString(resolved);
+    return dim ? { value: dim, type: 'dimension' } : { value: resolved };
+  }
+  if (TYPOGRAPHY_NUMBER_KEYS.has(key)) {
+    const num = Number(resolved);
+    const isNum = resolved.trim() !== '' && Number.isFinite(num);
+    if (key === 'fontWeight') return { value: isNum ? num : resolved, type: 'fontWeight' };
+    return isNum ? { value: num, type: 'number' } : { value: resolved };
+  }
+  if (key === 'fontFamily') return { value: resolved, type: 'fontFamily' };
+  return { value: resolved };
+}
+
 function toCubicBezier(easing: string): number[] | string {
   const trimmed = easing.trim();
   const keyword = CSS_EASING_KEYWORDS[trimmed];
@@ -293,7 +313,24 @@ export class Renderer {
     return JSON.stringify(this.renderW3DesignTokensObject(), null, 2);
   }
 
+  /** Typography-composed scopes are grouped under a top-level
+   *  `typography` key, so a plain scope of that name would be silently
+   *  overwritten (or merged into). Fail loudly, like the CSS collision check. */
+  private assertNoTypographyGroupClash(): void {
+    const scopes = this.book.getAllScopes();
+    const hasComposites = scopes.some((s) => s.compose === 'typography');
+    const plain = scopes.find((s) => s.name === 'typography' && s.compose !== 'typography');
+    if (hasComposites && plain) {
+      throw new Error(
+        'W3 group name collision: the plain scope "typography" clashes with the ' +
+        '"typography" group that typography-composed scopes are emitted under. ' +
+        'Rename the scope.'
+      );
+    }
+  }
+
   renderW3DesignTokensObject(): W3DesignTokensMap {
+    this.assertNoTypographyGroupClash();
     const result: W3DesignTokensMap = {};
 
     for (const scope of this.book.getAllScopes()) {
@@ -332,8 +369,18 @@ export class Renderer {
           : token as TokenValue;
 
         const entry: W3TokenEntry = { $value: '' };
+        const typographyTarget = token.type === 'reference'
+          ? this.typographyPropertyOf((token as ReferenceValue).key)
+          : undefined;
 
-        if (token.type === 'reference') {
+        if (typographyTarget !== undefined) {
+          // Keys of a typography-composed scope only exist inside the
+          // `typography.<scope>` composite, so an alias would point at
+          // nothing. Emit the resolved sub-value instead.
+          const formatted = formatW3TypographyProperty(typographyTarget, resolved);
+          entry.$value = formatted.value;
+          if (formatted.type) entry.$type = formatted.type;
+        } else if (token.type === 'reference') {
           entry.$value = `{${(token as ReferenceValue).key}}`;
         } else if (token.type === 'function' && (token as FunctionTokenValue).name === 'timing') {
           entry.$value = this.formatW3Transition(token as FunctionTokenValue);
@@ -341,8 +388,10 @@ export class Renderer {
           entry.$value = this.formatW3Value(internalType, resolved, plain);
         }
 
-        const w3Type = this.w3TypeFor(internalType, resolved, plain);
-        if (w3Type) entry.$type = w3Type;
+        if (typographyTarget === undefined) {
+          const w3Type = this.w3TypeFor(internalType, resolved, plain);
+          if (w3Type) entry.$type = w3Type;
+        }
 
         if (token.description) {
           entry.$description = token.description;
@@ -386,19 +435,21 @@ export class Renderer {
     return internalType; // pass through for custom types
   }
 
+  /** The property name when `qualifiedKey` lives in a typography-composed
+   *  scope (and so is never emitted as a W3 token of its own). */
+  private typographyPropertyOf(qualifiedKey: string): string | undefined {
+    const dot = qualifiedKey.indexOf('.');
+    if (dot === -1) return undefined;
+    const target = this.book.getScope(qualifiedKey.slice(0, dot));
+    return target?.compose === 'typography' ? qualifiedKey.slice(dot + 1) : undefined;
+  }
+
   /** Build the W3 `typography` composite for a composed scope. */
   private formatW3Typography(scopeName: string, keys: string[]): W3TypographyValue {
     const composite: W3TypographyValue = {};
     for (const key of keys) {
       const resolved = resolveTokenValue(this.book, scopeName, key);
-      if (TYPOGRAPHY_DIMENSION_KEYS.has(key)) {
-        composite[key] = parseDimensionString(resolved) ?? resolved;
-      } else if (TYPOGRAPHY_NUMBER_KEYS.has(key)) {
-        const num = Number(resolved);
-        composite[key] = resolved.trim() !== '' && Number.isFinite(num) ? num : resolved;
-      } else {
-        composite[key] = resolved;
-      }
+      composite[key] = formatW3TypographyProperty(key, resolved).value;
     }
     return composite;
   }
