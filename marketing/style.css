@@ -1311,16 +1311,10 @@ h1, h2, h3 {
   color: var(--muted);
   letter-spacing: 0.04em;
 }
-.order-seed color-input,
-.order-seed hdr-color-input {
-  --hdr-color-input-size: 44px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 1px solid var(--rule);
+.order-seed color-input {
+  /* Natural size: swatch plus hex, like the ramp and graph pickers. */
+  display: inline-flex;
   cursor: pointer;
-  display: block;
 }
 .order-modes {
   display: inline-flex;
