@@ -54,6 +54,18 @@ export function readableOnParts(
 }
 
 /**
+ * Position of the `readableOn` backdrop in a selector token's `args`, or -1
+ * when it has none. `readableOnParts` appends the backdrop as the last
+ * argument and stores `minContrast` exactly when it does, so the option is
+ * the token's own record of the backdrop — serializers use this instead of
+ * keeping a table of each selector's fixed arity.
+ */
+export function readableOnArgIndex(fn: Pick<FunctionTokenValue, 'args' | 'options'>): number {
+  if (fn.options?.minContrast === undefined || fn.args.length === 0) return -1;
+  return fn.args.length - 1;
+}
+
+/**
  * Registry side: splits the resolved arguments that follow a selector's
  * fixed ones into the optional backdrop and the options object.
  */

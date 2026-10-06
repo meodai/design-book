@@ -9,6 +9,7 @@ import {
 import type { RenderFormat } from '../src/index';
 import type { Scope, ScopeOrder } from '../src/index';
 import { parseTokenInput } from './editor-input-parser';
+import { readableOnArgIndex } from '../src/functions/color/readable';
 
 import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
@@ -366,12 +367,19 @@ function formatDimension(value: string | number, unit: string): string {
  *  Recurses into `arg.type === 'function'` args so a function nested
  *  inside another function's arguments (e.g. spacingScale(lighten(...)))
  *  round-trips instead of being silently dropped. */
-/** Fixed argument count of the colour selectors that take `readableOn`.
- *  The backdrop is stored as one more trailing argument; it is printed back
- *  inside the options object, the way it is typed. */
-const READABLE_ON_SELECTORS: Record<string, number> = {
-  mostVivid: 1, leastVivid: 1, lightest: 1, darkest: 1, furthestFrom: 1, closestColor: 2,
-};
+/** Serialize one function argument. Every argument yields exactly one
+ *  string so positions stay aligned with fn.args. */
+function serializeArg(arg: any): string {
+  if (typeof arg === 'string') return arg;
+  if (typeof arg === 'number') return String(arg);
+  if (typeof arg === 'object' && arg !== null) {
+    if (arg.type === 'function') return serializeFunctionToken(arg);
+    // Scope argument -- show scope name
+    if (typeof arg.getAllKeys === 'function') return arg.name || 'scope';
+    return serializePlainToken(arg);
+  }
+  return String(arg);
+}
 
 function serializeFunctionToken(fn: any): string {
   // sibling keeps its anchor key in fn.options (it needs the key's position,
@@ -386,29 +394,13 @@ function serializeFunctionToken(fn: any): string {
     return `sibling(ref('${from}'), ${offset}${tail})`;
   }
 
-  const argStrs: string[] = [];
-  if (fn.args) {
-    for (const arg of fn.args) {
-      if (typeof arg === 'object' && arg !== null) {
-        if (arg.type === 'reference') {
-          argStrs.push(`ref('${arg.key}')`);
-        } else if (arg.type === 'color') {
-          argStrs.push(`color('${arg.rawValue}')`);
-        } else if (arg.type === 'function') {
-          argStrs.push(serializeFunctionToken(arg));
-        } else if (typeof arg.getAllKeys === 'function') {
-          // Scope argument -- show scope name
-          argStrs.push(arg.name || 'scope');
-        } else if (arg.type === 'dimension') {
-          argStrs.push(formatDimension(arg.rawValue, arg.metadata?.unit || ''));
-        }
-      } else if (typeof arg === 'string') {
-        argStrs.push(arg);
-      } else if (typeof arg === 'number') {
-        argStrs.push(String(arg));
-      }
-    }
-  }
+  // The colour selectors' `readableOn` backdrop is stored as a trailing
+  // argument; the token itself says where (readableOnArgIndex). It is
+  // printed back inside the options object, the way it is typed.
+  const args: any[] = fn.args ?? [];
+  const backdropIdx = readableOnArgIndex({ args, options: fn.options });
+  const argStrs = args.filter((_, i) => i !== backdropIdx).map(serializeArg);
+  const readableOn = backdropIdx >= 0 ? serializeArg(args[backdropIdx]) : undefined;
   // Preserve options across edit-cycle round-trips so ratios, steps, etc.
   // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
   // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
@@ -421,8 +413,6 @@ function serializeFunctionToken(fn: any): string {
         return true;
       })
     : [];
-  const fixedArgs = READABLE_ON_SELECTORS[fn.name];
-  const readableOn = fixedArgs !== undefined && argStrs.length > fixedArgs ? argStrs.pop() : undefined;
   const optionPairs = [
     ...(readableOn ? [`readableOn: ${readableOn}`] : []),
     ...optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`),
