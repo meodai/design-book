@@ -148,7 +148,9 @@ export class DesignBook {
   private reportedBatchEntries: WeakSet<object> = new WeakSet();
 
   private _propagating = false;
-  private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any }> = [];
+  /** `correction` marks an entry that re-announces a rolled-back key; if
+   *  that fails too it is not corrected again. */
+  private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any; correction?: boolean }> = [];
 
   /** True once the current top-level propagation has announced a change.
    *  `_notifyRollback` consults it: a change that was announced and then
@@ -602,17 +604,35 @@ export class DesignBook {
       if (this._ownToken(queued.key) !== queued.newValue) {
         this._putToken(queued.key, queued.newValue);
       }
+      // Whether *this* entry got announced; the outer change's flag is
+      // restored afterwards so `_notifyRollback` still answers for it alone.
+      const outerAnnounced = this._announced;
+      this._announced = false;
       try {
         this._processAutoChange(queued.key, queued.newValue, oldValue);
         accepted.set(queued.key, queued.newValue);
       } catch (e) {
+        const announced = this._announced;
         // Reporting must not throw either: the drain also runs from a
         // `finally`, where an escaping error would replace the caller's.
         try {
           this._rollbackKey(queued.key, oldValue);
         } catch { /* the token is already unusable; the report matters more */ }
         accepted.set(queued.key, oldValue);
-        this._reportSuppressed(queued.key, e, 'reentrant');
+        this._reportSuppressed(queued.key, e, queued.correction ? 'rollback' : 'reentrant');
+        // A listener threw after the write was announced: listeners and
+        // dependents were told about a value that is gone. Announce the
+        // restored one next, through the same path.
+        if (announced && !queued.correction) {
+          this._reentrantQueue.unshift({
+            key: queued.key,
+            newValue: oldValue,
+            oldValue: queued.newValue,
+            correction: true,
+          });
+        }
+      } finally {
+        this._announced = outerAnnounced;
       }
     }
   }
@@ -669,9 +689,23 @@ export class DesignBook {
     if (dotIndex === -1) return;
     const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
     scope?._rollback(qualifiedKey.substring(dotIndex + 1), oldValue);
-    // The write may already have been indexed; the index must describe the
-    // token that is actually stored now.
-    this._indexSelector(qualifiedKey, this.getTokenByKey(qualifiedKey));
+    // The write may already have been indexed and wired into the graph (a
+    // listener can throw after both); the index, the graph edges and the
+    // live-key set must describe the token that is actually stored now.
+    const restored = this.getTokenByKey(qualifiedKey);
+    this._indexSelector(qualifiedKey, restored);
+    if (restored) {
+      this.graph.addNode(qualifiedKey);
+      try {
+        this.graph.updateEdges(qualifiedKey, this._getEffectiveDepsForKey(qualifiedKey, restored));
+      } catch { /* keep the edges it has; the restored value was accepted before */ }
+      this._liveKeys.add(qualifiedKey);
+      this._updateOwnReferenceCaches(qualifiedKey);
+    } else {
+      this._detachNode(qualifiedKey);
+      this._liveKeys.delete(qualifiedKey);
+    }
+    this._updateReferenceCaches(qualifiedKey);
   }
 
   private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {
