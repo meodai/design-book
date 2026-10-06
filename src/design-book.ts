@@ -540,7 +540,14 @@ export class DesignBook {
 
   _notifyTokenChange(qualifiedKey: string, newValue: any, oldValue: any): void {
     if (this._mode === 'batch') {
-      this.batchQueue.set(qualifiedKey, { newValue, oldValue });
+      // Several writes to one key merge into one entry, which must keep the
+      // value from before the first of them: it is what a rejected write
+      // rolls back to and what listeners last heard about. An entry that has
+      // already been through a flush (accepted, still failing to resolve)
+      // was announced, so the new write starts from its value instead.
+      const pending = this.batchQueue.get(qualifiedKey);
+      const firstOld = pending && !this.reportedBatchEntries.has(pending) ? pending.oldValue : oldValue;
+      this.batchQueue.set(qualifiedKey, { newValue, oldValue: firstOld });
       return;
     }
 
