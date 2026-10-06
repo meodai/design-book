@@ -174,7 +174,7 @@ h1, h2, h3 {
   height: 32px;
   border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--rule);
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px #000;
   cursor: pointer;
   z-index: 1;
 }
@@ -2322,3 +2322,14 @@ color-input::part(area),
 color-input::part(controls),
 color-input::part(input),
 color-input::part(gamut) { border-radius: 0; }
+
+/* Colour pickers read as controls: a white + black ring around the
+   swatch shows up on any surface, and thickens on hover/focus. */
+color-input::part(chip) {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px #000;
+  transition: box-shadow .15s;
+}
+color-input:hover::part(chip),
+color-input:focus-within::part(chip) {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #000;
+}
