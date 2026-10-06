@@ -3,19 +3,21 @@ import { scaleNames, nameValues, nameBetween, schemes } from '../../src/naming';
 import { TokenError } from '../../src/errors';
 
 describe('things — a hand-picked ladder for UI sizes', () => {
-  const ALL = ['nothing', 'glitter', 'pinhead', 'key-cap', 'lipstick', 'poker-card', 'cup', 'wine-glass',
-    'champagne-bottle', 'umbrella', 'chair', 'table', 'car', 'camper-van', 'godzilla', 'eiffel-tower',
-    'matterhorn', 'switzerland', 'europe', 'moon', 'earth'];
+  const ALL = ['nothing', 'electron', 'atom', 'glitter', 'dust', 'snowflake', 'ant', 'pinhead', 'key-cap',
+    'lipstick', 'poker-card', 'cup', 'wine-glass', 'champagne-bottle', 'umbrella', 'chair', 'ottoman', 'table',
+    'kitchen-island', 'car', 'camper-van', 'godzilla', 'eiffel-tower', 'matterhorn', 'switzerland', 'europe',
+    'moon', 'earth'];
 
-  it('has 21 steps, nothing (zero) first', () => {
-    expect(scaleNames(21, 'things')).toEqual(ALL);
+  it('has 28 steps, nothing (zero) first', () => {
+    expect(scaleNames(28, 'things')).toEqual(ALL);
+    expect(() => scaleNames(29, 'things')).toThrow(/28/);
     expect(schemes.things.anchor).toBe('range');
   });
 
   it('spreads over the ladder by default, or starts where you say', () => {
-    expect(scaleNames(3, 'things')).toEqual(['nothing', 'chair', 'earth']);
-    expect(scaleNames(4, 'things', { anchor: 'start', from: 'glitter' })).toEqual(['glitter', 'pinhead', 'key-cap', 'lipstick']);
-    expect(scaleNames(3, 'things', { from: 'glitter', to: 'table' })).toEqual(['glitter', 'cup', 'table']);
+    expect(scaleNames(3, 'things')).toEqual(['nothing', 'champagne-bottle', 'earth']);
+    expect(scaleNames(4, 'things', { anchor: 'start', from: 'glitter' })).toEqual(['glitter', 'dust', 'snowflake', 'ant']);
+    expect(scaleNames(3, 'things', { from: 'glitter', to: 'table' })).toEqual(['glitter', 'poker-card', 'table']);
   });
 
   it('splits two-word names like any other', () => {

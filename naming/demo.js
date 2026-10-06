@@ -24,7 +24,7 @@ const ABOUT = {
   paper: "a10 … a0 (11)",
   creatures: "tardigrade … whale (23, by size)",
   objects: "atom … universe (100, each ≥ 15% bigger)",
-  things: "nothing glitter pinhead … cup … car … earth (21, a ladder for UI sizes)",
+  things: "nothing electron atom … cup … car … earth (28, a ladder for UI sizes)",
   value: "each value named by its own number (fed an irregular px scale here)",
   tshirt: "… xs s m l xl … — open-ended, centre m",
   intensity: "hint … mid … intense",

@@ -133,9 +133,10 @@ export const schemes: Readonly<Record<BuiltinSchemeName, NamingScheme>> = Object
   // A hand-picked ladder for UI sizes: memorable, each step clearly bigger,
   // dense in the everyday middle — not proportional to real size. Starts at
   // nothing, a name for 0.
-  things: list('things', ['nothing', 'glitter', 'pinhead', 'key-cap', 'lipstick', 'poker-card', 'cup',
-    'wine-glass', 'champagne-bottle', 'umbrella', 'chair', 'table', 'car', 'camper-van', 'godzilla',
-    'eiffel-tower', 'matterhorn', 'switzerland', 'europe', 'moon', 'earth'], 'range'),
+  things: list('things', ['nothing', 'electron', 'atom', 'glitter', 'dust', 'snowflake', 'ant', 'pinhead',
+    'key-cap', 'lipstick', 'poker-card', 'cup', 'wine-glass', 'champagne-bottle', 'umbrella', 'chair', 'ottoman',
+    'table', 'kitchen-island', 'car', 'camper-van', 'godzilla', 'eiffel-tower', 'matterhorn', 'switzerland',
+    'europe', 'moon', 'earth'], 'range'),
   // Each value named by its own number (`1 2 3 4 6 8 9` for an irregular
   // hairline scale). Needs the values, so it works through nameValues.
   value: { name: 'value', anchor: 'start', kind: 'value' } as ValueScheme,
