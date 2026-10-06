@@ -1,6 +1,6 @@
 import { parse } from 'culori';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
-import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError, TokenError } from './errors';
@@ -468,6 +468,12 @@ export class Scope {
         const tv = arg as TokenValue;
         if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
         return String(tv.rawValue);
+      }
+      if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
+        // A scope argument names a scope; the object captured at construction
+        // dies with `deleteScope`. Read whichever scope holds that name now.
+        const live = this.book.getScope((arg as ScopeFunctionArg).name);
+        return live ?? arg;
       }
       return arg;
     });
