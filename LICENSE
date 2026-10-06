@@ -29,3 +29,33 @@ GitHub: https://github.com/meodai
 
 For the full AGPL-3.0 license text, see:
 https://www.gnu.org/licenses/agpl-3.0.html
+
+---
+
+ADDITIONAL PERMISSION (under section 7 of the GNU AGPL version 3)
+
+As the copyright holder, David Aerne grants the following additional
+permission.
+
+When David Aerne — personally or through Elastiq — has been engaged by a
+client and has used Design Book in the work done under that engagement,
+the client may use, modify and run Design Book only within the scope of
+that engagement: the specific project, product or system David Aerne was
+hired to work on. Within that scope, the client does not have to comply
+with the conditions of the GNU AGPL version 3 — in particular, they do
+not have to publish or provide the source code of that project, including
+to users who interact with it over a network.
+
+This permission:
+
+- is limited to the project, product or system the engagement was for,
+  including keeping it running and fixing it;
+- does not extend to any other project, product or system of the client,
+  nor to new projects built on or derived from the original work;
+- does not allow distributing Design Book on its own, or using it outside
+  that scope, except under the GNU AGPL version 3 or a separate commercial
+  license;
+- may be relied on by people working on that project on the client's
+  behalf, within the same scope;
+- does not transfer copyright; this copyright and permission notice must
+  be kept with any copy of Design Book.
