@@ -327,6 +327,17 @@ A plain number (`base: 2`) only works on base-anchored schemes and keeps the sch
 
 Fixed lists keep their outermost names and spread evenly towards the base, so `scaleNames(3, 'intensity')` is `['hint', 'mid', 'intense']`. Generated schemes (`ordinal`, `roman`, `tshirt`) never run out; fixed lists throw when asked for more names than they have.
 
+**When a list runs out** — fixed lists and ranges throw by default. With `overflow: 'between'` they keep every name and put the extra steps in the gaps, named as a fraction of the way to the next name:
+
+```typescript
+scaleNames(12, 'paper', { overflow: 'between' })
+// a10 a9 a8 a7 a6 a6_5 a5 a4 a3 a2 a1 a0
+scaleNames(13, 'intensity', { overflow: 'between' })
+// hint hint_5 faint subtle subtle_5 soft mid mid_5 firm bold bold_5 strong intense
+scaleNames(40, 'hundreds', { overflow: 'between' })
+// 50 … 62_5 … 950 (the step keeps halving)
+```
+
 **Room to grow** — `nameBetween(lower, upper, scheme)` names a step inserted later, so existing keys never change: `nameBetween('100', '200', 'hundreds')` → `'150'`, `nameBetween('1', '2', 'ordinal')` → `'1_5'`, `nameBetween('m', 'l', 'tshirt')` → `'m-l'`.
 
 **Your own list** — `namingScheme(['hint', 'faint', 'mid', 'bold', 'heavy'], { base: 'mid' })` makes a base-anchored scheme; without `base` it is start-anchored.

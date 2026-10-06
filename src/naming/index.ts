@@ -41,6 +41,11 @@ export interface ScaleNamesOptions {
   step?: number;
   /** `roman` only (default 'lower'). */
   case?: 'lower' | 'upper';
+  /** What to do when a fixed list or range runs out of names. `'throw'`
+   *  (default) fails; `'between'` keeps every name and adds the extra steps
+   *  in the gaps as fractions of the way to the next name (`soft_5`,
+   *  `62_5`). Not for `ordinal`, `roman` or `tshirt`, which never run out. */
+  overflow?: 'throw' | 'between';
 }
 
 // ── Internal scheme shapes ─────────────────────────────────────────────
@@ -175,6 +180,26 @@ function spread(k: number, m: number): number[] {
   return Array.from({ length: k }, (_, j) => Math.round(((j + 1) * m) / k));
 }
 
+/** Keep every name of `seq` (ends included) and add `slots - seq.length`
+ *  extra steps, spread evenly over the gaps. A gap after `a` with k extras
+ *  gets `a_<fraction>` for 1/(k+1) … k/(k+1) of the way to the next name:
+ *  one extra → `a_5`, three → `a_25 a_5 a_75`. */
+function fillGaps(seq: readonly string[], slots: number): string[] {
+  const gaps = seq.length - 1, extra = slots - seq.length;
+  const out: string[] = [];
+  for (let g = 0; g < seq.length; g++) {
+    out.push(seq[g]);
+    if (g === gaps) break;
+    const k = Math.round(((g + 1) * extra) / gaps) - Math.round((g * extra) / gaps);
+    const digits = String(k + 1).length + 1;
+    for (let j = 1; j <= k; j++) {
+      const frac = (j / (k + 1)).toFixed(digits).replace(/^0\./, '').replace(/0+$/, '');
+      out.push(`${seq[g]}_${frac}`);
+    }
+  }
+  return out;
+}
+
 /** Round `x`, sending an exact .5 towards `mid` so picks stay symmetric. */
 function roundTowards(x: number, mid: number): number {
   const f = Math.floor(x);
@@ -204,6 +229,15 @@ export function scaleNames(
       fail(`scaleNames: option "${opt}" does not apply to the "${s.name}" scheme`);
     }
   }
+  const overflow = options.overflow ?? 'throw';
+  if (overflow !== 'throw' && overflow !== 'between') {
+    fail(`scaleNames: overflow must be "throw" or "between", got ${String(overflow)}`);
+  }
+  if (options.overflow !== undefined && s.kind !== 'list' && s.kind !== 'range') {
+    fail(`scaleNames: option "overflow" does not apply to "${s.name}", which never runs out of names`);
+  }
+  const fill = overflow === 'between';
+
   const pair = Array.isArray(options.base) ? options.base as readonly [number, string] : null;
   if (options.base !== undefined) {
     if (s.anchor === 'start') {
@@ -241,17 +275,21 @@ export function scaleNames(
     }
     case 'list':
       if (s.anchor === 'start') {
-        if (count > s.names.length) fail(`scaleNames: "${s.name}" has ${s.names.length} names, ${count} were asked for`);
-        names = s.names.slice(0, count);
+        if (count > s.names.length) {
+          if (!fill || s.names.length < 2) fail(`scaleNames: "${s.name}" has ${s.names.length} names, ${count} were asked for`);
+          names = fillGaps(s.names, count);
+        } else {
+          names = s.names.slice(0, count);
+        }
         break;
       }
-      names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1]);
+      names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1], fill);
       break;
     case 'tshirt':
       names = baseNames(count, s, baseIndex ?? defaultBase(count, s), pair?.[1]);
       break;
     case 'range':
-      names = pair ? rangeNamesAround(count, s, pair[0], pair[1]) : rangeNames(count, s);
+      names = pair ? rangeNamesAround(count, s, pair[0], pair[1], fill) : rangeNames(count, s, fill);
       break;
   }
 
@@ -261,7 +299,7 @@ export function scaleNames(
   return out;
 }
 
-function baseNames(count: number, s: BaseList | Tshirt, base: number, baseName?: string): string[] {
+function baseNames(count: number, s: BaseList | Tshirt, base: number, baseName?: string, fill = false): string[] {
   const below = base, above = count - 1 - base;
   if (s.kind === 'tshirt') {
     const shift = baseName === undefined ? 0 : tshirtOffset(baseName);
@@ -271,35 +309,55 @@ function baseNames(count: number, s: BaseList | Tshirt, base: number, baseName?:
   const at = baseName === undefined ? s.baseIndex : s.names.indexOf(baseName);
   if (at < 0) fail(`scaleNames: "${baseName}" is not a name of the "${s.name}" scheme`);
   const haveBelow = at, haveAbove = s.names.length - 1 - at;
-  if (below > haveBelow || above > haveAbove) {
+  const fits = (need: number, have: number) => need <= have || (fill && have > 0);
+  if (!fits(below, haveBelow) || !fits(above, haveAbove)) {
     fail(`scaleNames: "${s.name}" has ${haveBelow} below its base "${s.names[at]}" and ` +
       `${haveAbove} above; ${below} below and ${above} above were asked for`);
   }
-  const lower = spread(below, haveBelow).map((p) => s.names[at - p]).reverse();
-  const upper = spread(above, haveAbove).map((p) => s.names[at + p]);
+  // A side with too few names keeps them all (base included) and fills the gaps.
+  const lower = below <= haveBelow
+    ? spread(below, haveBelow).map((p) => s.names[at - p]).reverse()
+    : fillGaps(s.names.slice(0, at + 1), below + 1).slice(0, -1);
+  const upper = above <= haveAbove
+    ? spread(above, haveAbove).map((p) => s.names[at + p])
+    : fillGaps(s.names.slice(at), above + 1).slice(1);
   return [...lower, s.names[at], ...upper];
 }
 
-function rangeNames(count: number, s: Range): string[] {
-  const tier = s.tiers.find((t) => t.length >= count);
+/** A range step as a key: `62.5` → `62_5`. */
+const stepName = (v: number) => String(v).replace('.', '_');
+
+/** The scheme's tiers, plus ever finer halvings of the last when filling. */
+function tiersOf(s: Range, fill: boolean): readonly (readonly number[])[] {
+  if (!fill) return s.tiers;
+  const out = [...s.tiers];
+  for (let i = 0; i < 10; i++) {
+    const last = out[out.length - 1];
+    out.push(steps(s.min, s.max, (last[1] - last[0]) / 2));
+  }
+  return out;
+}
+
+function rangeNames(count: number, s: Range, fill = false): string[] {
+  const tier = tiersOf(s, fill).find((t) => t.length >= count);
   if (!tier) {
     const max = s.tiers[s.tiers.length - 1].length;
     fail(`scaleNames: "${s.name}" fits up to ${max} values, ${count} were asked for`);
   }
   const R = tier.length - 1;
-  if (count === 1) return [String(tier[roundTowards(R / 2, R / 2)])];
-  return Array.from({ length: count }, (_, i) => String(tier[roundTowards((i * R) / (count - 1), R / 2)]));
+  if (count === 1) return [stepName(tier[roundTowards(R / 2, R / 2)])];
+  return Array.from({ length: count }, (_, i) => stepName(tier[roundTowards((i * R) / (count - 1), R / 2)]));
 }
 
 /** Range names with `name` on value `index`: the values below spread over
  *  the rungs from the low end up to `name`, the ones above from `name` to
  *  the high end, using the coarsest tier where both sides fit. An exact .5
  *  rounds towards the base, so both sides stay symmetric. */
-function rangeNamesAround(count: number, s: Range, index: number, name: string): string[] {
+function rangeNamesAround(count: number, s: Range, index: number, name: string, fill = false): string[] {
   const value = /^\d+$/.test(name) ? Number(name) : NaN;
   const below = index, above = count - 1 - index;
   let inAnyTier = false;
-  for (const tier of s.tiers) {
+  for (const tier of tiersOf(s, fill)) {
     const b = tier.indexOf(value);
     if (b < 0) continue;
     inAnyTier = true;
@@ -313,7 +371,7 @@ function rangeNamesAround(count: number, s: Range, index: number, name: string):
       const x = ((j + 1) * (R - b)) / above;
       return tier[b + (x % 1 === 0.5 ? Math.floor(x) : Math.round(x))];
     });
-    return [...lower, value, ...upper].map(String);
+    return [...lower, value, ...upper].map(stepName);
   }
   if (!inAnyTier) {
     fail(`scaleNames: "${name}" is not a step of the "${s.name}" scheme (${s.min}–${s.max})`);
