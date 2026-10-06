@@ -33,6 +33,12 @@ export function parseTokenInput(
 ): AnyTokenValue {
   const trimmed = input.trim();
 
+  // A plain value constructor with a trailing `{ description: "..." }`, the
+  // form the serializer writes for described tokens: color('#fff', { ... }),
+  // ref('a.b', { ... }), px(4, { ... }), dimension(1, 'em', { ... }), …
+  const described = parseDescribedConstructor(trimmed, book, currentScope);
+  if (described) return described;
+
   // ref('scope.token') or ref("scope.token")
   const refMatch = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
   if (refMatch) {
@@ -79,6 +85,62 @@ export function parseTokenInput(
   throw new Error(`Unknown value: ${trimmed}. Wrap colors in color(), dimensions in px()/rem()/ms()/dimension(), strings in string().`);
 }
 
+// --- Described plain tokens ---
+
+/** Constructors whose call takes a trailing `{ description }` object. */
+const PLAIN_CONSTRUCTORS = new Set(['color', 'ref', 'px', 'rem', 'ms', 'dimension', 'string']);
+
+function parseDescribedConstructor(
+  trimmed: string,
+  book?: DesignBook,
+  currentScope?: Scope,
+): AnyTokenValue | undefined {
+  const m = trimmed.match(/^(\w+)\((.+)\)$/s);
+  if (!m || !PLAIN_CONSTRUCTORS.has(m[1])) return undefined;
+  const args = splitArgs(m[2]);
+  const last = args[args.length - 1];
+  if (args.length < 2 || !last.startsWith('{')) return undefined;
+
+  let description: string | undefined;
+  for (const [key, valueStr] of optionPairs(last)) {
+    if (key !== 'description') {
+      throw new Error(`${m[1]}: unknown option \`${key}\` (only \`description\` is allowed)`);
+    }
+    description = parseQuotedString(valueStr);
+  }
+  const token = parseTokenInput(`${m[1]}(${args.slice(0, -1).join(', ')})`, book, currentScope);
+  if (description !== undefined) token.description = description;
+  return token;
+}
+
+/** Split `{ a: 1, b: 'x' }` into `[key, rawValue]` pairs; a pair without a
+ *  colon is an error rather than something to skip silently. */
+function optionPairs(objStr: string): Array<[string, string]> {
+  const inner = objStr.trim().replace(/^\{|\}$/g, '').trim();
+  if (!inner) return [];
+  return splitArgs(inner).map((pair) => {
+    const colonIdx = pair.indexOf(':');
+    if (colonIdx === -1) throw new Error(`Expected \`key: value\` in options, got "${pair}"`);
+    const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
+    return [key, pair.slice(colonIdx + 1).trim()];
+  });
+}
+
+/** A quoted string literal: "..." is read as JSON (so escapes round-trip
+ *  with JSON.stringify), '...' verbatim. */
+function parseQuotedString(valueStr: string): string {
+  const v = valueStr.trim();
+  if (v.length >= 2 && v.startsWith('"') && v.endsWith('"')) {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return v.slice(1, -1);
+    }
+  }
+  if (v.length >= 2 && v.startsWith("'") && v.endsWith("'")) return v.slice(1, -1);
+  return v;
+}
+
 // --- Argument parsing helpers ---
 
 /** Split top-level arguments respecting nested parens, brackets, braces and quotes */
@@ -93,7 +155,11 @@ function splitArgs(argsStr: string): string[] {
 
     if (inQuote) {
       current += ch;
-      if (ch === inQuote) inQuote = null;
+      if (ch === '\\' && i + 1 < argsStr.length) {
+        current += argsStr[++i];
+      } else if (ch === inQuote) {
+        inQuote = null;
+      }
       continue;
     }
 
@@ -438,11 +504,13 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
 
     const secondArg = args[1].trim();
     if (secondArg.startsWith('{')) {
-      const options = parseOptionsArg(secondArg) as { index?: number; not?: string[] } | undefined;
+      const options = parseOptionsArg(secondArg) as
+        | { index?: number; not?: string[]; description?: string }
+        | undefined;
       if (typeof options?.index !== 'number') {
         throw new Error('nth requires a numeric "index" in its options object');
       }
-      return nth(scope, options.index, { not: options.not });
+      return nth(scope, options.index, { not: options.not, description: options.description });
     }
 
     const indexParsed = parseArg(secondArg, book);
@@ -464,15 +532,10 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     }
 
     const options: { wrap?: boolean; not?: Array<ReferenceValue | string>; description?: string } = {};
-    const optsStr = args.slice(2).join(',').trim().replace(/^\{|\}$/g, '').trim();
-    for (const pair of optsStr ? splitArgs(optsStr) : []) {
-      const colonIdx = pair.indexOf(':');
-      if (colonIdx === -1) continue;
-      const key = pair.slice(0, colonIdx).trim().replace(/^['"]|['"]$/g, '');
-      const valueStr = pair.slice(colonIdx + 1).trim();
+    for (const [key, valueStr] of optionPairs(args.slice(2).join(','))) {
       if (key === 'wrap') options.wrap = valueStr === 'true';
       else if (key === 'not') options.not = parseNotList(valueStr, book);
-      else if (key === 'description') options.description = valueStr.replace(/^['"]|['"]$/g, '');
+      else if (key === 'description') options.description = parseQuotedString(valueStr);
     }
     return sibling(anchor as ReferenceValue, offsetParsed.value as number, options);
   },
@@ -557,7 +620,7 @@ function parseSelectorTail(
     } else if (key === 'minContrast') {
       options.minContrast = parseFloat(valueStr);
     } else if (key === 'description') {
-      options.description = valueStr.replace(/^['"]|['"]$/g, '');
+      options.description = parseQuotedString(valueStr);
     } else if (key === 'against') {
       throw new Error(`${name}: \`against\` was renamed to \`readableOn\``);
     }
@@ -591,16 +654,56 @@ function parseOptionsArg(str: string): Record<string, any> | undefined {
   // Wrap in braces if missing, quote unquoted keys, normalise single-quoted
   // string values to double quotes, and add a leading zero to bare-dot
   // numbers (.5 -> 0.5, -.5 -> -0.5) so JSON.parse can handle them.
-  let jsonLike = trimmed.replace(/^\{?\s*/, '{').replace(/\s*\}?$/, '}');
-  jsonLike = jsonLike.replace(/(\w+)\s*:/g, '"$1":');
-  jsonLike = jsonLike.replace(/'([^']*)'/g, '"$1"');
-  jsonLike = jsonLike.replace(/([:,[\s])(-?)\.(\d)/g, '$1$20.$3');
+  const jsonLike = toJsonLike(trimmed.replace(/^\{?\s*/, '{').replace(/\s*\}?$/, '}'));
 
   try {
     return JSON.parse(jsonLike);
   } catch (err) {
     throw new Error(`Cannot parse options "${str}": ${(err as Error).message}`);
   }
+}
+
+/** Rewrite a hand-written object literal into JSON, leaving the inside of
+ *  string literals alone (a description may hold `:` or apostrophes):
+ *  quotes bare keys, turns '…' strings into "…", and adds the leading zero
+ *  to `.5` / `-.5`. */
+function toJsonLike(src: string): string {
+  let out = '';
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < src.length && src[j] !== '"') j += src[j] === '\\' ? 2 : 1;
+      out += src.slice(i, j + 1);
+      i = j;
+    } else if (ch === "'") {
+      let j = i + 1;
+      let content = '';
+      while (j < src.length && src[j] !== "'") {
+        if (src[j] === '\\' && j + 1 < src.length) {
+          content += src[j + 1];
+          j += 2;
+        } else {
+          content += src[j++];
+        }
+      }
+      out += JSON.stringify(content);
+      i = j;
+    } else if (/[A-Za-z_$]/.test(ch)) {
+      let j = i;
+      while (j < src.length && /[\w$]/.test(src[j])) j++;
+      const ident = src.slice(i, j);
+      let k = j;
+      while (k < src.length && /\s/.test(src[k])) k++;
+      out += src[k] === ':' ? `"${ident}"` : ident;
+      i = j - 1;
+    } else if (ch === '.' && /\d/.test(src[i + 1] ?? '') && !/\d/.test(out[out.length - 1] ?? '')) {
+      out += '0.';
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }
 
 /** Parse relativeTo's positional modifications array: `[null, null, '+0.1']`. */

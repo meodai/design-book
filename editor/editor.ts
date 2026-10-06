@@ -381,6 +381,7 @@ function serializeFunctionToken(fn: any): string {
     const extras: string[] = [];
     if (wrap) extras.push('wrap: true');
     if (Array.isArray(not) && not.length > 0) extras.push(`not: ${JSON.stringify(not)}`);
+    if (fn.description) extras.push(`description: ${JSON.stringify(fn.description)}`);
     const tail = extras.length > 0 ? `, { ${extras.join(', ')} }` : '';
     return `sibling(ref('${from}'), ${offset}${tail})`;
   }
@@ -425,6 +426,8 @@ function serializeFunctionToken(fn: any): string {
   const optionPairs = [
     ...(readableOn ? [`readableOn: ${readableOn}`] : []),
     ...optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`),
+    // The description lives on the token itself, not in fn.options.
+    ...(fn.description ? [`description: ${JSON.stringify(fn.description)}`] : []),
   ];
   if (optionPairs.length > 0) {
     argStrs.push(`{ ${optionPairs.join(', ')} }`);
@@ -442,22 +445,35 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   const token = scope.get(tokenName);
   if (!token) return '';
 
-  if (token.type === 'reference') {
-    return `ref('${(token as any).key}')`;
-  }
   if (token.type === 'function') {
     return serializeFunctionToken(token as any);
   }
-  // Plain token
-  const tv = token as any;
+  // Plain tokens and refs: print the constructor call, with the token's
+  // description (if any) as a trailing `{ description }` object so an edit
+  // round-trip keeps it.
+  const call = serializePlainToken(token as any);
+  if (!token.description || !call.endsWith(')')) return call;
+  return `${call.slice(0, -1)}, { description: ${JSON.stringify(token.description)} })`;
+}
+
+/** Quote a string literal for the input syntax, picking the quote the
+ *  value does not contain. */
+function quote(value: string): string {
+  return value.includes("'") && !value.includes('"') ? `"${value}"` : `'${value}'`;
+}
+
+function serializePlainToken(tv: any): string {
+  if (tv.type === 'reference') {
+    return `ref('${tv.key}')`;
+  }
   if (tv.type === 'color') {
-    return `color('${tv.rawValue}')`;
+    return `color(${quote(String(tv.rawValue))})`;
   }
   if (tv.metadata?.unit) {
     return formatDimension(tv.rawValue, tv.metadata.unit);
   }
   if (tv.type === 'string') {
-    return `string('${tv.rawValue}')`;
+    return `string(${quote(String(tv.rawValue))})`;
   }
   return String(tv.rawValue);
 }
@@ -538,9 +554,11 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
         continue;
       }
 
-      // Skip inherited keys only if the text still says "inherit"
-      // (if the user typed a new value, we should set it locally as an override)
-      if (!scope.hasOwn(key) && scope.has(key) && valueStr === getTokenDisplayValue(scope, key)) {
+      // Only lines whose text changed are written back: re-setting an
+      // unchanged line would rebuild its token from the text and fire
+      // change events for nothing. (An inherited key whose line was retyped
+      // no longer matches, so it becomes a local override.)
+      if (scope.has(key) && valueStr === getTokenDisplayValue(scope, key)) {
         continue;
       }
 
