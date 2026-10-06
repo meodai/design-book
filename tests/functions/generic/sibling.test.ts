@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, createFunctionToken, px, ref } from '../../../src/tokens';
-import { sibling } from '../../../src/functions/generic/sibling';
+import { sibling, scopeOfKey } from '../../../src/functions/generic/sibling';
 import { lighten } from '../../../src/functions/color/lighten';
 import { FunctionError } from '../../../src/errors';
 import { Renderer } from '../../../src/renderers/renderer';
@@ -233,5 +233,22 @@ describe('sibling in the renderers', () => {
     expect(w3.ui.gap.$type).toBe('dimension');
     expect(w3.ui.gap.$value).toEqual({ value: 16, unit: 'px' });
     expect(w3.ui.pick.$type).toBe('color');
+  });
+});
+
+describe('sibling anchor validation', () => {
+  it('rejects an unqualified anchor at construction', () => {
+    expect(() => sibling(ref('g100'), 1)).toThrow(FunctionError);
+    expect(() => sibling(ref('g100'), 1)).toThrow(/fully-qualified/);
+  });
+
+  it('rejects an anchor with an empty scope or token part', () => {
+    expect(() => sibling(ref('.g100'), 1)).toThrow(FunctionError);
+    expect(() => sibling(ref('gray.'), 1)).toThrow(FunctionError);
+  });
+
+  it('scopeOfKey throws on a key without a scope', () => {
+    expect(() => scopeOfKey('g100')).toThrow(FunctionError);
+    expect(scopeOfKey('gray.g100')).toBe('gray');
   });
 });

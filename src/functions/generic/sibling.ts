@@ -20,9 +20,15 @@ export interface SiblingOptions {
   [key: string]: any;
 }
 
-/** Scope name of a fully-qualified key. Scope names cannot contain dots. */
+/** Scope name of a fully-qualified key. Scope names cannot contain dots.
+ *  Throws on a key that is not `scope.token`: an unqualified anchor would
+ *  otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
 export function scopeOfKey(key: string): string {
-  return key.slice(0, key.indexOf('.'));
+  const dot = key.indexOf('.');
+  if (dot <= 0 || dot === key.length - 1) {
+    throw new FunctionError(`sibling: the anchor must be a fully-qualified 'scope.token' key, got "${key}"`, 'sibling');
+  }
+  return key.slice(0, dot);
 }
 
 /**
@@ -99,6 +105,8 @@ export function sibling(
     throw new FunctionError(`sibling: offset must be an integer, got ${offset}`, 'sibling');
   }
 
+  const scopeName = scopeOfKey(anchor.key);
+
   return createFunctionToken('sibling', [], {
     description: options?.description,
     options: {
@@ -110,7 +118,7 @@ export function sibling(
     metadata: {
       dependencies: [anchor.key],
       visualDependencies: [anchor.key],
-      iteratedScopes: [scopeOfKey(anchor.key)],
+      iteratedScopes: [scopeName],
       returnType: undefined,
     },
   });
