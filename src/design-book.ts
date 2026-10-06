@@ -589,19 +589,50 @@ export class DesignBook {
    *  surface as an exception from an unrelated `set()`, and it must not
    *  abandon the changes queued behind it. */
   private _drainReentrantQueue(): void {
+    /** Per key, the value last accepted by the graph during this drain —
+     *  what a refused write rolls back to and what listeners last heard. A
+     *  queued entry's own `oldValue` may be a value that was itself refused. */
+    const accepted = new Map<string, AnyTokenValue | undefined>();
     while (this._reentrantQueue.length > 0) {
       const queued = this._reentrantQueue.shift()!;
+      const oldValue = accepted.has(queued.key) ? accepted.get(queued.key) : queued.oldValue;
+      // Writes queued behind this one have already replaced the stored
+      // token; replay them one at a time, as auto mode would have, so this
+      // entry is judged — and announced — with its own value.
+      if (this._ownToken(queued.key) !== queued.newValue) {
+        this._putToken(queued.key, queued.newValue);
+      }
       try {
-        this._processAutoChange(queued.key, queued.newValue, queued.oldValue);
+        this._processAutoChange(queued.key, queued.newValue, oldValue);
+        accepted.set(queued.key, queued.newValue);
       } catch (e) {
         // Reporting must not throw either: the drain also runs from a
         // `finally`, where an escaping error would replace the caller's.
         try {
-          this._rollbackKey(queued.key, queued.oldValue);
+          this._rollbackKey(queued.key, oldValue);
         } catch { /* the token is already unusable; the report matters more */ }
+        accepted.set(queued.key, oldValue);
         this._reportSuppressed(queued.key, e, 'reentrant');
       }
     }
+  }
+
+  /** The token stored on the key's own scope, ignoring inheritance. */
+  private _ownToken(qualifiedKey: string): AnyTokenValue | undefined {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return undefined;
+    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
+    const name = qualifiedKey.substring(dotIndex + 1);
+    return scope?.hasOwn(name) ? scope.get(name) : undefined;
+  }
+
+  /** Store (or, for `undefined`, remove) a key's own token without
+   *  notifying anyone. */
+  private _putToken(qualifiedKey: string, value: AnyTokenValue | undefined): void {
+    const dotIndex = qualifiedKey.indexOf('.');
+    if (dotIndex === -1) return;
+    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
+    scope?._rollback(qualifiedKey.substring(dotIndex + 1), value);
   }
 
   /** Announce that an already-announced change has been undone.
