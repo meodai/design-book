@@ -82,6 +82,26 @@ export function contrastAgainst(target: Color, candidate: Color): number {
 export const perceptualDistance: (a: Color | string, b: Color | string) => number =
   differenceEuclidean('oklab');
 
+const WHITE: Color = { mode: 'rgb', r: 1, g: 1, b: 1 };
+const BLACK: Color = { mode: 'rgb', r: 0, g: 0, b: 0 };
+
+/**
+ * Perceptual distance that takes alpha into account. OKLab distance alone is
+ * alpha-blind, so a 5% black hairline would count as identical to opaque
+ * black. With a known `backdrop` both colours are composited over it and
+ * compared as they would be seen there. Without one, they are compared over
+ * white and over black and the larger distance wins: two colours are only
+ * close if they look close on any backdrop. Opaque colours are unaffected.
+ */
+export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): number {
+  if ((a.alpha ?? 1) >= 1 && (b.alpha ?? 1) >= 1) return perceptualDistance(a, b);
+  if (backdrop) return perceptualDistance(compositeOver(a, backdrop), compositeOver(b, backdrop));
+  return Math.max(
+    perceptualDistance(compositeOver(a, WHITE), compositeOver(b, WHITE)),
+    perceptualDistance(compositeOver(a, BLACK), compositeOver(b, BLACK)),
+  );
+}
+
 /**
  * Collects every colour a scope can offer as a selector candidate.
  *

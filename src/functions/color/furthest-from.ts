@@ -2,7 +2,8 @@ import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors, perceptualDistance } from './scope-colors';
+import { parse } from 'culori';
+import { collectScopeColors, visibleDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
 
@@ -24,6 +25,9 @@ export function furthestFromImpl(
     return colors[0].hex;
   }
 
+  // Translucent colours are compared as they are seen: over the readableOn
+  // backdrop when there is one, otherwise over both white and black.
+  const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
   let furthestHex: string = colors[0].hex;
   let highestAvgDistance = -1;
 
@@ -31,7 +35,7 @@ export function furthestFromImpl(
     let totalDistance = 0;
     for (let j = 0; j < colors.length; j++) {
       if (i === j) continue;
-      totalDistance += perceptualDistance(colors[i].parsed, colors[j].parsed);
+      totalDistance += visibleDistance(colors[i].parsed, colors[j].parsed, backdrop);
     }
     const avgDistance = totalDistance / (colors.length - 1);
     if (avgDistance > highestAvgDistance) {

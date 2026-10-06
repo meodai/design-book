@@ -8,7 +8,7 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors, formatColor, gamutMapSrgb, perceptualDistance } from './scope-colors';
+import { collectScopeColors, formatColor, gamutMapSrgb, visibleDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
 
@@ -35,8 +35,11 @@ export function closestColorImpl(
   let closestDistance = Infinity;
 
   const pool = filterReadable('closestColor', collectScopeColors(scope, not), readableOn, minContrast);
+  // Translucent colours are compared as they are seen: over the readableOn
+  // backdrop when there is one, otherwise over both white and black.
+  const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
   for (const candidate of pool) {
-    const distance = perceptualDistance(targetParsed, candidate.parsed);
+    const distance = visibleDistance(targetParsed, candidate.parsed, backdrop);
     if (distance < closestDistance) {
       closestDistance = distance;
       closestHex = candidate.hex;
