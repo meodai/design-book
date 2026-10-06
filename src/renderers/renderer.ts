@@ -60,6 +60,17 @@ const toRgb = converter('rgb');
  *  `dimension`. */
 const DURATION_UNITS = new Set(['ms', 's']);
 
+/** The only units the W3 `dimension` type allows. Other CSS units (`em`,
+ *  `%`, `vw`, …) have no W3 type, so such a token is emitted like a plain
+ *  string: its CSS text as `$value` and no `$type`. */
+const W3_DIMENSION_UNITS = new Set(['px', 'rem']);
+
+/** A parsed dimension W3 can express structurally: a `dimension` (px/rem)
+ *  or a `duration` (ms/s). */
+function isW3Dimension(dim: W3DimensionValue): boolean {
+  return W3_DIMENSION_UNITS.has(dim.unit) || DURATION_UNITS.has(dim.unit);
+}
+
 /** The five CSS easing keywords, as the cubic-bezier control points the W3
  *  `transition` composite expects for its `timingFunction`. */
 const CSS_EASING_KEYWORDS: Record<string, [number, number, number, number]> = {
@@ -91,7 +102,9 @@ function formatW3TypographyProperty(
 ): { value: string | number | W3DimensionValue; type?: string } {
   if (TYPOGRAPHY_DIMENSION_KEYS.has(key)) {
     const dim = parseDimensionString(resolved);
-    return dim ? { value: dim, type: 'dimension' } : { value: resolved };
+    return dim && W3_DIMENSION_UNITS.has(dim.unit)
+      ? { value: dim, type: 'dimension' }
+      : { value: resolved };
   }
   if (TYPOGRAPHY_NUMBER_KEYS.has(key)) {
     const num = Number(resolved);
@@ -420,7 +433,7 @@ export class Renderer {
       const unit = token?.metadata?.unit ?? parseDimensionString(resolved)?.unit;
       if (unit && DURATION_UNITS.has(unit)) return 'duration';
       if (!unit) return 'number';
-      return 'dimension';
+      return W3_DIMENSION_UNITS.has(unit) ? 'dimension' : undefined;
     }
 
     // W3 has no `string` type. `fontFamily` is only correct when the token
@@ -496,7 +509,8 @@ export class Renderer {
         : parseDimensionString(resolvedStr);
       if (!dim) return resolvedStr;
       // A dimension with no unit is a plain W3 `number`.
-      return dim.unit === '' ? dim.value : dim;
+      if (dim.unit === '') return dim.value;
+      return isW3Dimension(dim) ? dim : resolvedStr;
     }
 
     if (internalType === 'number') {

@@ -528,7 +528,8 @@ describe('Renderer', () => {
         fontSize: { value: 2, unit: 'rem' },
         fontWeight: 700,
         lineHeight: 1.15,
-        letterSpacing: { value: -0.02, unit: 'em' },
+        // W3 `dimension` only allows px / rem, so em stays CSS text.
+        letterSpacing: '-0.02em',
       });
     });
 
