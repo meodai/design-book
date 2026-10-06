@@ -136,7 +136,7 @@ Event system uses `DesignBookEventMap` with typed payloads:
 - `addScope` rejects empty/dotted names and self- or cyclic `extends` with a `ScopeError`
 - Circular dependency errors in batch mode are collected, not silently swallowed
 - Re-entrancy in auto mode: changes from event handlers are queued
-- Deleting a token cleans up its graph node and updates dependent caches
+- Deleting a token cleans up its graph node and updates dependent caches; a node with no token of its own (a missing or deleted key, an inherited shadow) is pruned once nothing depends on it
 - Inherited tokens register dependency edges on their source key for correct propagation
 - Selector candidate pools are an index, not graph edges — pool membership never rejects a write
 - Custom event emitter (no Node dependency) — works in browser and Node

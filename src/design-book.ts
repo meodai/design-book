@@ -698,11 +698,13 @@ export class DesignBook {
     const restored = this.getTokenByKey(qualifiedKey);
     this._indexSelector(qualifiedKey, restored);
     if (restored) {
+      const rejectedDeps = this.graph.getPrerequisitesFor(qualifiedKey);
       this.graph.addNode(qualifiedKey);
       try {
         this.graph.updateEdges(qualifiedKey, this._getEffectiveDepsForKey(qualifiedKey, restored));
       } catch { /* keep the edges it has; the restored value was accepted before */ }
       this._liveKeys.add(qualifiedKey);
+      this._pruneOrphans(rejectedDeps);
       this._updateOwnReferenceCaches(qualifiedKey);
     } else {
       this._detachNode(qualifiedKey);
@@ -730,8 +732,10 @@ export class DesignBook {
         // The caller will drop the token; don't leave a node behind for a key
         // the graph never accepted in the first place.
         if (!hadNode) this.graph.removeNode(qualifiedKey);
+        this._pruneOrphans(deps);
         throw e;
       }
+      this._pruneOrphans(previousDeps);
       this._indexSelector(qualifiedKey, currentValue);
       this._updateReferenceCaches(qualifiedKey);
       this._updateOwnReferenceCaches(qualifiedKey);
@@ -1018,11 +1022,29 @@ export class DesignBook {
    *  re-`set` of the same key would never reach them again. Keep the node as
    *  a dangling prerequisite while anything still points at it. */
   private _detachNode(qualifiedKey: string): void {
+    const prerequisites = this.graph.getPrerequisitesFor(qualifiedKey);
     if (this.graph.getDependentsOf(qualifiedKey).length > 0) {
       this.graph.updateEdges(qualifiedKey, []);
-      return;
+    } else {
+      this.graph.removeNode(qualifiedKey);
     }
-    this.graph.removeNode(qualifiedKey);
+    this._pruneOrphans(prerequisites);
+  }
+
+  /** Drop the nodes among `candidates` that nothing depends on any more and
+   *  that stand for no token of their own: a key that was only ever
+   *  referenced (or was deleted while referenced), or an inherited shadow
+   *  linked for a reader that has since gone. Called with a key's former
+   *  prerequisites whenever its edges change, so such nodes do not pile up
+   *  in the graph. Keys still backed by a token keep their node. */
+  private _pruneOrphans(candidates: Iterable<string>): void {
+    for (const key of candidates) {
+      if (!this.graph.hasNode(key)) continue;
+      if (this.graph.getDependentsOf(key).length > 0) continue;
+      if (this._liveKeys.has(key)) continue;
+      if (this.has(key) && !this.isInherited(key)) continue;
+      this.graph.removeNode(key);
+    }
   }
 
   /** Refresh the cached resolution of every reference that reads
@@ -1072,11 +1094,13 @@ export class DesignBook {
       const hadNode = this.graph.hasNode(key);
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
+      const previousDeps = this.graph.getPrerequisitesFor(key);
       try {
         this.graph.updateEdges(key, deps);
         this._linkInheritedDependencies(deps);
         if (!this._liveKeys.has(key)) this._linkInheritedShadowsOf(key);
         this._indexSelector(key, currentValue);
+        this._pruneOrphans(previousDeps);
       } catch (e) {
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
@@ -1087,6 +1111,7 @@ export class DesignBook {
         rejectedKeys.add(key);
         this._rollbackKey(key, queued.get(key)?.oldValue);
         if (!hadNode) this.graph.removeNode(key);
+        this._pruneOrphans(deps);
       }
     }
 
