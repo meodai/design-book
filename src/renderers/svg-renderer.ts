@@ -1,7 +1,13 @@
 import { parse, formatHex, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
-import { extractVisualDependencies } from '../tokens';
-import type { AnyTokenValue, TokenValue, ReferenceValue, FunctionTokenValue } from '../tokens';
+import type {
+  AnyTokenValue,
+  TokenValue,
+  ReferenceValue,
+  FunctionTokenValue,
+  FunctionArg,
+  ScopeFunctionArg,
+} from '../tokens';
 
 export interface SVGRenderOptions {
   showConnections?: boolean;
@@ -96,19 +102,39 @@ function pickActiveOutline(fillValue: string): string {
 }
 
 /** Function tokens fall into two families: palette-linkers (iterate a
- *  scope — bestContrastWith, mostVivid, closestColor, …) and value
+ *  scope — bestContrastWith, mostVivid, closestColor, sibling, …) and value
  *  derivers (apply a formula to inputs — darken, colorMix, spacingScale).
- *  Palette-linkers iterate a scope, so their candidate pool is read live
- *  from the scope arguments rather than from `metadata.visualDependencies`
- *  — that snapshot is taken when the token is built and is empty for a
- *  selector written before the scope it iterates had any members. */
-function paletteCandidates(token: AnyTokenValue): string[] {
+ *  A token is a palette-linker only when it iterates a scope *itself*: a
+ *  top-level scope argument, or a scope it declares in
+ *  `metadata.iteratedScopes` (`sibling`, whose args are empty). A selector
+ *  nested inside a value deriver (`colorMix(x, mostVivid(brand))`) does not
+ *  make the outer token one — its output is a mix, not a pool member.
+ *  The pool is read live from the book rather than from
+ *  `metadata.visualDependencies` — that snapshot is taken when the token is
+ *  built and is empty for a selector written before its scope had members. */
+function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
   if (token.type !== 'function') return [];
-  return extractVisualDependencies((token as FunctionTokenValue).args);
+  const fn = token as FunctionTokenValue;
+  const scopeNames = new Set<string>(fn.metadata?.iteratedScopes ?? []);
+  for (const arg of fn.args) {
+    if (isScopeArg(arg)) scopeNames.add(arg.name);
+  }
+  const candidates: string[] = [];
+  for (const name of scopeNames) {
+    const scope = book.getScope(name);
+    if (!scope) continue;
+    for (const key of scope.getAllKeys()) candidates.push(`${name}.${key}`);
+  }
+  return candidates;
 }
 
-function isPaletteLinker(token: AnyTokenValue): boolean {
-  return paletteCandidates(token).length > 0;
+function isScopeArg(arg: FunctionArg): arg is ScopeFunctionArg {
+  return typeof arg === 'object' && arg !== null
+    && typeof (arg as ScopeFunctionArg).getAllKeys === 'function';
+}
+
+function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {
+  return paletteCandidates(book, token).length > 0;
 }
 
 /** For a palette-linker function token, find the candidate in its
@@ -121,7 +147,7 @@ function findResolvedSource(
   qualifiedKey: string,
   token: AnyTokenValue,
 ): string | null {
-  const visualDeps = paletteCandidates(token);
+  const visualDeps = paletteCandidates(book, token);
   if (visualDeps.length === 0) return null;
 
   let resolved: string;
@@ -133,6 +159,9 @@ function findResolvedSource(
   const resolvedHex = normalizeColor(resolved);
 
   for (const depKey of visualDeps) {
+    // A selector can sit in the scope it iterates; it trivially matches
+    // its own output, which would draw a self-loop.
+    if (depKey === qualifiedKey) continue;
     let candResolved: string;
     try {
       candResolved = book.resolve(depKey);
@@ -437,7 +466,9 @@ export class SVGRenderer {
         // Palette-linker function tokens (bestContrastWith, mostVivid, …)
         // collapse to a single solid edge from the chosen candidate back to
         // the function token — the rest of the palette is implied.
-        if (isFunction && token && isPaletteLinker(token)) {
+        // When no candidate matches (or it has no dot) the token falls
+        // through to its ordinary graph edges below.
+        if (isFunction && token && isPaletteLinker(this.book, token)) {
           const resolvedSource = findResolvedSource(this.book, key, token);
           const resolvedDot = resolvedSource ? dots.get(resolvedSource) : undefined;
           if (resolvedDot) {
@@ -449,8 +480,8 @@ export class SVGRenderer {
               // same way, so the arrow lands at the function (path end).
               connections.push({ from: resolvedDot, to: fromDot, isDashed: false, label: fnName, consumerAtStart: false });
             }
+            continue;
           }
-          continue;
         }
 
         // linksOnly hides value-deriving function edges entirely.
