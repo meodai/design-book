@@ -36,6 +36,13 @@ function formatNumber(value: number): string {
   return String(Number(value.toPrecision(10)));
 }
 
+/** Clamp a mix ratio / amount to [0, 1], as Culori's interpolation does on
+ *  the JS side — so a token that skipped constructor validation still emits
+ *  a valid `color-mix()` percentage that matches its resolved value. */
+function clampUnit(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
 function getOptions<T extends FunctionRendererOptions>(options?: FunctionRendererOptions): T | undefined {
   return options as T | undefined;
 }
@@ -50,7 +57,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
     const colorMixOptions = getOptions<{ ratio?: number; colorSpace?: string }>(options);
     const color1 = css(args[0]);
     const color2 = css(args[1]);
-    const ratio = colorMixOptions?.ratio ?? 0.5;
+    const ratio = clampUnit(colorMixOptions?.ratio ?? 0.5);
     const colorSpace = toCssColorSpace(colorMixOptions?.colorSpace ?? 'lab');
     // Rounding to whole percents shifts the mix (1/3 became 67%).
     const pct = formatNumber((1 - ratio) * 100);
@@ -61,7 +68,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   renderer.registerFunctionRenderer('lighten', (args, options) => {
     const lightenOptions = getOptions<{ amount?: number }>(options);
     const color = css(args[0]);
-    const amount = lightenOptions?.amount ?? 0.1;
+    const amount = clampUnit(lightenOptions?.amount ?? 0.1);
     // Rounding to whole percents shifts the mix (1/3 became 67%).
     const pct = formatNumber((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, white)`;
@@ -71,7 +78,7 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
   renderer.registerFunctionRenderer('darken', (args, options) => {
     const darkenOptions = getOptions<{ amount?: number }>(options);
     const color = css(args[0]);
-    const amount = darkenOptions?.amount ?? 0.1;
+    const amount = clampUnit(darkenOptions?.amount ?? 0.1);
     // Rounding to whole percents shifts the mix (1/3 became 67%).
     const pct = formatNumber((1 - amount) * 100);
     return `color-mix(in oklch, ${color} ${pct}%, black)`;
