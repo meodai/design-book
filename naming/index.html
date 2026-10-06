@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Naming Playground</title>
+  <meta name="description" content="Try every Design Book naming scheme: scaleNames, nameValues, nameBetween and namingScheme." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Libertinus+Serif&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --sans: "Libertinus Sans", ui-sans-serif, system-ui, sans-serif;
+      --serif: "Libertinus Serif", ui-serif, Georgia, serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      --surface: #fcf6ee;
+      --surface-2: #f6efe2;
+      --text: #1d1c1c;
+      --muted: rgba(0, 0, 0, .6);
+      --rule: rgba(0, 0, 0, .14);
+      --accent: #2d60a5;
+      --error: #a3241a;
+    }
+    * { box-sizing: border-box; border-radius: 0; }
+    body { margin: 0; background: var(--surface); color: var(--text); font: 17px/1.55 var(--sans); }
+    main { max-width: 74rem; margin: 0 auto; padding: 40px 24px 80px; }
+    h1 { font: 400 clamp(32px, 4vw, 48px)/1.1 var(--serif); letter-spacing: -.015em; margin: 0 0 .3em; }
+    h2 { font: 400 22px/1.2 var(--serif); margin: 0 0 10px; }
+    p.lead { color: var(--muted); max-width: 64ch; margin: 0 0 32px; }
+    code, .mono { font-family: var(--mono); font-size: 13px; }
+    [hidden] { display: none !important; }
+    .top { max-width: 74rem; margin: 0 auto; padding: 24px 24px 0; display: flex; justify-content: space-between; align-items: center; }
+    .top-mark { font: 20px var(--serif); color: var(--text); text-decoration: none; }
+    .top-nav { display: flex; gap: 22px; font-size: 15px; }
+    .top-nav a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+    .top-nav a:hover { color: var(--accent); border-color: var(--accent); }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 40px; align-items: start; }
+    @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+    .controls { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--rule); background: var(--surface-2); position: sticky; top: 16px; }
+    .field { display: grid; gap: 6px; }
+    .field > .lbl { font: 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .hint { font: 11px/1.4 var(--mono); color: var(--muted); }
+    select, input[type="text"], input[type="number"], textarea {
+      font: 13px var(--mono); color: var(--text); background: #fff;
+      border: 1px solid #000; padding: 7px 8px; width: 100%;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; min-width: 0; }
+    .row > b { flex: none; }
+    .seg { display: inline-flex; border: 1px solid #000; flex-wrap: wrap; justify-self: start; }
+    .seg button { font: 12px var(--mono); border: 0; background: #fff; padding: 6px 10px; cursor: pointer; }
+    .seg button + button { border-left: 1px solid #000; }
+    .seg button.is-active { background: var(--text); color: var(--surface); }
+    .seg button:disabled { color: rgba(0,0,0,.3); cursor: not-allowed; }
+
+    .code { font: 13px/1.6 var(--mono); background: var(--text); color: #f0e9da; padding: 14px 16px; margin: 0 0 16px; overflow-x: auto; white-space: pre; }
+    .code .s { color: #e8b96d; } .code .f { color: #88aee0; } .code .k { color: #c5b3e0; }
+    .error { border: 1px solid var(--error); color: var(--error); background: #fff; padding: 12px 14px; font: 13px var(--mono); margin: 0 0 16px; }
+    .meta { font: 12px var(--mono); color: var(--muted); margin: 0 0 12px; }
+
+    .tiles { display: flex; flex-wrap: wrap; align-items: stretch; }
+    .tile { display: flex; flex-direction: column; justify-content: flex-end; min-width: 84px; padding: 10px; font: 12px var(--mono); position: relative; }
+    .tile .name { font: 18px/1.1 var(--serif); margin-bottom: 4px; word-break: break-all; }
+    .tile.is-base { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 1; }
+    .tile.is-base::before { content: "base"; position: absolute; top: 6px; left: 6px; font-size: 9px; padding: 1px 5px; background: var(--accent); color: #fff; }
+    .tile.is-new { outline: 2px dashed currentColor; outline-offset: -4px; }
+    .colors .tile { height: 120px; flex: 1 1 84px; }
+    .sizes { align-items: flex-end; gap: 8px; }
+    .sizes .tile { background: #fff; border: 1px solid #000; justify-content: flex-start; flex: none; }
+    .grow { display: flex; align-items: center; }
+    .grow button { width: 22px; height: 22px; font: 14px/1 var(--mono); border: 1px solid #000; background: #fff; cursor: pointer; margin: 0 -11px; position: relative; z-index: 2; padding: 0; }
+    .grow button:hover { background: var(--text); color: #fff; }
+    .sizes .grow button { margin: 0; }
+
+    .out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 28px; }
+    @media (max-width: 880px) { .out { grid-template-columns: minmax(0, 1fr); } }
+    pre.css { margin: 0; font: 12px/1.6 var(--mono); background: #fff; border: 1px solid var(--rule); padding: 14px; overflow: auto; max-height: 320px; }
+    .stable p { font-size: 15px; color: var(--muted); margin: 0 0 10px; }
+    .stable ul { font: 13px var(--mono); padding-left: 18px; margin: 10px 0 0; }
+    .stable li { margin-bottom: 4px; }
+    .rerun { font: 12px var(--mono); border: 1px solid #000; background: #fff; padding: 7px 12px; cursor: pointer; }
+    .rerun:hover { background: var(--text); color: #fff; }
+
+    color-input { gap: 0; align-items: stretch; font: 12px/1 var(--mono); }
+    color-input::part(chip) { box-sizing: border-box; inline-size: 32px; block-size: 32px; border-radius: 0; border: 1px solid #000; border-right: 0; box-shadow: inset 0 0 0 1px #fff; }
+    color-input::part(trigger) { border-radius: 0; }
+    color-input::part(input) { box-sizing: border-box; block-size: 32px; inline-size: 10.5ch; padding: 0 8px; border: 1px solid #000; border-radius: 0; background: #fff; font: 12px/1 var(--mono); }
+    color-input::part(panel), color-input::part(area) { border-radius: 0; }
+  </style>
+</head>
+<body>
+<header class="top">
+  <a href="../" class="top-mark">Design Book</a>
+  <nav class="top-nav">
+    <a href="https://github.com/meodai/design-book">GitHub</a>
+    <a href="../editor/">Editor</a>
+    <a href="../article/">Article</a>
+  </nav>
+</header>
+<main>
+  <h1>Naming playground</h1>
+  <p class="lead">
+    Every naming scheme in Design Book, live: <code>nameValues</code>,
+    <code>scaleNames</code>, <code>nameBetween</code> and <code>namingScheme</code>.
+    Pick a scheme and a count; the swatches are a ramp from the seed color,
+    named and stored in a real DesignBook scope. Only the options that apply
+    to the scheme are shown.
+  </p>
+
+  <div class="layout">
+    <form class="controls" onsubmit="return false">
+      <label class="field"><span class="lbl">Scheme</span>
+        <select id="scheme"></select>
+        <span class="hint" id="scheme-hint"></span>
+      </label>
+      <label class="field"><span class="lbl">Count <b id="count-val"></b></span>
+        <input type="range" id="count" min="0" max="40" value="7" />
+      </label>
+
+      <div class="field" id="base-field"><span class="lbl">Base</span>
+        <div class="seg" id="base-mode">
+          <button type="button" data-mode="none" class="is-active">none</button>
+          <button type="button" data-mode="centre">base: n</button>
+          <button type="button" data-mode="pair">[n, name]</button>
+        </div>
+        <div class="row" id="base-controls">
+          <input type="range" id="base-index" min="0" max="6" value="2" />
+          <b class="mono" id="base-index-val">2</b>
+        </div>
+        <input type="text" id="base-name" placeholder="name" />
+        <span class="hint" id="base-hint"></span>
+      </div>
+
+      <div class="field" id="range-field"><span class="lbl" id="range-lbl">from / to</span>
+        <div class="row">
+          <input type="number" id="from" placeholder="from" step="any" />
+          <input type="number" id="to" placeholder="to" step="any" />
+        </div>
+      </div>
+      <label class="field" id="step-field"><span class="lbl">step</span>
+        <input type="number" id="step" placeholder="1" min="1" step="1" />
+      </label>
+      <div class="field" id="case-field"><span class="lbl">case</span>
+        <div class="seg" id="case">
+          <button type="button" data-v="lower" class="is-active">lower</button>
+          <button type="button" data-v="upper">upper</button>
+        </div>
+      </div>
+      <div class="field" id="overflow-field"><span class="lbl">overflow (when the list runs out)</span>
+        <div class="seg" id="overflow">
+          <button type="button" data-v="throw" class="is-active">throw</button>
+          <button type="button" data-v="between">between</button>
+        </div>
+      </div>
+      <div class="field" id="custom-field"><span class="lbl">Your list (smallest first)</span>
+        <textarea id="custom">hint, faint, subtle, soft, mid, firm, bold, strong, intense</textarea>
+        <input type="text" id="custom-base" value="mid" placeholder="center name (optional)" />
+      </div>
+      <div class="field"><span class="lbl">prefix / suffix</span>
+        <div class="row">
+          <input type="text" id="prefix" placeholder="prefix" />
+          <input type="text" id="suffix" placeholder="suffix" />
+        </div>
+      </div>
+      <div class="field"><span class="lbl">Show as</span>
+        <div class="seg" id="view">
+          <button type="button" data-v="colors" class="is-active">colors</button>
+          <button type="button" data-v="sizes">sizes</button>
+        </div>
+      </div>
+      <div class="field" id="seed-field"><span class="lbl">Ramp seed</span>
+        <color-input id="seed" value="#2d60a5" no-alpha></color-input>
+      </div>
+    </form>
+
+    <section>
+      <pre class="code" id="code"></pre>
+      <div class="error" id="error" hidden></div>
+      <p class="meta" id="meta"></p>
+      <div class="tiles colors" id="tiles"></div>
+
+      <div class="out">
+        <div>
+          <h2>In a real scope</h2>
+          <pre class="css" id="css"></pre>
+        </div>
+        <div class="stable">
+          <h2>Growing the scale</h2>
+          <p>
+            The best names always come from <b>re-running</b> the naming with
+            the new count. Insert with <b>+</b> (<code>nameBetween</code>) only
+            when existing names must stay stable — CSS, components or a
+            published token set already use them.
+          </p>
+          <button type="button" class="rerun" id="rerun" hidden></button>
+          <ul id="grown"></ul>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<script type="module" src="./demo.js"></script>
+</body>
+</html>

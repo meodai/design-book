@@ -2448,3 +2448,4 @@ color-input:focus-within::part(input) { outline: 2px solid var(--accent); outlin
 @media (max-width: 560px) {
   .names-schemes { flex-wrap: wrap; }
 }
+.names-more { margin: 16px 0 0; font-size: 16px; }

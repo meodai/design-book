@@ -291,6 +291,8 @@ resolve time if zero candidates match `type`.
 
 ## Naming Primitives
 
+Try every scheme in the [naming playground](https://meodai.github.io/design-book/naming/).
+
 Generated primitives still need keys. `nameValues(values, scheme, options?)` pairs each value with a name from a naming convention, smallest / lightest first, and `scaleNames(count, scheme, options?)` returns just the names. They only produce names — never values:
 
 ```typescript

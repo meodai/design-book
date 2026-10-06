@@ -34,18 +34,24 @@ jobs:
         env:
           BASE_PATH: /${{ github.event.repository.name }}/editor/
 
+      # Naming playground → site/naming/
+      - run: npm run build:naming
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/naming/
+
       # Article → site/article/
       - run: npm run build:article
         env:
           BASE_PATH: /${{ github.event.repository.name }}/article/
 
-      # Combine all three builds into one upload directory.
+      # Combine all builds into one upload directory.
       - name: Assemble site
         run: |
           mkdir -p site
           cp -r marketing-dist/. site/
           cp -r editor-dist site/editor
           cp -r article-dist site/article
+          cp -r naming-dist site/naming
 
       - uses: actions/upload-pages-artifact@v3
         with:

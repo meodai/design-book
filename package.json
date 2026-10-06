@@ -45,6 +45,8 @@
     "build:article": "vite build --mode article --emptyOutDir",
     "dev:marketing": "vite --mode marketing --host",
     "build:marketing": "vite build --mode marketing --emptyOutDir",
+    "dev:naming": "vite --mode naming --host",
+    "build:naming": "vite build --mode naming --emptyOutDir",
     "dev:live-test": "vite --mode live-test --host",
     "build:live-test": "vite build --mode live-test --emptyOutDir",
     "preview": "vite preview",

@@ -39,6 +39,17 @@ export default defineConfig(({ mode }) => {
     };
   }
 
+  if (mode === 'naming') {
+    return {
+      root: 'naming',
+      base: process.env.BASE_PATH ?? '/',
+      server: { host: true },
+      build: {
+        outDir: '../naming-dist',
+      },
+    };
+  }
+
   if (mode === 'marketing') {
     return {
       root: 'marketing',

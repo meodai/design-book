@@ -3,5 +3,6 @@ dist/
 demo-dist/
 editor-dist/
 live-test-dist/
+naming-dist/
 .claude/
 .superpowers/
