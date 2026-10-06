@@ -57,7 +57,7 @@ html::-webkit-scrollbar-track {
 html::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.22);
   border: 3px solid var(--surface);
-  border-radius: 8px;
+  border-radius: 0;
 }
 html::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
@@ -207,7 +207,7 @@ h1, h2, h3 {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 6px 28px 6px 12px;
   cursor: pointer;
   appearance: none;
@@ -265,7 +265,7 @@ h1, h2, h3 {
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.5);
   font-family: var(--font-mono);
   font-size: 16px;
@@ -281,7 +281,7 @@ h1, h2, h3 {
   color: var(--surface);
   border: none;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: 0;
   cursor: pointer;
   transition: background .15s;
 }
@@ -319,7 +319,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .graph-controls {
   display: flex;
@@ -341,7 +341,7 @@ h1, h2, h3 {
   width: 36px;
   height: 36px;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: 0;
   padding: 0;
   background: none;
   cursor: pointer;
@@ -361,7 +361,7 @@ h1, h2, h3 {
   background: none;
   border: 1px solid var(--rule);
   padding: 8px 14px;
-  border-radius: 4px;
+  border-radius: 0;
   cursor: pointer;
   color: var(--text);
 }
@@ -428,7 +428,7 @@ h1, h2, h3 {
   background: var(--surface-2);
   border: 1px solid var(--rule);
   padding: 2px 9px;
-  border-radius: 999px;
+  border-radius: 0;
   white-space: nowrap;
   position: relative;
   top: -0.6em;
@@ -477,7 +477,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: 0;
   color: var(--text);
 }
 
@@ -528,7 +528,7 @@ h1, h2, h3 {
   background: #1d1c1c;
   color: #f0e9da;
   padding: 18px 20px;
-  border-radius: 6px;
+  border-radius: 0;
   white-space: pre;
   overflow-x: auto;
 }
@@ -557,7 +557,7 @@ h1, h2, h3 {
 .r-pane::-webkit-scrollbar-thumb {
   background: rgba(240, 233, 218, 0.22);
   border: 2px solid #1d1c1c;
-  border-radius: 6px;
+  border-radius: 0;
 }
 .code::-webkit-scrollbar-thumb:hover,
 .r-pane::-webkit-scrollbar-thumb:hover {
@@ -586,7 +586,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .contrast-tile {
@@ -622,7 +622,7 @@ h1, h2, h3 {
   font-weight: 700;
   letter-spacing: 0.08em;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid currentColor;
   color: currentColor;
   background: transparent;
@@ -637,7 +637,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .contrast-palette > span {
@@ -654,13 +654,13 @@ h1, h2, h3 {
   padding: 20px;
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
 }
 .closest-target { display: flex; align-items: center; gap: 12px; }
 .closest-target .swatch {
   width: 64px; height: 64px;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: 0;
 }
 .closest-picker {
   /* Let the web component use its natural size so the hex inside
@@ -685,7 +685,7 @@ h1, h2, h3 {
   flex-direction: column;
   justify-content: flex-end;
   padding: 6px;
-  border-radius: 4px;
+  border-radius: 0;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.04em;
@@ -712,7 +712,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .furthest-stage .swatch-fr {
@@ -743,7 +743,7 @@ h1, h2, h3 {
   font-size: 9px;
   letter-spacing: 0.06em;
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .furthest-stage .swatch-fr.furthest::before {
   content: "odd one out";
@@ -781,7 +781,7 @@ h1, h2, h3 {
 }
 .min-card {
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .min-label {
@@ -811,7 +811,7 @@ h1, h2, h3 {
   padding: 20px;
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -825,7 +825,7 @@ h1, h2, h3 {
 .step-scale .bar {
   flex: 1;
   background: var(--rule);
-  border-radius: 2px;
+  border-radius: 0;
   position: relative;
   transition: background .15s, transform .15s;
   cursor: pointer;
@@ -882,7 +882,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .step-cell {
@@ -924,7 +924,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .vivid-stage .vtile {
@@ -957,7 +957,7 @@ h1, h2, h3 {
   letter-spacing: 0.06em;
   color: var(--surface);
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .vivid-stage .vtile.crown::before {
   content: "most vivid";
@@ -995,7 +995,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .sibling-stage { grid-template-columns: repeat(7, 1fr); }
@@ -1039,7 +1039,7 @@ h1, h2, h3 {
   letter-spacing: 0.06em;
   color: var(--surface);
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: 0;
 }
 .ltile.is-lightest::before { content: "lightest"; background: var(--accent); }
 .ltile.is-darkest::before  { content: "darkest";  background: var(--text); }
@@ -1068,7 +1068,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   background: transparent;
   color: var(--text);
-  border-radius: 3px;
+  border-radius: 0;
   cursor: pointer;
 }
 .sibling-offsets button:hover { border-color: var(--text); }
@@ -1095,7 +1095,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   background: var(--surface);
   color: var(--text);
-  border-radius: 3px;
+  border-radius: 0;
   width: 14ch;
   letter-spacing: 0;
   text-transform: none;
@@ -1113,7 +1113,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   background: transparent;
   color: var(--text);
-  border-radius: 3px;
+  border-radius: 0;
   cursor: pointer;
 }
 .random-shuffle:hover {
@@ -1126,7 +1126,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .random-stage .rtile {
@@ -1156,7 +1156,7 @@ h1, h2, h3 {
   letter-spacing: 0.06em;
   color: var(--surface);
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--accent);
 }
 @media (max-width: 899px) {
@@ -1184,7 +1184,7 @@ h1, h2, h3 {
   font-size: 13px;
   padding: 4px 8px;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   text-align: center;
@@ -1199,7 +1199,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .nth-stage .ntile {
@@ -1229,7 +1229,7 @@ h1, h2, h3 {
   letter-spacing: 0.06em;
   color: var(--surface);
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--accent);
 }
 .nth-presets {
@@ -1243,7 +1243,7 @@ h1, h2, h3 {
   font-size: 12px;
   padding: 4px 12px;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: 0;
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -1284,7 +1284,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .order-stage {
   display: flex;
@@ -1293,7 +1293,7 @@ h1, h2, h3 {
   padding: clamp(20px, 3vw, 32px);
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .order-head {
   display: flex;
@@ -1323,7 +1323,7 @@ h1, h2, h3 {
   padding: 3px;
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
 }
 .order-modes button {
   font-family: var(--font-mono);
@@ -1332,7 +1332,7 @@ h1, h2, h3 {
   color: var(--muted);
   background: transparent;
   border: 0;
-  border-radius: 5px;
+  border-radius: 0;
   padding: 5px 10px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -1352,7 +1352,7 @@ h1, h2, h3 {
   flex: 1 1 70px;
   min-width: 54px;
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--rule);
   display: flex;
   align-items: flex-end;
@@ -1408,7 +1408,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .mix-stage {
   display: flex;
@@ -1417,7 +1417,7 @@ h1, h2, h3 {
   padding: clamp(20px, 3vw, 32px);
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .mix-row {
   display: grid;
@@ -1443,7 +1443,7 @@ h1, h2, h3 {
 }
 .mix-strip span {
   flex: 1 1 0;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid var(--rule);
 }
 .mix-space {
@@ -1461,7 +1461,7 @@ h1, h2, h3 {
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 6px 28px 6px 10px;
   cursor: pointer;
   appearance: none;
@@ -1504,7 +1504,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .ramp-stage {
@@ -1515,7 +1515,7 @@ h1, h2, h3 {
   padding: clamp(20px, 3vw, 32px);
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .ramp-seed {
@@ -1558,7 +1558,7 @@ h1, h2, h3 {
 .ramp-bars {
   display: flex;
   flex-direction: column;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid var(--rule);
   min-width: 0;
@@ -1620,7 +1620,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .typo-stage {
@@ -1629,7 +1629,7 @@ h1, h2, h3 {
   padding: clamp(28px, 4vw, 44px);
   background: var(--surface-2);
   border: 1px solid var(--rule);
-  border-radius: 12px;
+  border-radius: 0;
 }
 .typo-stage figcaption {
   font-family: var(--font-mono);
@@ -1692,7 +1692,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .extends-stage {
@@ -1709,7 +1709,7 @@ h1, h2, h3 {
 .extends-pane {
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   font-family: var(--font-mono);
   font-size: 13px;
@@ -1760,7 +1760,7 @@ h1, h2, h3 {
 .ext-swatch {
   width: 18px;
   height: 18px;
-  border-radius: 3px;
+  border-radius: 0;
   border: 1px solid var(--rule);
   justify-self: center;
 }
@@ -1798,7 +1798,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px 6px 0 0;
+  border-radius: 0;
   overflow: hidden;
 }
 .r-tab {
@@ -1831,7 +1831,7 @@ h1, h2, h3 {
   font-size: 13px;
   line-height: 1.55;
   padding: 22px 24px;
-  border-radius: 0 0 6px 6px;
+  border-radius: 0;
   max-height: 360px;
   overflow: auto;
   white-space: pre;
@@ -1880,7 +1880,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .extend-grid {
   display: grid;
@@ -1889,7 +1889,7 @@ h1, h2, h3 {
 }
 .extend-card {
   border: 1px solid var(--rule);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--surface-2);
   padding: 24px;
   display: flex;
@@ -1930,7 +1930,7 @@ h1, h2, h3 {
   display: inline-block;
   width: 28px;
   height: 28px;
-  border-radius: 4px;
+  border-radius: 0;
   border: 1px solid var(--rule);
 }
 .extend-result code { font-size: 13px; }
@@ -1949,7 +1949,7 @@ h1, h2, h3 {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 0;
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid var(--rule);
   height: 48px;
@@ -1992,7 +1992,7 @@ h1, h2, h3 {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
 }
 .coda-list li {
@@ -2114,7 +2114,7 @@ h1, h2, h3 {
   font-size: 13px;
   padding: 6px 12px;
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -2197,7 +2197,7 @@ h1, h2, h3 {
   font-size: 0.9em;
   background: var(--surface-2);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .readable-stage { margin: 0; }
 .readable-stage figcaption {
@@ -2240,7 +2240,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   background: transparent;
   color: var(--text);
-  border-radius: 3px;
+  border-radius: 0;
   cursor: pointer;
 }
 .readable-ratios button:hover { border-color: var(--text); }
@@ -2251,12 +2251,12 @@ h1, h2, h3 {
   gap: 6px;
   padding: 14px;
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   transition: background .2s;
 }
 .rd-tile {
   aspect-ratio: 1;
-  border-radius: 4px;
+  border-radius: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -2274,7 +2274,7 @@ h1, h2, h3 {
 }
 .rd-result {
   border: 1px solid var(--rule);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 14px 16px;
 }
 .rd-result .rd-call {
@@ -2311,3 +2311,14 @@ h1, h2, h3 {
   .sibling-stage { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ltile, .stile { aspect-ratio: 1; }
 }
+
+/* No rounded corners anywhere — including inside the colour pickers.
+   (Circles stay circles: swatch dots are shapes, not corners.) */
+color-input::part(trigger),
+color-input::part(chip),
+color-input::part(output),
+color-input::part(panel),
+color-input::part(area),
+color-input::part(controls),
+color-input::part(input),
+color-input::part(gamut) { border-radius: 0; }
