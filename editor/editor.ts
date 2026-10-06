@@ -623,9 +623,11 @@ function syncScopeFromEditor(scope: Scope, text: string, _book: DesignBook) {
 
     if (missingInserts.length > 0) {
       syncingFromEditor = true;
-      // Apply in reverse order so line indices stay valid
+      // CodeMirror maps every change in one dispatch against the original
+      // document, so positions stay valid as-is; inserts at the same
+      // position land in the order given, which is the scope's key order.
       const changes: Array<{ from: number; insert: string }> = [];
-      for (const { afterLineIdx, text } of missingInserts.reverse()) {
+      for (const { afterLineIdx, text } of missingInserts) {
         if (afterLineIdx >= 0 && afterLineIdx < doc.lines) {
           const line = doc.line(afterLineIdx + 1); // 1-based
           changes.push({ from: line.to, insert: '\n' + text });
