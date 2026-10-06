@@ -1,7 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color } from '../../../src/tokens';
-import { relativeTo } from '../../../src/functions/color/relative-to';
+import { relativeTo, relativeToImpl } from '../../../src/functions/color/relative-to';
+
+describe('relativeTo alpha', () => {
+  it('keeps a translucent input translucent', () => {
+    expect(relativeToImpl('#ff000080', 'oklch', [null, null, null])).toBe('#ff000080');
+  });
+
+  it('keeps alpha through a channel change', () => {
+    expect(relativeToImpl('#ff000080', 'rgb', [0, null, null])).toBe('#00000080');
+  });
+
+  it('stays 6-digit hex for an opaque input', () => {
+    expect(relativeToImpl('#ff0000', 'oklch', [null, null, null])).toBe('#ff0000');
+  });
+});
 
 describe('relativeTo', () => {
   it('rotates hue by +180 in oklch', () => {

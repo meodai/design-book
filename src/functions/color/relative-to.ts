@@ -1,8 +1,8 @@
-import { parse, formatHex, converter } from 'culori';
+import { parse, converter } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
-import { gamutMapSrgb } from './scope-colors';
+import { formatColor, gamutMapSrgb } from './scope-colors';
 
 /** Channel order per colour space. Culori's object key order is not a
  *  reliable channel order — `hsl` comes out `s, l, h`, and achromatic
@@ -105,7 +105,9 @@ export function relativeToImpl(
   // Out-of-sRGB results are gamut-mapped in OKLCH rather than clipped
   // channel-wise; a displayable one is left exactly as it is (see
   // gamutMapSrgb — the round trip costs 1/255 for the sRGB-based spaces).
-  const result = formatHex(gamutMapSrgb(modified));
+  // Alpha rides along untouched, as in CSS relative-colour syntax, so a
+  // translucent input comes back as 8-digit hex.
+  const result = formatColor(gamutMapSrgb(modified));
   if (!result) {
     throw new FunctionError(
       `relativeTo: failed to format modified color`,
