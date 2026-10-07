@@ -767,24 +767,31 @@ Instead, write each theme as a **layer** holding only its differences, and compo
 ```typescript
 import { layer, composeBook, keysFromLayer, layerOf } from 'design-book';
 
-const base = layer('base', (book) => {
+// A magazine: one shared system, each section the same brand with its own accent.
+const core = layer('core', (book) => {
   book.addScope('brand').set('highlight', color('#2d60a5'));
   book.addScope('text').set('highlight', ref('brand.highlight'));
 });
-const product = layer('product', { brand: { accent: color('#ff5500') } });
-const forest = layer('forest', { brand: { highlight: color('#3f8f5a') } });
+const sport = layer('sport', { brand: { highlight: color('#d9480f') } });
+const culture = layer('culture', { brand: { highlight: color('#7048e8') } });
 
-const baseBook = composeBook('base', [base]);
-const forestBook = composeBook('forest', [base, product, forest]);
+const coreBook = composeBook('core', [core]);
+const sportBook = composeBook('sport', [core, sport]);
+const cultureBook = composeBook('culture', [core, culture]);
 
-forestBook.resolve('text.highlight'); // '#3f8f5a'
-baseBook.resolve('text.highlight');   // '#2d60a5'
+sportBook.resolve('text.highlight'); // '#d9480f'
+coreBook.resolve('text.highlight');  // '#2d60a5'
 
-forestBook.render('css-variables');   // the full set
-forestBook.render('css-variables', { selector: '.forest', changedFrom: baseBook }); // only what differs
+sportBook.render('css-variables');   // the full set
+sportBook.render('css-variables', { selector: '.sport', changedFrom: coreBook }); // only what differs
 
-keysFromLayer(forestBook, 'forest');  // ['brand.highlight'] — what this theme changes
-layerOf(forestBook, 'brand.accent');  // 'product'
+keysFromLayer(sportBook, 'sport');   // ['brand.highlight'] — what this section changes
+
+// Stacks go as deep as the brand does: the sport section's live ticker.
+const live = layer('live', { text: { highlight: color('#c92a2a') } });
+const liveBook = composeBook('sport-live', [core, sport, live]);
+layerOf(liveBook, 'brand.highlight'); // 'sport'
+layerOf(liveBook, 'text.highlight');  // 'live'
 ```
 
 A layer is either a **function** `(book) => void` — free to add scopes with `extends` or `compose`, call `addTypography`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
@@ -794,8 +801,8 @@ A layer is either a **function** `(book) => void` — free to add scopes with `e
 A composed book is live like any other. When a layer changes, compose again and diff:
 
 ```typescript
-const next = composeBook('forest', [base, product, forest]);
-diffBooks(forestBook, next).changed; // what the edit moved
+const next = composeBook('sport', [core, sport]);
+diffBooks(sportBook, next).changed; // what the edit moved
 ```
 
 A token that must *not* follow a theme should point at a root that no theme overrides (`brand.highlight-fixed`), so the exception is visible in the token names.

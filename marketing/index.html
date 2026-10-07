@@ -616,14 +616,15 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
     <div class="extends-feature-body is-active" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
       <div class="extends-feature-text">
         <p>
-          <strong>Across a whole system.</strong> Write it once as a base layer. A theme is another layer
-          that holds nothing but what it changes — usually a root or two.
-          Compose a book from the stack and the override lands in the same
-          graph as everything else, so every ref, mix and selector derived
-          from that root recomputes. Brand on brand on base is just a
-          longer stack.
+          <strong>Across a whole system.</strong> A magazine's sport and
+          culture sections are the same brand with a different accent.
+          Write the shared system once as a core layer; each section is a
+          layer that holds nothing but what makes it different — here,
+          one color. Compose a book from the stack and the override lands
+          in the same graph as everything else, so every ref, mix and
+          selector derived from that root recomputes.
         </p>
-        <pre class="code"><code><span class="c-fn">const</span> base = <span class="c-fn">layer</span>(<span class="c-str">'base'</span>, (book) =&gt; {
+        <pre class="code"><code><span class="c-fn">const</span> core = <span class="c-fn">layer</span>(<span class="c-str">'core'</span>, (book) =&gt; {
   <span class="c-fn">const</span> brand = book.<span class="c-fn">addScope</span>(<span class="c-str">'brand'</span>);
   brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
   <span class="c-dim">// … ink, paper …</span>
@@ -635,50 +636,53 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
     <span class="c-fn">ref</span>(<span class="c-str">'brand.paper'</span>), { <span class="c-key">ratio</span>: <span class="c-num">0.85</span> }));
 });
 
-<span class="c-dim">// the whole theme</span>
-<span class="c-fn">const</span> forest = <span class="c-fn">layer</span>(<span class="c-str">'forest'</span>, {
-  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#3f8f5a'</span>) },
+<span class="c-dim">// a section is only what sets it apart</span>
+<span class="c-fn">const</span> sport = <span class="c-fn">layer</span>(<span class="c-str">'sport'</span>, {
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) },
+});
+<span class="c-fn">const</span> culture = <span class="c-fn">layer</span>(<span class="c-str">'culture'</span>, {
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#7048e8'</span>) },
 });
 
-<span class="c-fn">composeBook</span>(<span class="c-str">'forest'</span>, [base, forest]);</code></pre>
+<span class="c-fn">composeBook</span>(<span class="c-str">'sport'</span>, [core, sport]);</code></pre>
       </div>
 
       <figure class="extends-stage">
         <div class="extends-pane">
           <div class="extends-pane-head">
-            <span class="extends-pane-name">forest</span>
-            <span class="extends-pane-meta"><code>base</code> + <code>forest</code></span>
+            <span class="extends-pane-name">sport</span>
+            <span class="extends-pane-meta"><code>core</code> + <code>sport</code></span>
           </div>
           <div class="extends-rows extends-rows--keys">
             <div class="ext-row ext-row--override">
               <span class="ext-key">brand.highlight</span>
-              <span class="ext-swatch" style="background:#3f8f5a"></span>
-              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#3f8f5a'</span>) <span class="ext-layer">forest</span></span>
+              <span class="ext-swatch" style="background:#d9480f"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) <span class="ext-layer">sport</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.link</span>
-              <span class="ext-swatch" style="background:#3f8f5a"></span>
-              <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #3f8f5a</span></span>
+              <span class="ext-swatch" style="background:#d9480f"></span>
+              <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #d9480f</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.hover</span>
-              <span class="ext-swatch" style="background:#2c6941"></span>
-              <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #2c6941</span></span>
+              <span class="ext-swatch" style="background:#a13308"></span>
+              <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a13308</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.tint</span>
-              <span class="ext-swatch" style="background:#e0e6d7"></span>
-              <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #e0e6d7</span></span>
+              <span class="ext-swatch" style="background:#fdddcb"></span>
+              <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #fdddcb</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.ink</span>
               <span class="ext-swatch" style="background:#1d1c1c"></span>
-              <span class="ext-val">base <span class="ext-resolved">→ #1d1c1c</span></span>
+              <span class="ext-val">core <span class="ext-resolved">→ #1d1c1c</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.paper</span>
               <span class="ext-swatch" style="background:#fcf6ee"></span>
-              <span class="ext-val">base <span class="ext-resolved">→ #fcf6ee</span></span>
+              <span class="ext-val">core <span class="ext-resolved">→ #fcf6ee</span></span>
             </div>
           </div>
         </div>

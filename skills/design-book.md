@@ -220,8 +220,8 @@ const css = [
 keysFromLayer(darkBook, 'dark'); // exactly what the dark theme changes
 ```
 
-Chains like base → product → product-brand are just longer stacks:
-`composeBook('product-brand', [base, productLayer, brandLayer])`. Use a
+Sub-brands are just longer stacks — a magazine's sport section, and its
+live ticker on top: `composeBook('sport-live', [core, sport, live])`. Use a
 function layer when a theme needs `addScope` with `extends` / `compose`,
 selectors over a scope, or deletions; data layers (`{ scope: { key: token } }`)
 cover plain overrides.
