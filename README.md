@@ -487,6 +487,8 @@ dark.delete('text');
 dark.resolve('text'); // '#1a1a1a'
 ```
 
+Scope `extends` shares tokens between scopes of one book; inherited refs keep pointing at the keys they name. To theme a whole system — override a root and have everything downstream follow — compose layers instead (see [Themes: layering a whole book](#themes-layering-a-whole-book)).
+
 Inherited tokens remain part of the dependency graph. If `dark.primary` currently resolves from `light.primary`, anything depending on `dark.primary` will continue to update when `light.primary` changes.
 
 `addScope` validates the name and the inheritance chain and throws a
@@ -747,6 +749,65 @@ Because the variation is a real book, computed tokens are recomputed for it: `ui
 diffBooks(base, inverted).changed
 // [{ key: 'surface.normal', from: '#ffffff', to: '#1d2b5c' }, { key: 'ui.text', from: '#111111', to: '#ffffff' }, …]
 ```
+
+### Themes: layering a whole book
+
+A theme usually changes the roots of the tree — "our brand highlight is green", "our spacing is denser" — and everything downstream should follow. Scope `extends` can't do that: an inherited token keeps pointing at the keys it was written against.
+
+```typescript
+book.addScope('brand').set('highlight', color('#2d60a5'));
+book.addScope('text').set('highlight', ref('brand.highlight'));
+book.addScope('alt-brand', { extends: 'brand' }).set('highlight', color('#3f8f5a'));
+book.addScope('alt-text', { extends: 'text' });
+book.resolve('alt-text.highlight'); // '#2d60a5' — still reads brand.highlight, not alt-brand.highlight
+```
+
+Instead, write each theme as a **layer** holding only its differences, and compose a book from a stack of layers. Every layer writes into the same book, so overriding a root is an ordinary `set` and every ref, function token and selector pool that depends on it is recomputed:
+
+```typescript
+import { layer, composeBook, keysFromLayer, layerOf } from 'design-book';
+
+// A store chain: one shared store system, each store the same brand with its own accent.
+const system = layer('store-system', (book) => {
+  book.addScope('brand').set('highlight', color('#2d60a5'));
+  book.addScope('text').set('highlight', ref('brand.highlight'));
+});
+const oldTown = layer('old-town', { brand: { highlight: color('#d9480f') } });
+const harbour = layer('harbour', { brand: { highlight: color('#0c8599') } });
+
+const chainBook = composeBook('store-system', [system]);
+const oldTownBook = composeBook('old-town', [system, oldTown]);
+const harbourBook = composeBook('harbour', [system, harbour]);
+
+oldTownBook.resolve('text.highlight'); // '#d9480f'
+chainBook.resolve('text.highlight');   // '#2d60a5'
+
+oldTownBook.render('css-variables');   // the full set
+oldTownBook.render('css-variables', { selector: '.old-town', changedFrom: chainBook }); // only what differs
+
+keysFromLayer(oldTownBook, 'old-town'); // ['brand.highlight'] — what this store changes
+
+// Stacks go as deep as the brand does: the old-town store's café corner.
+const cafe = layer('cafe', { text: { highlight: color('#5c940d') } });
+const cafeBook = composeBook('old-town-cafe', [system, oldTown, cafe]);
+layerOf(cafeBook, 'brand.highlight'); // 'old-town'
+layerOf(cafeBook, 'text.highlight');  // 'cafe'
+```
+
+A layer is either a **function** `(book) => void` — free to add scopes with `extends` or `compose`, call `addTypography`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
+
+`composeBook(name, layers, options?)` applies the layers in order, last one wins, and returns an ordinary book in `options.mode` (default `auto`). A layer that throws, or that would close a dependency cycle, stops the composition with a `LayerError` carrying `layerName`, `tokenKey` and the original error as `cause`. A ref to a key that a later layer adds is fine.
+
+A composed book is live like any other. When a layer changes, compose again and diff:
+
+```typescript
+const next = composeBook('old-town', [system, oldTown]);
+diffBooks(oldTownBook, next).changed; // what the edit moved
+```
+
+A token that must *not* follow a theme should point at a root that no theme overrides (`brand.highlight-fixed`), so the exception is visible in the token names.
+
+**Layers or scope `extends`?** Use layers for a variation of the whole system — brand, theme, mode, density. Use scope `extends` for two scopes in the *same* book that share members, such as a selector pool built on top of a palette, or a typography style that tweaks another one.
 
 ## Events
 

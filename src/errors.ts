@@ -41,3 +41,20 @@ export class FunctionError extends Error {
     this.options = options;
   }
 }
+
+/** A layer could not be applied while composing a book. `cause` holds the
+ *  original error when one was thrown (a function layer failing, a write the
+ *  graph rejected as a cycle). */
+export class LayerError extends Error {
+  public readonly layerName: string;
+  public readonly tokenKey?: string;
+  public readonly cause?: unknown;
+
+  constructor(message: string, layerName: string, options?: { tokenKey?: string; cause?: unknown }) {
+    super(message);
+    this.name = 'LayerError';
+    this.layerName = layerName;
+    this.tokenKey = options?.tokenKey;
+    this.cause = options?.cause;
+  }
+}

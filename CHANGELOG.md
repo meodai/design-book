@@ -23,6 +23,14 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Added
 
+- **Theme layers.** `layer(name, fn | data)` describes a theme as only its
+  differences; `composeBook(name, [base, theme, …])` builds one book from the
+  stack, last layer winning. Because every layer writes into the same book, a
+  theme that overrides a root (`brand.highlight`) re-flows to every ref,
+  function token and selector pool derived from it — which scope `extends`
+  cannot do. `layerOf(book, key)` and `keysFromLayer(book, layer)` report
+  which layer set each key; failures throw a new `LayerError` naming the
+  layer and key.
 - `lightest(scope, { not, readableOn })` and `darkest(...)` select the
   color with the highest / lowest OKLCH lightness from a scope.
 - `sibling(ref('ramp.s300'), offset, { wrap, not })` returns the member

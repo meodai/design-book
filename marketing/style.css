@@ -25,7 +25,7 @@
    not stretch a column wider than the phone. */
 :where(.fn-body, .graph, .hero, .ramp-feature-body, .order-feature-body,
        .mix-feature-body, .typo-feature-body, .extends-feature-body,
-       .readable-feature-body) {
+       .readable-feature-body, .names-feature-body) {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -1318,7 +1318,7 @@ h1, h2, h3 {
   display: inline-flex;
   cursor: pointer;
 }
-.order-modes {
+.order-modes, .extends-modes {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -1327,7 +1327,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   border-radius: 0;
 }
-.order-modes button {
+.order-modes button, .extends-modes button {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.02em;
@@ -1339,20 +1339,23 @@ h1, h2, h3 {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.order-modes button:hover { color: var(--text); }
-.order-modes button.is-active {
+.order-modes button:hover, .extends-modes button:hover { color: var(--text); }
+.order-modes button.is-active, .extends-modes button.is-active {
   background: var(--accent);
   color: #fff;
 }
-.order-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.order-modes button:focus-visible, .extends-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* One row, always: the point is a single continuous order, so the
+   swatches shrink rather than wrap. */
 .order-swatches {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: clamp(3px, 0.8vw, 6px);
 }
 .order-swatch {
-  flex: 1 1 70px;
-  min-width: 54px;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
   aspect-ratio: 1;
   border-radius: 0;
   border: 1px solid var(--rule);
@@ -1365,6 +1368,7 @@ h1, h2, h3 {
 .order-swatch span {
   font-family: var(--font-mono);
   font-size: 10px;
+  white-space: nowrap;
   letter-spacing: 0.02em;
   color: #fff;
   mix-blend-mode: difference;
@@ -1379,9 +1383,6 @@ h1, h2, h3 {
   line-height: 1.5;
   letter-spacing: 0.03em;
   color: var(--muted);
-}
-@media (max-width: 899px) {
-  .order-swatch { flex-basis: 54px; }
 }
 
 /* — colorMix demo — */
@@ -1626,6 +1627,7 @@ h1, h2, h3 {
 }
 
 .typo-stage {
+  margin: 0;
   display: grid;
   gap: clamp(12px, 1.6vw, 20px);
   padding: clamp(28px, 4vw, 44px);
@@ -1659,7 +1661,7 @@ h1, h2, h3 {
   letter-spacing: -0.02em;
 }
 
-/* ── Inheritance: scope-extends visualization ──────────────────── */
+/* ── Themes: layer stack visualization ─────────────────────────── */
 .extends-feature {
   max-width: var(--max);
   margin: 0 auto;
@@ -1677,6 +1679,26 @@ h1, h2, h3 {
   }
   .extends-stage { align-self: start; }
 }
+.extends-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: clamp(20px, 2.4vw, 32px);
+}
+.extends-head h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0;
+}
+/* Both panels share one grid cell, so the block is as tall as the
+   taller one and switching never shifts the page below it. */
+.extends-panels { display: grid; grid-template-columns: minmax(0, 1fr); }
+.extends-panels > [role="tabpanel"] { grid-area: 1 / 1; min-width: 0; }
+.extends-panels > [role="tabpanel"]:not(.is-active) { visibility: hidden; }
+.extends-panels > [role="tabpanel"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.extends-feature-text strong { font-weight: 600; }
 .extends-feature-text { max-width: 56ch; }
 .extends-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
@@ -1698,6 +1720,7 @@ h1, h2, h3 {
 }
 
 .extends-stage {
+  margin: 0;
   display: grid;
   gap: 12px;
 }
@@ -1773,6 +1796,34 @@ h1, h2, h3 {
   font-style: italic;
   margin-left: 6px;
   color: var(--muted);
+}
+/* Qualified keys (`brand.highlight`) need a wider key column. */
+.extends-rows--keys .ext-row {
+  grid-template-columns: 15ch 22px minmax(0, 1fr);
+}
+/* Phones: swatch beside the key, value on the line below. */
+@media (max-width: 480px) {
+  .extends-rows--keys .ext-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    grid-template-areas: "swatch key" ". val";
+    row-gap: 2px;
+    padding: 6px 12px;
+  }
+  .extends-rows--keys .ext-swatch { grid-area: swatch; }
+  .extends-rows--keys .ext-key { grid-area: key; }
+  .extends-rows--keys .ext-val { grid-area: val; }
+}
+.ext-layer {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 1px;
 }
 
 /* ── Renderer comparison ────────────────────────────────────────── */
@@ -1886,7 +1937,7 @@ h1, h2, h3 {
 }
 .extend-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(24px, 3vw, 36px);
 }
 .extend-card {

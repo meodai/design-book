@@ -935,15 +935,15 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 })();
 
 // ══════════════════════════════════════════════════════════════════════
-//  SELECTOR SWITCHER — one panel at a time (ARIA tabs, #hash aware)
+//  TAB SWITCHERS — one panel at a time (ARIA tabs). The selector
+//  switcher also follows #hash; the inheritance toggle does not.
 // ══════════════════════════════════════════════════════════════════════
-(function selectorTabs () {
-  const list = document.querySelector(".fn-tabs");
+function wireTabs (list, { hash = false } = {}) {
   if (!list) return;
   const tabs = [...list.querySelectorAll('[role="tab"]')];
   const panelOf = (tab) => document.getElementById(tab.getAttribute("aria-controls"));
 
-  function select (tab, { focus = false, updateHash = true } = {}) {
+  function select (tab, { focus = false, updateHash = hash } = {}) {
     for (const t of tabs) {
       const on = t === tab;
       t.setAttribute("aria-selected", String(on));
@@ -969,6 +969,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
     select(tabs[(next + tabs.length) % tabs.length], { focus: true });
   });
 
+  if (!hash) return;
   // A link to #closest (or any selector id) opens that panel.
   const fromHash = () => {
     const tab = tabs.find((t) => `#${t.getAttribute("aria-controls")}` === location.hash);
@@ -976,7 +977,10 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   };
   addEventListener("hashchange", fromHash);
   fromHash();
-})();
+}
+
+wireTabs(document.querySelector(".fn-tabs"), { hash: true });
+wireTabs(document.querySelector(".extends-modes"));
 
 // ══════════════════════════════════════════════════════════════════════
 //  READABLE ON — contrast as a filter before ranking
