@@ -616,15 +616,15 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
     <div class="extends-feature-body is-active" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
       <div class="extends-feature-text">
         <p>
-          <strong>Across a whole system.</strong> A magazine's sport and
-          culture sections are the same brand with a different accent.
-          Write the shared system once as a core layer; each section is a
-          layer that holds nothing but what makes it different — here,
-          one color. Compose a book from the stack and the override lands
-          in the same graph as everything else, so every ref, mix and
+          <strong>Across a whole system.</strong> Every shop in a chain is
+          the same brand, but the old-town store has its own accent.
+          Write the store system once as a layer; each store is a layer
+          that holds nothing but what makes it different — here, one
+          color. Compose a book from the stack and the override lands in
+          the same graph as everything else, so every ref, mix and
           selector derived from that root recomputes.
         </p>
-        <pre class="code"><code><span class="c-fn">const</span> core = <span class="c-fn">layer</span>(<span class="c-str">'core'</span>, (book) =&gt; {
+        <pre class="code"><code><span class="c-fn">const</span> system = <span class="c-fn">layer</span>(<span class="c-str">'store-system'</span>, (book) =&gt; {
   <span class="c-fn">const</span> brand = book.<span class="c-fn">addScope</span>(<span class="c-str">'brand'</span>);
   brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
   <span class="c-dim">// … ink, paper …</span>
@@ -636,28 +636,28 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
     <span class="c-fn">ref</span>(<span class="c-str">'brand.paper'</span>), { <span class="c-key">ratio</span>: <span class="c-num">0.85</span> }));
 });
 
-<span class="c-dim">// a section is only what sets it apart</span>
-<span class="c-fn">const</span> sport = <span class="c-fn">layer</span>(<span class="c-str">'sport'</span>, {
+<span class="c-dim">// a store is only what sets it apart</span>
+<span class="c-fn">const</span> oldTown = <span class="c-fn">layer</span>(<span class="c-str">'old-town'</span>, {
   <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) },
 });
-<span class="c-fn">const</span> culture = <span class="c-fn">layer</span>(<span class="c-str">'culture'</span>, {
-  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#7048e8'</span>) },
+<span class="c-fn">const</span> harbour = <span class="c-fn">layer</span>(<span class="c-str">'harbour'</span>, {
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#0c8599'</span>) },
 });
 
-<span class="c-fn">composeBook</span>(<span class="c-str">'sport'</span>, [core, sport]);</code></pre>
+<span class="c-fn">composeBook</span>(<span class="c-str">'old-town'</span>, [system, oldTown]);</code></pre>
       </div>
 
       <figure class="extends-stage">
         <div class="extends-pane">
           <div class="extends-pane-head">
-            <span class="extends-pane-name">sport</span>
-            <span class="extends-pane-meta"><code>core</code> + <code>sport</code></span>
+            <span class="extends-pane-name">old-town</span>
+            <span class="extends-pane-meta">on <code>store-system</code></span>
           </div>
           <div class="extends-rows extends-rows--keys">
             <div class="ext-row ext-row--override">
               <span class="ext-key">brand.highlight</span>
               <span class="ext-swatch" style="background:#d9480f"></span>
-              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) <span class="ext-layer">sport</span></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) <span class="ext-layer">old-town</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.link</span>
@@ -677,12 +677,12 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.ink</span>
               <span class="ext-swatch" style="background:#1d1c1c"></span>
-              <span class="ext-val">core <span class="ext-resolved">→ #1d1c1c</span></span>
+              <span class="ext-val">store-system <span class="ext-resolved">→ #1d1c1c</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.paper</span>
               <span class="ext-swatch" style="background:#fcf6ee"></span>
-              <span class="ext-val">core <span class="ext-resolved">→ #fcf6ee</span></span>
+              <span class="ext-val">store-system <span class="ext-resolved">→ #fcf6ee</span></span>
             </div>
           </div>
         </div>

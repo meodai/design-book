@@ -220,8 +220,8 @@ const css = [
 keysFromLayer(darkBook, 'dark'); // exactly what the dark theme changes
 ```
 
-Sub-brands are just longer stacks — a magazine's sport section, and its
-live ticker on top: `composeBook('sport-live', [core, sport, live])`. Use a
+Sub-brands are just longer stacks — a store chain's system, one store,
+and that store's café corner: `composeBook('old-town-cafe', [system, oldTown, cafe])`. Use a
 function layer when a theme needs `addScope` with `extends` / `compose`,
 selectors over a scope, or deletions; data layers (`{ scope: { key: token } }`)
 cover plain overrides.
