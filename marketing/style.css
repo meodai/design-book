@@ -1915,7 +1915,7 @@ h1, h2, h3 {
 }
 .extend-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(24px, 3vw, 36px);
 }
 .extend-card {
