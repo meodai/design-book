@@ -1627,6 +1627,7 @@ h1, h2, h3 {
 }
 
 .typo-stage {
+  margin: 0;
   display: grid;
   gap: clamp(12px, 1.6vw, 20px);
   padding: clamp(28px, 4vw, 44px);
@@ -1719,6 +1720,7 @@ h1, h2, h3 {
 }
 
 .extends-stage {
+  margin: 0;
   display: grid;
   gap: 12px;
 }
