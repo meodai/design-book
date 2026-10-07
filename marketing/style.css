@@ -1659,7 +1659,7 @@ h1, h2, h3 {
   letter-spacing: -0.02em;
 }
 
-/* ── Inheritance: scope-extends visualization ──────────────────── */
+/* ── Themes: layer stack visualization ─────────────────────────── */
 .extends-feature {
   max-width: var(--max);
   margin: 0 auto;
@@ -1773,6 +1773,34 @@ h1, h2, h3 {
   font-style: italic;
   margin-left: 6px;
   color: var(--muted);
+}
+/* Qualified keys (`brand.highlight`) need a wider key column. */
+.extends-rows--keys .ext-row {
+  grid-template-columns: 15ch 22px minmax(0, 1fr);
+}
+/* Phones: swatch beside the key, value on the line below. */
+@media (max-width: 480px) {
+  .extends-rows--keys .ext-row {
+    grid-template-columns: 22px minmax(0, 1fr);
+    grid-template-areas: "swatch key" ". val";
+    row-gap: 2px;
+    padding: 6px 12px;
+  }
+  .extends-rows--keys .ext-swatch { grid-area: swatch; }
+  .extends-rows--keys .ext-key { grid-area: key; }
+  .extends-rows--keys .ext-val { grid-area: val; }
+}
+.ext-layer {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 1px;
 }
 
 /* ── Renderer comparison ────────────────────────────────────────── */
