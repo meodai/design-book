@@ -191,19 +191,45 @@ type.set('h2',   typographyScale(ref('type.base'), { ratio: 1.25, step: 2 }));
 type.set('h1',   typographyScale(ref('type.base'), { ratio: 1.25, step: 3 }));
 ```
 
-If a theme has multiple modes (light / dark), model the dark theme as a
-scope that *extends* the light one:
+If the system has several themes, brands or modes (light / dark, dense,
+brand B), write the base as one layer and each theme as a layer that holds
+**only its differences**, then compose a book per theme. Later layers win,
+and because they write into the same book, overriding a root re-flows every
+ref and function token downstream:
 
 ```typescript
-const light = book.addScope('light');
-light.set('bg', color('#ffffff'));
-light.set('text', color('#1a1a1a'));
+import { layer, composeBook, keysFromLayer } from 'design-book';
 
-const dark = book.addScope('dark', { extends: 'light' });
-dark.set('bg', color('#1a1a1a'));
-dark.set('text', color('#ffffff'));
-// Anything light defines that dark doesn't override remains inherited.
+const base = layer('base', (book) => {
+  book.addScope('surface').set('bg', color('#ffffff'));
+  book.addScope('ink').set('text', color('#1a1a1a'));
+  book.addScope('ui').set('text', ref('ink.text'));
+  // … the whole system, as above …
+});
+const dark = layer('dark', {
+  surface: { bg: color('#1a1a1a') },
+  ink: { text: color('#ffffff') },
+});
+
+const light = composeBook('light', [base]);
+const darkBook = composeBook('dark', [base, dark]);   // ui.text follows ink.text
+const css = [
+  light.render('css-variables'),
+  darkBook.render('css-variables', { selector: '[data-theme="dark"]', changedFrom: light }),
+].join('\n\n');
+keysFromLayer(darkBook, 'dark'); // exactly what the dark theme changes
 ```
+
+Chains like base → product → product-brand are just longer stacks:
+`composeBook('product-brand', [base, productLayer, brandLayer])`. Use a
+function layer when a theme needs `addScope` with `extends` / `compose`,
+selectors over a scope, or deletions; data layers (`{ scope: { key: token } }`)
+cover plain overrides.
+
+Don't model themes as scopes that `extend` each other: an inherited
+`ref('brand.x')` keeps reading the base `brand`, so a theme's root
+overrides never reach the tokens derived from them. Scope `extends` is for
+sharing members between scopes of one book.
 
 ### 7. Verify
 
@@ -226,7 +252,8 @@ common causes:
 
 - A "rule" candidate was modelled as a value/ref instead of a function.
 - A ref points at the wrong key (typo in the qualified name).
-- A multi-mode theme wasn't wired through `extends`.
+- A multi-mode theme was modelled with scope `extends` instead of layers, so
+  root overrides never reach the derived tokens.
 
 ---
 

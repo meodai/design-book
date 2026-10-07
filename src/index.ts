@@ -50,11 +50,15 @@ export type {
 } from './tokens';
 
 // Errors
-export { TokenError, ScopeError, CircularDependencyError, FunctionError } from './errors';
+export { TokenError, ScopeError, CircularDependencyError, FunctionError, LayerError } from './errors';
 
 // Comparing books — brands, contexts, breakpoints built as variations
 export { diffBooks } from './diff-books';
 export type { BookDiff } from './diff-books';
+
+// Themes — a whole-book variation as a stack of sparse layers
+export { layer, composeBook, layerOf, keysFromLayer } from './layers';
+export type { Layer, LayerData } from './layers';
 
 // Naming schemes for primitive token keys
 export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming';
