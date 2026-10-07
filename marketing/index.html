@@ -602,20 +602,28 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
   </div>
 </section>
 
-<!-- ─── Themes: a layer holds only its differences ─────────────────── -->
+<!-- ─── Inheritance: layers across books, extends inside one ───────── -->
 <section class="extends-feature" aria-labelledby="extends-title">
-  <div class="extends-feature-body">
-    <div class="extends-feature-text">
-      <h2 id="extends-title"><em>A theme is</em> only its differences.</h2>
-      <p>
-        Write the system once as a base layer. A theme is another layer
-        that holds nothing but what it changes — usually a root or two.
-        Compose a book from the stack and the override lands in the same
-        graph as everything else, so every ref, mix and selector derived
-        from that root recomputes. Brand on brand on base is just a
-        longer stack.
-      </p>
-      <pre class="code"><code><span class="c-fn">const</span> base = <span class="c-fn">layer</span>(<span class="c-str">'base'</span>, (book) =&gt; {
+  <div class="extends-head">
+    <h2 id="extends-title"><em>Inherit.</em> Override what changes.</h2>
+    <div class="extends-modes" role="tablist" aria-label="Ways to inherit">
+      <button type="button" role="tab" id="tab-theme-layers" aria-controls="theme-layers" aria-selected="true" tabindex="0" class="is-active">layers</button>
+      <button type="button" role="tab" id="tab-theme-extends" aria-controls="theme-extends" aria-selected="false" tabindex="-1">scope extends</button>
+    </div>
+  </div>
+
+  <div class="extends-panels">
+    <div class="extends-feature-body is-active" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
+      <div class="extends-feature-text">
+        <p>
+          <strong>Across a whole system.</strong> Write it once as a base layer. A theme is another layer
+          that holds nothing but what it changes — usually a root or two.
+          Compose a book from the stack and the override lands in the same
+          graph as everything else, so every ref, mix and selector derived
+          from that root recomputes. Brand on brand on base is just a
+          longer stack.
+        </p>
+        <pre class="code"><code><span class="c-fn">const</span> base = <span class="c-fn">layer</span>(<span class="c-str">'base'</span>, (book) =&gt; {
   <span class="c-fn">const</span> brand = book.<span class="c-fn">addScope</span>(<span class="c-str">'brand'</span>);
   brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
   <span class="c-dim">// … ink, paper …</span>
@@ -633,64 +641,64 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
 });
 
 <span class="c-fn">composeBook</span>(<span class="c-str">'forest'</span>, [base, forest]);</code></pre>
+      </div>
+
+      <figure class="extends-stage">
+        <div class="extends-pane">
+          <div class="extends-pane-head">
+            <span class="extends-pane-name">forest</span>
+            <span class="extends-pane-meta"><code>base</code> + <code>forest</code></span>
+          </div>
+          <div class="extends-rows extends-rows--keys">
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">brand.highlight</span>
+              <span class="ext-swatch" style="background:#3f8f5a"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#3f8f5a'</span>) <span class="ext-layer">forest</span></span>
+            </div>
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">ui.link</span>
+              <span class="ext-swatch" style="background:#3f8f5a"></span>
+              <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #3f8f5a</span></span>
+            </div>
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">ui.hover</span>
+              <span class="ext-swatch" style="background:#2c6941"></span>
+              <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #2c6941</span></span>
+            </div>
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">ui.tint</span>
+              <span class="ext-swatch" style="background:#e0e6d7"></span>
+              <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #e0e6d7</span></span>
+            </div>
+            <div class="ext-row ext-row--inherited">
+              <span class="ext-key">brand.ink</span>
+              <span class="ext-swatch" style="background:#1d1c1c"></span>
+              <span class="ext-val">base <span class="ext-resolved">→ #1d1c1c</span></span>
+            </div>
+            <div class="ext-row ext-row--inherited">
+              <span class="ext-key">brand.paper</span>
+              <span class="ext-swatch" style="background:#fcf6ee"></span>
+              <span class="ext-val">base <span class="ext-resolved">→ #fcf6ee</span></span>
+            </div>
+          </div>
+        </div>
+        <figcaption>One override. Everything derived from it follows; the rest stays dim.</figcaption>
+      </figure>
     </div>
 
-    <figure class="extends-stage">
-      <div class="extends-pane">
-        <div class="extends-pane-head">
-          <span class="extends-pane-name">forest</span>
-          <span class="extends-pane-meta"><code>base</code> + <code>forest</code></span>
-        </div>
-        <div class="extends-rows extends-rows--keys">
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">brand.highlight</span>
-            <span class="ext-swatch" style="background:#3f8f5a"></span>
-            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#3f8f5a'</span>) <span class="ext-layer">forest</span></span>
-          </div>
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">ui.link</span>
-            <span class="ext-swatch" style="background:#3f8f5a"></span>
-            <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #3f8f5a</span></span>
-          </div>
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">ui.hover</span>
-            <span class="ext-swatch" style="background:#2c6941"></span>
-            <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #2c6941</span></span>
-          </div>
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">ui.tint</span>
-            <span class="ext-swatch" style="background:#e0e6d7"></span>
-            <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #e0e6d7</span></span>
-          </div>
-          <div class="ext-row ext-row--inherited">
-            <span class="ext-key">brand.ink</span>
-            <span class="ext-swatch" style="background:#1d1c1c"></span>
-            <span class="ext-val">base <span class="ext-resolved">→ #1d1c1c</span></span>
-          </div>
-          <div class="ext-row ext-row--inherited">
-            <span class="ext-key">brand.paper</span>
-            <span class="ext-swatch" style="background:#fcf6ee"></span>
-            <span class="ext-val">base <span class="ext-resolved">→ #fcf6ee</span></span>
-          </div>
-        </div>
-      </div>
-      <figcaption>One override. Everything derived from it follows; the rest stays dim.</figcaption>
-    </figure>
-  </div>
-
-  <div class="extends-feature-body feature-sub">
-    <div class="extends-feature-text">
-      <h3 id="scope-extends-title"><em>Or inherit</em> inside one book.</h3>
-      <p>
-        When both variants live side by side, a scope can extend another.
-        Every token cascades through unless you redefine it locally — and
-        the dependency graph still knows: change a parent token and every
-        descendant that inherits it recomputes. The editor dims inherited
-        rows, so only the changes are bright. Inherited references keep
-        pointing at the keys they name, so reach for layers once a theme
-        has to re-route what is derived from a root.
-      </p>
-      <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
+    <div class="extends-feature-body" id="theme-extends" role="tabpanel" aria-labelledby="tab-theme-extends" tabindex="0">
+      <div class="extends-feature-text">
+        <p>
+          <strong>Inside one book.</strong> When both variants live side by
+          side, a scope can extend another.
+          Every token cascades through unless you redefine it locally — and
+          the dependency graph still knows: change a parent token and every
+          descendant that inherits it recomputes. The editor dims inherited
+          rows, so only the changes are bright. Inherited references keep
+          pointing at the keys they name, so reach for layers once a theme
+          has to re-route what is derived from a root.
+        </p>
+        <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
 light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
@@ -703,44 +711,45 @@ light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span 
 });
 dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
 dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));</code></pre>
-    </div>
-
-    <figure class="extends-stage">
-      <div class="extends-pane">
-        <div class="extends-pane-head">
-          <span class="extends-pane-name">dark</span>
-          <span class="extends-pane-meta">extends <code>light</code></span>
-        </div>
-        <div class="extends-rows">
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">bg</span>
-            <span class="ext-swatch" style="background:#1a1a1a"></span>
-            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>)</span>
-          </div>
-          <div class="ext-row ext-row--override">
-            <span class="ext-key">text</span>
-            <span class="ext-swatch" style="background:#f5f5f5"></span>
-            <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>)</span>
-          </div>
-          <div class="ext-row ext-row--inherited">
-            <span class="ext-key">primary</span>
-            <span class="ext-swatch" style="background:#0066cc"></span>
-            <span class="ext-val">inherit <span class="ext-resolved">→ #0066cc</span></span>
-          </div>
-          <div class="ext-row ext-row--inherited">
-            <span class="ext-key">accent</span>
-            <span class="ext-swatch" style="background:#ff8800"></span>
-            <span class="ext-val">inherit <span class="ext-resolved">→ #ff8800</span></span>
-          </div>
-          <div class="ext-row ext-row--inherited">
-            <span class="ext-key">muted</span>
-            <span class="ext-swatch" style="background:#888888"></span>
-            <span class="ext-val">inherit <span class="ext-resolved">→ #888888</span></span>
-          </div>
-        </div>
       </div>
-      <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
-    </figure>
+
+      <figure class="extends-stage">
+        <div class="extends-pane">
+          <div class="extends-pane-head">
+            <span class="extends-pane-name">dark</span>
+            <span class="extends-pane-meta">extends <code>light</code></span>
+          </div>
+          <div class="extends-rows">
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">bg</span>
+              <span class="ext-swatch" style="background:#1a1a1a"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>)</span>
+            </div>
+            <div class="ext-row ext-row--override">
+              <span class="ext-key">text</span>
+              <span class="ext-swatch" style="background:#f5f5f5"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>)</span>
+            </div>
+            <div class="ext-row ext-row--inherited">
+              <span class="ext-key">primary</span>
+              <span class="ext-swatch" style="background:#0066cc"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #0066cc</span></span>
+            </div>
+            <div class="ext-row ext-row--inherited">
+              <span class="ext-key">accent</span>
+              <span class="ext-swatch" style="background:#ff8800"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #ff8800</span></span>
+            </div>
+            <div class="ext-row ext-row--inherited">
+              <span class="ext-key">muted</span>
+              <span class="ext-swatch" style="background:#888888"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #888888</span></span>
+            </div>
+          </div>
+        </div>
+        <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
+      </figure>
+    </div>
   </div>
 
   <div class="typo-feature-body feature-sub">

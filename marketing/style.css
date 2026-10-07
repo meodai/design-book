@@ -1318,7 +1318,7 @@ h1, h2, h3 {
   display: inline-flex;
   cursor: pointer;
 }
-.order-modes {
+.order-modes, .extends-modes {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -1327,7 +1327,7 @@ h1, h2, h3 {
   border: 1px solid var(--rule);
   border-radius: 0;
 }
-.order-modes button {
+.order-modes button, .extends-modes button {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.02em;
@@ -1339,12 +1339,12 @@ h1, h2, h3 {
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.order-modes button:hover { color: var(--text); }
-.order-modes button.is-active {
+.order-modes button:hover, .extends-modes button:hover { color: var(--text); }
+.order-modes button.is-active, .extends-modes button.is-active {
   background: var(--accent);
   color: #fff;
 }
-.order-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.order-modes button:focus-visible, .extends-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* One row, always: the point is a single continuous order, so the
    swatches shrink rather than wrap. */
 .order-swatches {
@@ -1678,6 +1678,26 @@ h1, h2, h3 {
   }
   .extends-stage { align-self: start; }
 }
+.extends-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: clamp(20px, 2.4vw, 32px);
+}
+.extends-head h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0;
+}
+/* Both panels share one grid cell, so the block is as tall as the
+   taller one and switching never shifts the page below it. */
+.extends-panels { display: grid; grid-template-columns: minmax(0, 1fr); }
+.extends-panels > [role="tabpanel"] { grid-area: 1 / 1; min-width: 0; }
+.extends-panels > [role="tabpanel"]:not(.is-active) { visibility: hidden; }
+.extends-panels > [role="tabpanel"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.extends-feature-text strong { font-weight: 600; }
 .extends-feature-text { max-width: 56ch; }
 .extends-feature-text :is(h2, h3) {
   font-size: clamp(28px, 3.4vw, 40px);
