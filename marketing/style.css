@@ -25,7 +25,7 @@
    not stretch a column wider than the phone. */
 :where(.fn-body, .graph, .hero, .ramp-feature-body, .order-feature-body,
        .mix-feature-body, .typo-feature-body, .extends-feature-body,
-       .readable-feature-body) {
+       .readable-feature-body, .names-feature-body) {
   grid-template-columns: minmax(0, 1fr);
 }
 
