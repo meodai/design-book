@@ -28,9 +28,16 @@ type BookWithScope = BookLike & {
 export { assertValidTokenKey } from './keys';
 import { assertValidTokenKey } from './keys';
 
+/** See `Scope.metadata`. */
+export type ScopeMetadata = Record<string, unknown>;
+
 export class Scope {
   readonly name: string;
   readonly description?: string;
+  /** Free-form data the user attaches to the scope. The book never reads it
+   *  and it is not inherited through `extends`; the css-variables renderer
+   *  reads one key, `media` (a breakpoint name or a media query). */
+  readonly metadata: ScopeMetadata;
   /** Stored compose marker; the public getter walks the extends chain. */
   private _compose?: string;
   private extendsName?: string;
@@ -56,11 +63,12 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string; compose?: string }
+    options?: { extends?: string; description?: string; compose?: string; metadata?: ScopeMetadata }
   ) {
     this.name = name;
     this.book = book;
     this.description = options?.description;
+    this.metadata = { ...options?.metadata };
     this.extendsName = options?.extends;
     this._compose = options?.compose;
     this.tokens = new Map();

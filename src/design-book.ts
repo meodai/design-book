@@ -233,7 +233,7 @@ export class DesignBook {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
+    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._linkInheritedKeysOf(name);
@@ -255,7 +255,7 @@ export class DesignBook {
   addTypography(
     name: string,
     properties: Record<string, AnyTokenValue | string>,
-    options?: { extends?: string; description?: string },
+    options?: { extends?: string; description?: string; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     const scope = this.addScope(name, { ...options, compose: 'typography' });
     for (const [key, value] of Object.entries(properties)) {

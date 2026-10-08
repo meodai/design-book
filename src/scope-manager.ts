@@ -13,9 +13,10 @@ export class ScopeManager {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder },
+    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     this.validateScopeName(name);
+    this.validateMetadata(name, options?.metadata);
     this.validateExtends(name, options?.extends);
     if (this.scopes.has(name)) {
       throw new ScopeError(`Scope "${name}" already exists`, name);
@@ -37,6 +38,14 @@ export class ScopeManager {
         `Invalid scope name "${name}": "." separates scope from token and cannot appear in a scope name`,
         name,
       );
+    }
+  }
+
+  private validateMetadata(name: string, metadata: unknown): void {
+    if (metadata === undefined) return;
+    const proto = metadata !== null && typeof metadata === 'object' ? Object.getPrototypeOf(metadata) : undefined;
+    if (proto !== Object.prototype && proto !== null) {
+      throw new ScopeError(`Scope "${name}": metadata must be a plain object`, name);
     }
   }
 

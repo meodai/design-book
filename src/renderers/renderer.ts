@@ -5,6 +5,7 @@ import { registerBuiltinFunctionRenderers } from './function-renderers';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/scope-colors';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
+import type { Scope } from '../scope';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
 export type FunctionRendererOptions = Record<string, unknown>;
@@ -20,6 +21,11 @@ export interface RendererOptions {
   selector?: string;
   /** css-variables: wrap the output in `@media <media> { … }`. */
   media?: string;
+  /** css-variables: breakpoint names a scope's `metadata.media` can use,
+   *  name → media query. A scope with a `media` renders in its own
+   *  `@media` block; blocks follow this table's order, then raw queries in
+   *  scope order. */
+  breakpoints?: Readonly<Record<string, string>>;
   /** css-variables / json: only these scopes. */
   scopes?: readonly string[];
   /** css-variables / json: only what differs from another book — the way a
@@ -70,6 +76,13 @@ export type ResolvedTokenMap = Record<string, string>;
 export type W3DesignTokensMap = Record<string, Record<string, W3TokenEntry>>;
 
 const toRgb = converter('rgb');
+
+/** Media types a scope's `metadata.media` may name without a breakpoint. */
+const MEDIA_TYPES = new Set(['all', 'print', 'screen']);
+
+function wrapMedia(media: string, body: string): string {
+  return `@media ${media} {\n${body.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n')}\n}`;
+}
 
 /** CSS units that make a numeric token a W3 `duration` rather than a
  *  `dimension`. */
@@ -270,9 +283,9 @@ export class Renderer {
   }
 
   /** One `--scope-key: value` declaration per token, in book order. */
-  private cssDeclarations(): CssDeclaration[] {
+  private cssDeclarations(scopes = this.scopesToRender()): CssDeclaration[] {
     const out: CssDeclaration[] = [];
-    for (const scope of this.scopesToRender()) {
+    for (const scope of scopes) {
       for (const key of scope.getAllKeys()) {
         const token = scope.get(key);
         if (!token) continue;
@@ -309,42 +322,93 @@ export class Renderer {
     return r;
   }
 
+  /** The media query a scope's `metadata.media` names: a key of the
+   *  `breakpoints` option, a media type, or a query used as is. */
+  private scopeMedia(scope: Scope): string | undefined {
+    const media = scope.metadata.media;
+    if (media === undefined) return undefined;
+    if (typeof media !== 'string' || media.trim() === '') {
+      throw new Error(`Renderer: scope "${scope.name}" metadata.media must be a non-empty string`);
+    }
+    const table = this.options.breakpoints;
+    if (table && Object.prototype.hasOwnProperty.call(table, media)) return table[media];
+    // A bare word that is not a media type reads as a breakpoint name, so a
+    // typo throws instead of writing `@media lgg`.
+    if (/^[A-Za-z_][\w-]*$/.test(media) && !MEDIA_TYPES.has(media)) {
+      throw new Error(`Renderer: unknown breakpoint "${media}" on scope "${scope.name}" — add it to the breakpoints option`);
+    }
+    return media;
+  }
+
+  /** Rendered scopes grouped by media query: no media first, then the
+   *  `breakpoints` table's order, then raw queries in scope order. */
+  private scopesByMedia(): [string | undefined, Scope[]][] {
+    const groups = new Map<string | undefined, Scope[]>([[undefined, []]]);
+    for (const scope of this.scopesToRender()) {
+      const media = this.scopeMedia(scope);
+      if (!groups.has(media)) groups.set(media, []);
+      groups.get(media)!.push(scope);
+    }
+    const tableOrder = Object.values(this.options.breakpoints ?? {});
+    const rank = (media: string | undefined) => {
+      if (media === undefined) return -1;
+      const i = tableOrder.indexOf(media);
+      return i === -1 ? tableOrder.length : i;
+    };
+    return [...groups].sort(([a], [b]) => rank(a) - rank(b));
+  }
+
   private renderCssVariables(): string {
     this.assertNoVarNameCollisions();
 
-    let declarations = this.cssDeclarations();
     const base = this.options.changedFrom;
-    if (base) {
-      const before = new Map(this.rendererFor(base).cssDeclarations().map((d) => [d.prop, d.value]));
-      declarations = declarations.filter((d) => before.get(d.prop) !== d.value);
-    }
+    const before = base
+      ? new Map(this.rendererFor(base).cssDeclarations().map((d) => [d.prop, d.value]))
+      : undefined;
 
-    const blocks: string[][] = [[
-      `${this.options.selector ?? ':root'} {`,
-      ...declarations.map((d) => `  ${d.prop}: ${d.value};`),
-      '}',
-    ]];
+    const groups = this.scopesByMedia();
+    const hasMediaGroups = groups.length > 1;
+    const sections: string[] = [];
 
-    // For each composed-as-typography scope, emit a class block that
-    // re-aggregates the scope's tokens into CSS properties. Each property
-    // points back at the corresponding `--scope-key` custom property, so a
-    // variation (changedFrom) never needs to repeat them.
-    if (!base) {
-      for (const scope of this.scopesToRender()) {
-        if (scope.compose !== 'typography') continue;
-        const keys = scope.getAllKeys();
-        if (keys.length === 0) continue;
+    for (const [media, scopes] of groups) {
+      let declarations = this.cssDeclarations(scopes);
+      if (before) declarations = declarations.filter((d) => before.get(d.prop) !== d.value);
+
+      const blocks: string[][] = [];
+      // The plain `:root` block stays even when empty, as before media
+      // groups existed — unless every rendered scope has a media.
+      if (declarations.length > 0 || (media === undefined && (scopes.length > 0 || !hasMediaGroups))) {
         blocks.push([
-          `.${this.options.classPrefix}${scope.name} {`,
-          ...keys.map((key) => `  ${camelToKebab(key)}: var(--${keyToHyphen(scope.name)}-${keyToHyphen(key)});`),
+          `${this.options.selector ?? ':root'} {`,
+          ...declarations.map((d) => `  ${d.prop}: ${d.value};`),
           '}',
         ]);
       }
+
+      // For each composed-as-typography scope, emit a class block that
+      // re-aggregates the scope's tokens into CSS properties. Each property
+      // points back at the corresponding `--scope-key` custom property, so a
+      // variation (changedFrom) never needs to repeat them.
+      if (!base) {
+        for (const scope of scopes) {
+          if (scope.compose !== 'typography') continue;
+          const keys = scope.getAllKeys();
+          if (keys.length === 0) continue;
+          blocks.push([
+            `.${this.options.classPrefix}${scope.name} {`,
+            ...keys.map((key) => `  ${camelToKebab(key)}: var(--${keyToHyphen(scope.name)}-${keyToHyphen(key)});`),
+            '}',
+          ]);
+        }
+      }
+
+      if (blocks.length === 0) continue;
+      const body = blocks.map((b) => b.join('\n')).join('\n\n');
+      sections.push(media === undefined ? body : wrapMedia(media, body));
     }
 
-    const body = blocks.map((b) => b.join('\n')).join('\n\n');
-    if (!this.options.media) return body;
-    return `@media ${this.options.media} {\n${body.split('\n').map((l) => (l ? `  ${l}` : l)).join('\n')}\n}`;
+    const body = sections.join('\n\n');
+    return this.options.media ? wrapMedia(this.options.media, body) : body;
   }
 
   private renderJson(): string {
