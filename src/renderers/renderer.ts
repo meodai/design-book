@@ -2,7 +2,7 @@ import { DesignBook } from '../design-book';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
-import { isTypographyToken } from '../functions/non-color/typography';
+import { isTypographyToken, typographyBase, typographyFieldNames } from '../functions/non-color/typography';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/scope-colors';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
@@ -281,14 +281,7 @@ export class Renderer {
   /** The field names when `token` is a `typography()` token or a ref (chain)
    *  that ends at one; `undefined` otherwise. */
   private typographyFieldsOf(token: AnyTokenValue | undefined): string[] | undefined {
-    const seen = new Set<string>();
-    while (token && token.type === 'reference') {
-      const key = (token as ReferenceValue).key;
-      if (seen.has(key)) return undefined;
-      seen.add(key);
-      token = this.book.getTokenByKey(key);
-    }
-    return isTypographyToken(token) ? token.options?.fields : undefined;
+    return typographyFieldNames(this.book, token);
   }
 
   /** The scopes to render: all, or the `scopes` option (unknown names throw). */
@@ -314,11 +307,18 @@ export class Renderer {
 
         // A typography has no single CSS value: one variable per field. A
         // ref to one points each field at the target's field variable.
+        // A variant's inherited fields point at its base's variables.
         const typo = isTypographyToken(token) ? token : undefined;
         if (typo) {
-          typo.options?.fields.forEach((field: string, i: number) => {
-            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value: argToCssValue(this, typo.args[i]) });
-          });
+          const own: string[] = typo.options?.fields ?? [];
+          const base = typographyBase(typo);
+          for (const field of this.typographyFieldsOf(typo) ?? []) {
+            const i = own.indexOf(field);
+            const value = i === -1
+              ? `var(--${keyToHyphen(base!)}-${keyToHyphen(field)})`
+              : argToCssValue(this, typo.args[i]);
+            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value });
+          }
           continue;
         }
         const refFields = token.type === 'reference' ? this.typographyFieldsOf(token) : undefined;
@@ -558,7 +558,7 @@ export class Renderer {
         } else if (token.type === 'reference') {
           entry.$value = `{${(token as ReferenceValue).key}}`;
         } else if (isTypographyToken(token as unknown)) {
-          entry.$value = this.formatW3TypographyToken(token as FunctionTokenValue);
+          entry.$value = this.formatW3TypographyToken(`${scope.name}.${key}`, this.typographyFieldsOf(token) ?? []);
         } else if (token.type === 'function' && (token as FunctionTokenValue).name === 'timing') {
           entry.$value = this.formatW3Transition(token as FunctionTokenValue);
         } else {
@@ -617,6 +617,10 @@ export class Renderer {
   private typographyPropertyOf(qualifiedKey: string): string | undefined {
     const dot = qualifiedKey.indexOf('.');
     if (dot === -1) return undefined;
+    // `scope.token.field` reads a field of a typography() token, which only
+    // exists inside its composite — W3 has no alias syntax for that.
+    const fieldDot = qualifiedKey.indexOf('.', dot + 1);
+    if (fieldDot !== -1) return qualifiedKey.slice(fieldDot + 1);
     const target = this.book.getScope(qualifiedKey.slice(0, dot));
     return target?.compose === 'typography' ? qualifiedKey.slice(dot + 1) : undefined;
   }
@@ -632,11 +636,11 @@ export class Renderer {
   }
 
   /** Build the W3 `typography` composite from a `typography()` token. */
-  private formatW3TypographyToken(fn: FunctionTokenValue): W3TypographyValue {
+  private formatW3TypographyToken(qualifiedKey: string, fields: string[]): W3TypographyValue {
     const composite: W3TypographyValue = {};
-    (fn.options?.fields ?? []).forEach((field: string, i: number) => {
-      composite[field] = formatW3TypographyProperty(field, String(this.resolveFunctionArg(fn.args[i]))).value;
-    });
+    for (const field of fields) {
+      composite[field] = formatW3TypographyProperty(field, this.book.resolve(`${qualifiedKey}.${field}`)).value;
+    }
     return composite;
   }
 

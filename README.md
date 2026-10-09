@@ -541,9 +541,30 @@ Any field name is allowed (it must be a valid token key). The CSS renderer write
 
 W3 output is the native composite (`"type": { "title": { "$type": "typography", "$value": { … } } }`), and a ref to it an alias (`"$value": "{type.body}"`). JSON writes the resolved declarations.
 
-`withFields(token, overrides)` copies a typography with some fields replaced or added — what a theme or breakpoint layer uses to change one text style, since a token cannot `ref()` the value it replaces:
+### One field: `ref('scope.token.field')`
+
+A third key segment reads one field. It depends on the whole typography in the graph, follows refs to it, and renders as the field's variable:
 
 ```typescript
+callout.set('size', ref('type.title.fontSize'));   // --callout-size: var(--type-title-font-size);
+book.resolve('button.label.lineHeight');            // '1.5' (button.label is a ref to type.body)
+```
+
+W3 has no alias syntax for a value inside a composite, so W3 output writes the resolved field with its type.
+
+### Changing some fields: `withFields`
+
+`withFields(base, overrides)` changes some fields of a typography; `null` drops one.
+
+- Pass a **ref** for a live **variant**: the fields it doesn't set keep reading the base, so it follows every later change to it — including in breakpoint books. Inherited fields render as `var()` of the base's variables.
+- Pass the **token** for a **copy**: what a theme or breakpoint layer uses to change a style in place, since a token cannot `ref()` the value it replaces (trying to is rejected with a hint).
+
+```typescript
+type.set('hero', withFields(ref('type.title'), { fontWeight: '800' }));
+// --type-hero-font-family: var(--type-title-font-family);
+// --type-hero-font-size: var(--type-title-font-size);
+// --type-hero-font-weight: 800;
+
 const phone = layer('phone', (book) => {
   book.getScope('type').set('title', withFields(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
 });

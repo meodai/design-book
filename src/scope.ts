@@ -27,6 +27,7 @@ type BookWithScope = BookLike & {
 // The key check lives in ./keys so design-book/naming can use it alone.
 export { assertValidTokenKey } from './keys';
 import { assertValidTokenKey } from './keys';
+import { isTypographyToken, typographyBase, typographyFieldNames } from './functions/non-color/typography';
 
 /** See `Scope.metadata`. */
 export type ScopeMetadata = Record<string, unknown>;
@@ -120,6 +121,13 @@ export class Scope {
 
   set(name: string, value: AnyTokenValue): void {
     assertValidTokenKey(this.name, name);
+    const qualified = `${this.name}.${name}`;
+    if (isTypographyToken(value) && typographyBase(value) === qualified) {
+      const error = new CircularDependencyError([qualified, qualified]);
+      error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +
+        `pass the token instead: withFields(book.getTokenByKey("${qualified}"), …)`;
+      throw error;
+    }
     const oldValue = this.tokens.get(name);
     const existed = this.tokens.has(name);
     this.tokens.set(name, value);
@@ -407,6 +415,8 @@ export class Scope {
   }
 
   resolve(name: string): string {
+    const fieldDot = name.indexOf('.');
+    if (fieldDot !== -1) return this.resolveField(name.slice(0, fieldDot), name.slice(fieldDot + 1));
     const token = this.get(name);
     if (!token) {
       throw new Error(`Token "${name}" not found in scope "${this.name}"`);
@@ -438,36 +448,69 @@ export class Scope {
     }
   }
 
+  /** One field of the typography `name` holds (`ref('type.title.fontSize')`):
+   *  follows a ref to the typography, and a variant's base for the fields
+   *  it doesn't set. */
+  private resolveField(name: string, field: string): string {
+    const token = this.get(name);
+    const qualified = `${this.name}.${name}`;
+    if (!token) throw new Error(`Token "${name}" not found in scope "${this.name}"`);
+    if (token.type === 'reference') {
+      return this.book.resolve(`${(token as ReferenceValue).key}.${field}`);
+    }
+    if (!isTypographyToken(token) || field.includes('.')) {
+      throw new TokenError(`"${qualified}" is not a typography, so "${qualified}.${field}" names no field`, `${qualified}.${field}`);
+    }
+    if (!typographyFieldNames(this.book, token)?.includes(field)) {
+      throw new TokenError(`"${qualified}" has no field "${field}"`, `${qualified}.${field}`);
+    }
+    const own = (token.options?.fields as string[]).indexOf(field);
+    if (own === -1) return this.book.resolve(`${typographyBase(token)}.${field}`);
+
+    const guard = `${name}.${field}`;
+    if (this.resolving.has(guard)) throw new CircularDependencyError([`${qualified}.${field}`, `${qualified}.${field}`]);
+    this.resolving.add(guard);
+    try {
+      return String(this.resolveArg(token.args[own]));
+    } finally {
+      this.resolving.delete(guard);
+    }
+  }
+
   /** Resolve a function token, recursing into any nested function-token
    *  arguments. Function tokens don't live in a scope as named entries —
    *  they're inlined as args — so they're invoked directly through the
    *  book's function registry rather than via `book.resolve`. */
   private resolveFunctionToken(fn: FunctionTokenValue): string {
-    const resolvedArgs = fn.args.map((arg: FunctionArg) => {
-      if (isReferenceValue(arg)) {
-        return this.book.resolve((arg as ReferenceValue).key);
-      }
-      if (isFunctionTokenValue(arg)) {
-        return this.resolveFunctionToken(arg);
-      }
-      if (isTokenValue(arg)) {
-        const tv = arg as TokenValue;
-        if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
-        return String(tv.rawValue);
-      }
-      if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
-        // A scope argument names a scope; the object captured at construction
-        // dies with `deleteScope`. Read whichever scope holds that name now.
-        const live = this.book.getScope((arg as ScopeFunctionArg).name);
-        return live ?? arg;
-      }
-      return arg;
-    });
+    const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveArg(arg));
     const implementation = this.book.getFunction(fn.name);
     if (!implementation) {
       throw new Error(`Function "${fn.name}" is not registered`);
     }
     return implementation(...resolvedArgs, fn.options);
+  }
+
+  /** A function argument's value: refs and nested functions resolved, a
+   *  scope argument looked up by name, anything else as is. */
+  private resolveArg(arg: FunctionArg): unknown {
+    if (isReferenceValue(arg)) {
+      return this.book.resolve((arg as ReferenceValue).key);
+    }
+    if (isFunctionTokenValue(arg)) {
+      return this.resolveFunctionToken(arg);
+    }
+    if (isTokenValue(arg)) {
+      const tv = arg as TokenValue;
+      if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
+      return String(tv.rawValue);
+    }
+    if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
+      // A scope argument names a scope; the object captured at construction
+      // dies with `deleteScope`. Read whichever scope holds that name now.
+      const live = this.book.getScope((arg as ScopeFunctionArg).name);
+      return live ?? arg;
+    }
+    return arg;
   }
 }
 

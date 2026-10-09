@@ -171,12 +171,20 @@ export function string(value: string, options?: { description?: string; [key: st
   return val({ type: 'string', rawValue: value }, options);
 }
 
+/** The `scope.token` a key reads: a field ref (`type.title.fontSize`)
+ *  depends on the whole token, so the graph only ever sees token keys. */
+export function tokenKeyOf(key: string): string {
+  const first = key.indexOf('.');
+  const second = first === -1 ? -1 : key.indexOf('.', first + 1);
+  return second === -1 ? key : key.slice(0, second);
+}
+
 /** Keys the args read as values, each listed once in first-seen order. */
 export function extractDependencies(args: FunctionArg[]): string[] {
   const deps = new Set<string>();
   for (const arg of args) {
     if (isReferenceValue(arg)) {
-      deps.add(arg.key);
+      deps.add(tokenKeyOf(arg.key));
     } else if (isFunctionTokenValue(arg)) {
       // Nested function token — its dependencies are transitively this
       // function's dependencies, so the graph propagates correctly. Include
@@ -194,7 +202,7 @@ export function extractDependencies(args: FunctionArg[]): string[] {
  *  A token built with `createFunctionToken` and no metadata still gets the
  *  edges its args imply. Deduplicated, first-seen order. */
 export function functionDependencies(fn: FunctionTokenValue): string[] {
-  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? [])])];
+  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? []).map(tokenKeyOf)])];
 }
 
 /** Normalises a `not` option into an array of fully-qualified token keys.

@@ -72,7 +72,7 @@ describe('withFields()', () => {
   });
 
   it('throws on anything that is not a typography token', () => {
-    expect(() => withFields(ref('type.a'), {})).toThrow(FunctionError);
+    expect(() => withFields(rem(1), {})).toThrow(FunctionError);
     expect(() => withFields(undefined, {})).toThrow(FunctionError);
   });
 });

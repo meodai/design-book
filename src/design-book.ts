@@ -7,7 +7,8 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { functionDependencies, iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken } from './tokens';
+import { functionDependencies, iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken, tokenKeyOf } from './tokens';
+import { typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -366,6 +367,12 @@ export class DesignBook {
     const tokenName = key.substring(dotIndex + 1);
     const scope = this.scopeManager.getScope(scopeName);
     if (!scope) return false;
+    const fieldDot = tokenName.indexOf('.');
+    if (fieldDot !== -1) {
+      // `scope.token.field`: a field of the typography the token holds
+      const names = typographyFieldNames(this, scope.get(tokenName.slice(0, fieldDot)));
+      return names?.includes(tokenName.slice(fieldDot + 1)) ?? false;
+    }
     return scope.has(tokenName);
   }
 
@@ -786,7 +793,7 @@ export class DesignBook {
   private _extractDepsFromValue(value: any): string[] {
     if (!value || typeof value !== 'object') return [];
     if (value.type === 'reference') {
-      return [(value as ReferenceValue).key];
+      return [tokenKeyOf((value as ReferenceValue).key)];
     }
     if (value.type === 'function') {
       return functionDependencies(value as FunctionTokenValue);

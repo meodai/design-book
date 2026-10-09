@@ -21,6 +21,7 @@ import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
 import { siblingImpl, scopeOfKey } from './generic/sibling';
 import type { Scope } from '../scope';
+import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
 import { splitReadableArgs } from './color/readable';
 
@@ -41,8 +42,8 @@ export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
-export { typography, withFields, isTypographyToken, typographyFields } from './non-color/typography';
-export type { TypographyField, TypographyFields } from './non-color/typography';
+export { typography, withFields, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
+export type { TypographyField, TypographyFields, TypographyOverrides } from './non-color/typography';
 export { timing } from './non-color/timing';
 export { nextLarger } from './non-color/next-larger';
 export { nextSmaller } from './non-color/next-smaller';
@@ -57,6 +58,9 @@ export function registerBuiltinFunctions(book: {
 	registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
 	/** `sibling` looks up the scope its anchor key lives in. */
 	getScope(name: string): Scope | undefined;
+	/** A typography variant reads its base's fields. */
+	resolve(key: string): string;
+	getTokenByKey(key: string): AnyTokenValue | undefined;
 }): void {
 	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[] }) =>
 		bestContrastWithImpl(targetValue, scope, options?.not ?? []),
@@ -64,7 +68,7 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[] }) =>
 		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, options?.not ?? []),
 	);
-	book.registerFunction('typography', typographyImpl);
+	book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
 		colorMixImpl(color1, color2, options?.ratio ?? 0.5, options?.colorSpace ?? 'lab'),
 	);
