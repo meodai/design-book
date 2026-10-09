@@ -1,7 +1,7 @@
 import {
   DesignBook, color, ref, px, rem, ms, string,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
-  spacingScale, typographyScale,
+  spacingScale, typographyScale, typography, withFields,
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
   Renderer, SVGRenderer, TableViewRenderer,
@@ -102,22 +102,24 @@ function bootDesignSystem() {
   // on the page — the softest usable text color.
   ui.set('text-soft', lightest(gray, { readableOn: ref('semantic.background') }));  // → g500
 
-  // Font families — plain string tokens reused by typography scopes.
+  // Font families — plain string tokens reused by the text styles.
   const fonts = book.addScope('fonts');
   fonts.set('sans', string('"Inter", system-ui, sans-serif'));
   fonts.set('serif', string('"Source Serif Pro", Georgia, serif'));
 
-  // Typography style — a *scope* tagged with compose: 'typography'.
-  // Each property stays a real token (refs participate in the graph), and
-  // renderers re-aggregate the scope into a CSS class or a W3 typography
-  // composite at output time.
-  book.addTypography('display', {
+  // Text styles — one typography() token each. Field refs are graph edges;
+  // renderers write a variable per field plus a CSS class, and a W3
+  // typography composite.
+  const type = book.addScope('type');
+  type.set('display', typography({
     fontFamily:    ref('fonts.serif'),
     fontSize:      ref('ui.heading-lg'),
     fontWeight:    '700',
-    lineHeight:    '1.15',
+    lineHeight:    1.15,
     letterSpacing: '-0.02em',
-  });
+  }));
+  // A live variant: every field it doesn't set keeps reading type.display.
+  type.set('display-sans', withFields(ref('type.display'), { fontFamily: ref('fonts.sans') }));
 
   // Dark theme extending brand — neutrals flow through the semantic
   // layer so the inversion is visible as a graph edge instead of a
@@ -408,7 +410,29 @@ function serializeArg(arg: any): string {
   return String(arg);
 }
 
+/** One typography field value, the way it is typed: quoted strings, bare
+ *  numbers, constructors and refs. */
+function serializeField(value: any): string {
+  if (typeof value === 'string') return quote(value);
+  return serializeArg(value);
+}
+
+/** typography({ … }) and withFields(ref('…'), { … }) keep their field names
+ *  in fn.options; print them back as object literals. */
+function serializeTypography(fn: any): string {
+  const names: string[] = fn.options?.fields ?? [];
+  const pairs = names.map((name, i) => `${name}: ${serializeField(fn.args[i])}`);
+  for (const name of fn.options?.removed ?? []) pairs.push(`${name}: null`);
+  const fields = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
+  const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
+  return fn.options?.base
+    ? `withFields(ref('${fn.options.base}'), ${fields}${tail})`
+    : `typography(${fields}${tail})`;
+}
+
 function serializeFunctionToken(fn: any): string {
+  if (fn.name === 'typography') return serializeTypography(fn);
+
   // sibling keeps its anchor key in fn.options (it needs the key's position,
   // not its value); print it the way it is typed.
   if (fn.name === 'sibling' && fn.options?.from) {

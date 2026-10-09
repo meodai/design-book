@@ -7,6 +7,7 @@ import {
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   nth, random, sibling,
+  typography, withFields,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
 import { parse } from 'culori';
@@ -327,6 +328,31 @@ function getScopeArg(parsed: ReturnType<typeof parseArg>): Scope {
   throw new Error(`Expected scope name (e.g. "brand"), got "${parsed.type === 'token' ? 'token value' : parsed.type}"`);
 }
 
+/** An object literal of typography fields: `{ name: value, … }`. A value is
+ *  a token or ref (as in any argument), a quoted string, a number, or — for
+ *  withFields — `null` to drop the field. */
+function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: boolean): Record<string, any> {
+  const body = str.trim().replace(/^\{/, '').replace(/\}$/, '');
+  const fields: Record<string, any> = {};
+  for (const entry of splitArgs(body)) {
+    const colon = entry.indexOf(':');
+    if (colon === -1) throw new Error(`Expected "name: value", got "${entry}"`);
+    const name = entry.slice(0, colon).trim().replace(/^['"]|['"]$/g, '');
+    const value = entry.slice(colon + 1).trim();
+    if (value === 'null') {
+      if (!allowNull) throw new Error(`Field "${name}" needs a value`);
+      fields[name] = null;
+    } else if (/^(['"]).*\1$/s.test(value)) {
+      fields[name] = parseQuotedString(value);
+    } else if (/^[+-]?(\d+\.?\d*|\.\d+)$/.test(value)) {
+      fields[name] = parseFloat(value);
+    } else {
+      fields[name] = getTokenArg(parseArg(value, book));
+    }
+  }
+  return fields;
+}
+
 // --- Function parsers ---
 
 type FuncParser = (argsStr: string, book?: DesignBook, currentScope?: Scope) => AnyTokenValue;
@@ -387,6 +413,29 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const color = getTokenArg(parseArg(args[0], book));
     const options = args.length > 1 ? parseOptionsArg(args.slice(1).join(',')) : undefined;
     return shade(color, options);
+  },
+
+  // typography({ fontFamily: ref('fonts.sans'), fontSize: rem(2), lineHeight: 1.5 }, { description }?)
+  typography(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1 || !args[0].startsWith('{')) {
+      throw new Error("typography requires an object of fields: typography({ fontSize: rem(2) })");
+    }
+    const fields = parseFieldObject(args[0], book, false) as Record<string, any>;
+    const description = args.length > 1 ? parseOptionsArg(args.slice(1).join(','))?.description : undefined;
+    return typography(fields, description ? { description } : undefined);
+  },
+
+  // withFields(ref('type.title'), { fontWeight: '800', letterSpacing: null })
+  withFields(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2 || !args[1].startsWith('{')) {
+      throw new Error("withFields requires a base and an object of fields: withFields(ref('type.title'), { fontWeight: '800' })");
+    }
+    const base = getTokenArg(parseArg(args[0], book));
+    const token = withFields(base, parseFieldObject(args[1], book, true));
+    const description = args.length > 2 ? parseOptionsArg(args.slice(2).join(','))?.description : undefined;
+    return description ? { ...token, description } : token;
   },
 
   // ramp(seed, { shade: '500' })

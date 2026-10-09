@@ -39,8 +39,6 @@ export class Scope {
    *  and it is not inherited through `extends`; the css-variables renderer
    *  reads one key, `media` (a breakpoint name or a media query). */
   readonly metadata: ScopeMetadata;
-  /** Stored compose marker; the public getter walks the extends chain. */
-  private _compose?: string;
   private extendsName?: string;
   private tokens: Map<string, AnyTokenValue>;
   private referenceResolver: ReferenceResolver;
@@ -64,14 +62,13 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string; compose?: string; metadata?: ScopeMetadata }
+    options?: { extends?: string; description?: string; metadata?: ScopeMetadata }
   ) {
     this.name = name;
     this.book = book;
     this.description = options?.description;
     this.metadata = { ...options?.metadata };
     this.extendsName = options?.extends;
-    this._compose = options?.compose;
     this.tokens = new Map();
     this.referenceResolver = new ReferenceResolver(book);
   }
@@ -80,19 +77,6 @@ export class Scope {
    *  inherit from another scope. */
   get extendsScope(): string | undefined {
     return this.extendsName;
-  }
-
-  /** Optional marker that lets renderers re-aggregate the scope's tokens
-   *  into a composite output (e.g. a CSS class for a typography style or
-   *  a W3 `$type: 'typography'` token). Inherits through `extends` unless
-   *  the scope sets its own marker. Returns `undefined` if no scope in
-   *  the chain is composed. */
-  get compose(): string | undefined {
-    if (this._compose) return this._compose;
-    if (this.extendsName) {
-      return this.book.getScope(this.extendsName)?.compose;
-    }
-    return undefined;
   }
 
   get(name: string): AnyTokenValue | undefined {
@@ -297,7 +281,7 @@ export class Scope {
   }
 
   /** Local order if set, else the nearest ancestor's via `extends`, else
-   *  undefined. Mirrors how `compose` walks the chain. */
+   *  undefined. */
   getEffectiveOrder(): ScopeOrder | undefined {
     if (this._order !== undefined) return this._order;
     if (this.extendsName) {

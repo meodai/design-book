@@ -13,9 +13,9 @@ export type FunctionRendererOptions = Record<string, unknown>;
 export type FunctionRenderer = (args: FunctionArg[], options?: FunctionRendererOptions) => string;
 
 export interface RendererOptions {
-  /** Prefix added in front of CSS class names emitted for typography
-   *  (or other composed) scopes. Defaults to an empty string, so a
-   *  `heading-lg` scope renders as `.heading-lg { … }`. */
+  /** Prefix added in front of the CSS class emitted for each typography
+   *  token. Defaults to an empty string, so `type.heading` renders as
+   *  `.type-heading { … }`. */
   classPrefix?: string;
   /** css-variables: the rule the declarations go into (default `:root`) —
    *  `.inverted`, `[data-theme=dark]`, a brand class. */
@@ -424,13 +424,11 @@ export class Renderer {
         ]);
       }
 
-      // For each composed-as-typography scope, emit a class block that
-      // re-aggregates the scope's tokens into CSS properties. Each property
-      // points back at the corresponding `--scope-key` custom property, so a
-      // variation (changedFrom) never needs to repeat them.
+      // A class per typography token (or ref to one). Each property points
+      // back at its field variable, so a variation (changedFrom) never needs
+      // to repeat them.
       if (!base) {
         for (const scope of scopes) {
-          // A class per typography token (or ref to one), from its field variables.
           for (const key of scope.getAllKeys()) {
             const fields = this.typographyFieldsOf(scope.get(key)!);
             if (!fields) continue;
@@ -441,14 +439,6 @@ export class Renderer {
               '}',
             ]);
           }
-          if (scope.compose !== 'typography') continue;
-          const keys = scope.getAllKeys();
-          if (keys.length === 0) continue;
-          blocks.push([
-            `.${this.options.classPrefix}${scope.name} {`,
-            ...keys.map((key) => `  ${camelToKebab(key)}: var(--${keyToHyphen(scope.name)}-${keyToHyphen(key)});`),
-            '}',
-          ]);
         }
       }
 
@@ -488,43 +478,10 @@ export class Renderer {
     return JSON.stringify(this.renderW3DesignTokensObject(), null, 2);
   }
 
-  /** Typography-composed scopes are grouped under a top-level
-   *  `typography` key, so a plain scope of that name would be silently
-   *  overwritten (or merged into). Fail loudly, like the CSS collision check. */
-  private assertNoTypographyGroupClash(): void {
-    const scopes = this.book.getAllScopes();
-    const hasComposites = scopes.some((s) => s.compose === 'typography');
-    const plain = scopes.find((s) => s.name === 'typography' && s.compose !== 'typography');
-    if (hasComposites && plain) {
-      throw new Error(
-        'W3 group name collision: the plain scope "typography" clashes with the ' +
-        '"typography" group that typography-composed scopes are emitted under. ' +
-        'Rename the scope.'
-      );
-    }
-  }
-
   renderW3DesignTokensObject(): W3DesignTokensMap {
-    this.assertNoTypographyGroupClash();
     const result: W3DesignTokensMap = {};
 
     for (const scope of this.book.getAllScopes()) {
-      // Typography-composed scopes collapse to a single composite entry
-      // under a shared `typography` group, matching the W3 spec example
-      // of `typography.heading-1`.
-      if (scope.compose === 'typography') {
-        if (!result['typography']) {
-          result['typography'] = {};
-        }
-        const entry: W3TokenEntry = {
-          $value: this.formatW3Typography(scope.name, scope.getAllKeys()),
-          $type: 'typography',
-        };
-        if (scope.description) entry.$description = scope.description;
-        result['typography'][scope.name] = entry;
-        continue;
-      }
-
       if (!result[scope.name]) {
         result[scope.name] = {};
       }
@@ -549,9 +506,8 @@ export class Renderer {
           : undefined;
 
         if (typographyTarget !== undefined) {
-          // Keys of a typography-composed scope only exist inside the
-          // `typography.<scope>` composite, so an alias would point at
-          // nothing. Emit the resolved sub-value instead.
+          // A typography field only exists inside its composite, so an
+          // alias would point at nothing. Emit the resolved field instead.
           const formatted = formatW3TypographyProperty(typographyTarget, resolved);
           entry.$value = formatted.value;
           if (formatted.type) entry.$type = formatted.type;
@@ -612,27 +568,13 @@ export class Renderer {
     return internalType; // pass through for custom types
   }
 
-  /** The property name when `qualifiedKey` lives in a typography-composed
-   *  scope (and so is never emitted as a W3 token of its own). */
+  /** The field name when `qualifiedKey` is `scope.token.field`: a field of
+   *  a typography() token only exists inside its composite, and W3 has no
+   *  alias syntax for that. */
   private typographyPropertyOf(qualifiedKey: string): string | undefined {
     const dot = qualifiedKey.indexOf('.');
-    if (dot === -1) return undefined;
-    // `scope.token.field` reads a field of a typography() token, which only
-    // exists inside its composite — W3 has no alias syntax for that.
-    const fieldDot = qualifiedKey.indexOf('.', dot + 1);
-    if (fieldDot !== -1) return qualifiedKey.slice(fieldDot + 1);
-    const target = this.book.getScope(qualifiedKey.slice(0, dot));
-    return target?.compose === 'typography' ? qualifiedKey.slice(dot + 1) : undefined;
-  }
-
-  /** Build the W3 `typography` composite for a composed scope. */
-  private formatW3Typography(scopeName: string, keys: string[]): W3TypographyValue {
-    const composite: W3TypographyValue = {};
-    for (const key of keys) {
-      const resolved = resolveTokenValue(this.book, scopeName, key);
-      composite[key] = formatW3TypographyProperty(key, resolved).value;
-    }
-    return composite;
+    const fieldDot = dot === -1 ? -1 : qualifiedKey.indexOf('.', dot + 1);
+    return fieldDot === -1 ? undefined : qualifiedKey.slice(fieldDot + 1);
   }
 
   /** Build the W3 `typography` composite from a `typography()` token. */

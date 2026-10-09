@@ -15,7 +15,7 @@ export interface Layer {
 }
 
 /** Make a layer from a setup function (free to add scopes with `extends` /
- *  `compose`, register functions, build selectors, delete tokens) or from
+ *  register functions, build selectors, delete tokens) or from
  *  data (`{ brand: { highlight: color('#3f8f5a') } }`). Data layers create
  *  missing scopes, accept tokens only, and clone them on every apply so
  *  books built from one layer never share token objects. */

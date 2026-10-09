@@ -117,7 +117,26 @@ describe('typography: css-variables', () => {
   });
 });
 
+describe('typography: class names and fields', () => {
+  it('respects the classPrefix option', () => {
+    expect(buildBook().render('css-variables', { classPrefix: 't-' })).toContain('.t-type-title {');
+  });
+
+  it('writes any camelCase field as a kebab-case property', () => {
+    const book = new DesignBook('c');
+    book.addScope('type').set('caps', typography({ textTransform: 'uppercase', fontFeatureSettings: '"smcp"' }));
+    expect(book.render('css-variables')).toContain('.type-caps {\n  text-transform: var(--type-caps-text-transform);\n  font-feature-settings: var(--type-caps-font-feature-settings);\n}');
+  });
+});
+
 describe('typography: w3-design-tokens', () => {
+  it('carries the description as $description', () => {
+    const book = new DesignBook('d');
+    book.addScope('type').set('body', typography({ fontSize: rem(1) }, { description: 'Running text' }));
+    const w3 = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
+    expect(w3.type.body.$description).toBe('Running text');
+  });
+
   it('writes a native typography composite and aliases refs to it', () => {
     const w3 = new Renderer(buildBook(), 'w3-design-tokens').renderW3DesignTokensObject();
     expect(w3.type.title).toEqual({

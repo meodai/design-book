@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { dimension, px, rem, ms, ref } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
+import { typography } from '../../src/functions';
 
 function w3(book: DesignBook): any {
   return new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
@@ -46,9 +47,9 @@ describe('w3 dimension units', () => {
 
   it('keeps em letter-spacing inside a typography composite as a string', () => {
     const book = new DesignBook('t');
-    book.addTypography('body', { fontSize: rem(1), letterSpacing: '-0.02em' });
+    book.addScope('type').set('body', typography({ fontSize: rem(1), letterSpacing: '-0.02em' }));
     const out = w3(book);
-    expect(out.typography.body.$value).toEqual({
+    expect(out.type.body.$value).toEqual({
       fontSize: { value: 1, unit: 'rem' },
       letterSpacing: '-0.02em',
     });

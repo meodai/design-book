@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DesignBook, rem, px, ref, ScopeError } from '../../src/index';
+import { DesignBook, rem, px, ref, ScopeError, typography } from '../../src/index';
 
 const css = (book: DesignBook, options?: unknown) => book.render('css-variables', options);
 
@@ -102,10 +102,9 @@ describe('css-variables: scopes with metadata.media', () => {
 
   it('puts a typography class inside its scope media block', () => {
     const book = build();
-    book.addTypography('lead-md', { fontSize: rem(1.4) });
-    book.getScope('lead-md')!.metadata.media = 'md';
+    book.addScope('type-md', { metadata: { media: 'md' } }).set('lead', typography({ fontSize: rem(1.4) }));
     const out = css(book, { breakpoints });
-    expect(out).toContain('  .lead-md {\n    font-size: var(--lead-md-font-size);\n  }\n}');
+    expect(out).toContain('  .type-md-lead {\n    font-size: var(--type-md-lead-font-size);\n  }\n}');
   });
 
   it('drops a media group that changedFrom leaves empty', () => {

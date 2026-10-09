@@ -3,6 +3,7 @@ import {
   DesignBook, color, ref, rem, px, string, colorMix, darken, bestContrastWith,
   createFunctionToken, diffBooks, layer, composeBook, layerOf, keysFromLayer,
   LayerError, CircularDependencyError,
+  typography, withFields,
 } from '../src/index';
 import type { Layer } from '../src/index';
 
@@ -123,16 +124,17 @@ describe('data layers', () => {
     expect(a.getTokenByKey('brand.link')).toEqual(b.getTokenByKey('brand.link'));
   });
 
-  it('overrides one property of a typography scope and keeps compose', () => {
+  it('overrides one field of a typography with withFields', () => {
     const book = composeBook('x', [
       layer('base', (b) => {
-        b.addTypography('heading', { fontFamily: 'Inter', fontSize: rem(2), fontWeight: '700' });
+        b.addScope('type').set('heading', typography({ fontFamily: 'Inter', fontSize: rem(2), fontWeight: '700' }));
       }),
-      layer('dense', { heading: { fontSize: rem(1.5) } }),
+      layer('dense', (b) => {
+        b.getScope('type')!.set('heading', withFields(b.getTokenByKey('type.heading'), { fontSize: rem(1.5) }));
+      }),
     ]);
-    expect(book.getScope('heading')!.compose).toBe('typography');
-    expect(book.resolve('heading.fontSize')).toBe('1.5rem');
-    expect(book.resolve('heading.fontFamily')).toBe('Inter');
+    expect(book.resolve('type.heading.fontSize')).toBe('1.5rem');
+    expect(book.resolve('type.heading.fontFamily')).toBe('Inter');
   });
 
   it('can be applied to a hand-built book', () => {

@@ -1,43 +1,39 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { ref, rem, px } from '../../src/tokens';
+import { ref, rem, px, string } from '../../src/tokens';
+import { typography } from '../../src/functions';
 import { Renderer } from '../../src/renderers/renderer';
 
 function w3(book: DesignBook): any {
   return new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject();
 }
 
-describe('w3 references into typography-composed scopes', () => {
+describe('w3 references into typography fields', () => {
   function book() {
     const b = new DesignBook('test');
-    b.addTypography('display', {
-      fontFamily: 'Inter',
+    b.addScope('type').set('display', typography({
+      fontFamily: string('Inter'),
       fontSize: rem(3),
       fontWeight: '700',
-      lineHeight: '1.1',
-    });
+      lineHeight: 1.1,
+    }));
     return b;
   }
 
-  it('emits the resolved value instead of an alias to a token that is never emitted', () => {
+  it('emits the resolved field instead of an alias W3 cannot express', () => {
     const b = book();
-    b.addScope('ui').set('weight', ref('display.fontWeight'));
+    b.addScope('ui').set('weight', ref('type.display.fontWeight'));
     const out = w3(b);
-
-    // Only the composite exists — `display.fontWeight` is not a W3 token.
-    expect(out.display).toBeUndefined();
-    expect(out.typography.display.$type).toBe('typography');
-
-    expect(out.ui.weight.$value).toBe(700);
-    expect(out.ui.weight.$type).toBe('fontWeight');
+    expect(out.type.display.$type).toBe('typography');
+    expect(out.ui.weight).toEqual({ $value: 700, $type: 'fontWeight' });
   });
 
   it('formats a referenced font size as a dimension and family as fontFamily', () => {
     const b = book();
     const ui = b.addScope('ui');
-    ui.set('size', ref('display.fontSize'));
-    ui.set('family', ref('display.fontFamily'));
-    ui.set('leading', ref('display.lineHeight'));
+    ui.set('size', ref('type.display.fontSize'));
+    ui.set('family', ref('type.display.fontFamily'));
+    ui.set('leading', ref('type.display.lineHeight'));
     const out = w3(b);
 
     expect(out.ui.size).toEqual({ $value: { value: 3, unit: 'rem' }, $type: 'dimension' });
@@ -45,31 +41,15 @@ describe('w3 references into typography-composed scopes', () => {
     expect(out.ui.leading).toEqual({ $value: 1.1, $type: 'number' });
   });
 
-  it('keeps aliases to ordinary scopes as aliases', () => {
+  it('keeps aliases to ordinary tokens as aliases', () => {
     const b = book();
     b.addScope('space').set('m', px(16));
     b.addScope('ui').set('gap', ref('space.m'));
     expect(w3(b).ui.gap.$value).toBe('{space.m}');
   });
-});
 
-describe('w3 typography group name clash', () => {
-  it('throws when a plain scope named "typography" would be overwritten by the composites', () => {
-    const b = new DesignBook('test');
-    b.addScope('typography').set('base', px(16));
-    b.addTypography('display', { fontFamily: 'Inter' });
-    expect(() => w3(b)).toThrow(/typography/);
-  });
-
-  it('throws regardless of scope order', () => {
-    const b = new DesignBook('test');
-    b.addTypography('display', { fontFamily: 'Inter' });
-    b.addScope('typography').set('base', px(16));
-    expect(() => w3(b)).toThrow(/typography/);
-  });
-
-  it('allows a plain "typography" scope when nothing is composed as typography', () => {
-    const b = new DesignBook('test');
+  it('allows a plain scope named "typography"', () => {
+    const b = book();
     b.addScope('typography').set('base', px(16));
     expect(w3(b).typography.base.$value).toEqual({ value: 16, unit: 'px' });
   });

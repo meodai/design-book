@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color, ref, px, rem, ms, dimension, string } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
-import { bestContrastWith, colorMix, lighten, darken, relativeTo, spacingScale, timing, typographyScale } from '../../src/functions';
+import { bestContrastWith, colorMix, lighten, darken, relativeTo, spacingScale, timing, typographyScale, typography } from '../../src/functions';
 
 function createTestBook() {
   const book = new DesignBook('test');
@@ -513,17 +513,17 @@ describe('Renderer', () => {
 
     it('formats typography sub-values per the W3 spec', () => {
       const book = new DesignBook('test');
-      book.addTypography('heading-lg', {
+      book.addScope('type').set('heading-lg', typography({
         fontFamily: 'Inter',
         fontSize: rem(2),
         fontWeight: '700',
         lineHeight: '1.15',
         letterSpacing: '-0.02em',
-      });
+      }));
 
       const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
-      expect(out.typography['heading-lg'].$type).toBe('typography');
-      expect(out.typography['heading-lg'].$value).toEqual({
+      expect(out.type['heading-lg'].$type).toBe('typography');
+      expect(out.type['heading-lg'].$value).toEqual({
         fontFamily: 'Inter',
         fontSize: { value: 2, unit: 'rem' },
         fontWeight: 700,
@@ -535,10 +535,10 @@ describe('Renderer', () => {
 
     it('keeps a non-numeric font weight keyword as a string', () => {
       const book = new DesignBook('test');
-      book.addTypography('body', { fontFamily: 'Georgia', fontWeight: 'bold' });
+      book.addScope('type').set('body', typography({ fontFamily: 'Georgia', fontWeight: 'bold' }));
 
       const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
-      expect(out.typography.body.$value.fontWeight).toBe('bold');
+      expect(out.type.body.$value.fontWeight).toBe('bold');
     });
   });
 

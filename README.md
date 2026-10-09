@@ -570,82 +570,11 @@ const phone = layer('phone', (book) => {
 });
 ```
 
-### Typography scopes
-
-The older form models a text style as a **scope** with a `compose` marker: each property is its own token, and renderers re-aggregate the scope into a CSS class and a W3 `typography` token. It still works; prefer `typography()` when a style should sit next to other tokens in a scope or be referenced as a whole.
+Pass `classPrefix` to prefix the emitted classes:
 
 ```typescript
-const fonts = book.addScope('fonts');
-fonts.set('sans', string('"Inter", system-ui, sans-serif'));
-
-const heading = book.addTypography('heading-lg', {
-  fontFamily:    ref('fonts.sans'),
-  fontSize:      rem(2),
-  fontWeight:    '700',
-  lineHeight:    '1.15',
-  letterSpacing: '-0.02em',
-});
-
-// Variant: same shape, one override. Inherits compose marker.
-const hero = book.addTypography(
-  'hero-title',
-  { fontWeight: '800' },
-  { extends: 'heading-lg' },
-);
-
-// Cherry-pick a single property into another scope.
-const callout = book.addScope('callout');
-callout.set('fontSize', ref('heading-lg.fontSize'));
+book.render('css-variables', { classPrefix: 't-' }); // → .t-type-title { … }
 ```
-
-`addTypography` is sugar over `addScope(name, { compose: 'typography' })` + `set()` for each key. Plain string values are auto-wrapped via `string(...)`; refs and token values pass through. Any keys are allowed — the W3 composite renderer only consumes the canonical typography keys (`fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`); the CSS renderer emits every key as a CSS property.
-
-### CSS output
-
-```css
-:root {
-  --heading-lg-font-family: "Inter", system-ui, sans-serif;
-  --heading-lg-font-size: 2rem;
-  --heading-lg-font-weight: 700;
-  --heading-lg-line-height: 1.15;
-  --heading-lg-letter-spacing: -0.02em;
-}
-
-.heading-lg {
-  font-family: var(--heading-lg-font-family);
-  font-size: var(--heading-lg-font-size);
-  font-weight: var(--heading-lg-font-weight);
-  line-height: var(--heading-lg-line-height);
-  letter-spacing: var(--heading-lg-letter-spacing);
-}
-```
-
-Pass `classPrefix` to prefix the emitted class:
-
-```typescript
-book.render('css-variables', { classPrefix: 't-' }); // → .t-heading-lg { … }
-```
-
-### W3 Design Tokens output
-
-```json
-{
-  "typography": {
-    "heading-lg": {
-      "$type": "typography",
-      "$value": {
-        "fontFamily": "\"Inter\", system-ui, sans-serif",
-        "fontSize": "2rem",
-        "fontWeight": "700",
-        "lineHeight": "1.15",
-        "letterSpacing": "-0.02em"
-      }
-    }
-  }
-}
-```
-
-All composed typography scopes group under a single `typography` namespace.
 
 ## Rendering
 
@@ -878,7 +807,7 @@ layerOf(cafeBook, 'brand.highlight'); // 'old-town'
 layerOf(cafeBook, 'text.highlight');  // 'cafe'
 ```
 
-A layer is either a **function** `(book) => void` — free to add scopes with `extends` or `compose`, call `addTypography`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
+A layer is either a **function** `(book) => void` — free to add scopes with `extends`, set `typography()` tokens or change them with `withFields`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
 
 `composeBook(name, layers, options?)` applies the layers in order, last one wins, and returns an ordinary book in `options.mode` (default `auto`). A layer that throws, or that would close a dependency cycle, stops the composition with a `LayerError` carrying `layerName`, `tokenKey` and the original error as `cause`. A ref to a key that a later layer adds is fine.
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DesignBook, color, ref, rem, bestContrastWith, diffBooks,
+  typography,
 } from '../../src/index';
 
 /** The same setup function, called once per variation. */
@@ -18,7 +19,7 @@ function buildBook() {
   const type = book.addScope('type');
   type.set('body', rem(1.8));
   type.set('small', rem(1.4));
-  book.addTypography('lead', { fontSize: ref('type.body'), fontWeight: '400' });
+  type.set('lead', typography({ fontSize: ref('type.body'), fontWeight: '400' }));
   return book;
 }
 
@@ -68,7 +69,7 @@ describe('css-variables: changedFrom', () => {
     expect(out).toContain('--ui-text: #ffffff;');        // recomputed for the dark surface
     expect(out).not.toContain('--ui-background');        // var(--surface-normal) follows on its own
     expect(out).not.toContain('--brand-ink');            // unchanged
-    expect(out).not.toContain('.lead');                  // typography blocks only hold var()s
+    expect(out).not.toContain('.type-lead');                  // typography blocks only hold var()s
   });
 
   it('emits keys only the variation has', () => {

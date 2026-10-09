@@ -7,7 +7,7 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { functionDependencies, iteratedScopesOf, isReferenceValue, isTokenValue, string as stringToken, tokenKeyOf } from './tokens';
+import { functionDependencies, iteratedScopesOf, tokenKeyOf } from './tokens';
 import { typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
@@ -234,7 +234,7 @@ export class DesignBook {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._linkInheritedKeysOf(name);
@@ -244,34 +244,6 @@ export class DesignBook {
 
   extendScope(name: string, base: string, description?: string): Scope {
     return this.addScope(name, { extends: base, description });
-  }
-
-  /** Convenience for creating a typography scope. Equivalent to
-   *  `addScope(name, { compose: 'typography' })` plus `.set()` for each
-   *  property. Plain string values are auto-wrapped with `string(...)`;
-   *  refs and token values pass through unchanged. Any keys are allowed
-   *  — renderers consult the canonical typography keys (`fontFamily`,
-   *  `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`) for the
-   *  W3 composite output. */
-  addTypography(
-    name: string,
-    properties: Record<string, AnyTokenValue | string>,
-    options?: { extends?: string; description?: string; metadata?: import('./scope').ScopeMetadata },
-  ): Scope {
-    const scope = this.addScope(name, { ...options, compose: 'typography' });
-    for (const [key, value] of Object.entries(properties)) {
-      if (typeof value === 'string') {
-        scope.set(key, stringToken(value));
-      } else if (isReferenceValue(value) || isTokenValue(value) || (value as { type?: string }).type === 'function') {
-        scope.set(key, value as AnyTokenValue);
-      } else {
-        throw new TokenError(
-          `addTypography "${name}.${key}": value must be a token, reference, or string — got ${typeof value}`,
-          `${name}.${key}`,
-        );
-      }
-    }
-    return scope;
   }
 
   copyScope(source: string, target: string): Scope {

@@ -13,7 +13,7 @@ export class ScopeManager {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; compose?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     this.validateScopeName(name);
     this.validateMetadata(name, options?.metadata);
