@@ -1,7 +1,8 @@
 import { DesignBook } from '../design-book';
 import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
-import { registerBuiltinFunctionRenderers } from './function-renderers';
+import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
+import { isTypographyToken } from '../functions/non-color/typography';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/scope-colors';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
@@ -253,9 +254,15 @@ export class Renderer {
       for (const key of scope.getAllKeys()) {
         if (!scope.get(key)) continue;
         const varName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
-        const owners = seen.get(varName);
-        if (owners) owners.push(`${scope.name}.${key}`);
-        else seen.set(varName, [`${scope.name}.${key}`]);
+        const fields = this.typographyFieldsOf(scope.get(key)!);
+        const names = fields
+          ? fields.map((field) => [`${varName}-${keyToHyphen(field)}`, `${scope.name}.${key} (${field})`])
+          : [[varName, `${scope.name}.${key}`]];
+        for (const [name, owner] of names) {
+          const owners = seen.get(name);
+          if (owners) owners.push(owner);
+          else seen.set(name, [owner]);
+        }
       }
     }
 
@@ -269,6 +276,19 @@ export class Renderer {
       `CSS variable name collision: ${detail}. ` +
       'Rename the tokens or scopes so each maps to a unique custom property.'
     );
+  }
+
+  /** The field names when `token` is a `typography()` token or a ref (chain)
+   *  that ends at one; `undefined` otherwise. */
+  private typographyFieldsOf(token: AnyTokenValue | undefined): string[] | undefined {
+    const seen = new Set<string>();
+    while (token && token.type === 'reference') {
+      const key = (token as ReferenceValue).key;
+      if (seen.has(key)) return undefined;
+      seen.add(key);
+      token = this.book.getTokenByKey(key);
+    }
+    return isTypographyToken(token) ? token.options?.fields : undefined;
   }
 
   /** The scopes to render: all, or the `scopes` option (unknown names throw). */
@@ -291,6 +311,25 @@ export class Renderer {
         if (!token) continue;
 
         const prop = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+
+        // A typography has no single CSS value: one variable per field. A
+        // ref to one points each field at the target's field variable.
+        const typo = isTypographyToken(token) ? token : undefined;
+        if (typo) {
+          typo.options?.fields.forEach((field: string, i: number) => {
+            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value: argToCssValue(this, typo.args[i]) });
+          });
+          continue;
+        }
+        const refFields = token.type === 'reference' ? this.typographyFieldsOf(token) : undefined;
+        if (refFields) {
+          const target = `--${keyToHyphen((token as ReferenceValue).key)}`;
+          for (const field of refFields) {
+            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value: `var(${target}-${keyToHyphen(field)})` });
+          }
+          continue;
+        }
+
         let value: string;
 
         if (token.type === 'reference') {
@@ -391,6 +430,17 @@ export class Renderer {
       // variation (changedFrom) never needs to repeat them.
       if (!base) {
         for (const scope of scopes) {
+          // A class per typography token (or ref to one), from its field variables.
+          for (const key of scope.getAllKeys()) {
+            const fields = this.typographyFieldsOf(scope.get(key)!);
+            if (!fields) continue;
+            const name = `${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+            blocks.push([
+              `.${this.options.classPrefix}${name} {`,
+              ...fields.map((field) => `  ${camelToKebab(field)}: var(--${name}-${keyToHyphen(field)});`),
+              '}',
+            ]);
+          }
           if (scope.compose !== 'typography') continue;
           const keys = scope.getAllKeys();
           if (keys.length === 0) continue;
@@ -507,6 +557,8 @@ export class Renderer {
           if (formatted.type) entry.$type = formatted.type;
         } else if (token.type === 'reference') {
           entry.$value = `{${(token as ReferenceValue).key}}`;
+        } else if (isTypographyToken(token as unknown)) {
+          entry.$value = this.formatW3TypographyToken(token as FunctionTokenValue);
         } else if (token.type === 'function' && (token as FunctionTokenValue).name === 'timing') {
           entry.$value = this.formatW3Transition(token as FunctionTokenValue);
         } else {
@@ -576,6 +628,15 @@ export class Renderer {
       const resolved = resolveTokenValue(this.book, scopeName, key);
       composite[key] = formatW3TypographyProperty(key, resolved).value;
     }
+    return composite;
+  }
+
+  /** Build the W3 `typography` composite from a `typography()` token. */
+  private formatW3TypographyToken(fn: FunctionTokenValue): W3TypographyValue {
+    const composite: W3TypographyValue = {};
+    (fn.options?.fields ?? []).forEach((field: string, i: number) => {
+      composite[field] = formatW3TypographyProperty(field, String(this.resolveFunctionArg(fn.args[i]))).value;
+    });
     return composite;
   }
 

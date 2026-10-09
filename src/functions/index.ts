@@ -15,6 +15,7 @@ import { nextSmallerImpl } from './non-color/next-smaller';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
+import { typographyImpl } from './non-color/typography';
 import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
@@ -40,6 +41,8 @@ export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
+export { typography, withFields, isTypographyToken, typographyFields } from './non-color/typography';
+export type { TypographyField, TypographyFields } from './non-color/typography';
 export { timing } from './non-color/timing';
 export { nextLarger } from './non-color/next-larger';
 export { nextSmaller } from './non-color/next-smaller';
@@ -61,6 +64,7 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[] }) =>
 		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, options?.not ?? []),
 	);
+	book.registerFunction('typography', typographyImpl);
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
 		colorMixImpl(color1, color2, options?.ratio ?? 0.5, options?.colorSpace ?? 'lab'),
 	);

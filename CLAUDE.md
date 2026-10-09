@@ -83,6 +83,8 @@ The generic selectors (`nth`, `random`, `nextLarger`, `nextSmaller`, `sibling`) 
 
 **Without scope** (pure transforms): `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`, `spacingScale`, `typographyScale`, `timing`
 
+**Composite**: `typography(fields)` (`src/functions/non-color/typography.ts`) — a text style as one token (W3 `typography`). The field values are the args, the names `options.fields` (each a valid token key), so field refs are ordinary graph edges and a `ref()` to it carries the whole style. Resolves to `font-size: 2rem; line-height: 1.5` (fields kebab-cased, in order). `withFields(token, overrides)` copies one with fields replaced/added (a layer can't `ref()` the value it replaces). The css-variables renderer writes `--scope-key-<field>` per field plus a `.scope-key` class, for the token and for any ref (chain) ending at one (`var(--target-<field>)`); the collision check covers field variables. W3 writes the native composite; a ref to it stays an alias with `$type: typography`. The editor does not parse or serialize it yet.
+
 #### Selector pools (`_selectorsByScope` in `src/design-book.ts`)
 
 A selector's candidate pool is the live membership of the scope it iterates.

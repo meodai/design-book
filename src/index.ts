@@ -75,6 +75,7 @@ export {
   lightest, darkest,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
+  typography, withFields, isTypographyToken, typographyFields,
   nextLarger, nextSmaller,
   random,
   nth,
@@ -83,6 +84,7 @@ export {
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';
+export type { TypographyField, TypographyFields } from './functions';
 export type { LightnessSelectorOptions, ReadableOnOptions } from './functions';
 
 // Renderers

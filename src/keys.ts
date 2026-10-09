@@ -8,7 +8,7 @@ import { TokenError } from './errors';
  *
  *  Kept in its own module so `design-book/naming` can check keys without
  *  pulling in the token engine. */
-const VALID_TOKEN_KEY = /^(?:[A-Za-z0-9_-]|[^\x00-\x7F])+$/;
+export const VALID_TOKEN_KEY = /^(?:[A-Za-z0-9_-]|[^\x00-\x7F])+$/;
 
 export function assertValidTokenKey(scopeName: string, name: string): void {
   if (typeof name === 'string' && VALID_TOKEN_KEY.test(name)) return;

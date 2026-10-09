@@ -12,7 +12,7 @@ import type { FunctionArg, ReferenceValue, TokenValue } from '../tokens';
  *  function tokens are handed back to the renderer so they render through
  *  the function-renderer registry (or their resolved value) rather than
  *  stringifying to `[object Object]`. */
-function argToCssValue(renderer: Renderer, arg: FunctionArg): string {
+export function argToCssValue(renderer: Renderer, arg: FunctionArg): string {
   if (typeof arg === 'string') return arg;
   if (typeof arg === 'number') return String(arg);
   if (isReferenceValue(arg)) {

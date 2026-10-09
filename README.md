@@ -500,7 +500,58 @@ rejected.
 
 ## Typography
 
-A type style is a *collection* of properties (family, size, weight, line-height, …) that you want to address as one thing. Design Book models that as a **scope** with a `compose` marker, so each property stays a real token in the graph while renderers can re-aggregate the scope into a composite output (a CSS class, a W3 `typography` token).
+A text style is a collection of properties (family, size, weight, line-height, …) that you want to address as one thing. `typography()` makes it **one token**, the W3 `typography` composite. Each field is an argument of the token, so the refs it holds are tracked in the graph like any function's, and a `ref()` to it carries the whole style:
+
+```typescript
+const font = book.addScope('font');
+font.set('sans', string('"Inter", system-ui, sans-serif'));
+
+const size = book.addScope('font-size');
+size.set('md', rem(1.8));
+size.set('xl', rem(3.2));
+
+const type = book.addScope('type');
+type.set('body',  typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.md'), lineHeight: 1.5 }));
+type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700' }));
+
+const button = book.addScope('button');
+button.set('padding', ref('space.sm'));
+button.set('label', ref('type.body'));       // the whole text style
+
+book.inspect('font-size.xl').dependents;     // ['type.title']
+book.resolve('type.title');                  // 'font-family: "Inter", …; font-size: 3.2rem; font-weight: 700'
+```
+
+Any field name is allowed (it must be a valid token key). The CSS renderer writes one variable per field and a class; a ref to a typography points each field at the target's variable:
+
+```css
+:root {
+  --type-title-font-family: var(--font-sans);
+  --type-title-font-size: var(--font-size-xl);
+  --type-title-font-weight: 700;
+  --button-label-font-family: var(--type-body-font-family);
+  /* … */
+}
+.type-title {
+  font-family: var(--type-title-font-family);
+  font-size: var(--type-title-font-size);
+  font-weight: var(--type-title-font-weight);
+}
+```
+
+W3 output is the native composite (`"type": { "title": { "$type": "typography", "$value": { … } } }`), and a ref to it an alias (`"$value": "{type.body}"`). JSON writes the resolved declarations.
+
+`withFields(token, overrides)` copies a typography with some fields replaced or added — what a theme or breakpoint layer uses to change one text style, since a token cannot `ref()` the value it replaces:
+
+```typescript
+const phone = layer('phone', (book) => {
+  book.getScope('type').set('title', withFields(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
+});
+```
+
+### Typography scopes
+
+The older form models a text style as a **scope** with a `compose` marker: each property is its own token, and renderers re-aggregate the scope into a CSS class and a W3 `typography` token. It still works; prefer `typography()` when a style should sit next to other tokens in a scope or be referenced as a whole.
 
 ```typescript
 const fonts = book.addScope('fonts');
@@ -742,6 +793,18 @@ Because the variation is a real book, computed tokens are recomputed for it: `ui
 | `media` | wrap the output in `@media …` (combine with `selector` for "inverted on phones") |
 | `scopes` | only these scopes (also for `json`) |
 | `changedFrom` | only declarations that differ from another book (also for `json`, by resolved value) |
+| `breakpoints` | name → media query, for scopes that carry `metadata.media` (below) |
+
+Breakpoints usually belong in their own books, as above: the same variables, new values inside `@media`. With `typography()` tokens built on a type scale, a breakpoint layer often only changes the scale (`layer('phone', { 'font-size': { xl: rem(2.4) } })`) and `changedFrom` writes just `--font-size-xl` — the text styles follow through `var()`.
+
+The exception is a scope whose variables should *only* exist inside a media query. Give it `metadata.media` — a name from the `breakpoints` option, a media type (`print`) or a raw query — and the renderer writes it in its own `@media` block. Blocks follow the order of the `breakpoints` table, then raw queries in scope order; an unknown name throws.
+
+```typescript
+book.addScope('layout-wide', { metadata: { media: 'lg' } });
+book.render('css-variables', { breakpoints: { md: '(min-width: 48em)', lg: '(min-width: 64em)' } });
+```
+
+`metadata` is a free-form object on every scope (`scope.metadata`, default `{}`, not inherited through `extends`); the book never reads it and `media` is the only key a renderer does.
 
 `diffBooks(a, b)` reports the same differences as data — `{ changed, added, removed }` by resolved value — for auditing a brand against its base:
 
