@@ -42,7 +42,7 @@ export { shade } from './color/shade';
 export { ramp, rampStops } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
-export { typography, withFields, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
+export { typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
 export type { TypographyField, TypographyFields, TypographyOverrides } from './non-color/typography';
 export { timing } from './non-color/timing';
 export { nextLarger } from './non-color/next-larger';

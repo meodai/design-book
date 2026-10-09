@@ -8,6 +8,10 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Changed
 
+- **`withFields` is renamed `variant`**, with no alias:
+  `variant(ref('type.title'), { fontWeight: '800' })`. The editor parses and
+  prints the new name.
+
 - **The `mostVivid` / `leastVivid` readability gate is now a shared pool
   filter, `readableOn`.** `against` is renamed `readableOn` (passing
   `against` throws and names the new option), `minContrast` defaults to 4.5

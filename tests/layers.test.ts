@@ -3,7 +3,7 @@ import {
   DesignBook, color, ref, rem, px, string, colorMix, darken, bestContrastWith,
   createFunctionToken, diffBooks, layer, composeBook, layerOf, keysFromLayer,
   LayerError, CircularDependencyError,
-  typography, withFields,
+  typography, variant,
 } from '../src/index';
 import type { Layer } from '../src/index';
 
@@ -124,13 +124,13 @@ describe('data layers', () => {
     expect(a.getTokenByKey('brand.link')).toEqual(b.getTokenByKey('brand.link'));
   });
 
-  it('overrides one field of a typography with withFields', () => {
+  it('overrides one field of a typography with variant', () => {
     const book = composeBook('x', [
       layer('base', (b) => {
         b.addScope('type').set('heading', typography({ fontFamily: 'Inter', fontSize: rem(2), fontWeight: '700' }));
       }),
       layer('dense', (b) => {
-        b.getScope('type')!.set('heading', withFields(b.getTokenByKey('type.heading'), { fontSize: rem(1.5) }));
+        b.getScope('type')!.set('heading', variant(b.getTokenByKey('type.heading'), { fontSize: rem(1.5) }));
       }),
     ]);
     expect(book.resolve('type.heading.fontSize')).toBe('1.5rem');

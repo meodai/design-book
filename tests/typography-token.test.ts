@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DesignBook, typography, withFields, ref, rem, string, composeBook, layer,
+  DesignBook, typography, variant, ref, rem, string, composeBook, layer,
   FunctionError, Renderer,
 } from '../src/index';
 
@@ -61,10 +61,10 @@ describe('typography in the graph', () => {
   });
 });
 
-describe('withFields()', () => {
+describe('variant()', () => {
   it('copies a typography with some fields replaced or added', () => {
     const base = typography({ fontSize: rem(2), fontWeight: '400' });
-    const next = withFields(base, { fontWeight: '700', letterSpacing: rem(0.1) });
+    const next = variant(base, { fontWeight: '700', letterSpacing: rem(0.1) });
     expect(next.options?.fields).toEqual(['fontSize', 'fontWeight', 'letterSpacing']);
     const book = new DesignBook('w');
     book.addScope('type').set('a', next);
@@ -73,8 +73,8 @@ describe('withFields()', () => {
   });
 
   it('throws on anything that is not a typography token', () => {
-    expect(() => withFields(rem(1), {})).toThrow(FunctionError);
-    expect(() => withFields(undefined, {})).toThrow(FunctionError);
+    expect(() => variant(rem(1), {})).toThrow(FunctionError);
+    expect(() => variant(undefined, {})).toThrow(FunctionError);
   });
 });
 
@@ -105,7 +105,7 @@ describe('typography: css-variables', () => {
     });
     const tablet = layer('tablet', { 'font-size': { xl: rem(2.8) } });
     const phone = layer('phone', (book) => {
-      book.getScope('type')!.set('title', withFields(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
+      book.getScope('type')!.set('title', variant(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
     });
     const desktopBook = composeBook('desktop', [base]);
     const tabletBook = composeBook('tablet', [base, tablet]);

@@ -109,7 +109,7 @@ export class Scope {
     if (isTypographyToken(value) && typographyBase(value) === qualified) {
       const error = new CircularDependencyError([qualified, qualified]);
       error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +
-        `pass the token instead: withFields(book.getTokenByKey("${qualified}"), …)`;
+        `pass the token instead: variant(book.getTokenByKey("${qualified}"), …)`;
       throw error;
     }
     const oldValue = this.tokens.get(name);

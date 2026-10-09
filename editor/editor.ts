@@ -1,7 +1,7 @@
 import {
   DesignBook, color, ref, px, rem, ms, string,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
-  spacingScale, typographyScale, typography, withFields,
+  spacingScale, typographyScale, typography, variant,
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
   Renderer, SVGRenderer, TableViewRenderer,
@@ -119,7 +119,7 @@ function bootDesignSystem() {
     letterSpacing: '-0.02em',
   }));
   // A live variant: every field it doesn't set keeps reading type.display.
-  type.set('display-sans', withFields(ref('type.display'), { fontFamily: ref('fonts.sans') }));
+  type.set('display-sans', variant(ref('type.display'), { fontFamily: ref('fonts.sans') }));
 
   // Dark theme extending brand — neutrals flow through the semantic
   // layer so the inversion is visible as a graph edge instead of a
@@ -417,7 +417,7 @@ function serializeField(value: any): string {
   return serializeArg(value);
 }
 
-/** typography({ … }) and withFields(ref('…'), { … }) keep their field names
+/** typography({ … }) and variant(ref('…'), { … }) keep their field names
  *  in fn.options; print them back as object literals. */
 function serializeTypography(fn: any): string {
   const names: string[] = fn.options?.fields ?? [];
@@ -426,7 +426,7 @@ function serializeTypography(fn: any): string {
   const fields = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
   const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
   return fn.options?.base
-    ? `withFields(ref('${fn.options.base}'), ${fields}${tail})`
+    ? `variant(ref('${fn.options.base}'), ${fields}${tail})`
     : `typography(${fields}${tail})`;
 }
 

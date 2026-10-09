@@ -5,7 +5,7 @@ import { VALID_TOKEN_KEY } from '../../keys';
 
 export type TypographyField = TokenValue | ReferenceValue | FunctionTokenValue | string | number;
 export type TypographyFields = Record<string, TypographyField>;
-/** `withFields` overrides: a value replaces or adds a field, `null` drops it. */
+/** `variant` overrides: a value replaces or adds a field, `null` drops it. */
 export type TypographyOverrides = Record<string, TypographyField | null>;
 
 /** What the typography helpers need from a book. */
@@ -156,7 +156,7 @@ export function typographyImpl(book: TypographyBook, ...args: unknown[]): string
  * fields it doesn't set keep reading the base, so it follows every later
  * change to it. A `null` override drops a field.
  */
-export function withFields(
+export function variant(
   token: AnyTokenValue | undefined,
   overrides: TypographyOverrides,
 ): FunctionTokenValue {
@@ -166,16 +166,16 @@ export function withFields(
     if (value === null) dropped.push(name);
     else set[name] = value;
   }
-  assertFieldNames(Object.keys(overrides), 'withFields');
+  assertFieldNames(Object.keys(overrides), 'variant');
 
   if (isReferenceValue(token)) {
     if (!isTokenKey(token.key)) {
-      throw new FunctionError(`withFields: the base must be a "scope.token" key, got "${token.key}"`, 'withFields');
+      throw new FunctionError(`variant: the base must be a "scope.token" key, got "${token.key}"`, 'variant');
     }
     return build(set, { base: token.key, removed: dropped });
   }
   if (!isTypographyToken(token)) {
-    throw new FunctionError('withFields: expects a typography() token or a ref() to one', 'withFields');
+    throw new FunctionError('variant: expects a typography() token or a ref() to one', 'variant');
   }
 
   const own = typographyFields(token);
@@ -186,7 +186,7 @@ export function withFields(
     : [];
   const merged = { ...own, ...set };
   if (!base && Object.keys(merged).length === 0) {
-    throw new FunctionError('withFields: a typography needs at least one field', 'withFields');
+    throw new FunctionError('variant: a typography needs at least one field', 'variant');
   }
   return build(merged, { base, removed: nextRemoved }, token.description);
 }

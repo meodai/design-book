@@ -552,21 +552,21 @@ book.resolve('button.label.lineHeight');            // '1.5' (button.label is a 
 
 W3 has no alias syntax for a value inside a composite, so W3 output writes the resolved field with its type.
 
-### Changing some fields: `withFields`
+### Changing some fields: `variant`
 
-`withFields(base, overrides)` changes some fields of a typography; `null` drops one.
+`variant(base, overrides)` changes some fields of a typography; `null` drops one.
 
 - Pass a **ref** for a live **variant**: the fields it doesn't set keep reading the base, so it follows every later change to it — including in breakpoint books. Inherited fields render as `var()` of the base's variables.
 - Pass the **token** for a **copy**: what a theme or breakpoint layer uses to change a style in place, since a token cannot `ref()` the value it replaces (trying to is rejected with a hint).
 
 ```typescript
-type.set('hero', withFields(ref('type.title'), { fontWeight: '800' }));
+type.set('hero', variant(ref('type.title'), { fontWeight: '800' }));
 // --type-hero-font-family: var(--type-title-font-family);
 // --type-hero-font-size: var(--type-title-font-size);
 // --type-hero-font-weight: 800;
 
 const phone = layer('phone', (book) => {
-  book.getScope('type').set('title', withFields(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
+  book.getScope('type').set('title', variant(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
 });
 ```
 
@@ -807,7 +807,7 @@ layerOf(cafeBook, 'brand.highlight'); // 'old-town'
 layerOf(cafeBook, 'text.highlight');  // 'cafe'
 ```
 
-A layer is either a **function** `(book) => void` — free to add scopes with `extends`, set `typography()` tokens or change them with `withFields`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
+A layer is either a **function** `(book) => void` — free to add scopes with `extends`, set `typography()` tokens or change them with `variant`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
 
 `composeBook(name, layers, options?)` applies the layers in order, last one wins, and returns an ordinary book in `options.mode` (default `auto`). A layer that throws, or that would close a dependency cycle, stops the composition with a `LayerError` carrying `layerName`, `tokenKey` and the original error as `cause`. A ref to a key that a later layer adds is fine.
 

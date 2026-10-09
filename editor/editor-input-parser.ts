@@ -7,7 +7,7 @@ import {
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   nth, random, sibling,
-  typography, withFields,
+  typography, variant,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
 import { parse } from 'culori';
@@ -330,7 +330,7 @@ function getScopeArg(parsed: ReturnType<typeof parseArg>): Scope {
 
 /** An object literal of typography fields: `{ name: value, … }`. A value is
  *  a token or ref (as in any argument), a quoted string, a number, or — for
- *  withFields — `null` to drop the field. */
+ *  variant — `null` to drop the field. */
 function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: boolean): Record<string, any> {
   const body = str.trim().replace(/^\{/, '').replace(/\}$/, '');
   const fields: Record<string, any> = {};
@@ -426,14 +426,14 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return typography(fields, description ? { description } : undefined);
   },
 
-  // withFields(ref('type.title'), { fontWeight: '800', letterSpacing: null })
-  withFields(argsStr, book) {
+  // variant(ref('type.title'), { fontWeight: '800', letterSpacing: null })
+  variant(argsStr, book) {
     const args = splitArgs(argsStr);
     if (args.length < 2 || !args[1].startsWith('{')) {
-      throw new Error("withFields requires a base and an object of fields: withFields(ref('type.title'), { fontWeight: '800' })");
+      throw new Error("variant requires a base and an object of fields: variant(ref('type.title'), { fontWeight: '800' })");
     }
     const base = getTokenArg(parseArg(args[0], book));
-    const token = withFields(base, parseFieldObject(args[1], book, true));
+    const token = variant(base, parseFieldObject(args[1], book, true));
     const description = args.length > 2 ? parseOptionsArg(args.slice(2).join(','))?.description : undefined;
     return description ? { ...token, description } : token;
   },

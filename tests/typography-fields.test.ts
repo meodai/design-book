@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DesignBook, typography, withFields, ref, rem, string, composeBook, layer,
+  DesignBook, typography, variant, ref, rem, string, composeBook, layer,
   CircularDependencyError, FunctionError, Renderer, SVGRenderer,
 } from '../src/index';
 
@@ -110,7 +110,7 @@ describe('field refs: ref("scope.token.field")', () => {
   it('lets a base read a field its variant inherits', () => {
     const book = buildBook();
     const type = book.getScope('type')!;
-    type.set('hero', withFields(ref('type.title'), { fontWeight: '800' }));
+    type.set('hero', variant(ref('type.title'), { fontWeight: '800' }));
     type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700', lineHeight: ref('type.hero.fontSize') }));
     expect(book.resolve('type.hero.lineHeight')).toBe('3.2rem');
   });
@@ -183,10 +183,10 @@ describe('field refs: ref("scope.token.field")', () => {
   });
 });
 
-describe('live variants: withFields(ref(...), overrides)', () => {
+describe('live variants: variant(ref(...), overrides)', () => {
   const withHero = () => {
     const book = buildBook();
-    book.getScope('type')!.set('hero', withFields(ref('type.title'), { fontWeight: '800', letterSpacing: rem(-0.02) }));
+    book.getScope('type')!.set('hero', variant(ref('type.title'), { fontWeight: '800', letterSpacing: rem(-0.02) }));
     return book;
   };
 
@@ -202,13 +202,13 @@ describe('live variants: withFields(ref(...), overrides)', () => {
     const book = withHero();
     expect(book.inspect('type.title')!.dependents).toContain('type.hero');
     expect(changesOf(book, () => book.getScope('font-size')!.set('xl', rem(4)))).toContain('type.hero');
-    book.getScope('type')!.set('title', withFields(book.getTokenByKey('type.title'), { lineHeight: 1.1 }));
+    book.getScope('type')!.set('title', variant(book.getTokenByKey('type.title'), { lineHeight: 1.1 }));
     expect(book.resolve('type.hero.lineHeight')).toBe('1.1');
   });
 
   it('can be the base of another variant and the target of a ref', () => {
     const book = withHero();
-    book.getScope('type')!.set('mega', withFields(ref('type.hero'), { fontSize: rem(6) }));
+    book.getScope('type')!.set('mega', variant(ref('type.hero'), { fontSize: rem(6) }));
     book.getScope('button')!.set('cta', ref('type.mega'));
     expect(book.resolve('button.cta'))
       .toBe('font-family: Inter; font-size: 6rem; font-weight: 800; letter-spacing: -0.02rem');
@@ -216,10 +216,10 @@ describe('live variants: withFields(ref(...), overrides)', () => {
 
   it('drops a field set to null', () => {
     const book = buildBook();
-    book.getScope('type')!.set('plain', withFields(ref('type.title'), { fontFamily: null }));
+    book.getScope('type')!.set('plain', variant(ref('type.title'), { fontFamily: null }));
     expect(book.resolve('type.plain')).toBe('font-size: 3.2rem; font-weight: 700');
     expect(book.has('type.plain.fontFamily')).toBe(false);
-    const copy = withFields(book.getTokenByKey('type.title'), { fontWeight: null });
+    const copy = variant(book.getTokenByKey('type.title'), { fontWeight: null });
     expect(copy.options?.fields).toEqual(['fontFamily', 'fontSize']);
   });
 
@@ -252,7 +252,7 @@ describe('live variants: withFields(ref(...), overrides)', () => {
       book.addScope('font-size').set('xl', rem(3.2));
       const type = book.addScope('type');
       type.set('title', typography({ fontSize: ref('font-size.xl') }));
-      type.set('hero', withFields(ref('type.title'), { fontWeight: '800' }));
+      type.set('hero', variant(ref('type.title'), { fontWeight: '800' }));
     });
     const tablet = layer('tablet', { 'font-size': { xl: rem(2.8) } });
     const desktopBook = composeBook('desktop', [base]);
@@ -263,7 +263,7 @@ describe('live variants: withFields(ref(...), overrides)', () => {
 
   it('rejects a variant of itself and says how to change a style in place', () => {
     const book = buildBook();
-    expect(() => book.getScope('type')!.set('title', withFields(ref('type.title'), { fontWeight: '800' })))
+    expect(() => book.getScope('type')!.set('title', variant(ref('type.title'), { fontWeight: '800' })))
       .toThrow(/getTokenByKey\("type\.title"\)/);
   });
 
@@ -275,6 +275,6 @@ describe('live variants: withFields(ref(...), overrides)', () => {
   });
 
   it('throws when the base is a field ref', () => {
-    expect(() => withFields(ref('type.title.fontSize'), {})).toThrow(FunctionError);
+    expect(() => variant(ref('type.title.fontSize'), {})).toThrow(FunctionError);
   });
 });

@@ -77,7 +77,7 @@ export {
   lightest, darkest,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
-  typography, withFields, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
+  typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
   nextLarger, nextSmaller,
   random,
   nth,
