@@ -46,7 +46,8 @@ describe('typography()', () => {
 describe('typography in the graph', () => {
   it('lists the typography as a dependent of what its fields use', () => {
     const book = buildBook();
-    expect(book.inspect('font-size.xl')!.dependents).toContain('type.title');
+    expect(book.inspect('font-size.xl')!.dependents).toContain('type.title.fontSize');
+    expect(book.inspect('type.title')!.dependencies).toEqual(['font.sans', 'font-size.xl']);
     expect(book.inspect('type.body')!.dependents).toContain('button.label');
   });
 

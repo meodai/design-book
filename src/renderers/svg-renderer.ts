@@ -1,5 +1,6 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
+import { isFieldKey, tokenKeyOf } from '../tokens';
 import type {
   AnyTokenValue,
   TokenValue,
@@ -493,7 +494,14 @@ export class SVGRenderer {
           ? (token as FunctionTokenValue).name
           : (token?.type === 'reference' ? 'ref' : '');
 
-        const prerequisites = graph.getIncoming(key);
+        // Field nodes (`type.title.fontSize`) have no row: a typography's own
+        // fields are looked through to what they read, any other field is
+        // drawn as an edge to the token it belongs to.
+        const prerequisites = new Set<string>();
+        for (const p of graph.getIncoming(key)) {
+          const deps = isFieldKey(p) && tokenKeyOf(p) === key ? graph.getIncoming(p) : [p];
+          for (const d of deps) prerequisites.add(isFieldKey(d) ? tokenKeyOf(d) : d);
+        }
         for (const depKey of prerequisites) {
           const toDot = dots.get(depKey);
           if (!toDot) continue;

@@ -31,6 +31,7 @@ export {
   createFunctionToken,
   extractDependencies,
   tokenKeyOf,
+  isFieldKey,
   extractVisualDependencies,
   extractIteratedScopes,
   iteratedScopesOf,

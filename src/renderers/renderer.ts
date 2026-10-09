@@ -3,6 +3,7 @@ import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens'
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
 import { isTypographyToken, typographyBase, typographyFieldNames } from '../functions/non-color/typography';
+import { FunctionError } from '../errors';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/scope-colors';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
@@ -312,7 +313,13 @@ export class Renderer {
         if (typo) {
           const own: string[] = typo.options?.fields ?? [];
           const base = typographyBase(typo);
-          for (const field of this.typographyFieldsOf(typo) ?? []) {
+          const fields = this.typographyFieldsOf(typo);
+          if (!fields) {
+            // A variant whose base is gone: fail like resolve, W3 and JSON
+            // rather than write half a style.
+            throw new FunctionError(`typography: the base "${base}" is not a typography`, 'typography');
+          }
+          for (const field of fields) {
             const i = own.indexOf(field);
             const value = i === -1
               ? `var(--${keyToHyphen(base!)}-${keyToHyphen(field)})`

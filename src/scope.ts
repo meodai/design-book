@@ -439,10 +439,16 @@ export class Scope {
     const token = this.get(name);
     const qualified = `${this.name}.${name}`;
     if (!token) throw new Error(`Token "${name}" not found in scope "${this.name}"`);
+    if (field.includes('.')) {
+      throw new TokenError(
+        `"${qualified}.${field}": a key has at most one field level — "scope.token.field"`,
+        `${qualified}.${field}`,
+      );
+    }
     if (token.type === 'reference') {
       return this.book.resolve(`${(token as ReferenceValue).key}.${field}`);
     }
-    if (!isTypographyToken(token) || field.includes('.')) {
+    if (!isTypographyToken(token)) {
       throw new TokenError(`"${qualified}" is not a typography, so "${qualified}.${field}" names no field`, `${qualified}.${field}`);
     }
     if (!typographyFieldNames(this.book, token)?.includes(field)) {

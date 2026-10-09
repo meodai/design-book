@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DesignBook, typography, withFields, ref, rem, string, composeBook, layer,
-  CircularDependencyError, FunctionError, Renderer,
+  CircularDependencyError, FunctionError, Renderer, SVGRenderer,
 } from '../src/index';
 
 function buildBook() {
@@ -45,10 +45,11 @@ describe('field refs: ref("scope.token.field")', () => {
     expect(() => book.resolve('font-size.xl.value')).toThrow(/not a typography/);
   });
 
-  it('depends on the whole typography and follows its changes', () => {
+  it('depends on the one field and follows its changes', () => {
     const book = buildBook();
     book.addScope('callout').set('size', ref('type.title.fontSize'));
     expect(book.inspect('type.title')!.dependents).toContain('callout.size');
+    expect(book.inspect('callout.size')!.dependencies).toEqual(['type.title.fontSize']);
     const changed = changesOf(book, () => book.getScope('font-size')!.set('xl', rem(4)));
     expect(changed).toContain('callout.size');
     expect(book.resolve('callout.size')).toBe('4rem');
@@ -76,10 +77,101 @@ describe('field refs: ref("scope.token.field")', () => {
     expect(book.has('type-alt.title.fontWeight')).toBe(true);
   });
 
-  it('rejects a typography whose field reads another of its own fields', () => {
+  it('lets a field read another field of the same typography', () => {
     const book = buildBook();
-    expect(() => book.getScope('type')!.set('loop', typography({ fontSize: rem(1), lineHeight: ref('type.loop.fontSize') })))
+    book.getScope('type')!.set('calc', typography({ fontSize: ref('font-size.md'), lineHeight: ref('type.calc.fontSize') }));
+    expect(book.resolve('type.calc')).toBe('font-size: 1.8rem; line-height: 1.8rem');
+    book.getScope('font-size')!.set('md', rem(2));
+    expect(book.resolve('type.calc.lineHeight')).toBe('2rem');
+  });
+
+  it('lets two typographies read different fields of each other', () => {
+    const book = buildBook();
+    const type = book.getScope('type')!;
+    type.set('a', typography({ fontSize: rem(1), lineHeight: 1.5 }));
+    type.set('b', typography({ fontSize: ref('type.a.fontSize'), lineHeight: 1.2 }));
+    type.set('a', typography({ fontSize: rem(1), lineHeight: ref('type.b.lineHeight') }));
+    expect(book.resolve('type.a')).toBe('font-size: 1rem; line-height: 1.2');
+    expect(book.resolve('type.b')).toBe('font-size: 1rem; line-height: 1.2');
+  });
+
+  it('rejects a real field cycle and leaves the graph as it was', () => {
+    const book = buildBook();
+    const nodes = book.getDependencyGraph().getAllNodes().sort();
+    expect(() => book.getScope('type')!.set('loop', typography({ fontSize: rem(1), lineHeight: ref('type.loop.lineHeight') })))
       .toThrow(CircularDependencyError);
+    const type = book.getScope('type')!;
+    type.set('a', typography({ fontSize: ref('type.b.fontSize') }));
+    expect(() => type.set('b', typography({ fontSize: ref('type.a.fontSize') }))).toThrow(CircularDependencyError);
+    type.delete('a');
+    expect(book.getDependencyGraph().getAllNodes().sort()).toEqual(nodes);
+  });
+
+  it('lets a base read a field its variant inherits', () => {
+    const book = buildBook();
+    const type = book.getScope('type')!;
+    type.set('hero', withFields(ref('type.title'), { fontWeight: '800' }));
+    type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700', lineHeight: ref('type.hero.fontSize') }));
+    expect(book.resolve('type.hero.lineHeight')).toBe('3.2rem');
+  });
+
+  it('reports only tokens in change events', () => {
+    const book = buildBook();
+    book.addScope('callout').set('size', ref('type.title.fontSize'));
+    const changed = changesOf(book, () => book.getScope('font-size')!.set('xl', rem(4)));
+    expect(changed.sort()).toEqual(['callout.size', 'font-size.xl', 'type.title']);
+  });
+
+  it('works the same in batch mode', () => {
+    const book = buildBook();
+    book.mode = 'batch';
+    book.addScope('callout').set('size', ref('type.title.fontSize'));
+    book.getScope('type')!.set('calc', typography({ fontSize: rem(2), lineHeight: ref('type.calc.fontSize') }));
+    expect(book.flush().errors).toEqual([]);
+    book.getScope('font-size')!.set('xl', rem(4));
+    const changed = changesOf(book, () => book.flush());
+    expect(changed).toContain('callout.size');
+    expect(changed.every((k) => k.split('.').length === 2)).toBe(true);
+    expect(book.resolve('callout.size')).toBe('4rem');
+  });
+
+  it('keeps a field ref wired through deleting and re-adding the typography', () => {
+    const book = buildBook();
+    book.addScope('callout').set('size', ref('type.title.fontSize'));
+    book.getScope('type')!.delete('title');
+    expect(() => book.resolve('callout.size')).toThrow();
+    const changed = changesOf(book, () => book.getScope('type')!.set('title', typography({ fontSize: rem(5) })));
+    expect(changed).toContain('callout.size');
+    book.getScope('type')!.set('title', typography({ fontSize: rem(6) }));
+    expect(book.resolve('callout.size')).toBe('6rem');
+  });
+
+  it('inspects a field key', () => {
+    const book = buildBook();
+    book.addScope('callout').set('size', ref('type.title.fontSize'));
+    expect(book.inspect('type.title.fontSize')).toMatchObject({
+      key: 'type.title.fontSize',
+      value: '3.2rem',
+      tokenType: 'field',
+      owner: 'type.title',
+      field: 'fontSize',
+      dependencies: ['font-size.xl'],
+      dependents: ['callout.size'],
+    });
+    expect(book.inspect('type.title.nope')).toBeNull();
+    expect(book.inspect('type.title')!.dependencies).toEqual(['font.sans', 'font-size.xl']);
+  });
+
+  it('draws a typography and a field ref as edges between tokens in the SVG graph', () => {
+    const book = buildBook();
+    book.addScope('callout').set('size', ref('type.title.fontSize'));
+    const svg = new SVGRenderer(book, { linksOnly: false }).render();
+    expect(svg).toContain('data-from="type.title" data-to="font-size.xl"');
+    expect(svg).toContain('data-from="callout.size" data-to="type.title"');
+  });
+
+  it('says that only one field level exists', () => {
+    expect(() => buildBook().resolve('type.title.fontSize.x')).toThrow(/one field level/);
   });
 
   it('renders as var() of the field variable in CSS and as the resolved value in W3', () => {
@@ -173,6 +265,13 @@ describe('live variants: withFields(ref(...), overrides)', () => {
     const book = buildBook();
     expect(() => book.getScope('type')!.set('title', withFields(ref('type.title'), { fontWeight: '800' })))
       .toThrow(/getTokenByKey\("type\.title"\)/);
+  });
+
+  it('throws in every format once its base is gone', () => {
+    const book = withHero();
+    book.getScope('type')!.delete('title');
+    expect(() => book.resolve('type.hero')).toThrow(/base "type.title"/);
+    expect(() => book.render('css-variables')).toThrow(/base "type.title"/);
   });
 
   it('throws when the base is a field ref', () => {

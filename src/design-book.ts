@@ -7,8 +7,8 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { functionDependencies, iteratedScopesOf, tokenKeyOf } from './tokens';
-import { typographyFieldNames } from './functions/non-color/typography';
+import { functionDependencies, iteratedScopesOf, isFieldKey, tokenKeyOf } from './tokens';
+import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
 import { FunctionError } from './errors';
@@ -107,6 +107,12 @@ export interface TokenInspection {
   source?: string;
   /** Free-text description, when one was set on the token. */
   description?: string;
+
+  // Field-key specifics (`type.title.fontSize`, tokenType `field`)
+  /** The typography the field belongs to. */
+  owner?: string;
+  /** The field name. */
+  field?: string;
 
   // Reference-token specifics
   /** Target key when the token is a reference. */
@@ -358,6 +364,53 @@ export class DesignBook {
     return scope.get(tokenName);
   }
 
+  /** A field key (`type.title.fontSize`) seen through `inspect`: its value,
+   *  what the field reads and who reads it. */
+  private _inspectField(key: string): TokenInspection | null {
+    if (!this.has(key)) return null;
+    const owner = tokenKeyOf(key);
+    let value: string | undefined;
+    try {
+      value = this.resolve(key);
+    } catch {
+      value = undefined;
+    }
+    const dependencies = this.graph.hasNode(key) ? this.graph.getIncoming(key) : this._fieldNodeDeps(key);
+    return {
+      key,
+      value,
+      tokenType: 'field',
+      owner,
+      field: key.slice(owner.length + 1),
+      dependencies,
+      dependents: this.graph.getOutgoing(key).filter((k) => k !== owner),
+      isInherited: false,
+    };
+  }
+
+  /** A token's prerequisites with its own field nodes looked through: a
+   *  typography lists what its fields read, not the fields themselves. */
+  private _visiblePrerequisites(key: string): string[] {
+    const out = new Set<string>();
+    for (const p of this.graph.getIncoming(key)) {
+      if (isFieldKey(p) && tokenKeyOf(p) === key) {
+        for (const q of this.graph.getIncoming(p)) out.add(q);
+      } else {
+        out.add(p);
+      }
+    }
+    return [...out];
+  }
+
+  /** A token's dependents plus whatever reads one of its fields. */
+  private _visibleDependents(key: string): string[] {
+    const out = new Set(this.graph.getOutgoing(key));
+    for (const fk of this._fieldNodesOf(key)) {
+      for (const d of this.graph.getOutgoing(fk)) if (d !== key) out.add(d);
+    }
+    return [...out];
+  }
+
   getDependencyGraph(): DependencyGraph {
     return this.graph;
   }
@@ -367,6 +420,7 @@ export class DesignBook {
    *  three-step pattern of `resolve` + `getTokenByKey` + `graph.getIncoming`.
    *  Returns null when the key isn't registered. */
   inspect(key: string): TokenInspection | null {
+    if (isFieldKey(key)) return this._inspectField(key);
     const token = this.getTokenByKey(key);
     if (!token) return null;
 
@@ -387,8 +441,8 @@ export class DesignBook {
       key,
       value,
       tokenType: token.type,
-      dependencies: this.graph.getIncoming(key),
-      dependents: this.graph.getOutgoing(key),
+      dependencies: this._visiblePrerequisites(key),
+      dependents: this._visibleDependents(key),
       isInherited: source !== undefined && source !== key,
       source,
     };
@@ -680,13 +734,14 @@ export class DesignBook {
       const rejectedDeps = this.graph.getPrerequisitesFor(qualifiedKey);
       this.graph.addNode(qualifiedKey);
       try {
-        this.graph.updateEdges(qualifiedKey, this._getEffectiveDepsForKey(qualifiedKey, restored));
+        this._setEdges(qualifiedKey, this._getEffectiveDepsForKey(qualifiedKey, restored), restored);
       } catch { /* keep the edges it has; the restored value was accepted before */ }
       this._liveKeys.add(qualifiedKey);
       this._pruneOrphans(rejectedDeps);
       this._updateOwnReferenceCaches(qualifiedKey);
     } else {
       this._detachNode(qualifiedKey);
+      this._rewireFieldNodesOf(qualifiedKey);
       this._liveKeys.delete(qualifiedKey);
     }
     this._updateReferenceCaches(qualifiedKey);
@@ -702,11 +757,13 @@ export class DesignBook {
       const hadNode = this.graph.hasNode(qualifiedKey);
       const isNewKey = !this._liveKeys.has(qualifiedKey);
       this.graph.addNode(qualifiedKey);
+      let undoEdges = () => {};
       try {
-        this.graph.updateEdges(qualifiedKey, deps);
+        undoEdges = this._setEdges(qualifiedKey, deps, currentValue);
         this._linkInheritedDependencies(deps);
         if (isNewKey) this._linkInheritedShadowsOf(qualifiedKey);
       } catch (e) {
+        undoEdges();
         this.graph.updateEdges(qualifiedKey, previousDeps);
         // The caller will drop the token; don't leave a node behind for a key
         // the graph never accepted in the first place.
@@ -723,6 +780,7 @@ export class DesignBook {
       this._indexSelector(qualifiedKey, undefined);
       this._updateReferenceCaches(qualifiedKey, previousDependents);
       this._detachNode(qualifiedKey);
+      this._rewireFieldNodesOf(qualifiedKey);
       this._liveKeys.delete(qualifiedKey);
     }
 
@@ -765,7 +823,7 @@ export class DesignBook {
   private _extractDepsFromValue(value: any): string[] {
     if (!value || typeof value !== 'object') return [];
     if (value.type === 'reference') {
-      return [tokenKeyOf((value as ReferenceValue).key)];
+      return [(value as ReferenceValue).key];
     }
     if (value.type === 'function') {
       return functionDependencies(value as FunctionTokenValue);
@@ -788,7 +846,118 @@ export class DesignBook {
       return [sourceKey];
     }
 
+    // A typography depends on one node per field, so a ref to one field
+    // is not tied to the others (see `_setEdges`); a variant also on its base.
+    if (isTypographyToken(value)) {
+      const base = typographyBase(value);
+      return [...this._ownFieldKeys(qualifiedKey, value), ...(base ? [base] : [])];
+    }
+
     return this._extractDepsFromValue(value);
+  }
+
+  // --- Field nodes ---
+  //
+  // `scope.token.field` nodes give typography fields their own place in the
+  // graph. A typography's node depends on its own field nodes; each field
+  // node depends on what that field reads (`typographyFieldDependencies`);
+  // a field the token does not own — a variant's inherited field, a field
+  // read through a ref, a field of an inherited shadow — points at the
+  // field it actually reads, or at the token as a last resort. Field nodes
+  // are never tokens: no events, no `_liveKeys`, pruned once unread.
+
+  /** Field nodes in the graph, by owning token key. */
+  private _fieldNodes: Map<string, Set<string>> = new Map();
+
+  private _fieldNodesOf(key: string): string[] {
+    const nodes = this._fieldNodes.get(key);
+    if (!nodes) return [];
+    for (const fk of nodes) if (!this.graph.hasNode(fk)) nodes.delete(fk);
+    if (nodes.size === 0) this._fieldNodes.delete(key);
+    return [...nodes];
+  }
+
+  private _ownFieldKeys(key: string, token: AnyTokenValue | undefined): string[] {
+    if (!isTypographyToken(token)) return [];
+    const source = this.getSourceKey(key);
+    if (source && source !== key) return [];
+    return ((token.options?.fields ?? []) as string[]).map((f) => `${key}.${f}`);
+  }
+
+  private _fieldNodeDeps(fieldKey: string): string[] {
+    const owner = tokenKeyOf(fieldKey);
+    const field = fieldKey.slice(owner.length + 1);
+    const source = this.getSourceKey(owner);
+    if (source && source !== owner) return [`${source}.${field}`];
+    return typographyFieldDependencies(this.getTokenByKey(owner), field) ?? [owner];
+  }
+
+  /** Set the edges of `key` and of its field nodes as one step — clearing
+   *  the field nodes first, so a field that changes between owned and
+   *  inherited never forms a passing cycle — then wire every field node
+   *  the new edges reach that nobody has wired yet. A cycle anywhere puts
+   *  everything back and rethrows; the returned function does the same for
+   *  a caller whose later step fails. */
+  private _setEdges(key: string, deps: string[], token: AnyTokenValue | undefined): () => void {
+    const graph = this.graph;
+    const nodesBefore = new Set(graph.getAllNodes());
+    const snapshots = new Map<string, string[] | null>();
+    const snap = (k: string) => {
+      if (!snapshots.has(k)) snapshots.set(k, graph.hasNode(k) ? graph.getPrerequisitesFor(k) : null);
+    };
+    const isWired = (fk: string) => graph.hasNode(fk) && (this._fieldNodes.get(tokenKeyOf(fk))?.has(fk) ?? false);
+    const undo = () => {
+      for (const k of snapshots.keys()) if (graph.hasNode(k)) graph.updateEdges(k, []);
+      for (const [k, prev] of snapshots) {
+        if (prev === null) continue;
+        try { graph.updateEdges(k, prev); } catch { /* it was acyclic before */ }
+      }
+      for (const node of graph.getAllNodes()) if (!nodesBefore.has(node)) graph.removeNode(node);
+    };
+
+    const fields = [...new Set([...this._ownFieldKeys(key, token), ...this._fieldNodesOf(key)])];
+    snap(key);
+    fields.forEach(snap);
+    const pending = [...fields];
+    for (const d of deps) {
+      if (isFieldKey(d) && !isWired(d)) { snap(d); pending.push(d); }
+    }
+
+    try {
+      for (const fk of fields) if (graph.hasNode(fk)) graph.updateEdges(fk, []);
+      graph.addNode(key);
+      graph.updateEdges(key, deps);
+      const done = new Set<string>();
+      while (pending.length > 0) {
+        const fk = pending.shift()!;
+        if (done.has(fk)) continue;
+        done.add(fk);
+        const fieldDeps = this._fieldNodeDeps(fk);
+        for (const d of fieldDeps) {
+          if (isFieldKey(d) && !done.has(d) && !isWired(d)) { snap(d); pending.push(d); }
+        }
+        graph.addNode(fk);
+        graph.updateEdges(fk, fieldDeps);
+        const owner = tokenKeyOf(fk);
+        if (!this._fieldNodes.has(owner)) this._fieldNodes.set(owner, new Set());
+        this._fieldNodes.get(owner)!.add(fk);
+        this._linkInheritedAll(fieldDeps.filter((d) => !isFieldKey(d)));
+      }
+    } catch (e) {
+      undo();
+      throw e;
+    }
+    return undo;
+  }
+
+  /** After a token is deleted, its remaining field nodes (still read by
+   *  someone) fall back to the key, so re-adding it reaches their readers. */
+  private _rewireFieldNodesOf(key: string): void {
+    for (const fk of this._fieldNodesOf(key)) {
+      try {
+        this.graph.updateEdges(fk, this._fieldNodeDeps(fk));
+      } catch { /* the key has no edges of its own any more */ }
+    }
   }
 
   /** Record (or forget) `qualifiedKey` as a selector over the scopes its
@@ -974,6 +1143,8 @@ export class DesignBook {
       for (const node of this.graph.dfsTraversal(start)) {
         if (seen.has(node)) continue;
         seen.add(node);
+        // A field node is a hop to its readers, never a token to report.
+        if (isFieldKey(node)) continue;
         dependents.push(node);
         pending.push(node);
       }
@@ -981,6 +1152,9 @@ export class DesignBook {
 
     walk(key);
     for (const previous of alsoFrom) walk(previous);
+    // A typography's fields are upstream of it: whoever reads one of them
+    // must hear that the token changed.
+    for (const fk of this._fieldNodesOf(key)) walk(fk);
 
     while (pending.length > 0) {
       const node = pending.shift()!;
@@ -1020,6 +1194,13 @@ export class DesignBook {
     for (const key of candidates) {
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length > 0) continue;
+      if (isFieldKey(key)) {
+        const prerequisites = this.graph.getPrerequisitesFor(key);
+        this.graph.removeNode(key);
+        this._fieldNodes.get(tokenKeyOf(key))?.delete(key);
+        this._pruneOrphans(prerequisites);
+        continue;
+      }
       if (this._liveKeys.has(key)) continue;
       if (this.has(key) && !this.isInherited(key)) continue;
       this.graph.removeNode(key);
@@ -1067,6 +1248,7 @@ export class DesignBook {
         deletedKeys.add(key);
         this._indexSelector(key, undefined);
         this._detachNode(key);
+        this._rewireFieldNodesOf(key);
         continue;
       }
 
@@ -1074,13 +1256,15 @@ export class DesignBook {
       this.graph.addNode(key);
       const deps = this._getEffectiveDepsForKey(key, currentValue);
       const previousDeps = this.graph.getPrerequisitesFor(key);
+      let undoEdges = () => {};
       try {
-        this.graph.updateEdges(key, deps);
+        undoEdges = this._setEdges(key, deps, currentValue);
         this._linkInheritedDependencies(deps);
         if (!this._liveKeys.has(key)) this._linkInheritedShadowsOf(key);
         this._indexSelector(key, currentValue);
         this._pruneOrphans(previousDeps);
       } catch (e) {
+        undoEdges();
         // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
         failedKeys.add(key);

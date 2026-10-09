@@ -89,6 +89,19 @@ export function typographyFields(token: FunctionTokenValue): TypographyFields {
   return Object.fromEntries(fields.map((name, i) => [name, token.args[i] as TypographyField]));
 }
 
+/** What one field of the typography `token` reads, for the graph: the
+ *  refs in its own value, a variant's base field, or — for a field it does
+ *  not have — `undefined`. */
+export function typographyFieldDependencies(token: AnyTokenValue | undefined, field: string): string[] | undefined {
+  if (isReferenceValue(token)) return isTokenKey(token.key) ? [`${token.key}.${field}`] : undefined;
+  if (!isTypographyToken(token)) return undefined;
+  const { fields, base, removed = [] } = optionsOf(token);
+  const own = fields.indexOf(field);
+  if (own !== -1) return extractDependencies([token.args[own]]);
+  if (base && !removed.includes(field)) return [`${base}.${field}`];
+  return undefined;
+}
+
 /** The base key of a live variant, or `undefined`. */
 export function typographyBase(token: FunctionTokenValue): string | undefined {
   return optionsOf(token).base;
@@ -112,7 +125,9 @@ export function typographyFieldNames(
   if (!base) return [...fields];
   if (seen.has(base)) return undefined;
   seen.add(base);
-  const inherited = typographyFieldNames(book, book.getTokenByKey(base), seen) ?? [];
+  // A variant whose base is gone (or no typography) has no field list.
+  const inherited = typographyFieldNames(book, book.getTokenByKey(base), seen);
+  if (!inherited) return undefined;
   return [...inherited, ...fields.filter((f) => !inherited.includes(f))].filter((f) => !removed.includes(f));
 }
 

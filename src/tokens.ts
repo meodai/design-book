@@ -171,12 +171,18 @@ export function string(value: string, options?: { description?: string; [key: st
   return val({ type: 'string', rawValue: value }, options);
 }
 
-/** The `scope.token` a key reads: a field ref (`type.title.fontSize`)
- *  depends on the whole token, so the graph only ever sees token keys. */
+/** The `scope.token` part of a key — the token a field key
+ *  (`type.title.fontSize`) belongs to; a token key comes back unchanged. */
 export function tokenKeyOf(key: string): string {
   const first = key.indexOf('.');
   const second = first === -1 ? -1 : key.indexOf('.', first + 1);
   return second === -1 ? key : key.slice(0, second);
+}
+
+/** `scope.token.field`: one field of a typography token. The graph keeps a
+ *  node per field, so field refs depend on the field, not the whole token. */
+export function isFieldKey(key: string): boolean {
+  return key.split('.').length === 3;
 }
 
 /** Keys the args read as values, each listed once in first-seen order. */
@@ -184,7 +190,7 @@ export function extractDependencies(args: FunctionArg[]): string[] {
   const deps = new Set<string>();
   for (const arg of args) {
     if (isReferenceValue(arg)) {
-      deps.add(tokenKeyOf(arg.key));
+      deps.add(arg.key);
     } else if (isFunctionTokenValue(arg)) {
       // Nested function token — its dependencies are transitively this
       // function's dependencies, so the graph propagates correctly. Include
@@ -202,7 +208,7 @@ export function extractDependencies(args: FunctionArg[]): string[] {
  *  A token built with `createFunctionToken` and no metadata still gets the
  *  edges its args imply. Deduplicated, first-seen order. */
 export function functionDependencies(fn: FunctionTokenValue): string[] {
-  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? []).map(tokenKeyOf)])];
+  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? [])])];
 }
 
 /** Normalises a `not` option into an array of fully-qualified token keys.

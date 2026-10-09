@@ -543,7 +543,7 @@ W3 output is the native composite (`"type": { "title": { "$type": "typography", 
 
 ### One field: `ref('scope.token.field')`
 
-A third key segment reads one field. It depends on the whole typography in the graph, follows refs to it, and renders as the field's variable:
+A third key segment reads one field. The graph tracks it per field — a line-height may read its own style's font size, two styles may read each other's other fields, and only a real loop is rejected. It follows refs to the typography and renders as the field's variable:
 
 ```typescript
 callout.set('size', ref('type.title.fontSize'));   // --callout-size: var(--type-title-font-size);
