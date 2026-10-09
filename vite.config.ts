@@ -1,11 +1,20 @@
 import { defineConfig } from 'vite';
+import type { ConfigEnv, UserConfig } from 'vite';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import dts from 'vite-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-export default defineConfig(({ mode }) => {
+// Each dev server pre-bundles its own dependencies: with one shared
+// node_modules/.vite, running the editor and the marketing page side by side
+// re-optimizes the cache under the other one (504 Outdated Optimize Dep).
+export default defineConfig((env) => ({
+  cacheDir: resolve(__dirname, 'node_modules/.vite', env.mode),
+  ...config(env),
+}));
+
+function config({ mode }: ConfigEnv): UserConfig {
   if (mode === 'editor') {
     return {
       root: 'editor',
@@ -79,4 +88,4 @@ export default defineConfig(({ mode }) => {
       },
     },
   };
-});
+}
