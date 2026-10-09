@@ -498,6 +498,72 @@ token, so `resolve('a.b.x')` could never find the token), a scope extending
 itself, and an `extends` chain that leads back to the new scope are all
 rejected.
 
+More scope helpers:
+
+```typescript
+book.extendScope('dark', 'light');     // same as addScope('dark', { extends: 'light' })
+book.copyScope('light', 'print');      // a new scope with light's tokens (own and inherited) copied in, unlinked
+book.deleteScope('print');             // returns the keys it removed
+book.hasScope('dark');                 // true
+book.getAllKeysForScope('dark');       // token names, inherited ones included
+book.getScopeDependencies('ui');       // keys outside ui that ui's tokens read
+
+dark.hasOwn('bg');                     // set on dark itself, not inherited
+dark.ownKeys();                        // only dark's own keys, in insertion order
+dark.allTokens();                      // { bg: <token>, text: <token>, … }, inherited included
+```
+
+## Scope Ordering
+
+A scope lists its keys in the order they were set, parents' keys first. Give
+it an `order` and it sorts them instead. The order is not cosmetic: it is the
+order of the CSS, JSON and W3 output, and it decides positions for `nth` and
+`sibling`.
+
+```typescript
+const space = book.addScope('space', { order: [{ by: 'value' }] });
+space.set('l', px(24));
+space.set('xs', px(4));
+space.set('m', px(16));
+space.getAllKeys();               // ['xs', 'm', 'l']
+
+palette.setOrder([{ by: 'value', direction: 'desc' }]);  // light → dark
+nth(palette, 0);                  // the lightest, wherever it was set
+palette.clearOrder();             // back to insertion order
+```
+
+An order is a list of criteria, tried in turn until one separates two keys:
+
+| Criterion | Sorts by |
+|---|---|
+| `{ by: 'value', direction? }` | the resolved value, within one type: dimensions by their number, strings alphabetically, colors dark → light along the smoothest path through the set ([colorsort-js](https://github.com/meodai/colorsort-js)) |
+| `{ by: 'name', direction? }` | the key, alphabetically |
+| `{ by: 'type', priority? }` | the type: the ones listed in `priority` first, then the rest |
+
+`direction` is `'asc'` (default) or `'desc'`. Refs and function tokens sort by
+their resolved value, and tokens that cannot resolve go last. The order
+updates when a value changes.
+
+```typescript
+// colors first, then everything else; alphabetical within each type
+book.addScope('mixed', { order: [{ by: 'type', priority: ['color'] }, { by: 'name' }] });
+```
+
+A scope with no order of its own uses its parent's (`getEffectiveOrder()`;
+`getOrder()` returns only its own). Dimensions compare by number alone, so
+`16px` and `1rem` don't sort sensibly against each other: keep one unit per
+ordered scope.
+
+To sort a type of your own, or replace a built-in sort, register an orderer.
+It receives every entry of that type at once and returns them in ascending
+order:
+
+```typescript
+book.registerOrderer('string', (entries) =>
+  [...entries].sort((a, b) => a.resolved.length - b.resolved.length));
+// entries: { key, type, resolved, token }[]
+```
+
 ## Typography
 
 A text style is a collection of properties (family, size, weight, line-height, …) that you want to address as one thing. `typography()` makes it **one token**, the W3 `typography` composite. Each field is an argument of the token, so the refs it holds are tracked in the graph like any function's, and a `ref()` to it carries the whole style:
@@ -979,23 +1045,28 @@ If you prefer a ramp-oriented workflow, RampenSau is a good fit for generating a
 
 ```typescript
 import {
-  DesignBook, color, ref,
+  DesignBook, color, ref, nameValues,
   bestContrastWith, closestColor, colorMix, nth,
 } from 'design-book';
 
 const book = new DesignBook('workflow');
 
 const primitive = book.addScope('primitive');
-primitive.set('blue-900', color('#102a43'));
-primitive.set('blue-700', color('#1f5f8b'));
-primitive.set('blue-500', color('#2f80ed'));
+
+// seven blues from step 1, lightest → darkest
+const blues = ['#e8f1fd', '#b9d4fa', '#7fb0f5', '#2f80ed', '#1f5f8b', '#163f63', '#102a43'];
+for (const [name, hex] of nameValues(blues, 'hundreds', { prefix: 'blue-' })) {
+  primitive.set(name, color(hex));
+}
+// → blue-50, blue-200, blue-300, blue-500, blue-700, blue-800, blue-950
+
 primitive.set('mint-300', color('#7ad9b6'));
 primitive.set('sand-100', color('#f6efe7'));
 primitive.set('ink-900', color('#111111'));
 primitive.set('white', color('#ffffff'));
 ```
 
-In a real pipeline, those primitive values would usually be imported from Poline, RampenSau, or another color-generation step rather than typed by hand.
+In a real pipeline, those values come from Poline, RampenSau, or another color-generation step rather than being typed by hand. Generated shades still need keys. [`nameValues`](#naming-primitives) gives them the names of a familiar convention, spread evenly over however many shades the generator returns. Any odd count keeps `blue-500` on the middle shade, so a semantic token that refers to it survives a regenerated ramp.
 
 ### 3. Build a semantic layer from rules
 
@@ -1012,7 +1083,9 @@ semantic.set('surface-accent-hover', colorMix(
 
 semantic.set('text', bestContrastWith(ref('semantic.surface'), primitive));
 semantic.set('text-on-accent', bestContrastWith(ref('semantic.surface-accent'), primitive));
-semantic.set('border-subtle', closestColor(ref('semantic.surface'), primitive));
+semantic.set('border-subtle', closestColor(ref('semantic.surface'), primitive, {
+  not: ['primitive.sand-100'],   // the surface itself
+}));
 semantic.set('focus-ring', ref('primitive.mint-300'));
 ```
 
@@ -1056,6 +1129,44 @@ If you regenerate the primitive palette, the semantic and component layers recom
 - Accessibility rules can live in the token graph instead of in design review folklore
 
 Design Book is strongest in that middle layer: not generating colors, but turning a generated palette into a maintainable, explainable system.
+
+## API Reference
+
+Everything exported from `design-book`, grouped. The sections above show how
+they fit together.
+
+**Book and scopes.** `DesignBook`: `addScope`, `extendScope`, `copyScope`, `deleteScope`, `getScope`, `hasScope`, `getAllScopes`, `getAllKeysForScope`, `getScopeDependencies`, `resolve`, `has`, `getTokenByKey`, `inspect`, `getSourceKey`, `isInherited`, `on`, `watch`, `mode`, `flush`, `batchQueueSize`, `registerFunction`, `getFunction`, `registerOrderer`, `getOrderer`, `registerRenderer`, `render`, `getRendererNames`, `getDependencyGraph`. `Scope`: `set`, `get`, `resolve`, `delete`, `has`, `hasOwn`, `isInherited`, `getSourceKey`, `getAllKeys`, `ownKeys`, `allTokens`, `setOrder`, `clearOrder`, `getOrder`, `getEffectiveOrder`, `metadata`.
+
+**Token constructors.** `color`, `ref`, `px`, `rem`, `ms`, `dimension`, `string`, `val`, `createFunctionToken`.
+
+**Functions.**
+- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
+- Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
+- Generic selectors: `nth`, `sibling`, `random`, `nextLarger`, `nextSmaller`
+- Scales: `spacingScale`, `typographyScale`, `timing`
+- Typography: `typography`, `variant`
+
+**Typography helpers**, for custom renderers and tooling:
+- `isTypographyToken(token)`
+- `typographyFields(token)` returns the token's own fields as `{ name: value }`
+- `typographyBase(token)` returns a live variant's base key, or `undefined`
+- `typographyFieldNames(book, token)` returns every field, inherited ones included
+
+**Themes and variations.** `layer`, `composeBook`, `layerOf`, `keysFromLayer`, `diffBooks`.
+
+**Naming** (also `design-book/naming`). `nameValues`, `scaleNames`, `nameBetween`, `namingScheme`, `schemes`.
+
+**Rendering.** `Renderer`, `SVGRenderer`, `TableViewRenderer`.
+
+**Errors.** `TokenError` (bad keys or values, unknown tokens), `ScopeError` (bad scope names or inheritance), `CircularDependencyError` (with `path`), `FunctionError` (invalid function arguments), `LayerError` (`layerName`, `tokenKey`, `cause`).
+
+**Low level**, for custom functions and tooling:
+- Type guards: `isReferenceValue`, `isTokenValue`
+- Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)` checks for a field key
+- Dependency extraction: `extractDependencies(args)`, `extractIteratedScopes(args)`, `iteratedScopesOf(fn)`, `extractVisualDependencies(args)`
+- Caches: `getTokenProcessors(token)`, `getReferenceResolution(ref)`
+- `DependencyGraph`
+- `registerBuiltinFunctions`, `registerBuiltinFunctionRenderers`, `registerBuiltinRenderers`: called by the constructors, needed only when building a book or renderer by hand
 
 ## Using with Claude Code
 

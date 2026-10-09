@@ -169,7 +169,7 @@
         <h3 data-rewire="onSurface">The most readable foreground</h3>
         <p>
           <code>color.onSurface</code> starts as a plain ref to
-          <code>values.gray50</code>. That works for a light surface, and
+          <code>values.gray900</code>. That works for a light surface, and
           fails the moment the surface stops being light.
         </p>
         <p class="rule-line">
@@ -241,8 +241,8 @@
           spacing, type, motion. Given a scale and a starting member,
           <code>nextLarger</code> and <code>nextSmaller</code> return the
           adjacent step. The unit can be anything (<code>px</code>,
-          <code>rem</code>, <code>ms</code>); the function only requires
-          that every member of the scope share one.
+          <code>rem</code>, <code>ms</code>); members in a different unit
+          from the starting one are skipped.
         </p>
         <p class="rule-line">
           <code>space.emphasis</code> =
@@ -456,6 +456,9 @@
           result. It works until dark mode arrives, or a second theme, or a
           broader brand shift. Then all the flexibility that should have
           been inside the system has to be retrofitted after the fact.
+          When the relationships live inside the system, a dark theme is
+          only the handful of roots that change, a dark surface and a light
+          ink, and everything derived from them follows.
         </p>
         <p>
           Once a token system can encode relationships instead of only
@@ -479,7 +482,9 @@
           easy to see, but the same logic applies anywhere the relationship
           matters more than the stored result: type treatments, motion
           rules, icon choices, grouped decisions like a surface/on-surface
-          pair. At that point a token system stops being a catalogue of
+          pair. A text style is already one of those: size, weight and
+          line height travel as one token, and a variant that changes only
+          the weight keeps following the rest. At that point a token system stops being a catalogue of
           frozen answers and starts behaving more like a design
           spreadsheet, or at its best, a small design program: one that
           makes flexibility part of the design instead of a chore that shows
