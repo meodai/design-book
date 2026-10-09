@@ -758,34 +758,40 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
 
   <div class="typo-feature-body feature-sub">
     <div class="typo-feature-text">
-      <h3 id="typo-title">A style is <em>a scope.</em></h3>
+      <h3 id="typo-title">Type styles <em>travel whole.</em></h3>
       <p>
         A type style is a collection of properties — family, size,
-        weight, line-height, tracking. Design Book treats it as a
-        <em>scope</em> with a <code>compose: 'typography'</code> marker,
-        so every property stays a real, ref-able token in the graph.
-        Renderers re-aggregate the scope at output time — a CSS class
-        for the browser, a <code>$type: 'typography'</code> composite
-        for the W3 Design Tokens spec.
+        weight, line-height, tracking. <code>typography()</code> makes it
+        one token, the W3 <code>typography</code> composite, so it sits in
+        a scope next to everything else. Its fields are tracked in the
+        graph like any rule's: a <code>ref()</code> carries the whole
+        style, <code>ref('type.heading.fontSize')</code> reads one field.
+        Renderers write a variable per field and a CSS class for the
+        browser, a <code>$type: 'typography'</code> token for the W3
+        Design Tokens spec.
       </p>
-      <pre class="code"><code>book.<span class="c-fn">addTypography</span>(<span class="c-str">'heading-lg'</span>, {
+      <pre class="code"><code>type.<span class="c-fn">set</span>(<span class="c-str">'heading'</span>, <span class="c-fn">typography</span>({
   <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
   <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
   <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
-  <span class="c-key">lineHeight</span>:    <span class="c-str">'1'</span>,
+  <span class="c-key">lineHeight</span>:    <span class="c-num">1</span>,
   <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
-});
+}));
 
-<span class="c-dim">// a variant extends it, compose included</span>
-book.<span class="c-fn">addTypography</span>(<span class="c-str">'hero-title'</span>,
+<span class="c-dim">// a variant reads the rest from its base, live</span>
+type.<span class="c-fn">set</span>(<span class="c-str">'hero'</span>, <span class="c-fn">withFields</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'type.heading'</span>),
   { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
-  { <span class="c-key">extends</span>: <span class="c-str">'heading-lg'</span> });</code></pre>
+));
+
+<span class="c-dim">// one field, anywhere</span>
+callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span class="c-fn">ref</span>(<span class="c-str">'type.heading.fontSize'</span>));</code></pre>
     </div>
 
     <figure class="typo-stage">
-      <div class="typo-sample typo-sample--heading">A style is a scope.</div>
-      <div class="typo-sample typo-sample--hero">Variants extend.</div>
-      <figcaption>Same book. Two scopes. One inherits the other.</figcaption>
+      <div class="typo-sample typo-sample--heading">Type styles travel whole.</div>
+      <div class="typo-sample typo-sample--hero">Variants follow.</div>
+      <figcaption>One scope. Two tokens. The variant reads the rest from its base.</figcaption>
     </figure>
   </div>
 </section>
