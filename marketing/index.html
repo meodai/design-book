@@ -97,6 +97,80 @@
   <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
 </section>
 
+<!-- ─── ref(): point at a source instead of copying it ───────────── -->
+<section class="ref-feature" aria-labelledby="ref-title">
+  <div class="ref-feature-body">
+    <div class="ref-feature-text">
+      <h2 id="ref-title"><em>Point,</em> don't copy.</h2>
+      <p>
+        A hex code pasted in two places is two decisions that will drift
+        apart. <code>ref()</code> records where a value comes from: the
+        token stores the key, not the value, so changing the source
+        changes everything that points at it. Refs chain, cross scopes
+        and read single fields of a type style, and the CSS keeps the
+        link as <code>var()</code>.
+      </p>
+      <pre class="code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>,
+  <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>,
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>));
+ui.<span class="c-fn">set</span>(<span class="c-str">'focus'</span>, <span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>));
+ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>));</code></pre>
+    </div>
+
+    <figure class="ref-stage">
+      <label class="ref-control">
+        <color-input id="ref-source" value="#2d60a5" initial-colorspace="hsl" no-alpha></color-input>
+        <span>brand.primary</span>
+      </label>
+      <div class="extends-pane">
+        <div class="extends-pane-head">
+          <span class="extends-pane-name">ui</span>
+          <span class="extends-pane-meta">reads <code>brand</code></span>
+        </div>
+        <div class="extends-rows extends-rows--keys" id="ref-rows"></div>
+      </div>
+      <pre class="code ref-css" id="ref-css" aria-label="CSS output"></pre>
+      <figcaption>Change the source. Every ref follows, and the CSS keeps the chain.</figcaption>
+    </figure>
+  </div>
+
+  <div class="ref-feature-body feature-sub">
+    <div class="ref-feature-text">
+      <h3 id="ref-relative-title"><em>Relative refs</em> read their own scope.</h3>
+      <p>
+        Leave the scope off — <code>ref('.bg')</code> — and the ref reads
+        that key in whichever scope reads the token. A variant extends
+        its base and overrides one root; every inherited token that
+        reads it relatively re-binds to the variant's value. Base and
+        variant ship side by side, as <code>--button-hover</code> and
+        <code>--button-danger-hover</code>.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> btn = book.<span class="c-fn">addScope</span>(<span class="c-str">'button'</span>);
+btn.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>, <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>));
+btn.<span class="c-fn">set</span>(<span class="c-str">'fg'</span>, <span class="c-fn">bestContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'.bg'</span>), brand));
+btn.<span class="c-fn">set</span>(<span class="c-str">'hover'</span>, <span class="c-fn">darken</span>(<span class="c-fn">ref</span>(<span class="c-str">'.bg'</span>),
+  { <span class="c-key">amount</span>: <span class="c-num">0.15</span> }));
+
+<span class="c-dim">// one root; fg and hover follow</span>
+book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'button'</span>,
+}).<span class="c-fn">set</span>(<span class="c-str">'bg'</span>, <span class="c-fn">ref</span>(<span class="c-str">'brand.error'</span>));</code></pre>
+    </div>
+
+    <figure class="ref-stage">
+      <label class="ref-control">
+        <color-input id="ref-danger" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <span>brand.error</span>
+      </label>
+      <div class="ref-panes" id="ref-panes"></div>
+      <figcaption>One override. The dimmed rows are inherited, and still follow it.</figcaption>
+    </figure>
+  </div>
+</section>
+
 <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
 <main class="sections">
 
@@ -698,9 +772,10 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
           Every token cascades through unless you redefine it locally — and
           the dependency graph still knows: change a parent token and every
           descendant that inherits it recomputes. The editor dims inherited
-          rows, so only the changes are bright. Inherited references keep
-          pointing at the keys they name, so reach for layers once a theme
-          has to re-route what is derived from a root.
+          rows, so only the changes are bright. A full reference keeps
+          pointing at the key it names; a <a href="#ref-relative-title">relative
+          one</a> re-binds to the inheriting scope. Reach for layers once a
+          theme has to change roots across the whole system.
         </p>
         <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
 light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));

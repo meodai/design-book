@@ -2218,6 +2218,75 @@ h1, h2, h3 {
 }
 .feature-sub :is(h2, h3) { font-size: clamp(24px, 2.6vw, 32px); }
 
+/* ── ref(): sources and relative refs ───────────────────────────── */
+.ref-feature {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: clamp(60px, 8vw, 100px) var(--gutter);
+  border-top: 1px solid var(--rule);
+}
+.ref-feature-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(20px, 2.4vw, 32px);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .ref-feature-body { grid-template-columns: 5fr 7fr; }
+}
+.ref-feature-text { max-width: 56ch; }
+.ref-feature-text :is(h2, h3) {
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.12;
+  margin: 0 0 0.5em;
+}
+.ref-feature-text :is(h2, h3) em { color: var(--accent); font-style: italic; }
+.ref-feature-body.feature-sub .ref-feature-text h3 { font-size: clamp(24px, 2.6vw, 32px); }
+.ref-feature-text > p {
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+.ref-feature-text code:not(.code code) {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 1px 6px;
+  border-radius: 0;
+}
+.ref-stage {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.ref-stage figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ref-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+/* `.code` carries a named grid-area from the selector panels; not here. */
+.ref-css { margin: 0; grid-area: auto; }
+.ref-panes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+/* Inherited here, yet the point is that they follow: dim less. */
+.ref-panes .ext-row--inherited { opacity: 0.55; }
+.ref-panes .ext-row { grid-template-columns: 6ch 22px minmax(0, 1fr); }
+
 /* ── readableOn ─────────────────────────────────────────────────── */
 .readable-feature {
   max-width: var(--max);

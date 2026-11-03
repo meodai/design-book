@@ -983,6 +983,85 @@ wireTabs(document.querySelector(".fn-tabs"), { hash: true });
 wireTabs(document.querySelector(".extends-modes"));
 
 // ══════════════════════════════════════════════════════════════════════
+//  REF — point at a source; relative refs re-bind in a variant scope
+// ══════════════════════════════════════════════════════════════════════
+(function refSection () {
+  const sourceIn = document.getElementById("ref-source");
+  const dangerIn = document.getElementById("ref-danger");
+  const rowsEl   = document.getElementById("ref-rows");
+  const cssEl    = document.getElementById("ref-css");
+  const panesEl  = document.getElementById("ref-panes");
+  if (!sourceIn || !dangerIn || !rowsEl || !cssEl || !panesEl) return;
+
+  const SOURCE = sourceIn.getAttribute("value") || "#2d60a5";
+  const DANGER = dangerIn.getAttribute("value") || "#c8391a";
+
+  const book = new DesignBook("ref-demo");
+  const brand = book.addScope("brand");
+  brand.set("primary", color(SOURCE));
+  brand.set("error",   color(DANGER));
+  brand.set("ink",     color("#1d1c1c"));
+  brand.set("paper",   color("#fcf6ee"));
+
+  const ui = book.addScope("ui");
+  ui.set("link",   ref("brand.primary"));
+  ui.set("focus",  ref("ui.link"));
+  ui.set("border", ref("ui.link"));
+
+  const button = book.addScope("button");
+  button.set("bg",    ref("brand.primary"));
+  button.set("fg",    bestContrastWith(ref(".bg"), brand));
+  button.set("hover", darken(ref(".bg"), { amount: 0.15 }));
+  book.addScope("button-danger", { extends: "button" })
+    .set("bg", ref("brand.error"));
+
+  // The token as written: a ref with its key, a function by name.
+  const written = (token) => token.type === "reference"
+    ? `<span class="c-fn">ref</span>(<span class="c-str">'${token.key}'</span>)`
+    : `<span class="c-fn">${token.name}</span>`;
+
+  const row = (scope, name, label = name) => {
+    const inherited = scope.isInherited(name);
+    const value = book.resolve(`${scope.name}.${name}`);
+    const source = inherited ? "inherit" : written(scope.getRaw(name));
+    return `<div class="ext-row ext-row--${inherited ? "inherited" : "override"}">
+      <span class="ext-key">${label}</span>
+      <span class="ext-swatch" style="background:${value}"></span>
+      <span class="ext-val">${source} <span class="ext-resolved">→ ${value}</span></span>
+    </div>`;
+  };
+
+  const pane = (scope) => `<div class="extends-pane">
+      <div class="extends-pane-head">
+        <span class="extends-pane-name">${scope.name}</span>
+        ${scope.extendsScope ? `<span class="extends-pane-meta">extends <code>${scope.extendsScope}</code></span>` : ""}
+      </div>
+      <div class="extends-rows">${["bg", "fg", "hover"].map((n) => row(scope, n)).join("")}</div>
+    </div>`;
+
+  function paint () {
+    rowsEl.innerHTML = ["link", "focus", "border"].map((n) => row(ui, n, `ui.${n}`)).join("");
+    const lines = book.render("css-variables").split("\n")
+      .filter((l) => /^\s*--(brand-primary|ui-[\w-]+):/.test(l))
+      .map((l) => `  ${l.trim()}`);
+    cssEl.textContent = [":root {", ...lines, "}"].join("\n");
+    panesEl.innerHTML = [button, book.getScope("button-danger")].map(pane).join("");
+  }
+
+  const bind = (input, key, fallback) => {
+    const update = () => {
+      try { brand.set(key, color(input.value || fallback)); paint(); } catch {}
+    };
+    input.addEventListener("input", update);
+    input.addEventListener("change", update);
+  };
+  bind(sourceIn, "primary", SOURCE);
+  bind(dangerIn, "error", DANGER);
+
+  paint();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
 //  READABLE ON — contrast as a filter before ranking
 // ══════════════════════════════════════════════════════════════════════
 (function readableSection () {
