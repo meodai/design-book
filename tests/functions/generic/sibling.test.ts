@@ -243,8 +243,8 @@ describe('sibling anchor validation', () => {
   });
 
   it('rejects an anchor with an empty scope or token part', () => {
-    expect(() => sibling(ref('.g100'), 1)).toThrow(FunctionError);
     expect(() => sibling(ref('gray.'), 1)).toThrow(FunctionError);
+    expect(() => sibling(ref('.g100.x'), 1)).toThrow(FunctionError);
   });
 
   it('scopeOfKey throws on a key without a scope', () => {

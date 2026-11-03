@@ -39,6 +39,10 @@ export {
   getTokenProcessors,
   isReferenceValue,
   isTokenValue,
+  isRelativeKey,
+  qualifyKey,
+  hasRelativeKeys,
+  bindToken,
 } from './tokens';
 export type {
   AnyTokenValue,

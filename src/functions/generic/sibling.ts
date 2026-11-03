@@ -1,6 +1,7 @@
 import {
   createFunctionToken,
   isReferenceValue,
+  isRelativeKey,
   normalizeNotKeys,
 } from '../../tokens';
 import type {
@@ -21,9 +22,11 @@ export interface SiblingOptions {
 }
 
 /** Scope name of a fully-qualified key. Scope names cannot contain dots.
- *  Throws on a key that is not `scope.token`: an unqualified anchor would
- *  otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
+ *  A relative key (`.token`) gives `''` — the scope that reads it, filled in
+ *  when the token is bound. Throws on a key that is neither: an unqualified
+ *  anchor would otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
 export function scopeOfKey(key: string): string {
+  if (isRelativeKey(key) && !key.includes('.', 1)) return '';
   const dot = key.indexOf('.');
   if (dot <= 0 || dot === key.length - 1) {
     throw new FunctionError(`sibling: the anchor must be a fully-qualified 'scope.token' key, got "${key}"`, 'sibling');

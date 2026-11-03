@@ -137,7 +137,7 @@ function ownTokens(book: DesignBook): Map<string, AnyTokenValue> {
   const tokens = new Map<string, AnyTokenValue>();
   for (const scope of book.getAllScopes()) {
     for (const key of scope.ownKeys()) {
-      tokens.set(`${scope.name}.${key}`, scope.get(key)!);
+      tokens.set(`${scope.name}.${key}`, scope.getRaw(key)!);
     }
   }
   return tokens;

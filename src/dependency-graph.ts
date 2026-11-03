@@ -23,6 +23,22 @@ export class DependencyGraph extends Graph {
    *  scope-iterating function token is deliberately *not* a graph edge —
    *  the book keeps it in a selector index instead — so a pool member that
    *  is derived from the selector iterating it is not a cycle. */
+  /** True when `targets` contains `start` or a node downstream of it. */
+  private reachesAny(start: string, targets: string[]): boolean {
+    if (targets.length === 0) return false;
+    const wanted = new Set(targets);
+    const seen = new Set<string>();
+    const stack = [start];
+    while (stack.length > 0) {
+      const node = stack.pop()!;
+      if (wanted.has(node)) return true;
+      if (seen.has(node)) continue;
+      seen.add(node);
+      for (const next of this.getOutgoing(node)) if (!seen.has(next)) stack.push(next);
+    }
+    return false;
+  }
+
   updateEdges(key: string, dependencies: string[]): void {
     // Save current incoming edges for rollback
     const currentPrereqs = [...this.getIncoming(key)];
@@ -33,16 +49,18 @@ export class DependencyGraph extends Graph {
     }
 
     // Add new incoming edges (auto-create nodes if needed)
-    const existingNodes = new Set(this.getAllNodes());
     for (const dep of dependencies) {
-      if (!existingNodes.has(dep)) {
+      if (!this.hasNode(dep)) {
         this.addNode(dep);
       }
       this.addEdge(dep, key);
     }
 
-    // Check for cycles — if found, rollback
-    if (this.hasCycles()) {
+    // Check for cycles — if found, rollback. The graph was acyclic before
+    // this call, so a cycle must run through one of the new edges
+    // `dep → key`, i.e. `key` already reaches `dep`: a search downstream
+    // from `key` answers it without walking the whole graph.
+    if (this.reachesAny(key, dependencies)) {
       // Rollback: remove new edges
       for (const dep of dependencies) {
         this.removeEdge(dep, key);

@@ -92,9 +92,19 @@ export class ScopeManager {
     if (!sourceScope) {
       throw new ScopeError(`Scope "${source}" not found`, source);
     }
-    for (const [key, token] of Object.entries(sourceScope.allTokens())) {
-      target.set(key, { ...token });
+    // As written: a relative ref (`ref('.primary')`) stays relative and
+    // reads the target's own keys.
+    for (const key of sourceScope.getAllKeys()) {
+      const token = sourceScope.getRaw(key);
+      if (token) target.set(key, { ...token });
     }
+  }
+
+  /** Unregister a scope that was just added, silently — for an `addScope`
+   *  the book refused after the fact. */
+  _discard(name: string): void {
+    this.scopes.get(name)?.dispose();
+    this.scopes.delete(name);
   }
 
   deleteScope(name: string): string[] {

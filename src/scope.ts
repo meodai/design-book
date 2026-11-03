@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
+import { bindToken, isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
 import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
@@ -18,6 +18,7 @@ type BookWithScope = BookLike & {
   getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
   _notifyRollback(key: string, restoredValue: any, rejectedValue: any): void;
+  _restoreRejectedDelete(key: string, restored: AnyTokenValue): void;
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
   on(event: 'change', callback: (e: { detail: { changedKeys: string[] } }) => void): () => void;
@@ -79,12 +80,23 @@ export class Scope {
     return this.extendsName;
   }
 
+  /** The token `name` holds as this scope reads it: own or inherited, with
+   *  relative keys (`ref('.primary')`) qualified against this scope — an
+   *  inherited `ref('.primary')` comes back as `ref('<this scope>.primary')`.
+   *  Use `getRaw` for the token as it was written. */
   get(name: string): AnyTokenValue | undefined {
+    const token = this.getRaw(name);
+    return token === undefined ? undefined : bindToken(token, this.name);
+  }
+
+  /** The token `name` holds, own or inherited, exactly as it was written —
+   *  relative keys left relative. What copies and serializers want. */
+  getRaw(name: string): AnyTokenValue | undefined {
     if (this.tokens.has(name)) {
       return this.tokens.get(name);
     }
     if (this.extendsName) {
-      return this.book.getScope(this.extendsName)?.get(name);
+      return this.book.getScope(this.extendsName)?.getRaw(name);
     }
     return undefined;
   }
@@ -106,7 +118,7 @@ export class Scope {
   set(name: string, value: AnyTokenValue): void {
     assertValidTokenKey(this.name, name);
     const qualified = `${this.name}.${name}`;
-    if (isTypographyToken(value) && typographyBase(value) === qualified) {
+    if (isTypographyToken(value) && typographyBase(bindToken(value, this.name)) === qualified) {
       const error = new CircularDependencyError([qualified, qualified]);
       error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +
         `pass the token instead: variant(book.getTokenByKey("${qualified}"), …)`;
@@ -148,11 +160,22 @@ export class Scope {
 
   /** Delete a local token, reverting to inherited value if available */
   delete(name: string): boolean {
+    const old = this.tokens.get(name);
     const had = this.tokens.delete(name);
     if (had) {
       this.invalidateOrderCache();
       this.book.invalidateDescendantOrderCaches(this.name);
-      this.book._notifyTokenChange(`${this.name}.${name}`, undefined, undefined);
+      try {
+        this.book._notifyTokenChange(`${this.name}.${name}`, undefined, old);
+      } catch (e) {
+        // The delete was rejected: with the own token gone the key inherits
+        // one whose relative refs close a cycle in this scope. Put it back.
+        this.tokens.set(name, old as AnyTokenValue);
+        this.invalidateOrderCache();
+        this.book.invalidateDescendantOrderCaches(this.name);
+        this.book._restoreRejectedDelete(`${this.name}.${name}`, old as AnyTokenValue);
+        throw e;
+      }
     }
     return had;
   }

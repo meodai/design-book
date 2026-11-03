@@ -39,7 +39,7 @@ Three value types: `TokenValue`, `ReferenceValue`, `FunctionTokenValue` (union: 
 
 Constructors — all validate and throw on invalid input:
 - `color(value)` — any CSS color via Culori
-- `ref(key)` — reference to another token (always fully qualified: `'scope.token'`)
+- `ref(key)` — reference to another token: fully qualified (`'scope.token'`) or **relative** (`'.token'`, `'.token.field'`) — see "Relative refs" below
 - `px(n)`, `rem(n)`, `ms(n)` — dimension shortcuts, delegate to `dimension(n, unit)`
 - `dimension(n, unit)` — generic dimension
 - `string(value)` — string token
@@ -48,6 +48,14 @@ Constructors — all validate and throw on invalid input:
 Type guards: `isReferenceValue(arg)`, `isTokenValue(arg)`
 
 Function argument type: `FunctionArg = TokenValue | ReferenceValue | ScopeFunctionArg | string | number`
+
+### Relative refs (`ref('.token')`)
+
+A leading-dot key reads that token in the scope that *reads* the token, so an inherited `button.hover = shade(ref('.bg'))` reads `button-danger.bg` in `button-danger extends button`. Tokens keep the relative form (shared data — an inherited token is one object); `bindToken(token, scope)` (`src/tokens.ts`, cached per token × scope so identity is stable) qualifies ref keys, nested args, `options.from` / `base` / `not`, `metadata.dependencies` / `visualDependencies`, and an `iteratedScopes` entry of `''` (a relative `sibling` anchor). `Scope.get` returns the **bound** token; `Scope.getRaw` the token as written — use `getRaw` for identity checks (`_ownToken`, layer provenance), copies (`copyTokensInto`) and serializing (editor). Everything else (resolve, graph deps, renderers, reference cache) sees bound tokens and never a relative key; `book.resolve('.x')` throws.
+
+An inherited key whose token has relative keys is **re-bound** (`book.isRebound(key)`): unlike a plain inherited shadow (one edge to its source, created lazily when read) it is wired eagerly like an own token, with its bound deps, and tracked in `_boundShadows`. `_readsSource(key)` (inherited and not re-bound) replaces the old `source !== key` checks in deps, field nodes, the selector index, `_linkInheritedDependency` and the reference resolver. `_rebindShadows(key)` runs after every write / delete / rollback of a key (auto and batch) and re-wires the key's copies in descendant scopes; the shadows it touched are notified with the key. A re-bound shadow can close a cycle that exists only in its scope: `_bindShadows` undoes all and throws, so the `set` is refused, `Scope.delete` restores the token (`_restoreRejectedDelete`; delete events now carry the removed token as `oldValue`), and `addScope` discards the scope (`_bindInheritedKeysOf` / `_discardScope`). No relative scope arguments.
+
+`DependencyGraph.updateEdges` checks cycles locally (does `key` already reach a new prerequisite?) and `_setEdges` tracks only nodes it may create — both used to walk / copy the whole graph per write.
 
 ### Naming (`src/naming/`)
 
@@ -113,7 +121,7 @@ terminate on the `seen` set; a selector never notifies itself.
 
 - **Renderer** — Outputs CSS variables (with `var()` refs, `color-mix()`, `calc()`, `color(from ...)`), JSON (resolved values), or W3 Design Tokens (structured objects per spec with proper color/dimension/duration formats). Built-in function renderers auto-registered in constructor. The CSS pass throws when two keys mangle to the same custom-property name. A `typography()` token is a W3 `typography` composite in its own scope; a `ref('scope.token.field')` emits the resolved field (with `fontWeight` / `fontFamily` / `dimension` / `number` `$type`) instead of an alias W3 cannot express. There is no scope-level typography (`addTypography` / `compose` were removed). W3 `dimension` is emitted only for `px` / `rem` (`ms` / `s` → `duration`, unitless → `number`); other units (`em`, `%`, `vw`, …) have no W3 type, so they get no `$type` and keep their CSS text as `$value`, like a string — inside typography composites too. Colors are gamut-mapped into sRGB before their components are read. `$type` can be overridden per token with `metadata.w3Type`; because `val()` shallow-merges options, pass `metadata: { unit, w3Type }` in one object or the constructor's `unit` is lost.
 - **Variations** — themes, inverted contexts, brands and breakpoints are separate books built by the same setup function; nothing about conditions is stored in a book. css-variables takes `selector` (default `:root`), `media`, `breakpoints` (name → query; a scope whose `metadata.media` is a breakpoint name, a media type or a raw query renders in its own `@media` block — blocks in table order, then raw queries in scope order; an unknown bare name throws), `scopes` and `changedFrom: otherBook` (only declarations whose rendered text differs, so `var()` references are skipped and recomputed values kept; typography classes are skipped). json takes `scopes` and `changedFrom` (resolved values). `diffBooks(a, b)` (`src/diff-books.ts`) returns `{ changed, added, removed }` by resolved value.
-- **Layers** (`src/layers.ts`) — `layer(name, fn | data)` and `composeBook(name, layers, options?)`: a theme is a sparse layer, a themed book is a stack applied in order (last wins) into one plain book, so root overrides re-flow through the normal `set` path. No core changes; nothing about layers is stored in the book. Built in batch mode with a `flush()` per layer; a thrown error or a rejected cycle becomes a `LayerError` (`layerName`, `tokenKey`, `cause`). Data layers create missing scopes, accept tokens only and deep-clone them (scope args kept). Provenance (`layerOf`, `keysFromLayer`) lives in a module `WeakMap`, computed by diffing own-token identity before/after each layer. Scope `extends` is not a theming tool — inherited refs keep their original keys.
+- **Layers** (`src/layers.ts`) — `layer(name, fn | data)` and `composeBook(name, layers, options?)`: a theme is a sparse layer, a themed book is a stack applied in order (last wins) into one plain book, so root overrides re-flow through the normal `set` path. No core changes; nothing about layers is stored in the book. Built in batch mode with a `flush()` per layer; a thrown error or a rejected cycle becomes a `LayerError` (`layerName`, `tokenKey`, `cause`). Data layers create missing scopes, accept tokens only and deep-clone them (scope args kept). Provenance (`layerOf`, `keysFromLayer`) lives in a module `WeakMap`, computed by diffing own-token identity before/after each layer. Scope `extends` is not a whole-system theming tool — inherited absolute refs keep their original keys; relative refs (`ref('.x')`) re-bind within the inheriting scope, for side-by-side variants in one book.
 - **SVGRenderer** — Circular table layout with Bezier dependency curves. Dashed lines for function dependencies. A token is a palette-linker only when it iterates a scope itself — a top-level scope arg or its own `metadata.iteratedScopes` (`sibling`) — so a selector nested in a value deriver doesn't hide the outer token's graph edges. The pool is read live from the book, not from the construction-time `metadata.visualDependencies` snapshot; the edge comes from the member that matches the output (never the token itself), and a linker with no matching member falls back to its graph edges. Inherits CSS variables from the editor for theming.
 
 ### Editor (`editor/`)
@@ -142,7 +150,7 @@ Event system uses `DesignBookEventMap` with typed payloads:
 
 ### Key Design Decisions
 
-- All token keys are fully qualified: `"scope.token"`
+- All token keys are fully qualified: `"scope.token"` — except relative refs (`".token"`) inside tokens, which are bound to a scope before anything reads them
 - Tokens are serializable data — no closures, functions, or mutable state on token objects
 - Function implementations live in a registry, looked up by name at resolve time
 - Token `type` field is `string` (not a union) — extensible for custom types

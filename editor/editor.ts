@@ -4,7 +4,7 @@ import {
   spacingScale, typographyScale, typography, variant,
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
-  Renderer, SVGRenderer, TableViewRenderer,
+  Renderer, SVGRenderer, TableViewRenderer, qualifyKey,
 } from '../src/index';
 import type { RenderFormat } from '../src/index';
 import type { Scope, ScopeOrder } from '../src/index';
@@ -153,6 +153,16 @@ function bootDesignSystem() {
   card.set('padding', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
   card.set('radius',  ref('brand.space-sm'));
   card.set('gap',     ref('brand.space-md'));
+
+  // Relative refs: ref('.bg') reads `bg` in whichever scope reads the token.
+  // button-danger inherits fg and hover from button but they re-bind to its
+  // own bg, so overriding one root re-flows the whole variant.
+  const button = book.addScope('button');
+  button.set('bg', ref('brand.primary'));
+  button.set('fg', bestContrastWith(ref('.bg'), brand));
+  button.set('hover', shade(ref('.bg'), { amount: 0.1 }));
+  const danger = book.addScope('button-danger', { extends: 'button' });
+  danger.set('bg', ref('brand.error'));
 }
 
 // --- State ---
@@ -483,7 +493,8 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
     return 'inherit';
   }
 
-  const token = scope.get(tokenName);
+  // As written: a relative ref('.x') stays relative.
+  const token = scope.getRaw(tokenName);
   if (!token) return '';
 
   if (token.type === 'function') {
@@ -820,7 +831,7 @@ function buildDecorations(view: EditorView, _book: DesignBook, _scope?: Scope): 
     while ((match = refRegex.exec(text)) !== null) {
       const refKey = match[1];
       try {
-        const resolved = book.resolve(refKey);
+        const resolved = book.resolve(_scope ? qualifyKey(refKey, _scope.name) : refKey);
         if (resolved && looksLikeColor(resolved)) {
           const pos = from + match.index;
           widgets.push({ pos, widget: new ColorSwatchWidget(resolved, pos, false) });
@@ -1008,6 +1019,28 @@ function getAllQualifiedKeys(): { key: string; color?: string }[] {
   return results;
 }
 
+/** Keys a ref() can point at from `scope`: its own keys first in the
+ *  relative form (`.primary` — re-binds in scopes that extend this one),
+ *  then every fully-qualified key. */
+function getRefKeys(scope: Scope): { key: string; color?: string; relative?: boolean }[] {
+  const own = scope.getAllKeys().map((name) => {
+    let color: string | undefined;
+    try {
+      const resolved = book.resolve(`${scope.name}.${name}`);
+      if (looksLikeColor(resolved)) color = resolved;
+    } catch {
+      // skip
+    }
+    return { key: `.${name}`, color, relative: true };
+  });
+  return [...own, ...getAllQualifiedKeys()];
+}
+
+function refDetail(entry: { color?: string; relative?: boolean }): string | undefined {
+  if (entry.relative) return entry.color ? `this scope · ${entry.color}` : 'this scope';
+  return entry.color || undefined;
+}
+
 function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
   return (context: CompletionContext): CompletionResult | null => {
     const line = context.state.doc.lineAt(context.pos);
@@ -1029,14 +1062,15 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
     if (insideRefMatch) {
       const partial = insideRefMatch[1];
       const refFrom = context.pos - partial.length;
-      const allKeys = getAllQualifiedKeys();
+      const allKeys = getRefKeys(_currentScope);
       const options = allKeys
         .filter(({ key }) => !partial || key.toLowerCase().includes(partial.toLowerCase()))
-        .map(({ key, color }) => ({
-          label: key,
+        .map((entry) => ({
+          label: entry.key,
           type: 'variable' as const,
-          detail: color || undefined,
-          apply: key,
+          detail: refDetail(entry),
+          apply: entry.key,
+          boost: entry.relative ? 1 : 0,
         }));
 
       if (options.length === 0) return null;
@@ -1067,14 +1101,15 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
       }
 
       // Suggest ref('...') completions (for token arguments)
-      const allKeys = getAllQualifiedKeys();
-      for (const { key, color } of allKeys) {
+      const allKeys = getRefKeys(_currentScope);
+      for (const entry of allKeys) {
+        const { key } = entry;
         const refLabel = `ref('${key}')`;
         if (!partial || refLabel.toLowerCase().includes(lowerPartial) || key.toLowerCase().includes(lowerPartial)) {
           options.push({
             label: refLabel,
             type: 'variable',
-            detail: color || undefined,
+            detail: refDetail(entry),
             apply: `ref('${key}')`,
           });
         }
@@ -1096,14 +1131,15 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
     const options: any[] = [];
 
     // Refs
-    const allKeys = getAllQualifiedKeys();
-    for (const { key, color } of allKeys) {
+    const allKeys = getRefKeys(_currentScope);
+    for (const entry of allKeys) {
+      const { key } = entry;
       const refLabel = `ref('${key}')`;
       if (!partial || refLabel.toLowerCase().includes(lowerPartial) || key.toLowerCase().includes(lowerPartial)) {
         options.push({
           label: refLabel,
           type: 'variable',
-          detail: color || undefined,
+          detail: refDetail(entry),
           apply: `ref('${key}')`,
         });
       }

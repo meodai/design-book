@@ -70,6 +70,7 @@ color('#0066cc')          // Any CSS color — hex, named, rgb(), hsl()
 color('rebeccapurple')    // Named colors work too
 
 ref('scope.token')        // Reference to another token
+ref('.token')             // Relative: `token` in whichever scope reads it (see Relative refs)
 
 px(16)                    // Dimension shortcuts
 rem(1.5)
@@ -487,9 +488,35 @@ dark.delete('text');
 dark.resolve('text'); // '#1a1a1a'
 ```
 
-Scope `extends` shares tokens between scopes of one book; inherited refs keep pointing at the keys they name. To theme a whole system — override a root and have everything downstream follow — compose layers instead (see [Themes: layering a whole book](#themes-layering-a-whole-book)).
+Scope `extends` shares tokens between scopes of one book; an inherited `ref('light.bg')` keeps pointing at `light.bg`. To have an inherited token read the inheriting scope's keys instead, write the ref relative (next section). To theme a whole system — override a root and have everything downstream follow, across every scope — compose layers (see [Themes: layering a whole book](#themes-layering-a-whole-book)).
 
 Inherited tokens remain part of the dependency graph. If `dark.primary` currently resolves from `light.primary`, anything depending on `dark.primary` will continue to update when `light.primary` changes.
+
+### Relative refs: `ref('.token')`
+
+A key with a leading dot and no scope is relative: it reads that token in the scope that reads the ref. In the scope where it is written that is the same as the full key; in a scope that extends it, it is that scope's own key:
+
+```typescript
+const button = book.addScope('button');
+button.set('bg', ref('brand.primary'));
+button.set('fg', bestContrastWith(ref('.bg'), brand));
+button.set('hover', shade(ref('.bg'), { amount: 0.1 }));
+
+const danger = book.addScope('button-danger', { extends: 'button' });
+danger.set('bg', ref('brand.error'));
+
+book.resolve('button-danger.hover'); // shade of brand.error — fg and hover follow danger's own bg
+book.resolve('button.hover');        // shade of brand.primary, unchanged
+```
+
+Override one root in the child and every inherited token that reads it relatively re-flows. That is the "abstract base scope, concrete variants" pattern: sibling variants that ship together in one stylesheet (`--button-hover` and `--button-danger-hover`). Layers cover whole-system variations that ship as alternative outputs.
+
+- Relative keys work anywhere a key does: `ref()` tokens, function arguments, `not` lists, `sibling(ref('.g100'), 1)`, a field (`ref('.title.fontSize')`) and a live `variant(ref('.title'), …)`.
+- Tokens keep the relative form as written. `scope.get(name)` returns the token **bound** to that scope (relative keys qualified, `ref('.bg')` read through `button-danger` is `ref('button-danger.bg')`); `scope.getRaw(name)` returns it as written. Renderers see bound tokens: a `ref('.bg')` read through `button-danger` is `var(--button-danger-bg)` in CSS and `{button-danger.bg}` in W3, and computed values (`--button-danger-hover`, `--button-danger-fg`) are written per scope.
+- An inherited token with relative refs is **re-bound** (`book.isRebound('button-danger.hover')`): it gets graph edges of its own, to its scope's keys, so `watch()`, `change` events and dependents fire for it like for an own token.
+- A cycle that exists only in an inheriting scope is caught at write time. With `danger.set('bg', ref('button-danger.hover'))` in place, writing `button.hover = shade(ref('.bg'))` throws a `CircularDependencyError` and is rolled back; so does a `delete` or an `addScope({ extends })` that would expose such a cycle.
+- `book.resolve('.bg')` throws: a relative key needs a scope (`scope.resolve('bg')`). `copyScope` copies relative refs as written, so the copy reads its own keys.
+- Scope arguments of selectors (`bestContrastWith(…, brand)`) name a scope directly and are not relative.
 
 `addScope` validates the name and the inheritance chain and throws a
 `ScopeError` rather than producing a book you cannot address: an empty or
@@ -831,7 +858,7 @@ diffBooks(base, inverted).changed
 
 ### Themes: layering a whole book
 
-A theme usually changes the roots of the tree — "our brand highlight is green", "our spacing is denser" — and everything downstream should follow. Scope `extends` can't do that: an inherited token keeps pointing at the keys it was written against.
+A theme usually changes the roots of the tree — "our brand highlight is green", "our spacing is denser" — and everything downstream should follow, in every scope. Scope `extends` can't do that: an inherited token keeps pointing at the keys it was written against, and a [relative ref](#relative-refs-reftoken) only re-binds within the inheriting scope's own keys.
 
 ```typescript
 book.addScope('brand').set('highlight', color('#2d60a5'));
@@ -886,7 +913,7 @@ diffBooks(oldTownBook, next).changed; // what the edit moved
 
 A token that must *not* follow a theme should point at a root that no theme overrides (`brand.highlight-fixed`), so the exception is visible in the token names.
 
-**Layers or scope `extends`?** Use layers for a variation of the whole system — brand, theme, mode, density. Use scope `extends` for two scopes in the *same* book that share members, such as a selector pool built on top of a palette, or a typography style that tweaks another one.
+**Layers or scope `extends`?** Use layers for a variation of the whole system — brand, theme, mode, density — that ships as an alternative output. Use scope `extends` with [relative refs](#relative-refs-reftoken) for variants that ship side by side in one book (`button` and `button-danger`). Use plain scope `extends` for two scopes in the *same* book that share members, such as a selector pool built on top of a palette.
 
 ## Events
 
@@ -1004,7 +1031,7 @@ cycle and is accepted.
 
 Run `npm run dev` to start the interactive editor. Features:
 
-- CodeMirror 6 with context-aware autocomplete
+- CodeMirror 6 with context-aware autocomplete (the current scope's own keys first, as relative `ref('.token')`)
 - Inline color swatches
 - Live CSS / JSON / W3 output
 - SVG dependency visualization
@@ -1135,7 +1162,7 @@ Design Book is strongest in that middle layer: not generating colors, but turnin
 Everything exported from `design-book`, grouped. The sections above show how
 they fit together.
 
-**Book and scopes.** `DesignBook`: `addScope`, `extendScope`, `copyScope`, `deleteScope`, `getScope`, `hasScope`, `getAllScopes`, `getAllKeysForScope`, `getScopeDependencies`, `resolve`, `has`, `getTokenByKey`, `inspect`, `getSourceKey`, `isInherited`, `on`, `watch`, `mode`, `flush`, `batchQueueSize`, `registerFunction`, `getFunction`, `registerOrderer`, `getOrderer`, `registerRenderer`, `render`, `getRendererNames`, `getDependencyGraph`. `Scope`: `set`, `get`, `resolve`, `delete`, `has`, `hasOwn`, `isInherited`, `getSourceKey`, `getAllKeys`, `ownKeys`, `allTokens`, `setOrder`, `clearOrder`, `getOrder`, `getEffectiveOrder`, `metadata`.
+**Book and scopes.** `DesignBook`: `addScope`, `extendScope`, `copyScope`, `deleteScope`, `getScope`, `hasScope`, `getAllScopes`, `getAllKeysForScope`, `getScopeDependencies`, `resolve`, `has`, `getTokenByKey`, `inspect`, `getSourceKey`, `isInherited`, `isRebound`, `on`, `watch`, `mode`, `flush`, `batchQueueSize`, `registerFunction`, `getFunction`, `registerOrderer`, `getOrderer`, `registerRenderer`, `render`, `getRendererNames`, `getDependencyGraph`. `Scope`: `set`, `get`, `getRaw`, `resolve`, `delete`, `has`, `hasOwn`, `isInherited`, `getSourceKey`, `getAllKeys`, `ownKeys`, `allTokens`, `setOrder`, `clearOrder`, `getOrder`, `getEffectiveOrder`, `metadata`.
 
 **Token constructors.** `color`, `ref`, `px`, `rem`, `ms`, `dimension`, `string`, `val`, `createFunctionToken`.
 
@@ -1163,6 +1190,7 @@ they fit together.
 **Low level**, for custom functions and tooling:
 - Type guards: `isReferenceValue`, `isTokenValue`
 - Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)` checks for a field key
+- Relative keys: `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`, `hasRelativeKeys(token)`, `bindToken(token, scope)` returns the token as `scope` reads it
 - Dependency extraction: `extractDependencies(args)`, `extractIteratedScopes(args)`, `iteratedScopesOf(fn)`, `extractVisualDependencies(args)`
 - Caches: `getTokenProcessors(token)`, `getReferenceResolution(ref)`
 - `DependencyGraph`

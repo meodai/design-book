@@ -14,6 +14,9 @@ export interface BookLike {
    *  the key itself when it resolves through `extends`. Optional so simple
    *  test doubles need not supply it. */
   getSourceKey?(key: string): string | undefined;
+  /** True for an inherited key that re-binds relative refs to its own
+   *  scope — it reads a token of its own, not its source's. */
+  isRebound?(key: string): boolean;
 }
 
 export class ReferenceResolver {
@@ -64,7 +67,7 @@ export class ReferenceResolver {
       // us so. Walk past it, or a `ref('child.a')` would never hear about
       // `parent.a` changing or going away.
       const source = this.book.getSourceKey?.(depKey);
-      if (source !== undefined && source !== depKey) continue;
+      if (source !== undefined && source !== depKey && !this.book.isRebound?.(depKey)) continue;
 
       const token = this.book.getTokenByKey(depKey);
       if (isReferenceValue(token)) {

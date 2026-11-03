@@ -138,7 +138,19 @@ export function color(value: string, options?: { description?: string; [key: str
   return setTokenProcessors(token, [{ name: 'culori', instance: parsed }]);
 }
 
+/**
+ * A reference to another token. `ref('brand.primary')` names a key in a
+ * given scope. `ref('.primary')` — a leading dot, no scope — is **relative**:
+ * it reads `primary` in whichever scope reads the token. A token written in
+ * `brand` and inherited by `acme extends brand` reads `brand.primary` in
+ * `brand` and `acme.primary` in `acme`, so overriding `acme.primary` re-flows
+ * through every inherited token that uses it. A field works the same way:
+ * `ref('.title.fontSize')`.
+ */
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
+  if (typeof key === 'string' && key.startsWith('.') && (key.length === 1 || key[1] === '.')) {
+    throw new Error(`Invalid relative reference "${key}": expected ".token" or ".token.field"`);
+  }
   return val({
     type: 'reference' as const,
     key,
@@ -183,6 +195,98 @@ export function tokenKeyOf(key: string): string {
  *  node per field, so field refs depend on the field, not the whole token. */
 export function isFieldKey(key: string): boolean {
   return key.split('.').length === 3;
+}
+
+// --- Relative keys ---
+//
+// A key with a leading dot (`.primary`, `.title.fontSize`) is relative: it
+// names a token in the scope that reads it. Tokens keep the relative form —
+// they are shared data, and an inherited token is the same object in every
+// scope that inherits it — and are *bound* to a scope whenever a scope hands
+// them out (`Scope.get`): the bound copy carries fully-qualified keys, so
+// resolution, the graph and the renderers never see a relative key. A scope
+// argument or `metadata.iteratedScopes` entry of `''` (what `sibling`
+// records for a relative anchor) is the reading scope.
+
+/** `.token` or `.token.field` — a key relative to the reading scope. */
+export function isRelativeKey(key: unknown): boolean {
+  return typeof key === 'string' && key.length > 1 && key[0] === '.' && key[1] !== '.';
+}
+
+/** A relative key qualified against `scope`; any other key unchanged. */
+export function qualifyKey(key: string, scope: string): string {
+  return isRelativeKey(key) ? `${scope}${key}` : key;
+}
+
+const relativeTokens = new WeakMap<object, boolean>();
+
+/** True when the token (or anything nested in it) holds a relative key. */
+export function hasRelativeKeys(token: unknown): boolean {
+  if (typeof token !== 'object' || token === null) return false;
+  const cached = relativeTokens.get(token);
+  if (cached !== undefined) return cached;
+  let result = false;
+  if (isReferenceValue(token)) {
+    result = isRelativeKey(token.key);
+  } else if (isFunctionTokenValue(token)) {
+    const options = token.options ?? {};
+    const metadata = token.metadata;
+    result = token.args.some(hasRelativeKeys)
+      || isRelativeKey(options.from)
+      || isRelativeKey(options.base)
+      || (Array.isArray(options.not) && options.not.some((n: unknown) =>
+        isRelativeKey(typeof n === 'string' ? n : (n as ReferenceValue | null)?.key)))
+      || (metadata?.dependencies ?? []).some(isRelativeKey)
+      || (metadata?.visualDependencies ?? []).some(isRelativeKey)
+      || (metadata?.iteratedScopes ?? []).includes('');
+  }
+  relativeTokens.set(token, result);
+  return result;
+}
+
+const boundTokens = new WeakMap<object, Map<string, unknown>>();
+
+/** The token as `scope` reads it: relative keys qualified against `scope`.
+ *  A token without relative keys comes back as is; a bound copy is cached,
+ *  so binding the same token to the same scope always gives the same
+ *  object. */
+export function bindToken<T>(token: T, scope: string): T {
+  if (!hasRelativeKeys(token)) return token;
+  const raw = token as unknown as object;
+  let perScope = boundTokens.get(raw);
+  if (!perScope) {
+    perScope = new Map();
+    boundTokens.set(raw, perScope);
+  }
+  const cached = perScope.get(scope);
+  if (cached) return cached as T;
+
+  const q = (key: string) => qualifyKey(key, scope);
+  let bound: unknown;
+  if (isReferenceValue(token)) {
+    bound = { ...token, key: q(token.key) };
+  } else {
+    const fn = token as unknown as FunctionTokenValue;
+    let options = fn.options;
+    if (options) {
+      options = { ...options };
+      if (typeof options.from === 'string') options.from = q(options.from);
+      if (typeof options.base === 'string') options.base = q(options.base);
+      if (Array.isArray(options.not)) {
+        options.not = options.not.map((n: unknown) => (typeof n === 'string' ? q(n) : bindToken(n, scope)));
+      }
+    }
+    let metadata = fn.metadata;
+    if (metadata) {
+      metadata = { ...metadata };
+      if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map(q);
+      if (metadata.visualDependencies) metadata.visualDependencies = metadata.visualDependencies.map(q);
+      if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
+    }
+    bound = { ...fn, args: fn.args.map((arg) => bindToken(arg, scope)), options, metadata };
+  }
+  perScope.set(scope, bound);
+  return bound as T;
 }
 
 /** Keys the args read as values, each listed once in first-seen order. */

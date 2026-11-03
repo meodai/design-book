@@ -461,7 +461,8 @@ export class SVGRenderer {
 
         // Inherited tokens get their lineage shown via the header-to-header
         // edge above — skip them here to avoid duplicating the relationship.
-        if (this.book.isInherited(key)) continue;
+        // A re-bound one (relative refs) reads its own scope: draw its edges.
+        if (this.book.isInherited(key) && !this.book.isRebound(key)) continue;
 
         const token = this.book.getTokenByKey(key);
         const isFunction = token?.type === 'function';
