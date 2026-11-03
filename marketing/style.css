@@ -2302,6 +2302,51 @@ h1, h2, h3 {
 }
 /* `.code` carries a named grid-area from the selector panels; not here. */
 .ref-css { margin: 0; grid-area: auto; }
+/* inParent demo: page switch, the ramp with the tokens marked, two buttons */
+.ref-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.ref-modes button {
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.ref-modes button code { background: transparent; padding: 0; margin-right: 4px; color: var(--muted); }
+.ref-modes button.is-active { background: var(--text); color: var(--surface); border-color: var(--text); }
+.ref-modes button.is-active code { color: inherit; opacity: 0.7; }
+.ref-ramp { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); }
+.ref-ramp-step {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+}
+.ref-ramp-step b { font-weight: 600; }
+.ref-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+}
+.ref-buttons div { display: grid; gap: 6px; justify-items: start; }
+.ref-buttons span { font-family: var(--font-mono); font-size: 11px; }
+.ref-buttons button {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 0;
+  cursor: default;
+}
 .ref-panes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));

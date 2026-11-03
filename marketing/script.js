@@ -58,6 +58,7 @@ import {
   random,
   nth,
   sibling,
+  inParent,
 } from "../src/index";
 
 import { Poline } from "poline";
@@ -1057,6 +1058,65 @@ wireTabs(document.querySelector(".extends-modes"));
   };
   bind(sourceIn, "primary", SOURCE);
   bind(dangerIn, "error", DANGER);
+
+  paint();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  inParent — a hover one step from the parent's interaction color,
+//  toward the parent's background
+// ══════════════════════════════════════════════════════════════════════
+(function parentSection () {
+  const modesEl   = document.getElementById("ref-parent-modes");
+  const rampEl    = document.getElementById("ref-ramp");
+  const buttonsEl = document.getElementById("ref-buttons");
+  if (!modesEl || !rampEl || !buttonsEl) return;
+
+  const BLUE = {
+    "50": "#eef4ff", "100": "#dbe7ff", "200": "#bcd2ff", "300": "#8fb3ff", "400": "#5c8cf5",
+    "500": "#3a6ae0", "600": "#2650c2", "700": "#1d3e9c", "800": "#172f75", "900": "#101f4d",
+  };
+  const book = new DesignBook("parent-demo");
+  const blue = book.addScope("blue");
+  for (const [step, value] of Object.entries(BLUE)) blue.set(step, color(value));
+  const base = book.addScope("base");
+  base.set("background", ref("blue.50"));
+  base.set("interaction", ref("blue.600"));
+  book.addScope("base-hover", { extends: "base" })
+    .set("interaction", sibling(inParent(ref(".interaction")), { toward: inParent(ref(".background")) }));
+
+  const ink = (bg) => (contrast(bg, "#ffffff") >= contrast(bg, "#101f4d") ? "#ffffff" : "#101f4d");
+
+  function paint () {
+    const page = book.resolve("base.background");
+    const rest = book.resolve("base.interaction");
+    const hover = book.resolve("base-hover.interaction");
+    const marks = (value) => [
+      value === page ? "background" : null,
+      value === rest ? "interaction" : null,
+      value === hover ? "hover" : null,
+    ].filter(Boolean);
+    rampEl.innerHTML = Object.entries(BLUE).map(([step, value]) => `
+      <div class="ref-ramp-step" style="background:${value};color:${ink(value)}">
+        ${marks(value).map((m) => `<b>${m}</b>`).join("")}
+        <span>${step}</span>
+      </div>`).join("");
+    buttonsEl.style.background = page;
+    buttonsEl.style.borderColor = page;
+    buttonsEl.innerHTML = [["base", rest], ["base-hover", hover]].map(([name, bg]) => `
+      <div>
+        <span style="color:${ink(page)}">${name}</span>
+        <button type="button" tabindex="-1" style="background:${bg};color:${ink(bg)}">Read more</button>
+      </div>`).join("");
+  }
+
+  modesEl.addEventListener("click", (e) => {
+    const button = e.target.closest("[data-background]");
+    if (!button) return;
+    base.set("background", ref(button.dataset.background));
+    for (const b of modesEl.querySelectorAll("[data-background]")) b.classList.toggle("is-active", b === button);
+    paint();
+  });
 
   paint();
 })();

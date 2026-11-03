@@ -169,6 +169,41 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
       <figcaption>One override. The dimmed rows are inherited, and still follow it.</figcaption>
     </figure>
   </div>
+
+  <div class="ref-feature-body feature-sub">
+    <div class="ref-feature-text">
+      <h3 id="ref-parent-title"><em>Read one level up.</em></h3>
+      <p>
+        <code>inParent(ref('.interaction'))</code> is the interaction color
+        the scope would have inherited — so a scope can override a value in
+        terms of the value it replaces. A hover state is one step from its
+        parent's interaction color, toward its parent's background: lighter
+        on a light page, darker on a dark one, from one rule.
+        <code>inRoot</code> reads the top of the chain instead.
+      </p>
+      <pre class="code"><code><span class="c-fn">const</span> base = book.<span class="c-fn">addScope</span>(<span class="c-str">'base'</span>);
+base.<span class="c-fn">set</span>(<span class="c-str">'background'</span>, <span class="c-fn">ref</span>(<span class="c-str">'blue.50'</span>));
+base.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <span class="c-fn">ref</span>(<span class="c-str">'blue.600'</span>));
+
+<span class="c-fn">const</span> hover = book.<span class="c-fn">addScope</span>(<span class="c-str">'base-hover'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'base'</span>,
+});
+hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <span class="c-fn">sibling</span>(
+  <span class="c-fn">inParent</span>(<span class="c-fn">ref</span>(<span class="c-str">'.interaction'</span>)),
+  { <span class="c-key">toward</span>: <span class="c-fn">inParent</span>(<span class="c-fn">ref</span>(<span class="c-str">'.background'</span>)) },
+));</code></pre>
+    </div>
+
+    <figure class="ref-stage">
+      <div class="ref-modes" id="ref-parent-modes" role="group" aria-label="base.background">
+        <button type="button" data-background="blue.50" class="is-active"><code>base.background</code> blue.50</button>
+        <button type="button" data-background="blue.900"><code>base.background</code> blue.900</button>
+      </div>
+      <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
+      <div class="ref-buttons" id="ref-buttons"></div>
+      <figcaption>One rule. The hover steps toward whatever the parent's page is.</figcaption>
+    </figure>
+  </div>
 </section>
 
 <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
@@ -787,7 +822,9 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
           descendant that inherits it recomputes. The editor dims inherited
           rows, so only the changes are bright. A full reference keeps
           pointing at the key it names; a <a href="#ref-relative-title">relative
-          one</a> re-binds to the inheriting scope. Reach for layers once a
+          one</a> re-binds to the inheriting scope, and
+          <a href="#ref-parent-title"><code>inParent</code></a> reads the value
+          a scope overrides. Reach for layers once a
           theme has to change roots across the whole system.
         </p>
         <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
