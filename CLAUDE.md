@@ -80,7 +80,7 @@ At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the r
 
 A function token's graph edges are `functionDependencies(fn)` (`src/tokens.ts`): the refs in its args (nested tokens included) unioned with `metadata.dependencies`, deduplicated — so a bare `createFunctionToken(name, [ref(…)])` is tracked too.
 
-**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`, `nextLighter`, `nextDarker` (`src/functions/color/next-lightness.ts`: the closest member on that side of the target by OKLCH L; `minDistance` is an OKLCH L gap, 0–1, stored only when set)
+**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
 
 **With scope argument** (generic selectors): `nth`, `random`, `nextLarger`, `nextSmaller`
 
@@ -114,6 +114,7 @@ terminate on the `seen` set; a selector never notifies itself.
 - Selector pools (`collectScopeColors`) gamut-map wide-gamut members in OKLCH like the transforms do, rather than clipping them.
 - `readableOn` + `minContrast` (default 4.5) filter a color selector's pool by WCAG contrast before ranking (`src/functions/color/readable.ts`). The backdrop is a trailing positional arg, so it is a value dependency; an empty filtered pool throws. Not on `bestContrastWith` / `minContrastWith`.
 - `lightest` / `darkest` rank by OKLCH L, ignoring alpha.
+- `closestColor` takes `direction: 'lighter' | 'darker'` or `toward` (a value, stored as the argument after the pool and marked `options.toward: true`, before the optional `readableOn` backdrop), plus `minDistance` (OKLCH L gap): only members strictly on that side of the target's lightness count, `toward` no further than its lightness. The registry closure shifts the marked `toward` argument off before `splitReadableArgs`; the editor prints it back as `toward:` in the options.
 - `closestColor` / `furthestFrom` measure Euclidean distance in OKLab. Translucent colors are compared composited over the `readableOn` backdrop, or without one over both white and black, taking the larger distance (`visibleDistance` in `scope-colors.ts`).
 - `lighten` / `darken` are OKLCH mixes towards white / black through `cssColorMix` (`src/functions/color/color-mix.ts`) — the JS twin of the `color-mix()` the CSS renderer emits, premultiplied alpha included. `colorMix` uses the same helper. `shade` shifts OKLCH lightness and carries alpha through; `relativeTo` carries it through too. All gamut-map in OKLCH before formatting and emit 8-digit hex only when translucent.
 - `nextLarger` / `nextSmaller` skip members whose unit differs from the target's instead of throwing.

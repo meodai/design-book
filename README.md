@@ -94,20 +94,20 @@ Some functions are straightforward transforms. The distinctive ones search a sco
 bestContrastWith(target, ref('scope'))             // Highest WCAG contrast
 minContrastWith(target, ref('scope'), { ratio })   // Meets minimum ratio (default 4.5)
 closestColor(target, ref('scope'))                 // Perceptually closest
+closestColor(target, ref('scope'), { direction: 'lighter' })  // … of the lighter ones
+closestColor(target, ref('scope'), { toward: ref('.page') })  // … on the page's side
 furthestFrom(ref('scope'))                         // Most distant from others
 mostVivid(ref('scope'))                            // Highest OKLCH chroma
 leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
 lightest(ref('scope'))                             // Highest OKLCH lightness
 darkest(ref('scope'))                              // Lowest OKLCH lightness
-nextLighter(target, ref('scope'), { minDistance }) // Next step lighter than the target
-nextDarker(target, ref('scope'), { minDistance })  // Next step darker than the target
 ```
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
 
 `lightest` and `darkest` rank by OKLCH L — not HSL lightness, which calls `#ffff00` and `#0000ff` equally light, and not WCAG luminance. Alpha is ignored when ranking; a translucent winner keeps its alpha.
 
-`nextLighter` and `nextDarker` are the color counterparts of `nextLarger` / `nextSmaller`: of the members on that side of the target, the one closest in OKLCH lightness. They rank by value, so the scope needs no particular order, and the target does not have to be a member. `minDistance` is a gap in OKLCH lightness (0–1) the pick must clear: `nextDarker(ref('.button'), ref('blue'), { minDistance: 0.05 })` is at least five points darker. They take `not` and `readableOn` like the other color selectors. Their direction is fixed; for a rule that goes lighter on a light page and darker on a dark one, use `sibling(…, { toward })`.
+**`closestColor` with a direction.** `direction: 'lighter' | 'darker'` keeps only the members strictly on that side of the target's OKLCH lightness, and the closest-looking of those wins — so from a blue it picks the nearest lighter blue rather than a yellow that happens to be the next step up in lightness. `toward: ref('.page')` takes the side from where another color lies and goes no further than its lightness: one rule that is lighter on a light page and darker on a dark one. `minDistance` is a gap in OKLCH lightness (0–1) the pick must clear: `closestColor(ref('.button'), ref('blue'), { direction: 'darker', minDistance: 0.05 })` is at least five points darker. The target does not need to be a member, and the pool needs no order.
 
 `closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
@@ -577,7 +577,7 @@ dark.allTokens();                      // { bg: <token>, text: <token>, … }, i
 Some functions find things by where they are rather than by what they are. Two kinds:
 
 - **Addresses** say *where* to read: `ref`, `inParent`, `inRoot`. They return a reference and never compute anything.
-- **Positions** pick a member by its *place* in a scope and return its value: `nth`, `sibling`, `nextLarger`, `nextSmaller`.
+- **Positions** pick a member by its *place* in a scope and return its value: `nth`, `sibling`.
 
 ### Addresses: `ref`, `inParent`, `inRoot`
 
@@ -616,9 +616,11 @@ callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
 - A reference that ends on its own key is a cycle and is rejected when written, as with `ref`.
 - `sibling` and `variant` take a navigated reference too: `sibling(inParent(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `variant(inParent(ref('.title')), { fontWeight: '700' })` is a live variant of the title this scope replaces.
 
-### Positions: `nth`, `sibling`, `nextLarger`, `nextSmaller`
+### Positions: `nth`, `sibling`
 
-These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page, `nextLarger(ref('space.m'), ref('space'))` the next bigger step, `nextLighter(ref('.button'), ref('blue'))` the next lighter color. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
+These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page. See [Index selection](#index-selection-require-a-scope-to-search) and [Relative steps](#relative-steps).
+
+Picking by *value* is a different thing: `nextLarger` / `nextSmaller` choose the next size up or down ([Dimension selection](#dimension-selection-require-a-scope-to-search)), and `closestColor(…, { direction })` the nearest lighter or darker color ([Color selection](#color-selection-require-a-scope-to-search)) — whatever order the scope is in.
 
 ## Scope Ordering
 
@@ -1249,9 +1251,10 @@ they fit together.
 **Navigation.** `inParent(reference, levels?)`, `inRoot(reference)`: the same reference further up the `extends` chain.
 
 **Functions.**
-- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`, `nextLighter`, `nextDarker`
+- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
 - Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
-- Generic selectors: `nth`, `sibling`, `random`, `nextLarger`, `nextSmaller`
+- Generic selectors: `nth`, `sibling`, `random`
+- Size selectors: `nextLarger`, `nextSmaller`
 - Scales: `spacingScale`, `typographyScale`, `timing`
 - Typography: `typography`, `variant`
 

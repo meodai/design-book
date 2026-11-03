@@ -4,6 +4,23 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-11-03
+
+### Added
+
+- **`closestColor` takes a direction.** `direction: 'lighter' | 'darker'`
+  keeps only the members on that side of the target's OKLCH lightness, so
+  the pick is the nearest look-alike that is lighter — it stays in the hue
+  family where a pure lightness step could jump to another hue.
+  `toward: ref('.page')` takes the side from another color and stops at its
+  lightness (one rule for light and dark). `minDistance` is a gap in OKLCH
+  lightness. The editor parses and prints all three.
+
+### Removed
+
+- **`nextLighter` / `nextDarker`** (added in 0.15.0): `closestColor(target,
+  pool, { direction })` does the same and keeps the hue.
+
 ## [0.15.0] - 2026-11-03
 
 ### Added
