@@ -290,7 +290,7 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- Poline picker (§5) ---------- */
+/* ---------- Poline picker (§6) ---------- */
 /* The palette generator that drives every value token. Lives inside the
    article so the reader sees one interactive thing reshaping the whole
    example panel. */
@@ -342,7 +342,7 @@ html, body {
   accent-color: var(--article-accent);
 }
 
-/* ---------- Bezier editor (§5) ---------- */
+/* ---------- Bezier editor (§6) ---------- */
 .bezier-demo {
   display: flex;
   flex-direction: column;
@@ -514,6 +514,25 @@ html, body {
   padding: 0;
 }
 
+/* Several rules that belong together: one box, a line each. */
+.rule-line--block {
+  margin: 0 0 14px 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.rule-line__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.rule-line__gap { height: 6px; }
+
+.rule-line__dim { color: var(--article-muted); }
+
 .pair-demo {
   margin: 20px 0 24px 0;
   padding: 1rem 0;
@@ -564,6 +583,93 @@ html, body {
 }
 
 .pair-demo__note {
+  margin: 0;
+  color: var(--article-muted);
+  font-size: 0.95rem;
+}
+
+.extend-demo {
+  margin: 20px 0 24px 0;
+  padding: 1rem 0;
+  max-width: 42rem;
+  border: 1px solid var(--article-rule);
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.extend-demo__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px 0;
+}
+
+.extend-demo__modes button {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--article-rule);
+  border-radius: 0;
+  background: transparent;
+  color: var(--article-text);
+  cursor: pointer;
+}
+
+.extend-demo__modes button code {
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+}
+
+.extend-demo__modes button:hover { border-color: var(--article-text); }
+
+.extend-demo__modes button.is-active {
+  background: var(--article-text);
+  border-color: var(--article-text);
+  color: var(--article-surface);
+}
+
+.extend-demo__modes button:focus-visible {
+  outline: 2px solid var(--article-accent);
+  outline-offset: 2px;
+}
+
+.extend-demo__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.extend-demo__card {
+  padding: 14px 16px 16px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.extend-demo__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0 0 8px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.extend-demo__name span { opacity: 0.6; }
+
+.extend-demo__text {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.extend-demo__name .extend-demo__ratio {
+  margin-left: auto;
+  opacity: 1;
+}
+
+.extend-demo__note {
   margin: 0;
   color: var(--article-muted);
   font-size: 0.95rem;

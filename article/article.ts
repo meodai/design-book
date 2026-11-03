@@ -45,11 +45,11 @@ values.set('red500',   color('#dc2626'));
 values.set('white',    color('#ffffff'));
 
 // ---------------------------------------------------------------------------
-// Poline (§5) — a procedural palette that takes over the values pool on scroll
+// Poline (§6) — a procedural palette that takes over the values pool on scroll
 // ---------------------------------------------------------------------------
 //
 // At boot the values scope still holds the hard-coded hex tokens (gray50,
-// gray800, blue500, …). When the reader scrolls into the §5 palette picker,
+// gray800, blue500, …). When the reader scrolls into the §6 palette picker,
 // activateProceduralPalette() runs once: the descriptive tokens are deleted,
 // nine new `values.poline100`…`values.poline900` tokens are sampled along
 // the Poline line, and the semantic refs (color.surface / color.brand /
@@ -112,7 +112,7 @@ function activateProceduralPalette() {
   proceduralActivated = true;
 
   // §3's onSurface rewire must have fired before we touch the values pool.
-  // If the reader landed on §5 without scrolling past §3 (deep link, fast
+  // If the reader landed on §6 without scrolling past §3 (deep link, fast
   // scroll, page reloaded near the bottom), color.onSurface would still be
   // `ref('values.gray900')` — and would dangle the moment we delete the
   // descriptive value tokens below. rewireOnSurface() is idempotent.
@@ -208,6 +208,28 @@ colorScope.set('buttonText', bestContrastWith(ref('color.brand'), ramp));
 // above the threshold, so this gives a soft border that auto-flips when the
 // surface goes dark.
 colorScope.set('line',       minContrastWith(ref('color.surface'), ramp, { ratio: 1.5 }));
+
+// §4 — a treatment and its inverted variant. card-inverted extends card
+// and overrides only its surface; its onSurface / line are inherited. With
+// relative refs (`ref('.surface')`) they re-bind to card-inverted.surface,
+// with absolute ones (`ref('card.surface')`) they keep reading card's. The
+// demo toggles between the two. Both surfaces read semantic tokens, never
+// `values.*` directly, so they survive the §6 palette swap.
+const card = book.addScope('card');
+type SurfaceMode = 'absolute' | 'relative';
+let surfaceMode: SurfaceMode = 'relative';
+function setCardRules(mode: SurfaceMode) {
+  surfaceMode = mode;
+  const surface = ref(mode === 'relative' ? '.surface' : 'card.surface');
+  inBatch(() => {
+    card.set('onSurface', bestContrastWith(surface, values));
+    card.set('line',      minContrastWith(surface, ramp, { ratio: 1.5 }));
+  });
+}
+card.set('surface', ref('color.surface'));
+setCardRules('relative');
+const cardInverted = book.addScope('card-inverted', { extends: 'card' });
+cardInverted.set('surface', ref('color.brand'));
 
 const space = book.addScope('space');
 space.set('base', px(16));
@@ -978,7 +1000,12 @@ document.getElementById('reset')?.addEventListener('click', () => {
     }
   }
 
-  // Restore the scroll-triggered rewire to its starting ref so the §5 demo
+  // §4: relative rules and the original surfaces.
+  card.set('surface', ref('color.surface'));
+  cardInverted.set('surface', ref('color.brand'));
+  setCardRules('relative');
+
+  // Restore the scroll-triggered rewire to its starting ref so the §3 demo
   // can fire again the next time the reader scrolls into the subsection.
   unwireOnSurface();
   document.querySelectorAll('[data-rewire="onSurface"]').forEach((m) => {
@@ -1018,7 +1045,7 @@ window.addEventListener('resize', closePopoverIfChipOffScreen);
 // ---------------------------------------------------------------------------
 //
 // color.onSurface starts as a plain `ref('values.gray900')` — a decision
-// pinned for the light surface. When the reader scrolls into the §5
+// pinned for the light surface. When the reader scrolls into the §3
 // "onSurface as a rule" subsection, the token is rewired in place to
 // `bestContrastWith(color.surface, values)`. The body text in the example
 // panel re-decides itself for whatever surface is in play. Reset restores
@@ -1055,7 +1082,7 @@ if (rewireMarkers.length) {
   rewireMarkers.forEach((m) => observer.observe(m));
 }
 
-// Attach the Poline state to the §5 picker and listen for drags. The picker
+// Attach the Poline state to the §6 picker and listen for drags. The picker
 // is in the DOM at boot, but it doesn't drive anything until the reader
 // scrolls into the section — see the IntersectionObserver below.
 const polinePicker = document.getElementById('poline') as
@@ -1102,13 +1129,82 @@ if (polinePicker) {
 }
 
 // ---------------------------------------------------------------------------
+// §4 — card and card-inverted, absolute vs relative refs
+// ---------------------------------------------------------------------------
+//
+// The two cards are painted from the resolved tokens. The mode buttons
+// rewrite card's rules between `ref('card.surface')` and `ref('.surface')`;
+// card-inverted inherits them, so only the relative form follows its own
+// surface. The note reports the contrast the inverted card actually gets.
+const extendDemo = document.querySelector<HTMLElement>('.extend-demo');
+
+function tryResolve(key: string): string | null {
+  try {
+    return book.resolve(key);
+  } catch {
+    return null;
+  }
+}
+
+function paintExtendDemo() {
+  if (!extendDemo) return;
+  for (const el of extendDemo.querySelectorAll<HTMLElement>('[data-card]')) {
+    const scopeName = el.dataset.card!;
+    const surface = tryResolve(`${scopeName}.surface`);
+    const text = tryResolve(`${scopeName}.onSurface`);
+    const line = tryResolve(`${scopeName}.line`);
+    el.style.background = surface ?? '';
+    el.style.color = text ?? '';
+    el.style.borderColor = line ?? '';
+    let ratio = el.querySelector<HTMLElement>('.extend-demo__ratio');
+    if (!ratio) {
+      ratio = document.createElement('span');
+      ratio.className = 'extend-demo__ratio';
+      (el.querySelector('.extend-demo__name') ?? el).append(ratio);
+    }
+    ratio.textContent = surface && text ? `${wcagContrast(surface, text).toFixed(1)}:1` : '';
+  }
+
+  for (const button of extendDemo.querySelectorAll<HTMLElement>('[data-surface-mode]')) {
+    const on = button.dataset.surfaceMode === surfaceMode;
+    button.classList.toggle('is-active', on);
+    button.setAttribute('aria-pressed', String(on));
+  }
+  const written = surfaceMode === 'relative' ? "ref('.surface')" : "ref('card.surface')";
+  document.querySelectorAll<HTMLElement>('[data-surface-ref]').forEach((el) => {
+    el.textContent = written;
+  });
+
+  const note = document.getElementById('extend-demo-note');
+  if (note) {
+    const surface = tryResolve('card-inverted.surface');
+    const text = tryResolve('card-inverted.onSurface');
+    const ratio = surface && text ? wcagContrast(surface, text).toFixed(1) : '?';
+    note.textContent = surfaceMode === 'relative'
+      ? `The inherited onSurface reads card-inverted.surface: ${ratio}:1 on the callout.`
+      : `The inherited onSurface still reads card.surface: ${ratio}:1 on the callout.`;
+  }
+}
+
+if (extendDemo) {
+  extendDemo.addEventListener('click', (e) => {
+    const button = (e.target as HTMLElement).closest<HTMLElement>('[data-surface-mode]');
+    if (!button) return;
+    setCardRules(button.dataset.surfaceMode as SurfaceMode);
+    paintExtendDemo();
+  });
+  book.on('change', paintExtendDemo);
+  paintExtendDemo();
+}
+
+// ---------------------------------------------------------------------------
 // Dependency graph (under the live example panel)
 // ---------------------------------------------------------------------------
 //
 // SVGRenderer draws a circular layout of every scope + the edges between
 // them, including the dashed function-token edges. We re-render on every
 // `change` so the reader sees the graph reorganise as tokens get added,
-// removed, or rewired (e.g. on §3 onSurface rewire, on §5 Poline activation).
+// removed, or rewired (e.g. on §3 onSurface rewire, on §6 Poline activation).
 const depGraphContainer = document.getElementById('dep-graph');
 if (depGraphContainer) {
   const svgRenderer = new SVGRenderer(book, { linksOnly: true, interactive: true });
@@ -1120,7 +1216,7 @@ if (depGraphContainer) {
 }
 
 // ---------------------------------------------------------------------------
-// Bezier curve editor (§5) — drives the spacing scale's multipliers
+// Bezier curve editor (§6) — drives the spacing scale's multipliers
 // ---------------------------------------------------------------------------
 //
 // Each `space.*` token is a `spacingScale(ref('space.base'), { multiplier })`

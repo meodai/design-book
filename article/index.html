@@ -258,7 +258,75 @@
       </section>
 
       <section>
-        <h2>4. Do something to a value</h2>
+        <h2>4. Extend a decision</h2>
+        <p>
+          A treatment rarely exists once. The card that holds the report
+          needs an inverted version for a callout: the same decisions, made
+          on a dark ground. Copying the scope copies every rule with it, and
+          the two copies start to drift the first time one of them is
+          fixed. Extending it keeps one set of rules and lets the variant
+          say only what is different.
+        </p>
+        <div class="rule-line rule-line--block">
+          <span class="rule-line__row"><code>card.surface</code> = <button class="token-chip" data-token="card.surface" type="button"></button></span>
+          <span class="rule-line__row"><code>card.onSurface</code> = <code>bestContrastWith(<span data-surface-ref>ref('.surface')</span>, values)</code></span>
+          <span class="rule-line__row"><code>card.line</code> = <code>minContrastWith(<span data-surface-ref>ref('.surface')</span>, ramp)</code></span>
+          <span class="rule-line__gap" aria-hidden="true"></span>
+          <span class="rule-line__row"><code>card-inverted</code> <span class="rule-line__dim">extends</span> <code>card</code></span>
+          <span class="rule-line__row"><code>card-inverted.surface</code> = <button class="token-chip" data-token="card-inverted.surface" type="button"></button></span>
+        </div>
+        <p>
+          The inverted card writes one line. Everything else it inherits,
+          and the interesting question is what those inherited rules read.
+        </p>
+
+        <h3>Absolute or relative</h3>
+        <p>
+          A reference that names its key in full, <code>ref('card.surface')</code>,
+          points at that key wherever the rule ends up. Inherited by the
+          inverted card, <code>onSurface</code> keeps measuring the light
+          surface of the original, and the callout gets dark text on a dark
+          ground. Leave the scope off, <code>ref('.surface')</code>, and the
+          reference reads <code>surface</code> in whichever scope reads the
+          rule. The inverted card's inherited rules re-decide against its own
+          surface.
+        </p>
+        <div class="extend-demo" aria-label="A card and its inverted variant">
+          <div class="extend-demo__modes" role="group" aria-label="How the inherited rules read surface">
+            <button type="button" data-surface-mode="absolute"><code>ref('card.surface')</code></button>
+            <button type="button" data-surface-mode="relative" class="is-active"><code>ref('.surface')</code></button>
+          </div>
+          <div class="extend-demo__cards">
+            <div class="extend-demo__card" data-card="card">
+              <p class="extend-demo__name">card</p>
+              <p class="extend-demo__text">Revenue grew 12% over Q3.</p>
+            </div>
+            <div class="extend-demo__card" data-card="card-inverted">
+              <p class="extend-demo__name">card-inverted <span>extends card</span></p>
+              <p class="extend-demo__text">Revenue grew 12% over Q3.</p>
+            </div>
+          </div>
+          <p class="extend-demo__note" id="extend-demo-note"></p>
+        </div>
+        <p>
+          Both are useful, and the choice is made per reference. An absolute
+          reference pins a decision to one source: <em>the brand color,
+          whatever card this is</em>. A relative one makes the decision part
+          of the treatment: <em>readable on my own surface</em>. One variant
+          can do both, following its own surface while still pointing at
+          the one brand color everyone shares.
+        </p>
+        <p>
+          This is the inside-one-system version of a theme: variants that
+          live side by side, a card and its callout, a button and its
+          destructive twin. A theme that changes the roots everywhere at
+          once, a dark mode or a second brand, is the same idea one level
+          up, and it does not need a second copy of the rules either.
+        </p>
+      </section>
+
+      <section>
+        <h2>5. Do something to a value</h2>
         <p>
           The second kind of dynamic connection does not choose from a set.
           It takes an input and applies a small operation to it. This is
@@ -386,7 +454,7 @@
       </section>
 
       <section>
-        <h2>5. Truly procedural design</h2>
+        <h2>6. Truly procedural design</h2>
         <p>
           Tokenising everything used to feel like the death of creative
           freedom. Every choice locked in. Every relationship buried in a
@@ -437,7 +505,7 @@
       </section>
 
       <section>
-        <h2>6. Better links</h2>
+        <h2>7. Better links</h2>
         <p>
           This is not an argument against static refs. Most links should
           stay static, because static is clear. The point is simply to stop
