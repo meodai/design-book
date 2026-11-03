@@ -2,8 +2,8 @@ import {
   color, ref, inParent, inRoot, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
-  closestColor, furthestFrom, mostVivid, leastVivid,
-  lightest, darkest,
+  closest, nextLighter, nextDarker, furthestFrom, mostVivid, leastVivid,
+  lightest, darkest, largest, smallest,
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   nth, random, sibling,
@@ -498,12 +498,28 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
   },
 
   // closestColor(target, scope, readableOn?, options?)
-  closestColor(argsStr, book, currentScope) {
+  // closest(target, scope, readableOn?, options?) and its direction aliases
+  closest(argsStr, book) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('closestColor requires 2 arguments');
+    if (args.length < 2) throw new Error('closest requires 2 arguments: a target and a scope');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    return closestColor(target, scope, parseSelectorTail('closestColor', args.slice(2), book));
+    return closest(target, scope, parseSelectorTail('closest', args.slice(2), book));
+  },
+  nextLarger: aliasParser('nextLarger', nextLarger),
+  nextSmaller: aliasParser('nextSmaller', nextSmaller),
+  nextLighter: aliasParser('nextLighter', nextLighter),
+  nextDarker: aliasParser('nextDarker', nextDarker),
+  // largest(scope, options?) / smallest(scope, options?)
+  largest(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('largest requires a scope');
+    return largest(getScopeArg(parseArg(args[0], book)), parseSelectorTail('largest', args.slice(1), book) as any);
+  },
+  smallest(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 1) throw new Error('smallest requires a scope');
+    return smallest(getScopeArg(parseArg(args[0], book)), parseSelectorTail('smallest', args.slice(1), book) as any);
   },
 
   // furthestFrom(scope, readableOn?, options?)
@@ -563,25 +579,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return typographyScale(base, options);
   },
 
-  // nextLarger(target, scope, options?)
-  nextLarger(argsStr, book, currentScope) {
-    const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('nextLarger requires 2 arguments');
-    const target = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return nextLarger(target, scope, options);
-  },
 
-  // nextSmaller(target, scope, options?)
-  nextSmaller(argsStr, book, currentScope) {
-    const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('nextSmaller requires 2 arguments');
-    const target = getTokenArg(parseArg(args[0], book));
-    const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return nextSmaller(target, scope, options);
-  },
 
   // timing(duration, easing, options?)
   timing(argsStr, book, currentScope) {
@@ -699,9 +697,9 @@ export const FUNCTION_NAMES: readonly string[] = Object.keys(FUNCTION_PARSERS)
  *  inside their calls. Kept beside the parser table; every entry must be
  *  one of its keys. */
 export const SCOPE_ARG_FUNCTIONS: ReadonlySet<string> = new Set([
-  'bestContrastWith', 'minContrastWith', 'closestColor', 'furthestFrom',
-  'mostVivid', 'leastVivid', 'lightest', 'darkest',
-  'nextLarger', 'nextSmaller', 'nth', 'random',
+  'bestContrastWith', 'minContrastWith', 'closest', 'furthestFrom',
+  'mostVivid', 'leastVivid', 'lightest', 'darkest', 'largest', 'smallest',
+  'nextLarger', 'nextSmaller', 'nextLighter', 'nextDarker', 'nth', 'random',
 ]);
 for (const name of SCOPE_ARG_FUNCTIONS) {
   if (!FUNCTION_PARSERS[name]) throw new Error(`SCOPE_ARG_FUNCTIONS: no parser for "${name}"`);
@@ -721,6 +719,20 @@ for (const name of SCOPE_ARG_FUNCTIONS) {
  * object. Hand-parsed rather than through parseOptionsArg because `not` and
  * `readableOn` may hold `ref(...)` calls, which are not JSON.
  */
+/** Parser for a direction alias of `closest`: `nextLarger(target, scope, readableOn?, options?)`. */
+function aliasParser(
+  name: string,
+  make: (target: AnyTokenValue, pool: ReferenceValue, options?: any) => AnyTokenValue,
+): (argsStr: string, book?: DesignBook) => AnyTokenValue {
+  return (argsStr, book) => {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error(`${name} requires 2 arguments: a target and a scope`);
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    return make(target, scope, parseSelectorTail(name, args.slice(2), book));
+  };
+}
+
 function parseSelectorTail(
   name: string,
   rest: string[],
@@ -749,8 +761,10 @@ function parseSelectorTail(
       options.minContrast = parseFloat(valueStr);
     } else if (key === 'minDistance') {
       options.minDistance = parseFloat(valueStr);
+    } else if (key === 'type') {
+      options.type = parseQuotedString(valueStr) as 'color' | 'size' | 'text';
     } else if (key === 'direction') {
-      options.direction = parseQuotedString(valueStr) as 'lighter' | 'darker';
+      options.direction = parseQuotedString(valueStr) as SelectorTailOptions['direction'];
     } else if (key === 'toward') {
       options.toward = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'description') {
@@ -777,8 +791,9 @@ function parseNotList(valueStr: string, book?: DesignBook): Array<ReferenceValue
 }
 
 type SelectorTailOptions = {
+  type?: 'color' | 'size' | 'text';
   minDistance?: number;
-  direction?: 'lighter' | 'darker';
+  direction?: 'lighter' | 'darker' | 'larger' | 'smaller';
   toward?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;
   readableOn?: AnyTokenValue;

@@ -18,7 +18,7 @@ export interface SVGRenderOptions {
   strokeWidth?: number;
   /** When true, the graph shows only "palette-linking" function edges —
    *  function tokens that iterate a scope (e.g. bestContrastWith,
-   *  mostVivid, closestColor). Value-deriving function tokens like darken,
+   *  mostVivid, closest). Value-deriving function tokens like darken,
    *  colorMix and spacingScale have their edges hidden. Each shown link
    *  is collapsed to a single dashed edge that points at the candidate
    *  whose resolved value matches the function's output — i.e. the token
@@ -104,7 +104,7 @@ function pickActiveOutline(fillValue: string): string {
 }
 
 /** Function tokens fall into two families: palette-linkers (iterate a
- *  scope — bestContrastWith, mostVivid, closestColor, sibling, …) and value
+ *  scope — bestContrastWith, mostVivid, closest, sibling, …) and value
  *  derivers (apply a formula to inputs — darken, colorMix, spacingScale).
  *  A token is a palette-linker only when it iterates a scope *itself*: a
  *  top-level scope argument, or a scope it declares in

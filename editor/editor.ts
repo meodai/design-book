@@ -461,9 +461,13 @@ function serializeFunctionToken(fn: any): string {
   // printed back inside the options object, the way it is typed.
   const args: any[] = fn.args ?? [];
   const backdropIdx = readableOnArgIndex({ args, options: fn.options });
-  // closestColor's `toward` is the argument after the pool, marked by
+  // closest's `toward` is the argument after the pool, marked by
   // `toward: true` in the options; it is printed as `toward: …` too.
-  const towardIdx = fn.name === 'closestColor' && fn.options?.toward === true ? 2 : -1;
+  const towardIdx = fn.name === 'closest' && fn.options?.toward === true ? 2 : -1;
+  // A closest with a plain direction prints as its alias: nextLarger(…), nextLighter(…).
+  const alias = fn.name === 'closest' && towardIdx < 0 && typeof fn.options?.direction === 'string'
+    ? ({ larger: 'nextLarger', smaller: 'nextSmaller', lighter: 'nextLighter', darker: 'nextDarker' } as Record<string, string>)[fn.options.direction]
+    : undefined;
   const argStrs = args.filter((_, i) => i !== backdropIdx && i !== towardIdx).map(serializeArg);
   const readableOn = backdropIdx >= 0 ? serializeArg(args[backdropIdx]) : undefined;
   const toward = towardIdx >= 0 ? serializeArg(args[towardIdx]) : undefined;
@@ -474,6 +478,7 @@ function serializeFunctionToken(fn: any): string {
     ? Object.keys(fn.options).filter((k) => {
         if (k === 'description') return false;
         if (k === 'toward' && towardIdx >= 0) return false;
+        if (k === 'direction' && alias) return false;
         const v = fn.options[k];
         if (v === undefined || v === null) return false;
         if (Array.isArray(v) && v.length === 0) return false;
@@ -490,7 +495,7 @@ function serializeFunctionToken(fn: any): string {
   if (optionPairs.length > 0) {
     argStrs.push(`{ ${optionPairs.join(', ')} }`);
   }
-  return `${fn.name}(${argStrs.join(', ')})`;
+  return `${alias ?? fn.name}(${argStrs.join(', ')})`;
 }
 
 // --- Get display value for a token ---

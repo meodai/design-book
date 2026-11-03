@@ -83,12 +83,13 @@ export { DependencyGraph } from './dependency-graph';
 export {
   bestContrastWith, minContrastWith,
   colorMix, lighten, darken, shade, relativeTo,
-  closestColor, furthestFrom, mostVivid, leastVivid,
+  closest, furthestFrom, mostVivid, leastVivid,
   lightest, darkest,
+  largest, smallest,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
   typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
-  nextLarger, nextSmaller,
+  nextLarger, nextSmaller, nextLighter, nextDarker,
   random,
   nth,
   sibling,
@@ -97,7 +98,7 @@ export {
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';
 export type { TypographyField, TypographyFields, TypographyOverrides } from './functions';
-export type { LightnessSelectorOptions, ReadableOnOptions, ClosestColorOptions } from './functions';
+export type { LightnessSelectorOptions, ReadableOnOptions, ClosestOptions, NextOptions, ExtremeOptions } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

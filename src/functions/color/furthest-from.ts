@@ -8,13 +8,38 @@ import { parse } from 'culori';
 import { collectScopeColors, visibleDistance } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
+import { measuredGroups, measuredMembers, onlyMeasuredGroup } from '../kinds';
+import type { Kind } from '../kinds';
 
 export function furthestFromImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
   minContrast?: number,
+  type?: Kind,
 ): string {
+  // Colors unless asked otherwise or the pool has none: then the one group
+  // of sizes or text styles it holds, by value. Kinds are never mixed.
+  if (type !== 'color' && (type !== undefined || collectScopeColors(scope, not).length === 0)) {
+    if (readableOn !== null) {
+      throw new FunctionError('furthestFrom: `readableOn` applies to colors', 'furthestFrom');
+    }
+    if (type === undefined && measuredGroups(scope, not).size === 0) {
+      throw new FunctionError(`furthestFrom: scope "${scope.name}" has no colors, sizes or text styles to compare`, 'furthestFrom');
+    }
+    const group = onlyMeasuredGroup('furthestFrom', scope, not, type);
+    const members = measuredMembers(scope, group.kind, group.unit, not);
+    let furthest = members[0].value;
+    let highest = -1;
+    for (const a of members) {
+      const avg = members.reduce((sum, b) => sum + Math.abs(a.num - b.num), 0) / Math.max(1, members.length - 1);
+      if (avg > highest) {
+        highest = avg;
+        furthest = a.value;
+      }
+    }
+    return furthest;
+  }
   // Distance is measured among the readable candidates only — the filter
   // narrows the pool before ranking, the same as `not`.
   const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, minContrast);
@@ -52,6 +77,9 @@ export function furthestFromImpl(
 export function furthestFrom(
   pool: PoolArg,
   options?: ReadableOnOptions & {
+    /** Which kind to compare when the pool holds several: 'color' (the
+     *  default when it holds colors), 'size' or 'text'. */
+    type?: Kind;
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
     description?: string;
@@ -59,17 +87,21 @@ export function furthestFrom(
   },
 ): FunctionTokenValue {
   const scope = poolArg('furthestFrom', pool);
+  const type = options?.type;
+  if (type !== undefined && type !== 'color' && type !== 'size' && type !== 'text') {
+    throw new FunctionError(`furthestFrom: \`type\` is 'color', 'size' or 'text', got ${String(type)}`, 'furthestFrom');
+  }
   const readable = readableOnParts('furthestFrom', options);
   return createFunctionToken(
     'furthestFrom',
     [scope, ...readable.args],
     {
       description: options?.description,
-      options: { not: normalizeNotKeys(options?.not), ...readable.options },
+      options: { not: normalizeNotKeys(options?.not), ...(type ? { type } : {}), ...readable.options },
       metadata: {
         dependencies: readable.dependencies,
         visualDependencies: extractVisualDependencies([scope, ...readable.args]),
-        returnType: 'color',
+        returnType: type === 'color' ? 'color' : undefined,
       },
     },
   );

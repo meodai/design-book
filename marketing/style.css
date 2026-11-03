@@ -436,6 +436,30 @@ h1, h2, h3 {
   top: -0.6em;
 }
 
+/* What a function works on: one tag per kind, with what it measures there. */
+.fn-kinds {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.fn-kinds li {
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+}
+.fn-kinds b {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 4px;
+}
+
 .fn-body {
   display: grid;
   gap: clamp(20px, 2.4vw, 32px);

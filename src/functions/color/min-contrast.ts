@@ -10,10 +10,18 @@ import {
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
+import type { Direction } from '../kinds';
 import { collectScopeColors, contrastAgainst, formatColor } from './scope-colors';
 
 export interface MinContrastOptions {
+  /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
+   *  between two sizes or font sizes for sizes and text styles (1.25 is a
+   *  major third). */
   ratio?: number;
+  /** Only candidates on that side of the target: 'lighter' / 'darker' for
+   *  colors, 'larger' / 'smaller' for sizes and text styles. */
+  direction?: Direction;
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue>;
   description?: string;
@@ -25,7 +33,11 @@ export function minContrastWithImpl(
   scope: Scope,
   ratio: number,
   not: string[] = [],
+  direction?: Direction,
 ): string {
+  const measure = measureOf(targetValue);
+  if (measure) return measuredContrast('minContrastWith', targetValue, measure, scope, not, direction, { pick: 'min', ratio });
+  assertDirectionFits('minContrastWith', direction, 'color');
   const targetColor = parse(targetValue);
   if (!targetColor) {
     throw new FunctionError(
@@ -53,6 +65,7 @@ export function minContrastWithImpl(
 
   for (const candidate of collectScopeColors(scope, not)) {
     if (excludedHexes.has(candidate.hex)) continue;
+    if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
     candidates.push({
       hex: candidate.hex,
       contrast: contrastAgainst(targetColor, candidate.parsed),
@@ -86,7 +99,8 @@ export function minContrastWith(
 ): FunctionTokenValue {
   const scope = poolArg('minContrastWith', pool);
   valueArg('minContrastWith', targetValue);
-  const { ratio = 4.5, not, description, ...rest } = options ?? {};
+  const { ratio = 4.5, not, description, direction, ...rest } = options ?? {};
+  assertDirection('minContrastWith', direction);
   const notKeys = normalizeNotKeys(not);
 
   // Only `not` keys outside the iterated scope are dependencies: those are
@@ -103,11 +117,12 @@ export function minContrastWith(
     {
       description,
       ...rest,
-      options: { ratio, not: notKeys },
+      options: { ratio, not: notKeys, ...(direction ? { direction } : {}) },
       metadata: {
         dependencies: [...extractDependencies([targetValue]), ...externalNotKeys],
         visualDependencies: extractVisualDependencies([targetValue, scope]),
-        returnType: 'color',
+        // A color, a size or a text style, as the target is.
+        returnType: undefined,
       },
     },
   );

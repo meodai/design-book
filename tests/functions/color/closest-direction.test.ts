@@ -1,7 +1,7 @@
 import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { converter } from 'culori';
 import { DesignBook } from '../../../src/design-book';
-import { color, ref, closestColor, FunctionError } from '../../../src/index';
+import { color, ref, closest, FunctionError } from '../../../src/index';
 import { parseTokenInput } from '../../../editor/editor-input-parser';
 import { loadEditorModule } from '../../editor/load-editor';
 
@@ -21,12 +21,12 @@ function palette() {
   return { book, p, ui };
 }
 
-describe('closestColor with a direction', () => {
+describe('closest with a direction', () => {
   it('picks the nearest look-alike on that side, staying in the hue family', () => {
     const { book, ui } = palette();
     ui.set('button', ref('p.blue'));
-    ui.set('up', closestColor(ref('ui.button'), ref('p'), { direction: 'lighter' }));
-    ui.set('down', closestColor(ref('ui.button'), ref('p'), { direction: 'darker' }));
+    ui.set('up', closest(ref('ui.button'), ref('p'), { direction: 'lighter' }));
+    ui.set('down', closest(ref('ui.button'), ref('p'), { direction: 'darker' }));
     // mustard is closer in lightness than mid, but mid looks closer
     expect(L('#8a7a2a') - L('#2d60a5')).toBeLessThan(L('#4a7bd0') - L('#2d60a5'));
     expect(book.resolve('ui.up')).toBe('#4a7bd0');
@@ -35,25 +35,25 @@ describe('closestColor with a direction', () => {
 
   it('never returns the target itself', () => {
     const { book, ui } = palette();
-    ui.set('up', closestColor(ref('p.blue'), ref('p'), { direction: 'lighter' }));
+    ui.set('up', closest(ref('p.blue'), ref('p'), { direction: 'lighter' }));
     expect(book.resolve('ui.up')).not.toBe('#2d60a5');
   });
 
   it('takes a minDistance in OKLCH lightness', () => {
     const { book, ui } = palette();
     const gap = L('#4a7bd0') - L('#2d60a5');
-    ui.set('up', closestColor(ref('p.blue'), ref('p'), { direction: 'lighter', minDistance: gap + 0.01 }));
+    ui.set('up', closest(ref('p.blue'), ref('p'), { direction: 'lighter', minDistance: gap + 0.01 }));
     expect(L(book.resolve('ui.up'))).toBeGreaterThan(L('#4a7bd0'));
   });
 
   it('throws when nothing is on that side', () => {
     const { book, ui } = palette();
-    ui.set('up', closestColor(ref('p.white'), ref('p'), { direction: 'lighter' }));
+    ui.set('up', closest(ref('p.white'), ref('p'), { direction: 'lighter' }));
     expect(() => book.resolve('ui.up')).toThrow(/no member of scope "p" is lighter/);
   });
 });
 
-describe('closestColor toward', () => {
+describe('closest toward', () => {
   it('takes the side from another color and is one rule for light and dark', () => {
     const book = new DesignBook('t');
     const p = book.addScope('p');
@@ -61,7 +61,7 @@ describe('closestColor toward', () => {
     const light = book.addScope('light');
     light.set('page', ref('p.a'));
     light.set('button', ref('p.d'));
-    light.set('hover', closestColor(ref('.button'), ref('p'), { toward: ref('.page') }));
+    light.set('hover', closest(ref('.button'), ref('p'), { toward: ref('.page') }));
     const dark = book.addScope('dark', { extends: 'light' });
     dark.set('page', ref('p.f'));
     dark.set('button', ref('p.b'));
@@ -78,14 +78,14 @@ describe('closestColor toward', () => {
     p.set('paler', color('#eef4ff'));
     p.set('button', color('#2650c2'));
     const ui = book.addScope('ui');
-    ui.set('hover', closestColor(ref('p.button'), ref('p'), { toward: ref('p.page') }));
+    ui.set('hover', closest(ref('p.button'), ref('p'), { toward: ref('p.page') }));
     expect(book.resolve('ui.hover')).toBe('#8fb3ff');
   });
 
   it('follows the toward color', () => {
     const { book, ui } = palette();
     ui.set('page', color('#ffffff'));
-    ui.set('hover', closestColor(ref('p.blue'), ref('p'), { toward: ref('ui.page') }));
+    ui.set('hover', closest(ref('p.blue'), ref('p'), { toward: ref('ui.page') }));
     const watcher = vi.fn();
     book.watch('ui.hover', watcher);
     ui.set('page', color('#000000'));
@@ -93,22 +93,22 @@ describe('closestColor toward', () => {
   });
 
   it('validates its options', () => {
-    expect(() => closestColor(ref('p.blue'), ref('p'), { direction: 'up' as any })).toThrow(FunctionError);
-    expect(() => closestColor(ref('p.blue'), ref('p'), { direction: 'lighter', toward: ref('ui.page') })).toThrow(/not both/);
-    expect(() => closestColor(ref('p.blue'), ref('p'), { minDistance: 0.1 })).toThrow(/needs a `direction`/);
-    expect(() => closestColor(ref('p.blue'), ref('p'), { direction: 'lighter', minDistance: 2 })).toThrow(FunctionError);
-    expect(() => closestColor(ref('p.blue'), ref('p'), { toward: ref('p') })).toThrow(/needs a value/);
+    expect(() => closest(ref('p.blue'), ref('p'), { direction: 'up' as any })).toThrow(FunctionError);
+    expect(() => closest(ref('p.blue'), ref('p'), { direction: 'lighter', toward: ref('ui.page') })).toThrow(/not both/);
+    expect(() => closest(ref('p.blue'), ref('p'), { minDistance: 0.1 })).toThrow(/needs a `direction`/);
+    expect(() => closest(ref('p.blue'), ref('p'), { direction: 'lighter', minDistance: 2 })).toThrow(FunctionError);
+    expect(() => closest(ref('p.blue'), ref('p'), { toward: ref('p') })).toThrow(/needs a value/);
   });
 
   it('combines with readableOn', () => {
     const { book, ui } = palette();
     ui.set('bg', color('#ffffff'));
-    ui.set('pick', closestColor(ref('p.navy'), ref('p'), { direction: 'lighter', readableOn: ref('ui.bg'), minContrast: 4.5 }));
+    ui.set('pick', closest(ref('p.navy'), ref('p'), { direction: 'lighter', readableOn: ref('ui.bg'), minContrast: 4.5 }));
     expect(book.resolve('ui.pick')).toBe('#2d60a5');
   });
 });
 
-describe('closestColor direction in the editor', () => {
+describe('closest direction in the editor', () => {
   let getTokenDisplayValue: (scope: any, tokenName: string) => string;
   beforeAll(async () => {
     getTokenDisplayValue = (await loadEditorModule()).getTokenDisplayValue;
@@ -119,9 +119,9 @@ describe('closestColor direction in the editor', () => {
     ui.set('page', color('#ffffff'));
     ui.set('bg', color('#ffffff'));
     for (const typed of [
-      "closestColor(ref('p.blue'), ref('p'), { direction: \"lighter\" })",
-      "closestColor(ref('p.blue'), ref('p'), { toward: ref('ui.page'), minDistance: 0.02 })",
-      "closestColor(ref('p.navy'), ref('p'), { toward: ref('ui.page'), readableOn: ref('ui.bg'), minContrast: 4.5 })",
+      "closest(ref('p.blue'), ref('p'), { direction: \"lighter\" })",
+      "closest(ref('p.blue'), ref('p'), { toward: ref('ui.page'), minDistance: 0.02 })",
+      "closest(ref('p.navy'), ref('p'), { toward: ref('ui.page'), readableOn: ref('ui.bg'), minContrast: 4.5 })",
     ]) {
       ui.set('probe', parseTokenInput(typed, book, ui));
       const printed = getTokenDisplayValue(ui, 'probe');

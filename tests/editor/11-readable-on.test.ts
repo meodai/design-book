@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   DesignBook, color, ref,
-  closestColor, furthestFrom, mostVivid, leastVivid, lightest, darkest,
+  closest, furthestFrom, mostVivid, leastVivid, lightest, darkest,
 } from '../../src/index';
 import { parseTokenInput } from '../../editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
@@ -33,7 +33,7 @@ describe('readableOn in the editor', () => {
     ['leastVivid',   () => leastVivid(pool, { readableOn: ref('bg-10.white') })],
     ['lightest',     () => lightest(pool, { readableOn: ref('bg-10.white'), minContrast: 7 })],
     ['darkest',      () => darkest(pool, { readableOn: ref('bg-10.white') })],
-    ['closestColor', () => closestColor(color('#ffff66'), pool, { readableOn: ref('bg-10.white') })],
+    ['closest', () => closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white') })],
     ['furthestFrom', () => furthestFrom(pool, { readableOn: ref('bg-10.white') })],
   ];
 
@@ -50,13 +50,13 @@ describe('readableOn in the editor', () => {
   it('displays readableOn inside the options object, the way it is typed', () => {
     const ui = book.addScope('ui-10-display');
     ui.set('accent', mostVivid(pool, { readableOn: ref('bg-10.white'), not: ['pool-10.gray'] }));
-    ui.set('match', closestColor(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), minContrast: 7 }));
+    ui.set('match', closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), minContrast: 7 }));
 
     expect(getTokenDisplayValue(ui, 'accent')).toBe(
       "mostVivid(ref('pool-10'), { readableOn: ref('bg-10.white'), not: [\"pool-10.gray\"], minContrast: 4.5 })",
     );
     expect(getTokenDisplayValue(ui, 'match')).toBe(
-      "closestColor(color('#ffff66'), ref('pool-10'), { readableOn: ref('bg-10.white'), minContrast: 7 })",
+      "closest(color('#ffff66'), ref('pool-10'), { readableOn: ref('bg-10.white'), minContrast: 7 })",
     );
   });
 

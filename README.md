@@ -88,28 +88,54 @@ string('Arial, sans-serif')  // String values
 
 Some functions are straightforward transforms. The distinctive ones search a scope and select the value that best satisfies a rule.
 
-### Color selection (require a scope to search)
+### Comparisons (any kind)
 
 ```typescript
-bestContrastWith(target, ref('scope'))             // Highest WCAG contrast
-minContrastWith(target, ref('scope'), { ratio })   // Meets minimum ratio (default 4.5)
-closestColor(target, ref('scope'))                 // Perceptually closest
-closestColor(target, ref('scope'), { direction: 'lighter' })  // … of the lighter ones
-closestColor(target, ref('scope'), { toward: ref('.page') })  // … on the page's side
-furthestFrom(ref('scope'))                         // Most distant from others
-mostVivid(ref('scope'))                            // Highest OKLCH chroma
-leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
-lightest(ref('scope'))                             // Highest OKLCH lightness
-darkest(ref('scope'))                              // Lowest OKLCH lightness
+closest(target, ref('scope'))                         // Nearest member of the target's kind
+nextLarger(target, ref('scope'), { minDistance })     // closest, larger  (sizes, text styles)
+nextSmaller(target, ref('scope'), { minDistance })    // closest, smaller
+nextLighter(target, ref('scope'), { minDistance })    // closest, lighter (colors)
+nextDarker(target, ref('scope'), { minDistance })     // closest, darker
+closest(target, ref('scope'), { toward: ref('.page') })  // closest on the page's side
+bestContrastWith(target, ref('scope'))                // Highest contrast
+minContrastWith(target, ref('scope'), { ratio })      // Lowest contrast that reaches the ratio
+furthestFrom(ref('scope'))                            // Most distant from the others
+lightest(ref('scope')) / darkest(ref('scope'))        // Extremes of lightness (colors)
+largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes, text styles)
 ```
 
-`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
+**The target decides the kind.** A pool may hold colors, sizes and text styles side by side; a comparison only looks at the members of the target's kind and skips the rest. Sizes are compared within one unit (`px` with `px`, `rem` with `rem` — there is no root size to convert with), and `typography()` text styles with text styles, by their font size. Nothing of that kind in the pool throws and says so: *closest: scope "brand" has no text styles in rem*. Functions without a target take their kind from their name (`lightest` colors, `largest` sizes and text styles), and `furthestFrom` / `largest` / `smallest` take `{ type: 'color' | 'size' | 'text' }` when a pool holds more than one group.
+
+| | Colors | Sizes | Text styles |
+|---|---|---|---|
+| `closest` | OKLab distance | value | font size |
+| `direction` (`nextLarger` …) | `lighter` / `darker` (OKLCH L) | `larger` / `smaller` | `larger` / `smaller` |
+| `minDistance` | OKLCH lightness, 0–1 | the target's unit | the target's unit |
+| `bestContrastWith` / `minContrastWith` | WCAG luminance ratio | ratio of the two sizes | ratio of the font sizes |
+| `furthestFrom` | OKLab distance | value | font size |
+| extremes | `lightest` / `darkest` | `largest` / `smallest` | `largest` / `smallest` |
+| `readableOn` | yes | — | — |
+
+**`closest` and its direction.** Colors are compared by perceptual distance (Euclidean in OKLab), so `nextLighter` from a blue is the nearest lighter *blue*, not a yellow that happens to be the next step up in lightness. `nextLarger` / `nextSmaller` / `nextLighter` / `nextDarker` are `closest` with `direction: 'larger' | 'smaller' | 'lighter' | 'darker'` — the editor writes them back that way. `toward: ref('.page')` takes the side from where another value lies and stops there: one rule that is lighter on a light page and darker on a dark one, or that steps a size toward another. `minDistance` is the gap the pick must clear past the target. The target does not need to be a member, and the pool needs no order.
+
+```typescript
+// scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }
+ui.set('gap',    nextLarger(ref('space.m'), ref('space')));                    // → 16px
+ui.set('gap',    nextLarger(ref('space.m'), ref('space'), { minDistance: 6 })); // → 24px
+ui.set('breath', nextSmaller(ref('space.l'), ref('space')));                   // → 12px
+ui.set('hover',  nextLighter(ref('.button'), ref('brand')));                   // nearest lighter look-alike
+```
+
+**Contrast** is a ratio for every kind: WCAG luminance for colors (4.5 is AA text), the ratio of the larger to the smaller value for sizes and text styles (1.25 is a major third). So a type scale can be written as a rule:
+
+```typescript
+// the smallest style at least 1.25× the body, going up
+type.set('lead', minContrastWith(ref('type.body'), ref('type'), { ratio: 1.25, direction: 'larger' }));
+```
+
+`direction` works here too. `minContrastWith` falls back to the highest contrast when nothing reaches the ratio.
 
 `lightest` and `darkest` rank by OKLCH L — not HSL lightness, which calls `#ffff00` and `#0000ff` equally light, and not WCAG luminance. Alpha is ignored when ranking; a translucent winner keeps its alpha.
-
-**`closestColor` with a direction.** `direction: 'lighter' | 'darker'` keeps only the members strictly on that side of the target's OKLCH lightness, and the closest-looking of those wins — so from a blue it picks the nearest lighter blue rather than a yellow that happens to be the next step up in lightness. `toward: ref('.page')` takes the side from where another color lies and goes no further than its lightness: one rule that is lighter on a light page and darker on a dark one. `minDistance` is a gap in OKLCH lightness (0–1) the pick must clear: `closestColor(ref('.button'), ref('blue'), { direction: 'darker', minDistance: 0.05 })` is at least five points darker. The target does not need to be a member, and the pool needs no order.
-
-`closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
 **Translucent candidates.** Selectors keep alpha. A candidate is judged as it
 would actually look — composited over the target color — so a 5%-black
@@ -117,6 +143,15 @@ hairline scores as the near-invisible line it is rather than as pure black,
 and the winner is returned with its own alpha as 8-digit hex
 (`#00000080`). Feed that into a renderer and you get the translucent token
 back, not an opaque approximation of it.
+
+### Color only
+
+```typescript
+mostVivid(ref('scope'))                            // Highest OKLCH chroma
+leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
+```
+
+`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Sizes have no chroma, so these only look at colors.
 
 ### Excluding candidates with `not`
 
@@ -132,7 +167,7 @@ ui.set('accent', mostVivid(ref('palette'), {
 }));
 
 // `not` is also available on bestContrastWith, minContrastWith,
-// closestColor, furthestFrom, nextLarger, nextSmaller, nth and sibling.
+// closest, furthestFrom, nextLarger, nextSmaller, nth and sibling.
 ```
 
 Plain strings work too — `not: ['palette.error']` is equivalent to
@@ -141,7 +176,7 @@ Plain strings work too — `not: ['palette.error']` is equivalent to
 ### Keeping only readable candidates with `readableOn`
 
 The color selectors `mostVivid`, `leastVivid`, `lightest`, `darkest`,
-`closestColor` and `furthestFrom` also take `readableOn` — a backdrop color —
+`closest` and `furthestFrom` also take `readableOn` — a backdrop color —
 and `minContrast` (default 4.5). Like `not`, it narrows the pool before the
 selector ranks anything: candidates below the WCAG ratio against the backdrop
 are dropped, so the vivid pick is the most vivid *readable* color.
@@ -185,37 +220,6 @@ while `lighten`/`darken`/`colorMix` compute the mixed alpha the way the
 browser does.
 
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
-
-### Dimension selection (require a scope to search)
-
-```typescript
-nextLarger(target, ref('scope'), { minDistance, not })   // Next-up step in a scale
-nextSmaller(target, ref('scope'), { minDistance, not })  // Next-down step in a scale
-```
-
-Same selector idea as `closestColor` / `furthestFrom`, but for dimensional
-scopes (spacing, type, motion). Pass the target value and a scope of
-dimensional tokens; the function returns the strictly-larger (or strictly-
-smaller) neighbour. `minDistance` skips members that are too close — handy
-when adjacent steps are nearly the same. Comparison is per unit: members
-whose unit differs from the target's are skipped rather than treated as an
-error, so a scope that mixes `px` and `rem` still works — each target only
-ever sees its own unit. The unit can be anything — `px`, `rem`, `em`, `ms`,
-etc. If no member of the target's unit qualifies, the function throws at
-resolve time.
-
-```typescript
-// scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }
-
-ui.set('gap',     nextLarger(ref('space.m'), ref('space')));               // → 16px
-ui.set('gap',     nextLarger(ref('space.m'), ref('space'), { minDistance: 6 })); // → 24px
-ui.set('breath',  nextSmaller(ref('space.l'), ref('space')));              // → 12px
-
-motion.set('exit', nextSmaller(ref('motion.slow'), ref('motion')));        // → 200ms
-```
-
-Throws at resolve time if no member qualifies (no larger/smaller value, or
-none clears `minDistance`).
 
 ### Index selection (require a scope to search)
 
@@ -620,7 +624,7 @@ callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
 
 These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page. See [Index selection](#index-selection-require-a-scope-to-search) and [Relative steps](#relative-steps).
 
-Picking by *value* is a different thing: `nextLarger` / `nextSmaller` choose the next size up or down ([Dimension selection](#dimension-selection-require-a-scope-to-search)), and `closestColor(…, { direction })` the nearest lighter or darker color ([Color selection](#color-selection-require-a-scope-to-search)) — whatever order the scope is in.
+Picking by *value* is a different thing: `closest` and its aliases (`nextLarger`, `nextLighter` …) choose the nearest value up or down whatever order the scope is in — see [Comparisons](#comparisons-any-kind).
 
 ## Scope Ordering
 
@@ -1155,7 +1159,7 @@ If you prefer a ramp-oriented workflow, RampenSau is a good fit for generating a
 ```typescript
 import {
   DesignBook, color, ref, nameValues,
-  bestContrastWith, closestColor, colorMix, nth,
+  bestContrastWith, closest, colorMix, nth,
 } from 'design-book';
 
 const book = new DesignBook('workflow');
@@ -1192,7 +1196,7 @@ semantic.set('surface-accent-hover', colorMix(
 
 semantic.set('text', bestContrastWith(ref('semantic.surface'), ref('primitive')));
 semantic.set('text-on-accent', bestContrastWith(ref('semantic.surface-accent'), ref('primitive')));
-semantic.set('border-subtle', closestColor(ref('semantic.surface'), ref('primitive'), {
+semantic.set('border-subtle', closest(ref('semantic.surface'), ref('primitive'), {
   not: ['primitive.sand-100'],   // the surface itself
 }));
 semantic.set('focus-ring', ref('primitive.mint-300'));
@@ -1251,10 +1255,10 @@ they fit together.
 **Navigation.** `inParent(reference, levels?)`, `inRoot(reference)`: the same reference further up the `extends` chain.
 
 **Functions.**
-- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
+- Comparisons (any kind): `closest` with the aliases `nextLarger`, `nextSmaller`, `nextLighter`, `nextDarker`; `bestContrastWith`, `minContrastWith`, `furthestFrom`, `lightest`, `darkest`, `largest`, `smallest`
+- Color only: `mostVivid`, `leastVivid`
 - Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
-- Generic selectors: `nth`, `sibling`, `random`
-- Size selectors: `nextLarger`, `nextSmaller`
+- Positions: `nth`, `sibling`, `random`
 - Scales: `spacingScale`, `typographyScale`, `timing`
 - Typography: `typography`, `variant`
 

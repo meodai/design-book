@@ -5,7 +5,7 @@ import type { Scope } from '../../../src/scope';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
 import { leastVivid } from '../../../src/functions/color/least-vivid';
 import { lightest, darkest } from '../../../src/functions/color/lightest-darkest';
-import { closestColor } from '../../../src/functions/color/closest-color';
+import { closest } from '../../../src/functions/generic/closest';
 import { furthestFrom } from '../../../src/functions/color/furthest-from';
 import { FunctionError } from '../../../src/errors';
 
@@ -57,7 +57,7 @@ describe('readableOn', () => {
   it.each<[string, (pool: Scope) => ReturnType<typeof mostVivid>, string]>([
     ['lightest',     (p) => lightest(p, { readableOn: ref('ui.bg'), minContrast: 7 }), '#1d4eb8'],
     ['darkest',      (p) => darkest(p, { readableOn: ref('ui.ink') }), '#767676'],
-    ['closestColor', (p) => closestColor(color('#ffff66'), p, { readableOn: ref('ui.bg') }), '#767676'],
+    ['closest', (p) => closest(color('#ffff66'), p, { readableOn: ref('ui.bg') }), '#767676'],
     ['furthestFrom', (p) => furthestFrom(p, { readableOn: ref('ui.ink') }), '#767676'],
   ])('applies to %s', (_name, make, expected) => {
     const { book, pool, ui } = setup();

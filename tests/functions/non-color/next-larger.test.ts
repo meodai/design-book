@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { px, rem, ms, ref, string as stringToken } from '../../../src/tokens';
-import { nextLarger } from '../../../src/functions/non-color/next-larger';
+import { nextLarger } from '../../../src/functions/generic/closest';
 
 describe('nextLarger', () => {
   it('picks the next-larger member of the scope', () => {
@@ -104,7 +104,7 @@ describe('nextLarger', () => {
     // Two selector tokens in the same scope used to mutually recurse —
     // emphasis iterates space, hits `tight`, resolves it, which iterates
     // space and hits `emphasis`, etc. This test guards that fix.
-    const { nextSmaller } = await import('../../../src/functions/non-color/next-smaller');
+    const { nextSmaller } = await import('../../../src/functions/generic/closest');
     const book = new DesignBook('test');
     const space = book.addScope('space');
     space.set('xs', px(4));

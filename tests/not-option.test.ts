@@ -3,7 +3,7 @@ import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { minContrastWith } from '../src/functions/color/min-contrast';
-import { closestColor } from '../src/functions/color/closest-color';
+import { closest } from '../src/functions/generic/closest';
 import { furthestFrom } from '../src/functions/color/furthest-from';
 import { mostVivid } from '../src/functions/color/most-vivid';
 import { leastVivid } from '../src/functions/color/least-vivid';
@@ -75,7 +75,7 @@ describe('"not" option excludes keys from the candidate pool', () => {
     expect(book.resolve('ui.lowNotJustOver')).toBe('#5e5e5e');
   });
 
-  it('closestColor skips excluded keys', () => {
+  it('closest skips excluded keys', () => {
     const book = new DesignBook('test');
     const palette = book.addScope('palette');
     palette.set('exact',  color('#0066cc'));
@@ -83,8 +83,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('far',    color('#ff0000'));
 
     const ui = book.addScope('ui');
-    ui.set('match',        closestColor(color('#0066cc'), ref('palette')));
-    ui.set('matchNotExact', closestColor(color('#0066cc'), ref('palette'), {
+    ui.set('match',        closest(color('#0066cc'), ref('palette')));
+    ui.set('matchNotExact', closest(color('#0066cc'), ref('palette'), {
       not: [ref('palette.exact')],
     }));
 

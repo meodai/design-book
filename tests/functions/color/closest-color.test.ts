@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
-import { closestColor } from '../../../src/functions/color/closest-color';
+import { closest } from '../../../src/functions/generic/closest';
 
-describe('closestColor', () => {
+describe('closest', () => {
   it('finds perceptually closest color in scope', () => {
     const book = new DesignBook('test');
     const brand = book.addScope('brand');
@@ -12,7 +12,7 @@ describe('closestColor', () => {
     brand.set('blue', color('#0000ff'));
 
     const ui = book.addScope('ui');
-    ui.set('match', closestColor(color('#ff3333'), ref('brand')));
+    ui.set('match', closest(color('#ff3333'), ref('brand')));
 
     // #ff3333 is closest to red
     expect(book.resolve('ui.match')).toBe('#ff0000');
@@ -28,7 +28,7 @@ describe('closestColor', () => {
     palette.set('pale', color('#ffff80'));
 
     const ui = book.addScope('ui');
-    ui.set('match', closestColor(color('#ffff00'), ref('palette')));
+    ui.set('match', closest(color('#ffff00'), ref('palette')));
 
     expect(book.resolve('ui.match')).toBe('#ffff80');
   });
@@ -40,7 +40,7 @@ describe('closestColor', () => {
     palette.set('mint', color('#00c600'));
 
     const ui = book.addScope('ui');
-    ui.set('match', closestColor(ref('palette.accent'), ref('palette')));
+    ui.set('match', closest(ref('palette.accent'), ref('palette')));
 
     // oklch(0.7 0.3 150) is out of sRGB; gamut-mapped in OKLCH it is #00c248
     // (clipping would give #00cb00). Either way it is closer to itself than

@@ -47,7 +47,7 @@ import {
   scaleNames,
   bestContrastWith,
   minContrastWith,
-  closestColor,
+  closest,
   furthestFrom,
   mostVivid,
   leastVivid,
@@ -167,7 +167,7 @@ const PALETTE_CONTRAST_SURFACES = [
   const selectors = {
     bestContrastWith: (s) => bestContrastWith(color(CENTER), s),
     minContrastWith:  (s) => minContrastWith(color(CENTER), s, { ratio: 3 }),
-    closestColor:     (s) => closestColor(color(CENTER), s),
+    closest:     (s) => closest(color(CENTER), s),
     furthestFrom:     (s) => furthestFrom(s),
     mostVivid:        (s) => mostVivid(s),
     leastVivid:       (s) => leastVivid(s),
@@ -425,7 +425,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   pal.innerHTML = PALETTE_BRAND.map((c) => `<span style="background:${c}" title="${c}"></span>`).join("");
 })();
 
-// — closestColor with picker —
+// — closest with picker —
 (function demoClosest () {
   const swatchHost = document.getElementById("closest-target-swatch");
   const stage = document.getElementById("closest-ranked");
@@ -442,7 +442,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   function render (target) {
     // The winner is the library's answer; the rest are ordered by the same
     // OKLab distance so the ranking reads left to right.
-    const winner = pick(PALETTE_BRAND, (s) => closestColor(color(target), s));
+    const winner = pick(PALETTE_BRAND, (s) => closest(color(target), s));
     const ranked = PALETTE_BRAND
       .map((c) => ({ color: c, d: deltaE(target, c) }))
       .sort((a, b) => (a.color === winner ? -1 : b.color === winner ? 1 : a.d - b.d))

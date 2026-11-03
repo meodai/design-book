@@ -1,5 +1,7 @@
 import { bestContrastWithImpl } from './color/best-contrast';
-import { closestColorImpl } from './color/closest-color';
+import { closestImpl } from './generic/closest';
+import { largestImpl, smallestImpl } from './generic/extremes';
+import type { Direction, Kind } from './kinds';
 import { colorMixImpl } from './color/color-mix';
 import { darkenImpl } from './color/darken';
 import { furthestFromImpl } from './color/furthest-from';
@@ -10,8 +12,6 @@ import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
 import { relativeToImpl } from './color/relative-to';
 import { shadeImpl } from './color/shade';
-import { nextLargerImpl } from './non-color/next-larger';
-import { nextSmallerImpl } from './non-color/next-smaller';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
@@ -31,8 +31,10 @@ export { colorMix } from './color/color-mix';
 export { lighten } from './color/lighten';
 export { darken } from './color/darken';
 export { relativeTo } from './color/relative-to';
-export { closestColor } from './color/closest-color';
-export type { ClosestColorOptions } from './color/closest-color';
+export { closest, nextLarger, nextSmaller, nextLighter, nextDarker } from './generic/closest';
+export type { ClosestOptions, NextOptions } from './generic/closest';
+export { largest, smallest } from './generic/extremes';
+export type { ExtremeOptions } from './generic/extremes';
 export { furthestFrom } from './color/furthest-from';
 export { mostVivid } from './color/most-vivid';
 export { leastVivid } from './color/least-vivid';
@@ -46,8 +48,6 @@ export { typographyScale } from './non-color/typography-scale';
 export { typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
 export type { TypographyField, TypographyFields, TypographyOverrides } from './non-color/typography';
 export { timing } from './non-color/timing';
-export { nextLarger } from './non-color/next-larger';
-export { nextSmaller } from './non-color/next-smaller';
 export { random } from './generic/random';
 export type { RandomOptions, RandomType } from './generic/random';
 export { nth } from './generic/nth';
@@ -63,11 +63,11 @@ export function registerBuiltinFunctions(book: {
 	resolve(key: string): string;
 	getTokenByKey(key: string): AnyTokenValue | undefined;
 }): void {
-	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[] }) =>
-		bestContrastWithImpl(targetValue, scope, options?.not ?? []),
+	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[]; direction?: Direction }) =>
+		bestContrastWithImpl(targetValue, scope, options?.not ?? [], options?.direction),
 	);
-	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[] }) =>
-		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, options?.not ?? []),
+	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[]; direction?: Direction }) =>
+		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, options?.not ?? [], options?.direction),
 	);
 	book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
@@ -82,20 +82,22 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('relativeTo', (baseColor: string, options?: { colorSpace?: string; modifications?: (null | number | string)[] }) =>
 		relativeToImpl(baseColor, options?.colorSpace ?? 'oklch', options?.modifications ?? [null, null, null]),
 	);
-	book.registerFunction('closestColor', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
+	book.registerFunction('closest', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
 		// [toward?, readableOn?, options]: options.toward marks the toward argument.
 		const marked = rest[rest.length - 1] as { toward?: unknown } | undefined;
 		const toward = marked?.toward === true ? rest.shift() as string : undefined;
 		const { readableOn, options } = splitReadableArgs<{
-			not?: string[]; minContrast?: number; direction?: 'lighter' | 'darker'; minDistance?: number;
+			not?: string[]; minContrast?: number; direction?: Direction; minDistance?: number;
 		}>(rest);
-		return closestColorImpl(targetValue, scope, options.not ?? [], readableOn, options.minContrast, {
+		return closestImpl(targetValue, scope, options.not ?? [], readableOn, options.minContrast, {
 			direction: options.direction, toward, minDistance: options.minDistance,
 		});
 	});
+	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, options));
+	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, options));
 	book.registerFunction('furthestFrom', (scope: Scope, ...rest: unknown[]) => {
-		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
-		return furthestFromImpl(scope, options.not ?? [], readableOn, options.minContrast);
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number; type?: Kind }>(rest);
+		return furthestFromImpl(scope, options.not ?? [], readableOn, options.minContrast, options.type);
 	});
 	book.registerFunction('mostVivid', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
@@ -125,16 +127,6 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction('timing', (duration: string, easing: string, options?: { delay?: number }) =>
 		timingImpl(duration, easing, options?.delay ?? 0),
-	);
-	book.registerFunction(
-		'nextLarger',
-		(targetValue: string, scope: Scope, options?: { minDistance?: number; not?: string[] }) =>
-			nextLargerImpl(targetValue, scope, options?.minDistance ?? 0, options?.not ?? []),
-	);
-	book.registerFunction(
-		'nextSmaller',
-		(targetValue: string, scope: Scope, options?: { minDistance?: number; not?: string[] }) =>
-			nextSmallerImpl(targetValue, scope, options?.minDistance ?? 0, options?.not ?? []),
 	);
 	book.registerFunction(
 		'random',

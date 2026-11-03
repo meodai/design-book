@@ -166,7 +166,7 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | `--press: <even darker>` | `darken(ref('color.brand'), { amount: 0.3 })` |
 | `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), ref('values'))` |
 | `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ref('values'), { ratio: 1.5 })` |
-| `--border: <the nearest shade to the surface>` | `closestColor(ref('color.surface'), ref('values'), { not: ['values.gray-50'] })` |
+| `--border: <the nearest shade to the surface>` | `closest(ref('color.surface'), ref('values'), { not: ['values.gray-50'] })` |
 | `--accent: <one of the brand colors>` | `mostVivid(ref('values'), { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
 | `--text: <darkest readable gray>` | `darkest(ref('grays'), { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
@@ -569,9 +569,9 @@ After importing:
   point.
 - **Smuggling semantics into the value layer.** `values.brand` is a code
   smell. The value layer holds material; the role goes in `color`.
-- **Forgetting `not` on `mostVivid` / `bestContrastWith` / `closestColor` / etc.**
+- **Forgetting `not` on `mostVivid` / `bestContrastWith` / `closest` / etc.**
   Without `not: [ref('values.error')]`, the procedural accent often lands
-  on the red error color (highest chroma), and `closestColor` of a surface
+  on the red error color (highest chroma), and `closest` of a surface
   returns the surface itself.
 - **Re-creating tokens on Figma sync instead of mutating.** `scope.set` on
   an existing key updates the value and keeps its dependents.

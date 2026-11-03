@@ -4,6 +4,28 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-11-03
+
+### Changed
+
+- **Comparisons work across kinds.** The target decides the kind — a color,
+  a size, or a `typography()` text style measured by its font size — and
+  only pool members of that kind (sizes: the same unit) are compared; the
+  rest are skipped. `closestColor` is now `closest`; `nextLarger`,
+  `nextSmaller`, `nextLighter` and `nextDarker` are its direction aliases
+  (the editor prints a `closest` with a plain direction as its alias).
+- **Contrast is a ratio for every kind:** WCAG luminance for colors, the
+  ratio of the two values for sizes and text styles, so
+  `minContrastWith(ref('type.body'), ref('type'), { ratio: 1.25, direction: 'larger' })`
+  is a type-scale step. `bestContrastWith` and `minContrastWith` take
+  `direction`.
+- `furthestFrom` compares sizes and text styles too (`{ type }` when a pool
+  holds several groups).
+
+### Added
+
+- `largest(pool)` / `smallest(pool)` for sizes and text styles.
+
 ## [0.16.0] - 2026-11-03
 
 ### Added

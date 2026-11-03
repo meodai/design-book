@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { px, rem, ms, ref, string as stringToken } from '../../../src/tokens';
-import { nextSmaller } from '../../../src/functions/non-color/next-smaller';
+import { nextSmaller } from '../../../src/functions/generic/closest';
 
 describe('nextSmaller', () => {
   it('picks the next-smaller member of the scope', () => {

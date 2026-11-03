@@ -4,7 +4,7 @@ import { color, ref, string } from '../../../src/tokens';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
 import { leastVivid } from '../../../src/functions/color/least-vivid';
 import { lightest, darkest } from '../../../src/functions/color/lightest-darkest';
-import { closestColor } from '../../../src/functions/color/closest-color';
+import { closest } from '../../../src/functions/generic/closest';
 import { furthestFrom } from '../../../src/functions/color/furthest-from';
 import { readableOnArgIndex } from '../../../src/functions/color/readable';
 
@@ -26,7 +26,7 @@ describe('readableOnArgIndex', () => {
     ['lightest', (o?: any) => lightest(ref('pool'), o)],
     ['darkest', (o?: any) => darkest(ref('pool'), o)],
     ['furthestFrom', (o?: any) => furthestFrom(ref('pool'), o)],
-    ['closestColor', (o?: any) => closestColor(color('#ff0000'), ref('pool'), o)],
+    ['closest', (o?: any) => closest(color('#ff0000'), ref('pool'), o)],
   ] as const;
 
   it.each(selectors)('%s: points at the backdrop argument', (_name, make) => {

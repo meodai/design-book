@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
 import { bestContrastWith } from '../../../src/functions/color/best-contrast';
-import { closestColor } from '../../../src/functions/color/closest-color';
+import { closest } from '../../../src/functions/generic/closest';
 
 describe('`not` exclusion on inherited candidate pools', () => {
   it('excludes an inherited token named by its source key', () => {
@@ -44,7 +44,7 @@ describe('`not` exclusion on inherited candidate pools', () => {
     const dark = book.addScope('dark', { extends: 'palette' });
 
     const ui = book.addScope('ui');
-    ui.set('near', closestColor(color('#111111'), ref('dark'), { not: [ref('palette.black')] }));
+    ui.set('near', closest(color('#111111'), ref('dark'), { not: [ref('palette.black')] }));
 
     expect(book.resolve('ui.near')).toBe('#ffffff');
   });

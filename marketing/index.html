@@ -57,7 +57,7 @@
       <select class="hi-fn" id="hi-fn" aria-label="Selector function">
         <option value="bestContrastWith">bestContrastWith</option>
         <option value="minContrastWith">minContrastWith</option>
-        <option value="closestColor">closestColor</option>
+        <option value="closest">closest</option>
         <option value="furthestFrom">furthestFrom</option>
         <option value="mostVivid">mostVivid</option>
         <option value="leastVivid">leastVivid</option>
@@ -185,22 +185,25 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
 
   <div class="fn-tabs" role="tablist" aria-label="Selectors">
     <span class="fn-tabs-set" role="presentation">
+      <span class="fn-tabs-group" aria-hidden="true">Compare</span>
+      <button type="button" role="tab" id="tab-closest" aria-controls="closest" aria-selected="false" tabindex="-1">closest</button>
+      <button type="button" role="tab" id="tab-next-step" aria-controls="next-step" aria-selected="false" tabindex="-1">nextLarger · nextSmaller</button>
+      <button type="button" role="tab" id="tab-furthest" aria-controls="furthest" aria-selected="false" tabindex="-1">furthestFrom</button>
+      <button type="button" role="tab" id="tab-lightness" aria-controls="lightness" aria-selected="false" tabindex="-1">lightest · darkest</button>
+    </span>
+    <span class="fn-tabs-set" role="presentation">
       <span class="fn-tabs-group" aria-hidden="true">Contrast</span>
       <button type="button" role="tab" id="tab-best-contrast" aria-controls="best-contrast" aria-selected="true" tabindex="0" class="is-active">bestContrastWith</button>
       <button type="button" role="tab" id="tab-min-contrast" aria-controls="min-contrast" aria-selected="false" tabindex="-1">minContrastWith</button>
     </span>
     <span class="fn-tabs-set" role="presentation">
-      <span class="fn-tabs-group" aria-hidden="true">Color</span>
-      <button type="button" role="tab" id="tab-closest" aria-controls="closest" aria-selected="false" tabindex="-1">closestColor</button>
-      <button type="button" role="tab" id="tab-furthest" aria-controls="furthest" aria-selected="false" tabindex="-1">furthestFrom</button>
+      <span class="fn-tabs-group" aria-hidden="true">Color only</span>
       <button type="button" role="tab" id="tab-vivid" aria-controls="vivid" aria-selected="false" tabindex="-1">mostVivid · leastVivid</button>
-      <button type="button" role="tab" id="tab-lightness" aria-controls="lightness" aria-selected="false" tabindex="-1">lightest · darkest</button>
     </span>
     <span class="fn-tabs-set" role="presentation">
       <span class="fn-tabs-group" aria-hidden="true">Position</span>
       <button type="button" role="tab" id="tab-nth" aria-controls="nth" aria-selected="false" tabindex="-1">nth</button>
       <button type="button" role="tab" id="tab-sibling" aria-controls="sibling" aria-selected="false" tabindex="-1">sibling</button>
-      <button type="button" role="tab" id="tab-next-step" aria-controls="next-step" aria-selected="false" tabindex="-1">nextLarger · nextSmaller</button>
       <button type="button" role="tab" id="tab-random" aria-controls="random" aria-selected="false" tabindex="-1">random</button>
     </span>
   </div>
@@ -211,7 +214,8 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
   <article class="fn is-active" id="best-contrast" role="tabpanel" aria-labelledby="tab-best-contrast" tabindex="0">
     <header class="fn-head">
       <h3>bestContrastWith</h3>
-      <code class="sig">bestContrastWith( target, scope, { not? } )</code>
+      <code class="sig">bestContrastWith( target, scope, { direction?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -230,11 +234,12 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
     </div>
   </article>
 
-  <!-- closestColor -->
+  <!-- closest -->
   <article class="fn" id="closest" role="tabpanel" aria-labelledby="tab-closest" tabindex="0">
     <header class="fn-head">
-      <h3>closestColor</h3>
-      <code class="sig">closestColor( target, scope, { readableOn?, minContrast?, not? } )</code>
+      <h3>closest</h3>
+      <code class="sig">closest( target, scope, { direction?, toward?, minDistance?, readableOn?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -251,7 +256,7 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
           <div class="closest-ranked" id="closest-ranked"></div>
         </div>
       </figure>
-      <pre class="code"><code>brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closestColor</span>(
+      <pre class="code"><code>brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closest</span>(
   <span class="c-fn">color</span>(<span class="c-str">'#7f4dc4'</span>),
   palette,
 ))</code></pre>
@@ -263,6 +268,7 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
     <header class="fn-head">
       <h3>furthestFrom</h3>
       <code class="sig">furthestFrom( scope, { readableOn?, minContrast?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -285,6 +291,7 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
     <header class="fn-head">
       <h3>minContrastWith</h3>
       <code class="sig">minContrastWith( target, scope, { ratio?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -320,7 +327,8 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
   <article class="fn" id="next-step" role="tabpanel" aria-labelledby="tab-next-step" tabindex="0">
     <header class="fn-head">
       <h3>nextLarger · nextSmaller</h3>
-      <code class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } )</code>
+      <code class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } ) = closest( …, { direction } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -372,6 +380,7 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
     <header class="fn-head">
       <h3>mostVivid · leastVivid</h3>
       <code class="sig">mostVivid|leastVivid( scope, { readableOn?, minContrast?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH chroma</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -392,6 +401,7 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
     <header class="fn-head">
       <h3>lightest · darkest</h3>
       <code class="sig">lightest|darkest( scope, { readableOn?, minContrast?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH lightness</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -422,6 +432,7 @@ ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>
     <header class="fn-head">
       <h3>random</h3>
       <code class="sig">random( scope, { type, seed?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> filtered by type</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -453,6 +464,7 @@ ui.set(<span class="c-str">'promo-bg'</span>, <span class="c-fn">random</span>(b
     <header class="fn-head">
       <h3>nth</h3>
       <code class="sig">nth( scope, index, { not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> by position</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -488,6 +500,7 @@ ui.set(<span class="c-str">'subtle'</span>,  <span class="c-fn">nth</span>(ramp,
     <header class="fn-head">
       <h3>sibling</h3>
       <code class="sig">sibling( ref, offset, { wrap?, not? } )</code>
+      <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> along the scale it comes from</li></ul>
     </header>
     <div class="fn-body">
       <div class="fn-pitch">
@@ -527,7 +540,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
         <code>readableOn</code> and <code>minContrast</code> (4.5 by
         default). Members that don't reach the ratio against that
         backdrop leave the pool before ranking — so <code>mostVivid</code>
-        returns the loudest color that still reads, <code>closestColor</code>
+        returns the loudest color that still reads, <code>closest</code>
         the nearest readable one. If nothing passes, the token fails
         loudly instead of shipping an unreadable color. The backdrop is
         a reference, so a theme switch re-runs the filter.

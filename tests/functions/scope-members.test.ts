@@ -4,8 +4,8 @@ import { color, px, ref } from '../../src/tokens';
 import { nth } from '../../src/functions/generic/nth';
 import { sibling } from '../../src/functions/generic/sibling';
 import { random } from '../../src/functions/generic/random';
-import { nextLarger } from '../../src/functions/non-color/next-larger';
-import { nextSmaller } from '../../src/functions/non-color/next-smaller';
+import { nextLarger } from '../../src/functions/generic/closest';
+import { nextSmaller } from '../../src/functions/generic/closest';
 import { lighten } from '../../src/functions/color/lighten';
 import { poolKeys } from '../../src/functions/scope-members';
 
