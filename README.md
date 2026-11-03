@@ -99,11 +99,15 @@ mostVivid(ref('scope'))                            // Highest OKLCH chroma
 leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
 lightest(ref('scope'))                             // Highest OKLCH lightness
 darkest(ref('scope'))                              // Lowest OKLCH lightness
+nextLighter(target, ref('scope'), { minDistance }) // Next step lighter than the target
+nextDarker(target, ref('scope'), { minDistance })  // Next step darker than the target
 ```
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
 
 `lightest` and `darkest` rank by OKLCH L — not HSL lightness, which calls `#ffff00` and `#0000ff` equally light, and not WCAG luminance. Alpha is ignored when ranking; a translucent winner keeps its alpha.
+
+`nextLighter` and `nextDarker` are the color counterparts of `nextLarger` / `nextSmaller`: of the members on that side of the target, the one closest in OKLCH lightness. They rank by value, so the scope needs no particular order, and the target does not have to be a member. `minDistance` is a gap in OKLCH lightness (0–1) the pick must clear: `nextDarker(ref('.button'), ref('blue'), { minDistance: 0.05 })` is at least five points darker. They take `not` and `readableOn` like the other color selectors. Their direction is fixed; for a rule that goes lighter on a light page and darker on a dark one, use `sibling(…, { toward })`.
 
 `closestColor` and `furthestFrom` measure perceptual distance as Euclidean distance in OKLab, so "closest" means closest to the eye rather than closest in sRGB coordinates.
 
@@ -614,7 +618,7 @@ callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
 
 ### Positions: `nth`, `sibling`, `nextLarger`, `nextSmaller`
 
-These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page, `nextLarger(ref('space.m'), ref('space'))` the next bigger step. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
+These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page, `nextLarger(ref('space.m'), ref('space'))` the next bigger step, `nextLighter(ref('.button'), ref('blue'))` the next lighter color. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
 
 ## Scope Ordering
 
@@ -1245,7 +1249,7 @@ they fit together.
 **Navigation.** `inParent(reference, levels?)`, `inRoot(reference)`: the same reference further up the `extends` chain.
 
 **Functions.**
-- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
+- Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`, `nextLighter`, `nextDarker`
 - Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
 - Generic selectors: `nth`, `sibling`, `random`, `nextLarger`, `nextSmaller`
 - Scales: `spacingScale`, `typographyScale`, `timing`

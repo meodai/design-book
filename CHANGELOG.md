@@ -4,6 +4,17 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-11-03
+
+### Added
+
+- **`nextLighter(target, pool, options?)` / `nextDarker(…)`**, the color
+  counterparts of `nextLarger` / `nextSmaller`: of the members on that side
+  of the target, the one closest in OKLCH lightness. By value, so the pool
+  needs no order. `minDistance` is a gap in OKLCH lightness (0–1); `not` and
+  `readableOn` work as on the other color selectors. The editor parses and
+  prints both.
+
 ## [0.14.0] - 2026-11-03
 
 ### Added

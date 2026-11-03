@@ -80,7 +80,7 @@ At resolve time, `Scope.resolve()` looks up the function by `fn.name` from the r
 
 A function token's graph edges are `functionDependencies(fn)` (`src/tokens.ts`): the refs in its args (nested tokens included) unioned with `metadata.dependencies`, deduplicated — so a bare `createFunctionToken(name, [ref(…)])` is tracked too.
 
-**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
+**With scope argument** (iterate scope colors): `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`, `nextLighter`, `nextDarker` (`src/functions/color/next-lightness.ts`: the closest member on that side of the target by OKLCH L; `minDistance` is an OKLCH L gap, 0–1, stored only when set)
 
 **With scope argument** (generic selectors): `nth`, `random`, `nextLarger`, `nextSmaller`
 

@@ -85,6 +85,7 @@ export {
   colorMix, lighten, darken, shade, relativeTo,
   closestColor, furthestFrom, mostVivid, leastVivid,
   lightest, darkest,
+  nextLighter, nextDarker,
   ramp, rampStops,
   spacingScale, typographyScale, timing,
   typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
@@ -97,7 +98,7 @@ export {
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';
 export type { TypographyField, TypographyFields, TypographyOverrides } from './functions';
-export type { LightnessSelectorOptions, ReadableOnOptions } from './functions';
+export type { LightnessSelectorOptions, ReadableOnOptions, NextLightnessOptions } from './functions';
 
 // Renderers
 export { Renderer } from './renderers/renderer';

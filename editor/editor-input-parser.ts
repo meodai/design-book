@@ -5,7 +5,7 @@ import {
   closestColor, furthestFrom, mostVivid, leastVivid,
   lightest, darkest,
   spacingScale, typographyScale, timing,
-  nextLarger, nextSmaller,
+  nextLarger, nextSmaller, nextLighter, nextDarker,
   nth, random, sibling,
   typography, variant,
 } from '../src/index';
@@ -563,6 +563,21 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return typographyScale(base, options);
   },
 
+  // nextLighter(target, scope, readableOn?, options?) / nextDarker(…)
+  nextLighter(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('nextLighter requires 2 arguments: a color and a scope');
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    return nextLighter(target, scope, parseSelectorTail('nextLighter', args.slice(2), book));
+  },
+  nextDarker(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('nextDarker requires 2 arguments: a color and a scope');
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    return nextDarker(target, scope, parseSelectorTail('nextDarker', args.slice(2), book));
+  },
   // nextLarger(target, scope, options?)
   nextLarger(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
@@ -701,7 +716,7 @@ export const FUNCTION_NAMES: readonly string[] = Object.keys(FUNCTION_PARSERS)
 export const SCOPE_ARG_FUNCTIONS: ReadonlySet<string> = new Set([
   'bestContrastWith', 'minContrastWith', 'closestColor', 'furthestFrom',
   'mostVivid', 'leastVivid', 'lightest', 'darkest',
-  'nextLarger', 'nextSmaller', 'nth', 'random',
+  'nextLarger', 'nextSmaller', 'nextLighter', 'nextDarker', 'nth', 'random',
 ]);
 for (const name of SCOPE_ARG_FUNCTIONS) {
   if (!FUNCTION_PARSERS[name]) throw new Error(`SCOPE_ARG_FUNCTIONS: no parser for "${name}"`);
@@ -747,6 +762,8 @@ function parseSelectorTail(
       options.readableOn = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'minContrast') {
       options.minContrast = parseFloat(valueStr);
+    } else if (key === 'minDistance') {
+      options.minDistance = parseFloat(valueStr);
     } else if (key === 'description') {
       options.description = parseQuotedString(valueStr);
     } else if (key === 'against') {
@@ -771,6 +788,7 @@ function parseNotList(valueStr: string, book?: DesignBook): Array<ReferenceValue
 }
 
 type SelectorTailOptions = {
+  minDistance?: number;
   not?: Array<ReferenceValue | string>;
   readableOn?: AnyTokenValue;
   minContrast?: number;

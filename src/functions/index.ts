@@ -5,6 +5,7 @@ import { darkenImpl } from './color/darken';
 import { furthestFromImpl } from './color/furthest-from';
 import { leastVividImpl } from './color/least-vivid';
 import { lightestImpl, darkestImpl } from './color/lightest-darkest';
+import { nextLighterImpl, nextDarkerImpl } from './color/next-lightness';
 import { lightenImpl } from './color/lighten';
 import { minContrastWithImpl } from './color/min-contrast';
 import { mostVividImpl } from './color/most-vivid';
@@ -36,6 +37,8 @@ export { furthestFrom } from './color/furthest-from';
 export { mostVivid } from './color/most-vivid';
 export { leastVivid } from './color/least-vivid';
 export { lightest, darkest } from './color/lightest-darkest';
+export { nextLighter, nextDarker } from './color/next-lightness';
+export type { NextLightnessOptions } from './color/next-lightness';
 export type { LightnessSelectorOptions } from './color/lightest-darkest';
 export type { ReadableOnOptions } from './color/readable';
 export { shade } from './color/shade';
@@ -104,6 +107,14 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('darkest', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
 		return darkestImpl(scope, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('nextLighter', (target: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ minDistance?: number; not?: string[]; minContrast?: number }>(rest);
+		return nextLighterImpl(target, scope, options.minDistance ?? 0, options.not ?? [], readableOn, options.minContrast);
+	});
+	book.registerFunction('nextDarker', (target: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ minDistance?: number; not?: string[]; minContrast?: number }>(rest);
+		return nextDarkerImpl(target, scope, options.minDistance ?? 0, options.not ?? [], readableOn, options.minContrast);
 	});
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
 		shadeImpl(colorValue, options?.amount ?? 0.1),
