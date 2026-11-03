@@ -21,7 +21,7 @@ describe('scope-iterating functions resolve safely inside their own scope', () =
     surface.set('a', color('#222222')); // best contrast vs white
     surface.set('b', color('#cccccc'));
     // `text` lives in the same scope it iterates over.
-    surface.set('text', bestContrastWith(ref('surface.bg'), surface));
+    surface.set('text', bestContrastWith(ref('surface.bg'), ref('surface')));
 
     expect(book.resolve('surface.text')).toBe('#222222');
     // The self-entry must be skipped, not recursed into.
@@ -42,7 +42,7 @@ describe('scope-iterating functions resolve safely inside their own scope', () =
     surface.set('bg', color('#ffffff'));
     surface.set('a', color('#777777'));
     surface.set('b', color('#111111'));
-    surface.set('text', minContrastWith(ref('surface.bg'), surface, { ratio: 4.5 }));
+    surface.set('text', minContrastWith(ref('surface.bg'), ref('surface'), { ratio: 4.5 }));
 
     expect(() => book.resolve('surface.text')).not.toThrow();
     expect(calls).toBe(1);

@@ -4,6 +4,40 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-11-03
+
+### Added
+
+- **`ref()` addresses any level of the book.** `ref('palette')` is a scope,
+  `ref('.')` the scope reading the token, next to `ref('scope.token')` and
+  `ref('scope.token.field')`. A scope reference is the pool a selector
+  searches: `bestContrastWith(ref('.bg'), ref('palette'))`. A relative pool
+  re-binds like a relative token: `nth(ref('.'), 0)` written on a scope and
+  inherited by another searches the inheriting one.
+- **`inParent(ref, levels?)` and `inRoot(ref)`** read a reference further
+  up the `extends` chain and return the same kind of reference.
+  `inParent(ref('.surface'))` is the surface the scope would have if it had
+  not overridden it, so a scope can override a token in terms of the value
+  it replaces. Past the top of the chain throws; `inRoot` on a root scope is
+  that scope. The editor parses and prints both.
+- `isScopeKey`, `isScopeReference`, `needsBinding`; `bindToken` takes a
+  `BindingContext`.
+
+### Changed
+
+- **Function tokens are plain data.** A selector stores its pool as
+  `ref('palette')`. Passing the scope object, `mostVivid(palette)`, still
+  works and is stored the same way; the `ScopeFunctionArg` type is gone
+  from `FunctionArg`.
+- A scope reference where a value is expected (`ui.set('x', ref('palette'))`,
+  `lighten(ref('.'))`) and a token reference where a pool is expected
+  (`mostVivid(ref('palette.blue'))`) throw with a message that says what to
+  write.
+- The editor writes pools as `ref('palette')` and still reads a bare scope
+  name.
+- `metadata.visualDependencies` no longer lists a pool's members: pools are
+  read live.
+
 ## [Unreleased]
 
 ### Changed

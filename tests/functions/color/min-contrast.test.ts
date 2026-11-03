@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color } from '../../../src/tokens';
+import { color, ref } from '../../../src/tokens';
 import { minContrastWith } from '../../../src/functions/color/min-contrast';
 
 describe('minContrastWith', () => {
@@ -12,7 +12,7 @@ describe('minContrastWith', () => {
     brand.set('light', color('#cccccc'));   // ~1.6:1 against white (fails AA)
 
     const ui = book.addScope('ui');
-    ui.set('text', minContrastWith(color('#ffffff'), brand, { ratio: 4.5 }));
+    ui.set('text', minContrastWith(color('#ffffff'), ref('brand'), { ratio: 4.5 }));
 
     // Should pick #767676 — meets 4.5 but closest to threshold
     expect(book.resolve('ui.text')).toBe('#767676');
@@ -25,7 +25,7 @@ describe('minContrastWith', () => {
     brand.set('light2', color('#dddddd'));
 
     const ui = book.addScope('ui');
-    ui.set('text', minContrastWith(color('#ffffff'), brand, { ratio: 4.5 }));
+    ui.set('text', minContrastWith(color('#ffffff'), ref('brand'), { ratio: 4.5 }));
 
     // Neither meets 4.5, so fallback to highest contrast
     expect(book.resolve('ui.text')).toBe('#dddddd');

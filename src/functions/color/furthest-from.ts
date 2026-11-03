@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
@@ -48,7 +50,7 @@ export function furthestFromImpl(
 }
 
 export function furthestFrom(
-  scope: Scope,
+  pool: PoolArg,
   options?: ReadableOnOptions & {
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
@@ -56,6 +58,7 @@ export function furthestFrom(
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const scope = poolArg('furthestFrom', pool);
   const readable = readableOnParts('furthestFrom', options);
   return createFunctionToken(
     'furthestFrom',

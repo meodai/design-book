@@ -1,3 +1,5 @@
+import { poolArg } from '../args';
+import type { PoolArg } from '../args';
 import { converter } from 'culori';
 import {
   createFunctionToken,
@@ -80,9 +82,10 @@ export interface LightnessSelectorOptions extends ReadableOnOptions {
 
 function lightnessSelector(
   name: 'lightest' | 'darkest',
-  scope: Scope,
+  pool: PoolArg,
   options?: LightnessSelectorOptions,
 ): FunctionTokenValue {
+  const scope = poolArg(name, pool);
   const readable = readableOnParts(name, options);
   return createFunctionToken(name, [scope, ...readable.args], {
     description: options?.description,
@@ -96,11 +99,11 @@ function lightnessSelector(
 }
 
 /** The color in `scope` with the highest OKLCH lightness. */
-export function lightest(scope: Scope, options?: LightnessSelectorOptions): FunctionTokenValue {
+export function lightest(scope: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
   return lightnessSelector('lightest', scope, options);
 }
 
 /** The color in `scope` with the lowest OKLCH lightness. */
-export function darkest(scope: Scope, options?: LightnessSelectorOptions): FunctionTokenValue {
+export function darkest(scope: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
   return lightnessSelector('darkest', scope, options);
 }

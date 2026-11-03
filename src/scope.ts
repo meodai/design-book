@@ -1,6 +1,6 @@
 import { parse } from 'culori';
-import { bindToken, isFunctionTokenValue, isReferenceValue, isTokenValue } from './tokens';
-import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, ScopeFunctionArg, TokenValue } from './tokens';
+import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvableReference, unresolvableIn } from './tokens';
+import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError, TokenError } from './errors';
@@ -19,6 +19,8 @@ type BookWithScope = BookLike & {
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
   _notifyRollback(key: string, restoredValue: any, rejectedValue: any): void;
   _restoreRejectedDelete(key: string, restored: AnyTokenValue): void;
+  /** How this book's `extends` chains are read while binding a token. */
+  _bindingContext?(): BindingContext;
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
   on(event: 'change', callback: (e: { detail: { changedKeys: string[] } }) => void): () => void;
@@ -86,7 +88,7 @@ export class Scope {
    *  Use `getRaw` for the token as it was written. */
   get(name: string): AnyTokenValue | undefined {
     const token = this.getRaw(name);
-    return token === undefined ? undefined : bindToken(token, this.name);
+    return token === undefined ? undefined : bindToken(token, this.name, this.book._bindingContext?.());
   }
 
   /** The token `name` holds, own or inherited, exactly as it was written —
@@ -118,7 +120,18 @@ export class Scope {
   set(name: string, value: AnyTokenValue): void {
     assertValidTokenKey(this.name, name);
     const qualified = `${this.name}.${name}`;
-    if (isTypographyToken(value) && typographyBase(bindToken(value, this.name)) === qualified) {
+    const bound = bindToken(value, this.name, this.book._bindingContext?.());
+    // A scope is a pool for a selector, never a value of its own.
+    if (isReferenceValue(bound) && isScopeKey(bound.key) && !isUnresolvableReference(bound)) {
+      throw new TokenError(
+        `${qualified}: ref('${(value as ReferenceValue).key}') names a scope; a token needs 'scope.token'`,
+        qualified,
+      );
+    }
+    // inParent / inRoot past the top of the chain, as this scope reads it.
+    const unresolvable = unresolvableIn(bound);
+    if (unresolvable) throw new TokenError(`${qualified}: ${unresolvable}`, qualified);
+    if (isTypographyToken(value) && typographyBase(bound as FunctionTokenValue) === qualified) {
       const error = new CircularDependencyError([qualified, qualified]);
       error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +
         `pass the token instead: variant(book.getTokenByKey("${qualified}"), …)`;
@@ -436,8 +449,7 @@ export class Scope {
     this.resolving.add(name);
     try {
       if (token.type === 'reference') {
-        const ref = token as ReferenceValue;
-        return this.book.resolve(ref.key);
+        return this.book.resolve(this.valueKey(token as ReferenceValue, qualified));
       }
 
       if (token.type === 'function') {
@@ -469,7 +481,7 @@ export class Scope {
       );
     }
     if (token.type === 'reference') {
-      return this.book.resolve(`${(token as ReferenceValue).key}.${field}`);
+      return this.book.resolve(`${this.valueKey(token as ReferenceValue, qualified)}.${field}`);
     }
     if (!isTypographyToken(token)) {
       throw new TokenError(`"${qualified}" is not a typography, so "${qualified}.${field}" names no field`, `${qualified}.${field}`);
@@ -490,6 +502,16 @@ export class Scope {
     }
   }
 
+  /** The key a bound reference reads as a value. Refuses a navigation that
+   *  could not be followed and a scope, which has no value of its own. */
+  private valueKey(reference: ReferenceValue, where: string): string {
+    if (isUnresolvableReference(reference)) throw new TokenError(`${where}: ${reference.unresolvable}`, where);
+    if (isScopeKey(reference.key)) {
+      throw new TokenError(`${where}: ref('${reference.key}') names a scope; a value needs 'scope.token'`, where);
+    }
+    return reference.key;
+  }
+
   /** Resolve a function token, recursing into any nested function-token
    *  arguments. Function tokens don't live in a scope as named entries —
    *  they're inlined as args — so they're invoked directly through the
@@ -507,7 +529,13 @@ export class Scope {
    *  scope argument looked up by name, anything else as is. */
   private resolveArg(arg: FunctionArg): unknown {
     if (isReferenceValue(arg)) {
-      return this.book.resolve((arg as ReferenceValue).key);
+      // A scope reference is a pool: hand the function the scope itself.
+      if (isScopeKey(arg.key) && !isUnresolvableReference(arg)) {
+        const scope = this.book.getScope(arg.key);
+        if (!scope) throw new TokenError(`Scope "${arg.key}" not found`, arg.key);
+        return scope;
+      }
+      return this.book.resolve(this.valueKey(arg, this.name));
     }
     if (isFunctionTokenValue(arg)) {
       return this.resolveFunctionToken(arg);
@@ -516,12 +544,6 @@ export class Scope {
       const tv = arg as TokenValue;
       if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
       return String(tv.rawValue);
-    }
-    if (typeof arg === 'object' && arg !== null && typeof (arg as ScopeFunctionArg).getAllKeys === 'function') {
-      // A scope argument names a scope; the object captured at construction
-      // dies with `deleteScope`. Read whichever scope holds that name now.
-      const live = this.book.getScope((arg as ScopeFunctionArg).name);
-      return live ?? arg;
     }
     return arg;
   }

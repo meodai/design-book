@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { parse, converter, toGamut } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -48,6 +49,7 @@ export function shade(
   color: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { amount?: number; description?: string },
 ): FunctionTokenValue {
+  valueArg('shade', color);
   const amount = options?.amount ?? 0.1;
   return createFunctionToken(
     'shade',

@@ -16,7 +16,7 @@ describe('SVGRenderer palette-linker classification', () => {
     brand.set('grey', color('#888888'));
     const u = book.addScope('u');
     u.set('base', color('#0066cc'));
-    u.set('mix', colorMix(ref('u.base'), mostVivid(brand)));
+    u.set('mix', colorMix(ref('u.base'), mostVivid(ref('brand'))));
 
     const svg = new SVGRenderer(book, { linksOnly: false }).render();
 
@@ -28,7 +28,7 @@ describe('SVGRenderer palette-linker classification', () => {
     const ui = book.addScope('ui');
     // The selector comes first in key order, so it is the first candidate
     // whose value matches its own output.
-    ui.set('vivid', mostVivid(ui));
+    ui.set('vivid', mostVivid(ref('ui')));
     ui.set('red', color('#ff0000'));
     ui.set('grey', color('#888888'));
     expect(ui.getAllKeys()[0]).toBe('vivid');

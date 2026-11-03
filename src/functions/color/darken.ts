@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { parse } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -37,6 +38,7 @@ export function darken(
   color: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { amount?: number; description?: string }
 ): FunctionTokenValue {
+  valueArg('darken', color);
   const amount = options?.amount ?? 0.1;
   assertFraction('darken', 'amount', amount);
   return createFunctionToken(

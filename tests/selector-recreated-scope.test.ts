@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color } from '../src/tokens';
+import { color, ref } from '../src/tokens';
 import { nth } from '../src/functions';
 
 describe('a selector whose scope is deleted and re-created', () => {
@@ -9,7 +9,7 @@ describe('a selector whose scope is deleted and re-created', () => {
     const pal = book.addScope('pal');
     pal.set('a', color('#ff0000'));
     const ui = book.addScope('ui');
-    ui.set('pick', nth(pal, 0));
+    ui.set('pick', nth(ref('pal'), 0));
     expect(book.resolve('ui.pick')).toBe('#ff0000');
 
     book.deleteScope('pal');
@@ -24,7 +24,7 @@ describe('a selector whose scope is deleted and re-created', () => {
     const book = new DesignBook('test');
     const pal = book.addScope('pal');
     pal.set('a', color('#00ff00'));
-    book.addScope('ui').set('pick', nth(pal, 0));
+    book.addScope('ui').set('pick', nth(ref('pal'), 0));
     expect(book.resolve('ui.pick')).toBe('#00ff00');
   });
 });

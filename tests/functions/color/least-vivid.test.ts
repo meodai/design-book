@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color } from '../../../src/tokens';
+import { color, ref } from '../../../src/tokens';
 import { leastVivid } from '../../../src/functions/color/least-vivid';
 
 describe('leastVivid', () => {
@@ -12,7 +12,7 @@ describe('leastVivid', () => {
     palette.set('vivid',  color('#ff0000')); // high chroma red
 
     const ui = book.addScope('ui');
-    ui.set('surface', leastVivid(palette));
+    ui.set('surface', leastVivid(ref('palette')));
 
     expect(book.resolve('ui.surface')).toBe('#808080');
   });
@@ -26,7 +26,7 @@ describe('leastVivid', () => {
     palette.set('steelBlue', color('#b0c4de'));
 
     const ui = book.addScope('ui');
-    ui.set('surface', leastVivid(palette));
+    ui.set('surface', leastVivid(ref('palette')));
 
     expect(book.resolve('ui.surface')).toBe('#ffe4e1');
   });

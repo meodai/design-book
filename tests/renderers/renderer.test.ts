@@ -130,7 +130,7 @@ describe('Renderer', () => {
       brand.set('dark', color('#000000'));
       brand.set('light', color('#ffffff'));
       const ui = book.addScope('ui');
-      ui.set('text', bestContrastWith(color('#ffffff'), brand));
+      ui.set('text', bestContrastWith(color('#ffffff'), ref('brand')));
 
       const renderer = new Renderer(book, 'css-variables');
       const output = renderer.render();
@@ -293,7 +293,7 @@ describe('Renderer', () => {
       palette.set('black', color('#000000'));
       palette.set('white', color('#ffffff'));
       const ui = book.addScope('ui');
-      ui.set('x', darken(bestContrastWith(color('#ffffff'), palette), { amount: 0.2 }));
+      ui.set('x', darken(bestContrastWith(color('#ffffff'), ref('palette')), { amount: 0.2 }));
 
       const output = new Renderer(book, 'css-variables').render();
       expect(output).toContain('--ui-x: color-mix(in oklch, #000000 80%, black);');

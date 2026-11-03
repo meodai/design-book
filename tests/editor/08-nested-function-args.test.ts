@@ -46,7 +46,7 @@ describe('nested function args round-trip', () => {
     const ui = book.getScope('ui-08')!;
     const original = bestContrastWith(
       colorMix(color('#ffffff'), color('#000000'), { ratio: 0.5 }),
-      brand,
+      ref('brand-08'),
     );
     ui.set('text', original);
 

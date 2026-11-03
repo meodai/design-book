@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
@@ -13,6 +14,7 @@ export function timing(
   easing: string,
   options?: { delay?: number; description?: string }
 ): FunctionTokenValue {
+  valueArg('timing', duration);
   const delay = options?.delay ?? 0;
   return createFunctionToken(
     'timing',

@@ -18,9 +18,9 @@ describe('mutual pool references between function tokens', () => {
     s.set('black', color('#000000'));
     s.set('red', color('#e03e1a'));
     // bg picks the color furthest from the rest of the pool …
-    s.set('bg', furthestFrom(s));
+    s.set('bg', furthestFrom(ref('semantic')));
     // … while text picks the best contrast against bg, from the same pool.
-    s.set('text', bestContrastWith(ref('semantic.bg'), s));
+    s.set('text', bestContrastWith(ref('semantic.bg'), ref('semantic')));
 
     expect(() => book.resolve('semantic.bg')).not.toThrow();
     expect(() => book.resolve('semantic.text')).not.toThrow();
@@ -38,8 +38,8 @@ describe('mutual pool references between function tokens', () => {
     const b = book.addScope('b');
     a.set('base', color('#ffffff'));
     b.set('base', color('#111111'));
-    a.set('pick', bestContrastWith(ref('b.base'), b)); // iterates scope b
-    b.set('pick', bestContrastWith(ref('a.base'), a)); // iterates scope a
+    a.set('pick', bestContrastWith(ref('b.base'), ref('b'))); // iterates scope b
+    b.set('pick', bestContrastWith(ref('a.base'), ref('a'))); // iterates scope a
 
     expect(() => book.resolve('a.pick')).not.toThrow();
     expect(() => book.resolve('b.pick')).not.toThrow();
@@ -76,7 +76,7 @@ describe('hard dependencies that point back into a candidate pool', () => {
     ui.set('bg', color('#ffffff'));
     ui.set('muted', color('#cccccc'));
     // ui.muted sits in the pool ui.text selects from …
-    ui.set('text', bestContrastWith(ref('ui.bg'), ui));
+    ui.set('text', bestContrastWith(ref('ui.bg'), ref('ui')));
 
     // … which must not stop ui.muted from reading ui.text: pool membership
     // is not a value dependency, so there is no cycle to reject.

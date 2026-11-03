@@ -52,8 +52,9 @@ function describe(value: unknown): string {
   return typeof value;
 }
 
-/** Copy plain objects and arrays all the way down; anything else (a scope
- *  argument, which resolves by name in the target book anyway) is kept. */
+/** Copy plain objects and arrays all the way down. Tokens are plain data —
+ *  a pool is stored as `ref('scope')` — so anything that is not (a value a
+ *  custom function put there) is kept as is rather than copied. */
 function cloneToken<T>(value: T): T {
   if (Array.isArray(value)) return value.map(cloneToken) as T;
   if (value !== null && typeof value === 'object') {

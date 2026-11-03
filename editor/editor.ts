@@ -72,20 +72,20 @@ function bootDesignSystem() {
   // Semantic scope
   const semantic = book.addScope('semantic');
   semantic.set('background', ref('brand.neutral-light'));
-  semantic.set('text', bestContrastWith(ref('semantic.background'), brand));
+  semantic.set('text', bestContrastWith(ref('semantic.background'), ref('brand')));
   semantic.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.1 }));
 
   // UI scope
   const ui = book.addScope('ui');
   ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
   ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null]));
-  ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
+  ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), ref('brand'), { ratio: 4.5 }));
   ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
   ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
   // Step UP from m → l (16px). Add minDistance to skip steps that are too close.
-  ui.set('gap-emphasis', nextLarger(ref('space.m'), space));
+  ui.set('gap-emphasis', nextLarger(ref('space.m'), ref('space')));
   // Step DOWN from l → m (12px). Useful for derived "tighter" tokens.
-  ui.set('gap-tight', nextSmaller(ref('space.l'), space));
+  ui.set('gap-tight', nextSmaller(ref('space.l'), ref('space')));
   // sibling steps by position from a token in its own scope: +1 is the next
   // member, -1 the previous. Past either end it stops there...
   ui.set('surface-hover', sibling(ref('gray.g100'), 1));    // → g300
@@ -95,12 +95,12 @@ function bootDesignSystem() {
   ui.set('step-wrapped', sibling(ref('gray.g900'), 1, { wrap: true }));  // → g100
   ui.set('gap-loose', sibling(ref('space.l'), 1));          // → xl (24px)
   // lightest / darkest rank a scope by OKLCH lightness.
-  ui.set('paper', lightest(gray));                          // → g100
-  ui.set('ink', darkest(gray));                             // → g900
+  ui.set('paper', lightest(ref('gray')));                     // → g100
+  ui.set('ink', darkest(ref('gray')));                        // → g900
   // readableOn drops members that don't reach minContrast (default 4.5)
   // against a backdrop before ranking: the lightest grey that still reads
   // on the page — the softest usable text color.
-  ui.set('text-soft', lightest(gray, { readableOn: ref('semantic.background') }));  // → g500
+  ui.set('text-soft', lightest(ref('gray'), { readableOn: ref('semantic.background') }));  // → g500
 
   // Font families — plain string tokens reused by the text styles.
   const fonts = book.addScope('fonts');
@@ -131,17 +131,17 @@ function bootDesignSystem() {
   // Card palette — tokens consumed by the Example tab
   const card = book.addScope('card');
   card.set('surface', ref('brand.neutral-light'));
-  card.set('on-surface', bestContrastWith(ref('card.surface'), brand));
+  card.set('on-surface', bestContrastWith(ref('card.surface'), ref('brand')));
   // mostVivid picks the highest-chroma color in `brand` that still reads
   // on the card surface — `readableOn` drops the orange secondary, which is
   // too light for white. `not` keeps role-loaded tokens like brand.error /
   // brand.success from being mistaken for the accent (red happens to have
   // higher OKLCH chroma than blue).
-  card.set('interactive', mostVivid(brand, {
+  card.set('interactive', mostVivid(ref('brand'), {
     readableOn: ref('card.surface'),
     not: [ref('brand.error'), ref('brand.success')],
   }));
-  card.set('on-interactive', bestContrastWith(ref('card.interactive'), brand));
+  card.set('on-interactive', bestContrastWith(ref('card.interactive'), ref('brand')));
   // shade adapts to the surface's lightness — darkens light surfaces,
   // lightens dark ones — so the border is always subtly visible.
   card.set('border', shade(ref('card.surface'), { amount: 0.12 }));
@@ -159,7 +159,7 @@ function bootDesignSystem() {
   // own bg, so overriding one root re-flows the whole variant.
   const button = book.addScope('button');
   button.set('bg', ref('brand.primary'));
-  button.set('fg', bestContrastWith(ref('.bg'), brand));
+  button.set('fg', bestContrastWith(ref('.bg'), ref('brand')));
   button.set('hover', shade(ref('.bg'), { amount: 0.1 }));
   const danger = book.addScope('button-danger', { extends: 'button' });
   danger.set('bg', ref('brand.error'));
@@ -413,8 +413,6 @@ function serializeArg(arg: any): string {
   if (typeof arg === 'number') return String(arg);
   if (typeof arg === 'object' && arg !== null) {
     if (arg.type === 'function') return serializeFunctionToken(arg);
-    // Scope argument -- show scope name
-    if (typeof arg.getAllKeys === 'function') return arg.name || 'scope';
     return serializePlainToken(arg);
   }
   return String(arg);
@@ -516,7 +514,10 @@ function quote(value: string): string {
 
 function serializePlainToken(tv: any): string {
   if (tv.type === 'reference') {
-    return `ref('${tv.key}')`;
+    const written = `ref('${tv.key}')`;
+    if (tv.up === 'root') return `inRoot(${written})`;
+    if (typeof tv.up === 'number') return tv.up === 1 ? `inParent(${written})` : `inParent(${written}, ${tv.up})`;
+    return written;
   }
   if (tv.type === 'color') {
     return `color(${quote(String(tv.rawValue))})`;
@@ -1088,14 +1089,15 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
 
       // Only suggest scope names for functions that take a scope argument
       if (SCOPE_ARG_FUNCTIONS.has(call.name)) {
-        for (const scope of book.getAllScopes()) {
-          if (!partial || scope.name.toLowerCase().includes(lowerPartial)) {
-            options.push({
-              label: scope.name,
-              type: 'namespace',
-              detail: 'scope',
-              boost: 1, // show scopes prominently
-            });
+        // A pool is a scope reference: this scope first, then its parent, then every scope.
+        const pools = [
+          { label: "ref('.')", detail: 'this scope' },
+          ...(_currentScope.extendsScope ? [{ label: "inParent(ref('.'))", detail: `parent: ${_currentScope.extendsScope}` }] : []),
+          ...book.getAllScopes().map((scope) => ({ label: `ref('${scope.name}')`, detail: 'scope' })),
+        ];
+        for (const pool of pools) {
+          if (!partial || pool.label.toLowerCase().includes(lowerPartial)) {
+            options.push({ label: pool.label, type: 'namespace', detail: pool.detail, apply: pool.label, boost: 1 });
           }
         }
       }

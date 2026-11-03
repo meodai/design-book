@@ -1,13 +1,12 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
-import { isFieldKey, tokenKeyOf } from '../tokens';
+import { isFieldKey, isScopeReference, tokenKeyOf } from '../tokens';
 import type {
   AnyTokenValue,
   TokenValue,
   ReferenceValue,
   FunctionTokenValue,
   FunctionArg,
-  ScopeFunctionArg,
 } from '../tokens';
 
 export interface SVGRenderOptions {
@@ -120,7 +119,7 @@ function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
   const fn = token as FunctionTokenValue;
   const scopeNames = new Set<string>(fn.metadata?.iteratedScopes ?? []);
   for (const arg of fn.args) {
-    if (isScopeArg(arg)) scopeNames.add(arg.name);
+    if (isScopeReference(arg)) scopeNames.add(arg.key);
   }
   const candidates: string[] = [];
   for (const name of scopeNames) {
@@ -129,11 +128,6 @@ function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
     for (const key of scope.getAllKeys()) candidates.push(`${name}.${key}`);
   }
   return candidates;
-}
-
-function isScopeArg(arg: FunctionArg): arg is ScopeFunctionArg {
-  return typeof arg === 'object' && arg !== null
-    && typeof (arg as ScopeFunctionArg).getAllKeys === 'function';
 }
 
 function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {

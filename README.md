@@ -37,7 +37,7 @@ brand.set('space', px(16));
 // Tokens chosen by references, selection, and transforms
 const ui = book.addScope('ui');
 ui.set('background', ref('brand.white'));
-ui.set('text', bestContrastWith(ref('ui.background'), brand));
+ui.set('text', bestContrastWith(ref('ui.background'), ref('brand')));
 ui.set('hover', colorMix(ref('brand.primary'), color('#000000'), { ratio: 0.15 }));
 ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
 
@@ -71,6 +71,10 @@ color('rebeccapurple')    // Named colors work too
 
 ref('scope.token')        // Reference to another token
 ref('.token')             // Relative: `token` in whichever scope reads it (see Relative refs)
+ref('scope')              // A scope, where a function searches one: mostVivid(ref('palette'))
+ref('.')                  // The scope that reads the token, as a pool
+inParent(ref('.token'))   // The same reference one `extends` level up (see Navigation)
+inRoot(ref('.token'))     // … at the top of the chain
 
 px(16)                    // Dimension shortcuts
 rem(1.5)
@@ -87,14 +91,14 @@ Some functions are straightforward transforms. The distinctive ones search a sco
 ### Color selection (require a scope to search)
 
 ```typescript
-bestContrastWith(target, scope)             // Highest WCAG contrast
-minContrastWith(target, scope, { ratio })   // Meets minimum ratio (default 4.5)
-closestColor(target, scope)                 // Perceptually closest
-furthestFrom(scope)                         // Most distant from others
-mostVivid(scope)                            // Highest OKLCH chroma
-leastVivid(scope)                           // Lowest OKLCH chroma — the muted counterpart
-lightest(scope)                             // Highest OKLCH lightness
-darkest(scope)                              // Lowest OKLCH lightness
+bestContrastWith(target, ref('scope'))             // Highest WCAG contrast
+minContrastWith(target, ref('scope'), { ratio })   // Meets minimum ratio (default 4.5)
+closestColor(target, ref('scope'))                 // Perceptually closest
+furthestFrom(ref('scope'))                         // Most distant from others
+mostVivid(ref('scope'))                            // Highest OKLCH chroma
+leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
+lightest(ref('scope'))                             // Highest OKLCH lightness
+darkest(ref('scope'))                              // Lowest OKLCH lightness
 ```
 
 `mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same.
@@ -119,7 +123,7 @@ elsewhere — `values.error` shouldn't be the accent color even if it happens
 to have the highest chroma.
 
 ```typescript
-ui.set('accent', mostVivid(palette, {
+ui.set('accent', mostVivid(ref('palette'), {
   not: [ref('palette.error'), ref('palette.success')],
 }));
 
@@ -139,7 +143,7 @@ selector ranks anything: candidates below the WCAG ratio against the backdrop
 are dropped, so the vivid pick is the most vivid *readable* color.
 
 ```typescript
-ui.set('accent', mostVivid(palette, {
+ui.set('accent', mostVivid(ref('palette'), {
   readableOn: ref('ui.surface'),
   minContrast: 4.5,
   not: [ref('palette.error')],
@@ -181,8 +185,8 @@ Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N
 ### Dimension selection (require a scope to search)
 
 ```typescript
-nextLarger(target, scope, { minDistance, not })   // Next-up step in a scale
-nextSmaller(target, scope, { minDistance, not })  // Next-down step in a scale
+nextLarger(target, ref('scope'), { minDistance, not })   // Next-up step in a scale
+nextSmaller(target, ref('scope'), { minDistance, not })  // Next-down step in a scale
 ```
 
 Same selector idea as `closestColor` / `furthestFrom`, but for dimensional
@@ -199,11 +203,11 @@ resolve time.
 ```typescript
 // scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }
 
-ui.set('gap',     nextLarger(ref('space.m'), space));               // → 16px
-ui.set('gap',     nextLarger(ref('space.m'), space, { minDistance: 6 })); // → 24px
-ui.set('breath',  nextSmaller(ref('space.l'), space));              // → 12px
+ui.set('gap',     nextLarger(ref('space.m'), ref('space')));               // → 16px
+ui.set('gap',     nextLarger(ref('space.m'), ref('space'), { minDistance: 6 })); // → 24px
+ui.set('breath',  nextSmaller(ref('space.l'), ref('space')));              // → 12px
 
-motion.set('exit', nextSmaller(ref('motion.slow'), motion));        // → 200ms
+motion.set('exit', nextSmaller(ref('motion.slow'), ref('motion')));        // → 200ms
 ```
 
 Throws at resolve time if no member qualifies (no larger/smaller value, or
@@ -212,10 +216,10 @@ none clears `minDistance`).
 ### Index selection (require a scope to search)
 
 ```typescript
-nth(scope, 0)              // First item (integer index)
-nth(scope, -1)             // Last item (negative wraps like Array.at)
-nth(scope, 0.5)            // Middle item (non-integer = relative position, 0 < x < 1)
-nth(scope, 0.25, { not })  // Quarter-way through, with exclusions
+nth(ref('scope'), 0)              // First item (integer index)
+nth(ref('scope'), -1)             // Last item (negative wraps like Array.at)
+nth(ref('scope'), 0.5)            // Middle item (non-integer = relative position, 0 < x < 1)
+nth(ref('scope'), 0.25, { not })  // Quarter-way through, with exclusions
 ```
 
 Picks a single value from a scope by position. Integer indices (including
@@ -230,15 +234,15 @@ This is particularly useful when a scope is generated by a ramp or scale
 function where you know the order is meaningful — index 0 is the lightest
 shade and the last is the darkest (or vice versa). Instead of hard-coding
 a token name like `ramp.shade-7`, you express "the darkest one" as
-`nth(ramp, -1)` — which stays correct even if the ramp is regenerated with
+`nth(ref('ramp'), -1)` — which stays correct even if the ramp is regenerated with
 a different number of stops.
 
 ```typescript
 // ramp scope has 9 generated shades, lightest → darkest
-ui.set('surface',    nth(ramp, 0));      // lightest
-ui.set('text',       nth(ramp, -1));     // darkest
-ui.set('subtle',     nth(ramp, 0.15));   // just off white
-ui.set('muted-text', nth(ramp, 0.7));    // dark but not darkest
+ui.set('surface',    nth(ref('ramp'), 0));      // lightest
+ui.set('text',       nth(ref('ramp'), -1));     // darkest
+ui.set('subtle',     nth(ref('ramp'), 0.15));   // just off white
+ui.set('muted-text', nth(ref('ramp'), 0.7));    // dark but not darkest
 ```
 
 ### Relative steps
@@ -278,9 +282,9 @@ timing(duration, 'ease-out', { delay })         // Timing string
 ### Random (any type)
 
 ```typescript
-random(scope, { type })                                 // type: 'color' | 'dimension' | 'string'
-random(scope, { type: 'color', seed: 'spring-2026' })   // reproducible
-random(scope, { type: 'color', not: ['brand.primary'] })// with exclusions
+random(ref('scope'), { type })                                 // type: 'color' | 'dimension' | 'string'
+random(ref('scope'), { type: 'color', seed: 'spring-2026' })   // reproducible
+random(ref('scope'), { type: 'color', not: ['brand.primary'] })// with exclusions
 ```
 
 Picks a token from a scope, filtered by base type. If `seed` is omitted, a
@@ -499,7 +503,7 @@ A key with a leading dot and no scope is relative: it reads that token in the sc
 ```typescript
 const button = book.addScope('button');
 button.set('bg', ref('brand.primary'));
-button.set('fg', bestContrastWith(ref('.bg'), brand));
+button.set('fg', bestContrastWith(ref('.bg'), ref('brand')));
 button.set('hover', shade(ref('.bg'), { amount: 0.1 }));
 
 const danger = book.addScope('button-danger', { extends: 'button' });
@@ -516,7 +520,7 @@ Override one root in the child and every inherited token that reads it relativel
 - An inherited token with relative refs is **re-bound** (`book.isRebound('button-danger.hover')`): it gets graph edges of its own, to its scope's keys, so `watch()`, `change` events and dependents fire for it like for an own token.
 - A cycle that exists only in an inheriting scope is caught at write time. With `danger.set('bg', ref('button-danger.hover'))` in place, writing `button.hover = shade(ref('.bg'))` throws a `CircularDependencyError` and is rolled back; so does a `delete` or an `addScope({ extends })` that would expose such a cycle.
 - `book.resolve('.bg')` throws: a relative key needs a scope (`scope.resolve('bg')`). `copyScope` copies relative refs as written, so the copy reads its own keys.
-- Scope arguments of selectors (`bestContrastWith(…, brand)`) name a scope directly and are not relative.
+- A pool can be relative too: `nth(ref('.'), 0)` is the first member of whichever scope reads the rule. See [Navigation](#navigation).
 
 `addScope` validates the name and the inheritance chain and throws a
 `ScopeError` rather than producing a book you cannot address: an empty or
@@ -540,6 +544,54 @@ dark.ownKeys();                        // only dark's own keys, in insertion ord
 dark.allTokens();                      // { bg: <token>, text: <token>, … }, inherited included
 ```
 
+## Navigation
+
+Some functions find things by where they are rather than by what they are. Two kinds:
+
+- **Addresses** say *where* to read: `ref`, `inParent`, `inRoot`. They return a reference and never compute anything.
+- **Positions** pick a member by its *place* in a scope and return its value: `nth`, `sibling`, `nextLarger`, `nextSmaller`.
+
+### Addresses: `ref`, `inParent`, `inRoot`
+
+A reference is a path. The number of segments says what it names, and a leading dot makes it relative to the scope that reads it:
+
+| Reference | Names |
+|---|---|
+| `ref('palette')` | the scope `palette` |
+| `ref('palette.blue')` | a token |
+| `ref('type.title.fontSize')` | one field of a typography |
+| `ref('.')` | the scope reading the token |
+| `ref('.bg')`, `ref('.title.fontSize')` | a token or field in the reading scope |
+
+A token or field reference is a value. A scope reference is a pool, the argument a selector searches: `bestContrastWith(ref('.bg'), ref('palette'))`. Each is only accepted where it fits — `ui.set('x', ref('palette'))` and `lighten(ref('.'))` throw ("names a scope"), and so does `mostVivid(ref('palette.blue'))` ("needs a scope to search"). Passing the scope object itself, `mostVivid(palette)`, still works: the constructor stores it as `ref('palette')`, so a function token is always plain data.
+
+`inParent` and `inRoot` read the same path further up the `extends` chain. They return the same kind of reference they are given — a scope stays a scope, a token a token:
+
+```typescript
+const card     = book.addScope('card');
+const inverted = book.addScope('card-inverted', { extends: 'card' });
+const callout  = book.addScope('callout', { extends: 'card-inverted' });
+
+inverted.set('border', inParent(ref('.surface')));        // card's surface
+callout.set('corner',  inParent(ref('.radius'), 2));      // two levels up: card's radius
+card.set('base',       inRoot(ref('.surface')));          // the root's surface, from anywhere in the chain
+callout.set('pick',    lightest(inParent(ref('.'))));     // the lightest member of card-inverted
+
+// Override a token in terms of the value it replaces — not a cycle:
+callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
+```
+
+- A relative reference counts from the scope that reads the rule, so an inherited rule re-binds: written on `card-inverted`, `inParent(ref('.surface'))` is card's surface; inherited by `callout`, it is card-inverted's. An absolute one counts from the scope it names: `inParent(ref('card-inverted.surface'))` is `card.surface` wherever it is read.
+- If the parent does not declare the token itself, inheritance carries on upward — `inParent(ref('.x'))` is the value the scope would have if it had not overridden `x`.
+- Only `extends` makes a parent. Reading from a scope (`ref('palette.white')`) does not.
+- `inParent` past the top of the chain throws (`"card" has no parent`, `"callout" has only 2 levels above it`); `inRoot` on a scope that extends nothing is that scope. Levels are whole numbers of 1 or more, and `inParent(inParent(x))` is `inParent(x, 2)`.
+- A reference that ends on its own key is a cycle and is rejected when written, as with `ref`.
+- `sibling` and `variant` do not take an `inParent` / `inRoot` anchor yet.
+
+### Positions: `nth`, `sibling`, `nextLarger`, `nextSmaller`
+
+These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `nextLarger(ref('space.m'), ref('space'))` the next bigger step. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
+
 ## Scope Ordering
 
 A scope lists its keys in the order they were set, parents' keys first. Give
@@ -555,7 +607,7 @@ space.set('m', px(16));
 space.getAllKeys();               // ['xs', 'm', 'l']
 
 palette.setOrder([{ by: 'value', direction: 'desc' }]);  // light → dark
-nth(palette, 0);                  // the lightest, wherever it was set
+nth(ref('palette'), 0);                  // the lightest, wherever it was set
 palette.clearOrder();             // back to insertion order
 ```
 
@@ -828,7 +880,7 @@ const css = [
 }
 ```
 
-Because the variation is a real book, computed tokens are recomputed for it: `ui.text = bestContrastWith(ref('surface.normal'), brand)` picks a new color for the dark surface, and `changedFrom` emits it. Tokens that only reference others (`var(--surface-normal)`) are left out — the cascade already updates them.
+Because the variation is a real book, computed tokens are recomputed for it: `ui.text = bestContrastWith(ref('surface.normal'), ref('brand'))` picks a new color for the dark surface, and `changedFrom` emits it. Tokens that only reference others (`var(--surface-normal)`) are left out — the cascade already updates them.
 
 | Option (css-variables) | Meaning |
 |---|---|
@@ -1019,7 +1071,7 @@ graph.getAdjacencyList(true);               // upstream: incoming edges per node
 For inherited tokens, prerequisites reflect the active source token. If `dark.primary` is inherited from `light.primary`, `graph.getPrerequisitesFor('dark.primary')` includes `light.primary`.
 
 The graph holds *value* dependencies only. The candidate pool of a
-scope-iterating selector is not one: `ui.text = bestContrastWith(ref('ui.bg'), ui)`
+scope-iterating selector is not one: `ui.text = bestContrastWith(ref('ui.bg'), ref('ui'))`
 lists `ui.bg` as a prerequisite, but not the other members of `ui` it
 chooses between. The book tracks pools in a separate index, so a change to
 any member of an iterated scope — added, changed, deleted, inherited through
@@ -1066,7 +1118,7 @@ const poline = new Poline({
 const palette = poline.colorsCSS;
 ```
 
-If you prefer a ramp-oriented workflow, RampenSau is a good fit for generating a light-to-dark sequence first and then mapping roles onto it. With `nth` you can address ramp stops by position — `nth(ramp, 0)` is the lightest, `nth(ramp, -1)` is the darkest — so the semantic layer stays correct even when the number of stops changes.
+If you prefer a ramp-oriented workflow, RampenSau is a good fit for generating a light-to-dark sequence first and then mapping roles onto it. With `nth` you can address ramp stops by position — `nth(ref('ramp'), 0)` is the lightest, `nth(ref('ramp'), -1)` is the darkest — so the semantic layer stays correct even when the number of stops changes.
 
 ### 2. Store those colors as primitives
 
@@ -1108,9 +1160,9 @@ semantic.set('surface-accent-hover', colorMix(
   { ratio: 0.12 },
 ));
 
-semantic.set('text', bestContrastWith(ref('semantic.surface'), primitive));
-semantic.set('text-on-accent', bestContrastWith(ref('semantic.surface-accent'), primitive));
-semantic.set('border-subtle', closestColor(ref('semantic.surface'), primitive, {
+semantic.set('text', bestContrastWith(ref('semantic.surface'), ref('primitive')));
+semantic.set('text-on-accent', bestContrastWith(ref('semantic.surface-accent'), ref('primitive')));
+semantic.set('border-subtle', closestColor(ref('semantic.surface'), ref('primitive'), {
   not: ['primitive.sand-100'],   // the surface itself
 }));
 semantic.set('focus-ring', ref('primitive.mint-300'));
@@ -1120,10 +1172,10 @@ When your primitives come from a ramp generator, `nth` lets you pin roles to pos
 
 ```typescript
 // ramp = scope with N generated shades, lightest → darkest
-semantic.set('surface',     nth(ramp, 0));      // always the lightest
-semantic.set('text',        nth(ramp, -1));     // always the darkest
-semantic.set('muted',       nth(ramp, 0.5));    // the midtone
-semantic.set('subtle-bg',   nth(ramp, 0.1));    // just off white
+semantic.set('surface',     nth(ref('ramp'), 0));      // always the lightest
+semantic.set('text',        nth(ref('ramp'), -1));     // always the darkest
+semantic.set('muted',       nth(ref('ramp'), 0.5));    // the midtone
+semantic.set('subtle-bg',   nth(ref('ramp'), 0.1));    // just off white
 ```
 
 This is where Design Book becomes useful: instead of deciding every UI color manually, you encode the rule.
@@ -1166,6 +1218,8 @@ they fit together.
 
 **Token constructors.** `color`, `ref`, `px`, `rem`, `ms`, `dimension`, `string`, `val`, `createFunctionToken`.
 
+**Navigation.** `inParent(reference, levels?)`, `inRoot(reference)`: the same reference further up the `extends` chain.
+
 **Functions.**
 - Color selectors: `bestContrastWith`, `minContrastWith`, `closestColor`, `furthestFrom`, `mostVivid`, `leastVivid`, `lightest`, `darkest`
 - Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
@@ -1190,7 +1244,7 @@ they fit together.
 **Low level**, for custom functions and tooling:
 - Type guards: `isReferenceValue`, `isTokenValue`
 - Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)` checks for a field key
-- Relative keys: `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`, `hasRelativeKeys(token)`, `bindToken(token, scope)` returns the token as `scope` reads it
+- Paths: `isScopeKey('palette')` / `isScopeReference(arg)` for a scope reference; `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`; `hasRelativeKeys(token)` (reads depend on the reading scope), `needsBinding(token)` (relative or navigated); `bindToken(token, scope, context)` returns the token as `scope` reads it
 - Dependency extraction: `extractDependencies(args)`, `extractIteratedScopes(args)`, `iteratedScopesOf(fn)`, `extractVisualDependencies(args)`
 - Caches: `getTokenProcessors(token)`, `getReferenceResolution(ref)`
 - `DependencyGraph`

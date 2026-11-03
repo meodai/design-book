@@ -169,6 +169,9 @@ export function variant(
   assertFieldNames(Object.keys(overrides), 'variant');
 
   if (isReferenceValue(token)) {
+    if (token.up !== undefined) {
+      throw new FunctionError('variant: the base cannot be an inParent / inRoot reference yet; name the token directly', 'variant');
+    }
     if (!isTokenKey(token.key)) {
       throw new FunctionError(`variant: the base must be a "scope.token" key, got "${token.key}"`, 'variant');
     }

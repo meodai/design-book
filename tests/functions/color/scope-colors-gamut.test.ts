@@ -31,7 +31,7 @@ describe('collectScopeColors and wide-gamut members', () => {
   it('a selector agrees with a no-op transform on the same member', () => {
     const { book } = makeBook();
     const ui = book.addScope('ui');
-    ui.set('vivid', mostVivid(book.getScope('s')!));
+    ui.set('vivid', mostVivid(ref('s')));
     ui.set('same', lighten(ref('s.p'), { amount: 0 }));
     expect(book.resolve('ui.vivid')).toBe(book.resolve('ui.same'));
     expect(book.resolve('ui.vivid')).toBe('#00c300');

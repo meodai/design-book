@@ -1,5 +1,5 @@
 import {
-  color, ref, px, rem, ms, dimension, string,
+  color, ref, inParent, inRoot, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
   closestColor, furthestFrom, mostVivid, leastVivid,
@@ -10,6 +10,7 @@ import {
   typography, variant,
 } from '../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
+import { isScopeKey } from '../src/tokens';
 import { parse } from 'culori';
 
 /**
@@ -18,6 +19,8 @@ import { parse } from 'culori';
  * Supports:
  *   #ff0000 or any CSS color         -> color(value)
  *   ref('scope.token')               -> ref('scope.token')
+ *   ref('scope'), ref('.')           -> a scope, where a function takes one
+ *   inParent(ref('.x'), 2), inRoot(ref('.x')) -> the reference, further up the extends chain
  *   px(16), rem(1.5), ms(200)        -> dimension tokens
  *   bestContrastWith(arg, scope)      -> function tokens
  *   colorMix(arg1, arg2, ...)        -> function tokens
@@ -40,11 +43,9 @@ export function parseTokenInput(
   const described = parseDescribedConstructor(trimmed, book, currentScope);
   if (described) return described;
 
-  // ref('scope.token') or ref("scope.token")
-  const refMatch = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
-  if (refMatch) {
-    return ref(refMatch[1]);
-  }
+  // ref('scope.token'), and the same inside inParent(…, n) / inRoot(…)
+  const reference = parseReference(trimmed);
+  if (reference) return reference;
 
   // px(number)
   const pxMatch = trimmed.match(/^px\(\s*(-?[\d.]+)\s*\)$/);
@@ -220,17 +221,36 @@ function splitArgs(argsStr: string): string[] {
   return args;
 }
 
+/** `ref('path')`, or one wrapped in `inParent(…, n)` / `inRoot(…)`;
+ *  `undefined` for anything else. */
+function parseReference(text: string): ReferenceValue | undefined {
+  const trimmed = text.trim();
+  const plain = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
+  if (plain) return ref(plain[1]);
+  const parent = trimmed.match(/^inParent\(\s*(.+?)\s*(?:,\s*(\d+)\s*)?\)$/s);
+  if (parent) {
+    const inner = parseReference(parent[1]);
+    if (inner) return inParent(inner, parent[2] === undefined ? 1 : Number(parent[2]));
+  }
+  const root = trimmed.match(/^inRoot\(\s*(.+?)\s*\)$/s);
+  if (root) {
+    const inner = parseReference(root[1]);
+    if (inner) return inRoot(inner);
+  }
+  return undefined;
+}
+
 /** Parse a single argument — could be ref(), color(), px(), a scope name, a number, or a string */
 function parseArg(
   arg: string,
   book?: DesignBook,
-): { type: 'ref'; value: AnyTokenValue } | { type: 'token'; value: AnyTokenValue } | { type: 'scope'; value: Scope } | { type: 'raw'; value: string | number } {
+): { type: 'ref'; value: ReferenceValue } | { type: 'token'; value: AnyTokenValue } | { type: 'scope'; value: ReferenceValue } | { type: 'raw'; value: string | number } {
   const trimmed = arg.trim();
 
-  // ref('...')
-  const refMatch = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
-  if (refMatch) {
-    return { type: 'ref', value: ref(refMatch[1]) };
+  // ref('...'), inParent(ref('...')), inRoot(ref('...'))
+  const reference = parseReference(trimmed);
+  if (reference) {
+    return isScopeKey(reference.key) ? { type: 'scope', value: reference } : { type: 'ref', value: reference };
   }
 
   // color('...') — matching-quote form first, so values containing spaces,
@@ -291,11 +311,11 @@ function parseArg(
     return { type: 'token', value: color(trimmed) };
   }
 
-  // CSS named color or scope name
+  // CSS named color or scope name. A bare scope name is a shorthand the
+  // editor accepts for ref('name'); it is always written back as ref('name').
   if (/^[a-z]/i.test(trimmed) && book) {
     // Check scope first
-    const scope = book.getScope(trimmed);
-    if (scope) return { type: 'scope', value: scope };
+    if (book.getScope(trimmed)) return { type: 'scope', value: ref(trimmed) };
     // Then try as CSS named color
     if (parse(trimmed)) {
       return { type: 'token', value: color(trimmed) };
@@ -303,10 +323,7 @@ function parseArg(
   }
 
   // Scope name (without book having named colors)
-  if (book) {
-    const scope = book.getScope(trimmed);
-    if (scope) return { type: 'scope', value: scope };
-  }
+  if (book && book.getScope(trimmed)) return { type: 'scope', value: ref(trimmed) };
 
   // Number — signed, so a hand-typed `nth(brand, -1)` reads as an index
   // rather than falling through to the string branch.
@@ -320,12 +337,13 @@ function parseArg(
 
 function getTokenArg(parsed: ReturnType<typeof parseArg>): AnyTokenValue {
   if (parsed.type === 'ref' || parsed.type === 'token') return parsed.value;
+  if (parsed.type === 'scope') throw new Error(`Expected a value, got the scope ref('${parsed.value.key}')`);
   throw new Error(`Expected token argument, got ${parsed.type}`);
 }
 
-function getScopeArg(parsed: ReturnType<typeof parseArg>): Scope {
+function getScopeArg(parsed: ReturnType<typeof parseArg>): ReferenceValue {
   if (parsed.type === 'scope') return parsed.value;
-  throw new Error(`Expected scope name (e.g. "brand"), got "${parsed.type === 'token' ? 'token value' : parsed.type}"`);
+  throw new Error(`Expected a scope (e.g. ref('brand')), got "${parsed.type === 'token' ? 'token value' : parsed.type}"`);
 }
 
 /** An object literal of typography fields: `{ name: value, … }`. A value is

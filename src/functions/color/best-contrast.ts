@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { parse } from 'culori';
 import {
   createFunctionToken,
@@ -42,7 +44,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, not: str
 
 export function bestContrastWith(
   targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
-  scope: Scope,
+  pool: PoolArg,
   options?: {
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
@@ -50,6 +52,8 @@ export function bestContrastWith(
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const scope = poolArg('bestContrastWith', pool);
+  valueArg('bestContrastWith', targetValue);
   return createFunctionToken(
     'bestContrastWith',
     [targetValue, scope],

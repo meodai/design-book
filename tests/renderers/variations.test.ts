@@ -15,7 +15,7 @@ function buildBook() {
   surface.set('normal', ref('brand.paper'));
   const ui = book.addScope('ui');
   ui.set('background', ref('surface.normal'));
-  ui.set('text', bestContrastWith(ref('surface.normal'), brand));
+  ui.set('text', bestContrastWith(ref('surface.normal'), ref('brand')));
   const type = book.addScope('type');
   type.set('body', rem(1.8));
   type.set('small', rem(1.4));

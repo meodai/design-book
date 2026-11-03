@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { converter } from 'culori';
 import {
   createFunctionToken,
@@ -58,7 +60,8 @@ export interface LeastVividOptions extends ReadableOnOptions {
   [key: string]: unknown;
 }
 
-export function leastVivid(scope: Scope, options?: LeastVividOptions): FunctionTokenValue {
+export function leastVivid(pool: PoolArg, options?: LeastVividOptions): FunctionTokenValue {
+  const scope = poolArg('leastVivid', pool);
   const readable = readableOnParts('leastVivid', options);
 
   return createFunctionToken('leastVivid', [scope, ...readable.args], {

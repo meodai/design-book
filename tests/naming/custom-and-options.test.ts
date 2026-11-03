@@ -85,8 +85,8 @@ describe('naming a real scope', () => {
     const names = scaleNames(stops.length, 'hundreds');
     names.forEach((name, i) => gray.set(name, color(stops[i])));
     const ui = book.addScope('ui');
-    ui.set('first', nth(gray, 0));
-    ui.set('last', nth(gray, -1));
+    ui.set('first', nth(ref('gray'), 0));
+    ui.set('last', nth(ref('gray'), -1));
     ui.set('next', sibling(ref(`gray.${names[2]}`), 1));
     expect(book.resolve('ui.first')).toBe('#f5f5f5');
     expect(book.resolve('ui.last')).toBe('#111111');

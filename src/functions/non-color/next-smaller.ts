@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import {
   createFunctionToken,
   extractDependencies,
@@ -69,7 +71,7 @@ export function nextSmallerImpl(
 
 export function nextSmaller(
   target: TokenValue | ReferenceValue | FunctionTokenValue,
-  scope: Scope,
+  pool: PoolArg,
   options?: {
     /** Minimum gap (in the scope's unit) the candidate must clear below the target. */
     minDistance?: number;
@@ -79,6 +81,8 @@ export function nextSmaller(
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const scope = poolArg('nextSmaller', pool);
+  valueArg('nextSmaller', target);
   return createFunctionToken(
     'nextSmaller',
     [target, scope],

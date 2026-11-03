@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { parse } from 'culori';
 import {
   createFunctionToken,
@@ -96,9 +98,10 @@ export function randomImpl(
  * Pass `seed` explicitly for reproducibility across sessions.
  */
 export function random(
-  scope: Scope,
+  pool: PoolArg,
   options: RandomOptions,
 ): FunctionTokenValue {
+  const scope = poolArg('random', pool);
   const { type, seed, not, description, ...rest } = options;
   const resolvedSeed = seed ?? Math.floor(Math.random() * 0x1_0000_0000);
 

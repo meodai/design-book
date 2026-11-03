@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { DittoTones } from 'dittotones';
 import type { GenerateResult, Ramp } from 'dittotones';
 import { formatHex } from 'culori';
@@ -74,6 +75,7 @@ export function ramp(
   seed: TokenValue | ReferenceValue | FunctionTokenValue,
   options: { shade: string; description?: string },
 ): FunctionTokenValue {
+  valueArg('ramp', seed);
   if (typeof options?.shade !== 'string' || options.shade.length === 0) {
     throw new FunctionError('ramp: "shade" option is required and must be a non-empty string', 'ramp');
   }

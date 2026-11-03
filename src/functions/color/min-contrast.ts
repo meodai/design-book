@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { parse } from 'culori';
 import {
   createFunctionToken,
@@ -79,9 +81,11 @@ export function minContrastWithImpl(
 
 export function minContrastWith(
   targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
-  scope: Scope,
+  pool: PoolArg,
   options?: MinContrastOptions
 ): FunctionTokenValue {
+  const scope = poolArg('minContrastWith', pool);
+  valueArg('minContrastWith', targetValue);
   const { ratio = 4.5, not, description, ...rest } = options ?? {};
   const notKeys = normalizeNotKeys(not);
 
@@ -90,7 +94,8 @@ export function minContrastWith(
   // A key inside the scope is excluded by name alone, so its value is never
   // read; declaring it anyway can close a false cycle — `s.text` excluding
   // `s.accent` while `s.accent` is derived from `s.text`.
-  const externalNotKeys = notKeys.filter((k) => !k.startsWith(`${scope.name}.`));
+  const poolPrefix = scope.key === '.' ? '.' : `${scope.key}.`;
+  const externalNotKeys = notKeys.filter((k): k is string => typeof k === 'string' && !k.startsWith(poolPrefix));
 
   return createFunctionToken(
     'minContrastWith',

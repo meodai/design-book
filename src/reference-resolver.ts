@@ -2,6 +2,8 @@ import {
   getReferenceResolution,
   isFunctionTokenValue,
   isReferenceValue,
+  isScopeKey,
+  isUnresolvableReference,
   setReferenceResolution,
 } from './tokens';
 import type { ReferenceValue, FunctionTokenValue } from './tokens';
@@ -82,6 +84,8 @@ export class ReferenceResolver {
    *  tokens included. */
   updateFunctionArgs(fn: FunctionTokenValue): void {
     for (const arg of fn.args) {
+      // A pool is not a value to resolve; a failed navigation has nothing to read.
+      if (isReferenceValue(arg) && (isScopeKey(arg.key) || isUnresolvableReference(arg))) continue;
       if (isReferenceValue(arg)) {
         this.updateReferenceMetadata(arg);
       } else if (isFunctionTokenValue(arg)) {

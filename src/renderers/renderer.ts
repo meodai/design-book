@@ -1,5 +1,5 @@
 import { DesignBook } from '../design-book';
-import { isFunctionTokenValue, isReferenceValue, isTokenValue } from '../tokens';
+import { isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
 import { isTypographyToken, typographyBase, typographyFieldNames } from '../functions/non-color/typography';
@@ -658,8 +658,16 @@ export class Renderer {
 
   /** Resolve one function argument to the string the implementation would
    *  see. Shared by the CSS fallback path and the W3 transition composite. */
-  private resolveFunctionArg(arg: FunctionArg): string | FunctionArg {
-    if (isReferenceValue(arg)) return this.book.resolve(arg.key);
+  private resolveFunctionArg(arg: FunctionArg): unknown {
+    if (isReferenceValue(arg)) {
+      // A pool reaches the implementation as the scope itself, as in `Scope`.
+      if (isScopeKey(arg.key)) {
+        const scope = this.book.getScope(arg.key);
+        if (!scope) throw new Error(`Scope "${arg.key}" not found`);
+        return scope;
+      }
+      return this.book.resolve(arg.key);
+    }
     if (isFunctionTokenValue(arg)) return this.resolveFunctionToken(arg);
     if (isTokenValue(arg)) {
       if (arg.metadata?.unit) return `${arg.rawValue}${arg.metadata.unit}`;

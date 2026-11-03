@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { parse, interpolate, interpolateWithPremultipliedAlpha } from 'culori';
 import { formatColor, gamutMapSrgb } from './scope-colors';
 import { createFunctionToken, extractDependencies } from '../../tokens';
@@ -105,6 +106,8 @@ export function colorMix(
   color2: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; colorSpace?: string; description?: string }
 ): FunctionTokenValue {
+  valueArg('colorMix', color1);
+  valueArg('colorMix', color2);
   const ratio = options?.ratio ?? 0.5;
   const colorSpace = options?.colorSpace ?? 'lab';
   assertFraction('colorMix', 'ratio', ratio);

@@ -16,8 +16,8 @@ describe('lightest / darkest', () => {
 
   it('picks the highest and lowest OKLCH lightness in the scope', () => {
     const { book, p, ui } = palette();
-    ui.set('bg', lightest(p));
-    ui.set('fg', darkest(p));
+    ui.set('bg', lightest(ref('palette')));
+    ui.set('fg', darkest(ref('palette')));
 
     expect(book.resolve('ui.bg')).toBe('#fafafa');
     expect(book.resolve('ui.fg')).toBe('#111111');
@@ -32,7 +32,7 @@ describe('lightest / darkest', () => {
     p.set('yellow',     color('#ffff00'));
 
     const ui = book.addScope('ui');
-    ui.set('bg', lightest(p));
+    ui.set('bg', lightest(ref('palette')));
     expect(book.resolve('ui.bg')).toBe('#ffff00');
   });
 
@@ -45,16 +45,16 @@ describe('lightest / darkest', () => {
     p.set('periwinkle', color('#8080ff'));
 
     const ui = book.addScope('ui');
-    ui.set('bg', lightest(p));
-    ui.set('fg', darkest(p));
+    ui.set('bg', lightest(ref('palette')));
+    ui.set('fg', darkest(ref('palette')));
     expect(book.resolve('ui.bg')).toBe('#8080ff');
     expect(book.resolve('ui.fg')).toBe('#00a0a0');
   });
 
   it('skips keys listed in `not`', () => {
     const { book, p, ui } = palette();
-    ui.set('bg', lightest(p, { not: [ref('palette.paper')] }));
-    ui.set('fg', darkest(p, { not: ['palette.ink'] }));
+    ui.set('bg', lightest(ref('palette'), { not: [ref('palette.paper')] }));
+    ui.set('fg', darkest(ref('palette'), { not: ['palette.ink'] }));
 
     expect(book.resolve('ui.bg')).toBe('#ff0000'); // red L 0.63 > mid L 0.57
     expect(book.resolve('ui.fg')).toBe('#777777');
@@ -62,7 +62,7 @@ describe('lightest / darkest', () => {
 
   it('follows changes to the scope it iterates', () => {
     const { book, p, ui } = palette();
-    ui.set('bg', lightest(p));
+    ui.set('bg', lightest(ref('palette')));
     p.set('white', color('#ffffff'));
     expect(book.resolve('ui.bg')).toBe('#ffffff');
   });
@@ -74,7 +74,7 @@ describe('lightest / darkest', () => {
     p.set('gray', color('#808080'));
 
     const ui = book.addScope('ui');
-    ui.set('bg', lightest(p));
+    ui.set('bg', lightest(ref('palette')));
     expect(book.resolve('ui.bg')).toBe('#ffffff80');
   });
 
@@ -82,7 +82,7 @@ describe('lightest / darkest', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     const ui = book.addScope('ui');
-    ui.set('bg', lightest(empty));
+    ui.set('bg', lightest(ref('empty')));
     expect(() => book.resolve('ui.bg')).toThrow(/lightest: no valid color candidates/);
   });
 });

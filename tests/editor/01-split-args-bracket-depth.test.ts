@@ -30,7 +30,7 @@ describe('splitArgs tracks [ ] and { } depth', () => {
 
     const ui = book.addScope('ui-01');
 
-    const original = mostVivid(brand, {
+    const original = mostVivid(ref('brand-01'), {
       not: [ref('brand-01.a'), 'brand-01.b'],
     });
     ui.set('accent', original);

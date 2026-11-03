@@ -29,8 +29,8 @@ function setup() {
 describe('readableOn', () => {
   it('drops candidates below the ratio before mostVivid ranks', () => {
     const { book, pool, ui } = setup();
-    ui.set('plain',  mostVivid(pool));
-    ui.set('accent', mostVivid(pool, { readableOn: ref('ui.bg'), minContrast: 4.5 }));
+    ui.set('plain',  mostVivid(ref('pool')));
+    ui.set('accent', mostVivid(ref('pool'), { readableOn: ref('ui.bg'), minContrast: 4.5 }));
 
     expect(book.resolve('ui.plain')).toBe('#ffff00');
     expect(book.resolve('ui.accent')).toBe('#1d4eb8');
@@ -39,15 +39,15 @@ describe('readableOn', () => {
   it('defaults minContrast to 4.5', () => {
     const { book, pool, ui } = setup();
     // gray (4.54:1) just clears the default; navy (7.4:1) is more vivid.
-    ui.set('loose', mostVivid(pool, { readableOn: ref('ui.bg') }));
-    ui.set('tight', leastVivid(pool, { readableOn: ref('ui.bg'), minContrast: 5 }));
+    ui.set('loose', mostVivid(ref('pool'), { readableOn: ref('ui.bg') }));
+    ui.set('tight', leastVivid(ref('pool'), { readableOn: ref('ui.bg'), minContrast: 5 }));
     expect(book.resolve('ui.loose')).toBe('#1d4eb8');
     expect(book.resolve('ui.tight')).toBe('#1d4eb8'); // gray is out at 5:1
   });
 
   it('re-picks when the backdrop changes', () => {
     const { book, pool, ui } = setup();
-    ui.set('fg', lightest(pool, { readableOn: ref('ui.bg') }));
+    ui.set('fg', lightest(ref('pool'), { readableOn: ref('ui.bg') }));
     expect(book.resolve('ui.fg')).toBe('#767676'); // lightest that reads on white
 
     ui.set('bg', color('#000000'));
@@ -71,14 +71,14 @@ describe('readableOn', () => {
     // Opaque, this blue clears 4.5:1 on white; at 20% alpha it does not.
     p.set('ghost', color('rgba(0, 0, 255, 0.2)'));
     p.set('green', color('#006600'));
-    ui.set('accent', mostVivid(p, { readableOn: ref('ui.bg') }));
+    ui.set('accent', mostVivid(ref('ghosts'), { readableOn: ref('ui.bg') }));
     expect(book.resolve('ui.accent')).toBe('#006600');
   });
 
   it('throws when nothing in the pool is readable', () => {
     const { book, pool, ui } = setup();
     expect(() => {
-      ui.set('x', mostVivid(pool, { readableOn: ref('ui.bg'), minContrast: 12 }));
+      ui.set('x', mostVivid(ref('pool'), { readableOn: ref('ui.bg'), minContrast: 12 }));
       book.resolve('ui.x');
     }).toThrow(/no candidate reaches 12:1/);
   });
@@ -94,18 +94,18 @@ describe('readableOn', () => {
 
   it('rejects minContrast without readableOn at construction', () => {
     const { pool } = setup();
-    expect(() => mostVivid(pool, { minContrast: 4.5 })).toThrow(FunctionError);
-    expect(() => lightest(pool, { minContrast: 4.5 })).toThrow(/needs `readableOn`/);
+    expect(() => mostVivid(ref('pool'), { minContrast: 4.5 })).toThrow(FunctionError);
+    expect(() => lightest(ref('pool'), { minContrast: 4.5 })).toThrow(/needs `readableOn`/);
   });
 
   it('rejects a non-positive minContrast', () => {
     const { pool } = setup();
-    expect(() => mostVivid(pool, { readableOn: ref('ui.bg'), minContrast: 0 })).toThrow(/minContrast/);
+    expect(() => mostVivid(ref('pool'), { readableOn: ref('ui.bg'), minContrast: 0 })).toThrow(/minContrast/);
   });
 
   it('points the old `against` option at its new name', () => {
     const { pool } = setup();
-    expect(() => mostVivid(pool, { against: ref('ui.bg') } as any)).toThrow(/readableOn/);
+    expect(() => mostVivid(ref('pool'), { against: ref('ui.bg') } as any)).toThrow(/readableOn/);
   });
 
   it('still resolves a token saved in the old against + minContrast shape', () => {

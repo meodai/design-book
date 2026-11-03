@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { converter } from 'culori';
 import {
   createFunctionToken,
@@ -59,7 +61,8 @@ export interface MostVividOptions extends ReadableOnOptions {
   [key: string]: unknown;
 }
 
-export function mostVivid(scope: Scope, options?: MostVividOptions): FunctionTokenValue {
+export function mostVivid(pool: PoolArg, options?: MostVividOptions): FunctionTokenValue {
+  const scope = poolArg('mostVivid', pool);
   const readable = readableOnParts('mostVivid', options);
 
   return createFunctionToken('mostVivid', [scope, ...readable.args], {

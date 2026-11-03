@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
@@ -18,6 +19,7 @@ export function typographyScale(
   baseSize: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; step?: number; description?: string }
 ): FunctionTokenValue {
+  valueArg('typographyScale', baseSize);
   const ratio = options?.ratio ?? 1.25;
   const step = options?.step ?? 0;
   return createFunctionToken(

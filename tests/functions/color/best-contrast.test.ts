@@ -12,7 +12,7 @@ describe('bestContrastWith', () => {
     brand.set('mid', color('#808080'));
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(color('#ffffff'), brand));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('brand')));
 
     // Against white, black has highest contrast
     expect(book.resolve('ui.text')).toBe('#000000');
@@ -26,7 +26,7 @@ describe('bestContrastWith', () => {
     brand.set('light', color('#eeeeee'));
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(ref('brand.bg'), brand));
+    ui.set('text', bestContrastWith(ref('brand.bg'), ref('brand')));
 
     expect(book.resolve('ui.text')).toBe('#000000');
   });

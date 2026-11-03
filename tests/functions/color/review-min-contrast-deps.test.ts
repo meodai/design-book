@@ -15,7 +15,7 @@ describe('minContrastWith dependencies', () => {
     s.set('accent', color('#e03e1a'));
     // `not: ['s.accent']` only narrows the pool this selector iterates; it is
     // not a value this selector reads, so it must not become a graph edge.
-    s.set('text', minContrastWith(ref('s.white'), s, { not: ['s.accent'] }));
+    s.set('text', minContrastWith(ref('s.white'), ref('s'), { not: ['s.accent'] }));
 
     expect(() =>
       s.set('accent', colorMix(ref('s.text'), ref('s.white')))
@@ -32,7 +32,7 @@ describe('minContrastWith dependencies', () => {
 
     // A cross-scope exclusion is value-based (the candidate whose hex matches
     // it is dropped), so it stays a real dependency.
-    const token = minContrastWith(ref('s.white'), s, {
+    const token = minContrastWith(ref('s.white'), ref('s'), {
       not: [ref('other.avoid'), 's.accent'],
     });
 

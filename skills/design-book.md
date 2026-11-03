@@ -33,8 +33,8 @@ layer; mixing layers is the most common mistake.
 
 3. **Procedural / function tokens** — rules. Read inputs, compute output.
    `darken(ref('color.brand'), { amount: 0.15 })`,
-   `bestContrastWith(ref('color.surface'), values)`,
-   `nth(values, -1)`.
+   `bestContrastWith(ref('color.surface'), ref('values'))`,
+   `nth(ref('values'), -1)`.
 
 Rule of thumb: a value token *never* gets a semantic name. Calling one
 `values.brand` smuggles a decision into a layer that's supposed to be
@@ -144,9 +144,9 @@ instead of names, so the semantic layer survives a regenerated ramp with a
 different number of stops:
 
 ```typescript
-colorScope.set('surface', nth(values, 0));      // first member
-colorScope.set('text',    nth(values, -1));     // last member
-colorScope.set('muted',   nth(values, 0.7));    // 70% of the way along
+colorScope.set('surface', nth(ref('values'), 0));      // first member
+colorScope.set('text',    nth(ref('values'), -1));     // last member
+colorScope.set('muted',   nth(ref('values'), 0.7));    // 70% of the way along
 colorScope.set('button-hover', sibling(ref('values.blue-500'), 1)); // next member
 ```
 
@@ -164,15 +164,15 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | --- | --- |
 | `--hover: <darker version of base>` | `darken(ref('color.brand'), { amount: 0.15 })` |
 | `--press: <even darker>` | `darken(ref('color.brand'), { amount: 0.3 })` |
-| `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), values)` |
-| `--border: <faint shade>` | `minContrastWith(ref('color.surface'), values, { ratio: 1.5 })` |
-| `--border: <the nearest shade to the surface>` | `closestColor(ref('color.surface'), values, { not: ['values.gray-50'] })` |
-| `--accent: <one of the brand colors>` | `mostVivid(values, { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
-| `--text: <darkest readable gray>` | `darkest(grays, { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
+| `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), ref('values'))` |
+| `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ref('values'), { ratio: 1.5 })` |
+| `--border: <the nearest shade to the surface>` | `closestColor(ref('color.surface'), ref('values'), { not: ['values.gray-50'] })` |
+| `--accent: <one of the brand colors>` | `mostVivid(ref('values'), { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
+| `--text: <darkest readable gray>` | `darkest(ref('grays'), { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
 | `--button-hover`: the next stop of the ramp | `sibling(ref('values.blue-500'), 1)` |
 | `--space-sm/md/lg/xl`: multiples of a base | `spacingScale(ref('space.base'), { multiplier })` |
-| `--gap-loose`: the next size up from another | `nextLarger(ref('space.m'), space)` / `nextSmaller` |
+| `--gap-loose`: the next size up from another | `nextLarger(ref('space.m'), ref('space'))` / `nextSmaller` |
 | `--font-h1/h2/h3`: modular scale | `typographyScale(ref('font-size.base'), { ratio, step })` |
 | `--h1-font`, `--h1-size`, `--h1-weight` that travel together | one `typography({ fontFamily, fontSize, fontWeight, … })` token (see below) |
 | Surface-aware shade ("slightly darker if light, lighter if dark") | `shade(ref('color.surface'), { amount: 0.1 })` |
@@ -311,8 +311,8 @@ colorScope.set('text',        ref('color.on-surface'));
 
 // ---- procedural -------------------------------------------------------
 colorScope.set('link-hover', darken(ref('color.interaction'), { amount: 0.15 }));
-colorScope.set('line',       minContrastWith(ref('color.surface'), values, { ratio: 1.5 }));
-colorScope.set('on-brand',   bestContrastWith(ref('color.brand'), values, {
+colorScope.set('line',       minContrastWith(ref('color.surface'), ref('values'), { ratio: 1.5 }));
+colorScope.set('on-brand',   bestContrastWith(ref('color.brand'), ref('values'), {
   not: [ref('values.red-500')], // exclude role-loaded tokens
 }));
 
@@ -528,7 +528,7 @@ that differ from another only in a few properties (`Heading/Bold` vs
 Figma doesn't store rules. But naming conventions usually leak them:
 
 - Pairs like `color/button/bg` + `color/button/text` → consider
-  `bestContrastWith(ref('color.button-bg'), values)` instead of a fixed text color.
+  `bestContrastWith(ref('color.button-bg'), ref('values'))` instead of a fixed text color.
 - Sequences like `color/brand/100, 200, …, 900` → likely a colorMix ramp.
   Check the colors: are they perceptually-spaced steps? Replace with
   `colorMix(anchor, anchor2, { ratio })` per step. If the ramp stays a set

@@ -37,7 +37,7 @@ describe('poolKeys', () => {
 
   it('skips a member that walks the scope only through a nested function', () => {
     const { book, gray } = grayWithSibling();
-    gray.set('tint', lighten(nth(gray, 0)));
+    gray.set('tint', lighten(nth(ref('gray'), 0)));
     expect(poolKeys(gray)).toEqual(['a', 'b', 'c']);
     expect(book.resolve('gray.tint')).toBeTruthy();
   });
@@ -52,8 +52,8 @@ describe('scope-member pools agree across selectors', () => {
   it('nth and sibling count the same positions when a sibling lives in the scope', () => {
     const { book } = grayWithSibling();
     const ui = book.addScope('ui');
-    ui.set('second', nth(book.getScope('gray')!, 1));
-    ui.set('third', nth(book.getScope('gray')!, 2));
+    ui.set('second', nth(ref('gray'), 1));
+    ui.set('third', nth(ref('gray'), 2));
     expect(book.resolve('gray.hover')).toBe('#222222');
     expect(book.resolve('ui.second')).toBe('#222222');
     expect(book.resolve('ui.third')).toBe('#333333');
@@ -66,8 +66,8 @@ describe('scope-member pools agree across selectors', () => {
     s.set('next', sibling(ref('s.a'), 1));
     s.set('b', px(8));
     const ui = book.addScope('ui');
-    ui.set('up', nextLarger(px(4), s));
-    ui.set('down', nextSmaller(px(8), s));
+    ui.set('up', nextLarger(px(4), ref('s')));
+    ui.set('down', nextSmaller(px(8), ref('s')));
     expect(book.resolve('ui.up')).toBe('8px');
     expect(book.resolve('ui.down')).toBe('4px');
   });
@@ -75,21 +75,21 @@ describe('scope-member pools agree across selectors', () => {
   it('nextLarger honours `not` given as an inherited member’s source key', () => {
     const { book, kid } = inheritedDims();
     const ui = book.addScope('ui');
-    ui.set('up', nextLarger(px(4), kid, { not: [ref('base.b')] }));
+    ui.set('up', nextLarger(px(4), ref('kid'), { not: [ref('base.b')] }));
     expect(book.resolve('ui.up')).toBe('16px');
   });
 
   it('nextSmaller honours `not` given as an inherited member’s source key', () => {
     const { book, kid } = inheritedDims();
     const ui = book.addScope('ui');
-    ui.set('down', nextSmaller(px(16), kid, { not: [ref('base.b')] }));
+    ui.set('down', nextSmaller(px(16), ref('kid'), { not: [ref('base.b')] }));
     expect(book.resolve('ui.down')).toBe('4px');
   });
 
   it('nth honours `not` given as an inherited member’s source key', () => {
     const { book, kid } = inheritedDims();
     const ui = book.addScope('ui');
-    ui.set('second', nth(kid, 1, { not: [ref('base.b')] }));
+    ui.set('second', nth(ref('kid'), 1, { not: [ref('base.b')] }));
     expect(book.resolve('ui.second')).toBe('16px');
   });
 
@@ -97,7 +97,7 @@ describe('scope-member pools agree across selectors', () => {
     const { book, kid } = inheritedDims();
     const ui = book.addScope('ui');
     for (let seed = 0; seed < 20; seed++) {
-      ui.set(`r${seed}`, random(kid, { type: 'dimension', seed, not: [ref('base.a'), ref('base.b')] }));
+      ui.set(`r${seed}`, random(ref('kid'), { type: 'dimension', seed, not: [ref('base.a'), ref('base.b')] }));
       expect(book.resolve(`ui.r${seed}`)).toBe('16px');
     }
   });

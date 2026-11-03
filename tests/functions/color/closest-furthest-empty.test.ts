@@ -13,7 +13,7 @@ describe('closestColor / furthestFrom with nothing to pick', () => {
     const empty = book.addScope('empty');
     empty.set('label', string('hello'));
     const ui = book.addScope('ui');
-    ui.set('match', closestColor(color('#ff0000'), empty));
+    ui.set('match', closestColor(color('#ff0000'), ref('empty')));
     expect(() => book.resolve('ui.match')).toThrow(/closestColor: no valid color candidates/);
   });
 
@@ -35,7 +35,7 @@ describe('closestColor / furthestFrom with nothing to pick', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     const ui = book.addScope('ui');
-    ui.set('far', furthestFrom(empty));
+    ui.set('far', furthestFrom(ref('empty')));
     expect(() => book.resolve('ui.far')).toThrow(/furthestFrom: no valid color candidates/);
   });
 
@@ -51,7 +51,7 @@ describe('closestColor / furthestFrom with nothing to pick', () => {
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
     const ui = book.addScope('ui');
-    ui.set('match', closestColor(ref('p.red'), p));
+    ui.set('match', closestColor(ref('p.red'), ref('p')));
     expect(book.resolve('ui.match')).toBe('#ff0000');
   });
 });

@@ -88,7 +88,7 @@ describe('composeBook: late binding', () => {
       ink.set('dark', color('#333333'));
       ink.set('light', color('#eeeeee'));
       b.addScope('surface').set('bg', color('#ffffff'));
-      b.addScope('ui').set('text', bestContrastWith(ref('surface.bg'), ink));
+      b.addScope('ui').set('text', bestContrastWith(ref('surface.bg'), ref('ink')));
     });
     expect(composeBook('a', [pool]).resolve('ui.text')).toBe('#333333');
     const book = composeBook('b', [pool, layer('t', { ink: { black: color('#000000') } })]);

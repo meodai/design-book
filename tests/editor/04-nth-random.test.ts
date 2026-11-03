@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DesignBook, color, px, nth, random } from '../../src/index';
+import { DesignBook, color, px, nth, random, ref } from '../../src/index';
 import { parseTokenInput } from '../../editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
@@ -26,7 +26,7 @@ describe('nth and random round-trip', () => {
     space.set('m', px(12));
 
     const ui = book.addScope('ui-04');
-    const original = nth(space, 1, { not: ['space-04.xs'] });
+    const original = nth(ref('space-04'), 1, { not: ['space-04.xs'] });
     ui.set('picked', original);
 
     const serialized = getTokenDisplayValue(ui, 'picked');
@@ -39,7 +39,7 @@ describe('nth and random round-trip', () => {
   it('still accepts the positional index form', () => {
     const space = book.getScope('space-04')!;
     const parsed = parseTokenInput('nth(space-04, 2)', book, space);
-    expect(parsed).toEqual(nth(space, 2));
+    expect(parsed).toEqual(nth(ref('space-04'), 2));
   });
 
   it('round-trips random', () => {
@@ -48,7 +48,7 @@ describe('nth and random round-trip', () => {
     brand.set('secondary', color('#ff8800'));
 
     const ui = book.getScope('ui-04')!;
-    const original = random(brand, { type: 'color', seed: 42, not: ['brand-04.secondary'] });
+    const original = random(ref('brand-04'), { type: 'color', seed: 42, not: ['brand-04.secondary'] });
     ui.set('accent', original);
 
     const serialized = getTokenDisplayValue(ui, 'accent');

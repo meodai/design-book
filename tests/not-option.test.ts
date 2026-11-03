@@ -19,8 +19,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     values.set('mute',  color('#cccccc'));
 
     const ui = book.addScope('ui');
-    ui.set('accent',         mostVivid(values));
-    ui.set('accentSkipError', mostVivid(values, { not: [ref('values.error')] }));
+    ui.set('accent',         mostVivid(ref('values')));
+    ui.set('accentSkipError', mostVivid(ref('values'), { not: [ref('values.error')] }));
 
     expect(book.resolve('ui.accent')).toBe('#dc3545');         // error wins by chroma
     expect(book.resolve('ui.accentSkipError')).toBe('#0066cc'); // blue wins once error is excluded
@@ -33,7 +33,7 @@ describe('"not" option excludes keys from the candidate pool', () => {
     values.set('b', color('#0066cc'));
 
     const ui = book.addScope('ui');
-    ui.set('out', mostVivid(values, { not: ['values.a'] }));
+    ui.set('out', mostVivid(ref('values'), { not: ['values.a'] }));
 
     expect(book.resolve('ui.out')).toBe('#0066cc');
   });
@@ -46,8 +46,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('light', color('#eeeeee'));
 
     const ui = book.addScope('ui');
-    ui.set('text',         bestContrastWith(color('#ffffff'), palette));
-    ui.set('textNotBlack', bestContrastWith(color('#ffffff'), palette, {
+    ui.set('text',         bestContrastWith(color('#ffffff'), ref('palette')));
+    ui.set('textNotBlack', bestContrastWith(color('#ffffff'), ref('palette'), {
       not: [ref('palette.black')],
     }));
 
@@ -64,9 +64,9 @@ describe('"not" option excludes keys from the candidate pool', () => {
     const ui = book.addScope('ui');
     // Without exclusion, picks the lowest-contrast option that still
     // clears 4.5 (justOver).
-    ui.set('low', minContrastWith(color('#ffffff'), palette, { ratio: 4.5 }));
+    ui.set('low', minContrastWith(color('#ffffff'), ref('palette'), { ratio: 4.5 }));
     // Excluding it forces the higher-contrast fallback.
-    ui.set('lowNotJustOver', minContrastWith(color('#ffffff'), palette, {
+    ui.set('lowNotJustOver', minContrastWith(color('#ffffff'), ref('palette'), {
       ratio: 4.5,
       not: [ref('palette.justOver')],
     }));
@@ -83,8 +83,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('far',    color('#ff0000'));
 
     const ui = book.addScope('ui');
-    ui.set('match',        closestColor(color('#0066cc'), palette));
-    ui.set('matchNotExact', closestColor(color('#0066cc'), palette, {
+    ui.set('match',        closestColor(color('#0066cc'), ref('palette')));
+    ui.set('matchNotExact', closestColor(color('#0066cc'), ref('palette'), {
       not: [ref('palette.exact')],
     }));
 
@@ -101,8 +101,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('outlier', color('#ffffff')); // by far the most distant
 
     const ui = book.addScope('ui');
-    ui.set('out',           furthestFrom(palette));
-    ui.set('outNotOutlier', furthestFrom(palette, { not: [ref('palette.outlier')] }));
+    ui.set('out',           furthestFrom(ref('palette')));
+    ui.set('outNotOutlier', furthestFrom(ref('palette'), { not: [ref('palette.outlier')] }));
 
     expect(book.resolve('ui.out')).toBe('#ffffff');
     // Without the outlier, the survivors are all clustered near black; the
@@ -118,8 +118,8 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('vivid',  color('#ff0000'));
 
     const ui = book.addScope('ui');
-    ui.set('mute',        leastVivid(palette));
-    ui.set('muteNotGray', leastVivid(palette, { not: [ref('palette.gray')] }));
+    ui.set('mute',        leastVivid(ref('palette')));
+    ui.set('muteNotGray', leastVivid(ref('palette'), { not: [ref('palette.gray')] }));
 
     expect(book.resolve('ui.mute')).toBe('#808080');         // gray wins by chroma
     expect(book.resolve('ui.muteNotGray')).toBe('#f7c8c5');  // pastel wins once gray is excluded

@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import {
   createFunctionToken,
   extractVisualDependencies,
@@ -69,10 +71,11 @@ export function nthImpl(
  *   member; it is clamped to [0, 1] and rounded to the nearest member.
  */
 export function nth(
-  scope: Scope,
+  pool: PoolArg,
   index: number,
   options?: NthOptions,
 ): FunctionTokenValue {
+  const scope = poolArg('nth', pool);
   return createFunctionToken(
     'nth',
     [scope],

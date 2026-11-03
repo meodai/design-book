@@ -209,7 +209,7 @@ describe('sibling in the renderers', () => {
     const ui = book.addScope('ui');
     ui.set('up', sibling(ref('ramp.a'), 1));
     ui.set('gap', sibling(ref('space.m'), 1));
-    ui.set('pick', nth(ramp, 1)); // same untyped-function path as sibling
+    ui.set('pick', nth(ref('ramp'), 1)); // same untyped-function path as sibling
     return book;
   }
 

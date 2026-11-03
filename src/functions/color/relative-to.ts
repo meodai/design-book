@@ -1,3 +1,4 @@
+import { valueArg } from '../args';
 import { parse, converter } from 'culori';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -124,6 +125,7 @@ export function relativeTo(
   modifications: (null | number | string)[],
   options?: { description?: string }
 ): FunctionTokenValue {
+  valueArg('relativeTo', baseColor);
   relativeToChannels(colorSpace);
   return createFunctionToken(
     'relativeTo',

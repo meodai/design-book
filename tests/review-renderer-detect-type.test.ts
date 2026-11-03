@@ -50,7 +50,7 @@ describe('Scope and the W3 renderer agree on detected types', () => {
     const book = new DesignBook('t');
     const src = book.addScope('src');
     src.set('ratio', string('1.5'));
-    book.addScope('ui').set('pick', nth(src, 0));
+    book.addScope('ui').set('pick', nth(ref('src'), 0));
     const out = new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject() as any;
     expect(out.ui.pick).toEqual({ $value: 1.5, $type: 'number' });
   });

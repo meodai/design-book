@@ -16,9 +16,10 @@ function brandBook(mode: 'auto' | 'batch' = 'auto') {
 }
 
 describe('relative refs: ref(".token")', () => {
-  it('rejects malformed relative keys', () => {
-    expect(() => ref('.')).toThrow();
+  it('rejects malformed keys; ref(".") is the reading scope', () => {
+    expect(() => ref('')).toThrow();
     expect(() => ref('..x')).toThrow();
+    expect(ref('.').key).toBe('.');
   });
 
   it('reads its own scope where it is written', () => {
@@ -190,7 +191,7 @@ describe('relative refs: ref(".token")', () => {
     scale.set('b', color('#555555'));
     scale.set('c', color('#999999'));
     scale.set('next', sibling(ref('.a'), 1));
-    scale.set('first', nth(scale, 0, { not: [ref('.a')] }));
+    scale.set('first', nth(ref('scale'), 0, { not: [ref('.a')] }));
     expect(book.resolve('scale.next')).toBe('#555555');
     expect(book.resolve('scale.first')).toBe('#555555');
 

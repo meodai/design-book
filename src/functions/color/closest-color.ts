@@ -1,3 +1,5 @@
+import { poolArg, valueArg } from '../args';
+import type { PoolArg } from '../args';
 import { parse } from 'culori';
 import {
   createFunctionToken,
@@ -54,7 +56,7 @@ export function closestColorImpl(
 
 export function closestColor(
   targetColor: TokenValue | ReferenceValue | FunctionTokenValue,
-  scope: Scope,
+  pool: PoolArg,
   options?: ReadableOnOptions & {
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue>;
@@ -62,6 +64,8 @@ export function closestColor(
     [key: string]: any;
   },
 ): FunctionTokenValue {
+  const scope = poolArg('closestColor', pool);
+  valueArg('closestColor', targetColor);
   const readable = readableOnParts('closestColor', options);
   return createFunctionToken(
     'closestColor',

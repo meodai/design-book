@@ -165,7 +165,7 @@ describe('SVGRenderer palette-linker edges', () => {
     // The scope is still empty here, so the construction-time
     // visualDependencies snapshot is empty — the pool is what the scope
     // holds at render time.
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
     palette.set('black', color('#000000'));
     palette.set('white', color('#ffffff'));
 

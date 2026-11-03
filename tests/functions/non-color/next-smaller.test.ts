@@ -14,7 +14,7 @@ describe('nextSmaller', () => {
     space.set('xl', px(24));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(ref('space.l'), space));
+    ui.set('breath', nextSmaller(ref('space.l'), ref('space')));
 
     expect(book.resolve('ui.breath')).toBe('12px');
   });
@@ -30,7 +30,7 @@ describe('nextSmaller', () => {
 
     const ui = book.addScope('ui');
     // m = 12 is only 4 below l = 16; minDistance of 6 forces s = 8.
-    ui.set('breath', nextSmaller(ref('space.l'), space, { minDistance: 6 }));
+    ui.set('breath', nextSmaller(ref('space.l'), ref('space'), { minDistance: 6 }));
 
     expect(book.resolve('ui.breath')).toBe('8px');
   });
@@ -43,7 +43,7 @@ describe('nextSmaller', () => {
     space.set('l', rem(1.5));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(ref('space.l'), space));
+    ui.set('breath', nextSmaller(ref('space.l'), ref('space')));
 
     expect(book.resolve('ui.breath')).toBe('1rem');
   });
@@ -56,7 +56,7 @@ describe('nextSmaller', () => {
     motion.set('slow',   ms(400));
 
     const ui = book.addScope('ui');
-    ui.set('exit', nextSmaller(ref('motion.slow'), motion));
+    ui.set('exit', nextSmaller(ref('motion.slow'), ref('motion')));
 
     expect(book.resolve('ui.exit')).toBe('200ms');
   });
@@ -68,7 +68,7 @@ describe('nextSmaller', () => {
     space.set('m', px(8));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(ref('space.s'), space));
+    ui.set('breath', nextSmaller(ref('space.s'), ref('space')));
 
     expect(() => book.resolve('ui.breath')).toThrow(/no member of scope "space" is smaller/);
   });
@@ -80,7 +80,7 @@ describe('nextSmaller', () => {
     space.set('m', rem(1));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(ref('space.s'), space));
+    ui.set('breath', nextSmaller(ref('space.s'), ref('space')));
 
     expect(() => book.resolve('ui.breath')).toThrow(/no member of scope "space" is smaller/);
   });
@@ -94,7 +94,7 @@ describe('nextSmaller', () => {
     space.set('m', px(12));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(px(16), space));
+    ui.set('breath', nextSmaller(px(16), ref('space')));
 
     expect(book.resolve('ui.breath')).toBe('12px');
   });
@@ -108,7 +108,7 @@ describe('nextSmaller', () => {
     space.set('l',  px(16));
 
     const ui = book.addScope('ui');
-    ui.set('breath', nextSmaller(ref('space.l'), space, { not: ['space.m'] }));
+    ui.set('breath', nextSmaller(ref('space.l'), ref('space'), { not: ['space.m'] }));
 
     expect(book.resolve('ui.breath')).toBe('8px');
   });

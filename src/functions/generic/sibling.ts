@@ -128,6 +128,9 @@ export function sibling(
   if (!isReferenceValue(anchor)) {
     throw new FunctionError('sibling: the anchor must be a ref(...) to a token', 'sibling');
   }
+  if (anchor.up !== undefined) {
+    throw new FunctionError('sibling: the anchor cannot be an inParent / inRoot reference yet; name the token directly', 'sibling');
+  }
   if (!Number.isInteger(offset)) {
     throw new FunctionError(`sibling: offset must be an integer, got ${offset}`, 'sibling');
   }

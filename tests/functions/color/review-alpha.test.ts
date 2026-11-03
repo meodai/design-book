@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color } from '../../../src/tokens';
+import { color, ref } from '../../../src/tokens';
 import { bestContrastWith } from '../../../src/functions/color/best-contrast';
 import { minContrastWith } from '../../../src/functions/color/min-contrast';
 import { mostVivid } from '../../../src/functions/color/most-vivid';
@@ -16,7 +16,7 @@ describe('selectors and translucent candidates', () => {
     pool.set('grey', color('#767676'));
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(color('#ffffff'), pool));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('pool')));
 
     expect(book.resolve('ui.text')).toBe('#767676');
   });
@@ -28,7 +28,7 @@ describe('selectors and translucent candidates', () => {
     pool.set('white', color('#ffffff'));
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(color('#ffffff'), pool));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('pool')));
 
     expect(book.resolve('ui.text')).toBe('#00000080');
   });
@@ -43,7 +43,7 @@ describe('selectors and translucent candidates', () => {
     pool.set('faint', color('#eeeeee'));
 
     const ui = book.addScope('ui');
-    ui.set('text', minContrastWith(color('#ffffff'), pool, { ratio: 1.05 }));
+    ui.set('text', minContrastWith(color('#ffffff'), ref('pool'), { ratio: 1.05 }));
 
     expect(book.resolve('ui.text')).toBe('#0000000d');
   });
@@ -55,7 +55,7 @@ describe('selectors and translucent candidates', () => {
     pool.set('brand', color('#0066cc'));
 
     const ui = book.addScope('ui');
-    ui.set('muted', leastVivid(pool));
+    ui.set('muted', leastVivid(ref('pool')));
 
     expect(book.resolve('ui.muted')).toBe('#0000000d');
   });

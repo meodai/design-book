@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color } from '../src/tokens';
+import { color, ref } from '../src/tokens';
 import { nth } from '../src/functions/generic/nth';
 
 describe('ordering ↔ resolution re-entrancy', () => {
@@ -9,7 +9,7 @@ describe('ordering ↔ resolution re-entrancy', () => {
     const s = book.addScope('s');
     s.set('white', color('#ffffff'));
     s.set('black', color('#000000'));
-    s.set('pick', nth(s, 0)); // selector that walks getAllKeys()
+    s.set('pick', nth(ref('s'), 0)); // selector that walks getAllKeys()
     s.setOrder([{ by: 'value' }]);
 
     expect(() => s.getAllKeys()).not.toThrow();

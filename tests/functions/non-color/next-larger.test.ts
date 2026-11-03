@@ -14,7 +14,7 @@ describe('nextLarger', () => {
     space.set('xl', px(24));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(ref('space.m'), space));
+    ui.set('gap', nextLarger(ref('space.m'), ref('space')));
 
     expect(book.resolve('ui.gap')).toBe('16px');
   });
@@ -31,7 +31,7 @@ describe('nextLarger', () => {
     const ui = book.addScope('ui');
     // l = 16 is only 4 away from m = 12, so a minDistance of 6 should skip
     // to xl = 24.
-    ui.set('gap', nextLarger(ref('space.m'), space, { minDistance: 6 }));
+    ui.set('gap', nextLarger(ref('space.m'), ref('space'), { minDistance: 6 }));
 
     expect(book.resolve('ui.gap')).toBe('24px');
   });
@@ -44,7 +44,7 @@ describe('nextLarger', () => {
     space.set('l', rem(1.5));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(ref('space.s'), space));
+    ui.set('gap', nextLarger(ref('space.s'), ref('space')));
 
     expect(book.resolve('ui.gap')).toBe('1rem');
   });
@@ -57,7 +57,7 @@ describe('nextLarger', () => {
     motion.set('slow',   ms(400));
 
     const ui = book.addScope('ui');
-    ui.set('enter', nextLarger(ref('motion.fast'), motion));
+    ui.set('enter', nextLarger(ref('motion.fast'), ref('motion')));
 
     expect(book.resolve('ui.enter')).toBe('200ms');
   });
@@ -69,7 +69,7 @@ describe('nextLarger', () => {
     space.set('m', px(8));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(ref('space.m'), space));
+    ui.set('gap', nextLarger(ref('space.m'), ref('space')));
 
     expect(() => book.resolve('ui.gap')).toThrow(/no member of scope "space" is larger/);
   });
@@ -81,7 +81,7 @@ describe('nextLarger', () => {
     space.set('m', rem(1));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(ref('space.s'), space));
+    ui.set('gap', nextLarger(ref('space.s'), ref('space')));
 
     expect(() => book.resolve('ui.gap')).toThrow(/no member of scope "space" is larger/);
   });
@@ -95,7 +95,7 @@ describe('nextLarger', () => {
     space.set('m', px(12));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(px(4), space));
+    ui.set('gap', nextLarger(px(4), ref('space')));
 
     expect(book.resolve('ui.gap')).toBe('8px');
   });
@@ -112,8 +112,8 @@ describe('nextLarger', () => {
     space.set('m',  px(12));
     space.set('l',  px(16));
     space.set('xl', px(24));
-    space.set('emphasis', nextLarger(ref('space.m'), space));
-    space.set('tight',    nextSmaller(ref('space.m'), space));
+    space.set('emphasis', nextLarger(ref('space.m'), ref('space')));
+    space.set('tight',    nextSmaller(ref('space.m'), ref('space')));
 
     expect(book.resolve('space.emphasis')).toBe('16px');
     expect(book.resolve('space.tight')).toBe('8px');
@@ -128,7 +128,7 @@ describe('nextLarger', () => {
     space.set('l',  px(16));
 
     const ui = book.addScope('ui');
-    ui.set('gap', nextLarger(ref('space.s'), space, { not: ['space.m'] }));
+    ui.set('gap', nextLarger(ref('space.s'), ref('space'), { not: ['space.m'] }));
 
     expect(book.resolve('ui.gap')).toBe('16px');
   });

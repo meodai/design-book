@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DesignBook, px, nth } from '../../src/index';
+import { DesignBook, px, nth, ref } from '../../src/index';
 import { parseTokenInput } from '../../editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 

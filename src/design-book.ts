@@ -5,7 +5,7 @@ import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
-import type { AnyTokenValue, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
 import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf, isFieldKey, tokenKeyOf } from './tokens';
 import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
@@ -243,6 +243,7 @@ export class DesignBook {
     options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
+    this._binding.version++;
     try {
       this._bindInheritedKeysOf(name);
     } catch (e) {
@@ -270,7 +271,9 @@ export class DesignBook {
   }
 
   deleteScope(name: string): string[] {
+    this._binding.version++;
     const keys = this.scopeManager.deleteScope(name);
+    this._binding.version++;
     this.emit('scopeRemoved', { scope: name, removedKeys: keys });
     return keys;
   }
@@ -347,6 +350,18 @@ export class DesignBook {
   private _readsSource(key: string): boolean {
     const source = this.getSourceKey(key);
     return source !== undefined && source !== key && !this.isRebound(key);
+  }
+
+  /** How tokens read this book's `extends` chains while they are bound
+   *  (`inParent` / `inRoot`). The version moves with every scope added or
+   *  removed, so a cached binding never outlives the chain it followed. */
+  private readonly _binding: BindingContext = {
+    parentOf: (name: string) => this.scopeManager.getScope(name)?.extendsScope,
+    version: 0,
+  };
+
+  _bindingContext(): BindingContext {
+    return this._binding;
   }
 
   // --- Token operations ---
@@ -1262,6 +1277,7 @@ export class DesignBook {
   /** Undo an `addScope` whose inherited tokens were refused. */
   private _discardScope(name: string): void {
     this.scopeManager._discard(name);
+    this._binding.version++;
     const prefix = `${name}.`;
     for (const node of this.graph.getAllNodes()) {
       if (!node.startsWith(prefix) || !this.graph.hasNode(node)) continue;

@@ -21,12 +21,12 @@ function setup() {
 describe('readableOnArgIndex', () => {
   const { pool } = setup();
   const selectors = [
-    ['mostVivid', (o?: any) => mostVivid(pool, o)],
-    ['leastVivid', (o?: any) => leastVivid(pool, o)],
-    ['lightest', (o?: any) => lightest(pool, o)],
-    ['darkest', (o?: any) => darkest(pool, o)],
-    ['furthestFrom', (o?: any) => furthestFrom(pool, o)],
-    ['closestColor', (o?: any) => closestColor(color('#ff0000'), pool, o)],
+    ['mostVivid', (o?: any) => mostVivid(ref('pool'), o)],
+    ['leastVivid', (o?: any) => leastVivid(ref('pool'), o)],
+    ['lightest', (o?: any) => lightest(ref('pool'), o)],
+    ['darkest', (o?: any) => darkest(ref('pool'), o)],
+    ['furthestFrom', (o?: any) => furthestFrom(ref('pool'), o)],
+    ['closestColor', (o?: any) => closestColor(color('#ff0000'), ref('pool'), o)],
   ] as const;
 
   it.each(selectors)('%s: points at the backdrop argument', (_name, make) => {

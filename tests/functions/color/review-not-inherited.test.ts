@@ -16,7 +16,7 @@ describe('`not` exclusion on inherited candidate pools', () => {
     const dark = book.addScope('dark', { extends: 'palette' });
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(color('#ffffff'), dark, { not: [ref('palette.black')] }));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('dark'), { not: [ref('palette.black')] }));
 
     expect(book.resolve('ui.text')).toBe('#767676');
   });
@@ -30,7 +30,7 @@ describe('`not` exclusion on inherited candidate pools', () => {
     const dark = book.addScope('dark', { extends: 'palette' });
 
     const ui = book.addScope('ui');
-    ui.set('text', bestContrastWith(color('#ffffff'), dark, { not: [ref('dark.black')] }));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('dark'), { not: [ref('dark.black')] }));
 
     expect(book.resolve('ui.text')).toBe('#767676');
   });
@@ -44,7 +44,7 @@ describe('`not` exclusion on inherited candidate pools', () => {
     const dark = book.addScope('dark', { extends: 'palette' });
 
     const ui = book.addScope('ui');
-    ui.set('near', closestColor(color('#111111'), dark, { not: [ref('palette.black')] }));
+    ui.set('near', closestColor(color('#111111'), ref('dark'), { not: [ref('palette.black')] }));
 
     expect(book.resolve('ui.near')).toBe('#ffffff');
   });

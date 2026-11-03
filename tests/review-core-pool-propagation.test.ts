@@ -10,7 +10,7 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     const palette = book.addScope('palette');
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
 
     expect(book.resolve('ui.text')).toBe('#ffffff');
 
@@ -32,7 +32,7 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
     palette.set('dark', color('#111111'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
 
     const watcher = vi.fn();
     book.watch('ui.text', watcher);
@@ -47,7 +47,7 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     const sizes = book.addScope('sizes');
     const ui = book.addScope('ui');
     sizes.set('a', color('#111111'));
-    ui.set('second', nth(sizes, 1));
+    ui.set('second', nth(ref('sizes'), 1));
 
     const watcher = vi.fn();
     book.watch('ui.second', watcher);
@@ -63,7 +63,7 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     const palette = book.addScope('palette');
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
     book.flush();
 
     const watcher = vi.fn();
@@ -82,7 +82,7 @@ describe('scope-iterating functions propagate changes to their candidate pool', 
     s.set('bg', color('#ffffff'));
     s.set('a', color('#222222'));
 
-    expect(() => s.set('text', bestContrastWith(ref('s.bg'), s))).not.toThrow();
+    expect(() => s.set('text', bestContrastWith(ref('s.bg'), ref('s')))).not.toThrow();
 
     const prereqs = book.getDependencyGraph().getPrerequisitesFor('s.text');
     expect(prereqs).not.toContain('s.text');
@@ -107,7 +107,7 @@ describe('shrinking the candidate pool propagates too', () => {
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
     palette.set('dark', color('#000000'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
     expect(book.resolve('ui.text')).toBe('#000000');
 
     const watcher = vi.fn();
@@ -126,7 +126,7 @@ describe('shrinking the candidate pool propagates too', () => {
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
     palette.set('dark', color('#000000'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
     book.flush();
 
     const watcher = vi.fn();
@@ -145,7 +145,7 @@ describe('shrinking the candidate pool propagates too', () => {
     const ui = book.addScope('ui');
     palette.set('light', color('#ffffff'));
     palette.set('dark', color('#000000'));
-    ui.set('text', bestContrastWith(color('#ffffff'), palette));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
 
     const changed: string[] = [];
     book.on('tokenChanged', (e) => changed.push(e.detail.key));
@@ -165,7 +165,7 @@ describe('inherited pool members propagate through the extends chain', () => {
     const ui = book.addScope('ui');
     palette.set('white', color('#ffffff'));
     // The selector iterates `dark`, whose key list includes palette's keys.
-    ui.set('text', bestContrastWith(color('#ffffff'), dark));
+    ui.set('text', bestContrastWith(color('#ffffff'), ref('dark')));
     if (mode === 'batch') book.flush();
     return { book, palette, dark, ui };
   };

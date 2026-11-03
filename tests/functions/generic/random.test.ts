@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color, px, string as stringToken, createFunctionToken } from '../../../src/tokens';
+import { color, px, string as stringToken, createFunctionToken, ref } from '../../../src/tokens';
 import { random } from '../../../src/functions/generic/random';
 import { FunctionError } from '../../../src/errors';
 
@@ -13,7 +13,7 @@ describe('random', () => {
     palette.set('blue', color('#0000ff'));
 
     const ui = book.addScope('ui');
-    ui.set('accent', random(palette, { type: 'color', seed: 'fixed' }));
+    ui.set('accent', random(ref('palette'), { type: 'color', seed: 'fixed' }));
 
     const resolved = book.resolve('ui.accent');
     expect(['#ff0000', '#00ff00', '#0000ff']).toContain(resolved);
@@ -28,8 +28,8 @@ describe('random', () => {
     palette.set('d', color('#444444'));
 
     const ui = book.addScope('ui');
-    ui.set('a1', random(palette, { type: 'color', seed: 'spring' }));
-    ui.set('a2', random(palette, { type: 'color', seed: 'spring' }));
+    ui.set('a1', random(ref('palette'), { type: 'color', seed: 'spring' }));
+    ui.set('a2', random(ref('palette'), { type: 'color', seed: 'spring' }));
 
     expect(book.resolve('ui.a1')).toBe(book.resolve('ui.a2'));
   });
@@ -42,7 +42,7 @@ describe('random', () => {
     palette.set('c', color('#333333'));
 
     const ui = book.addScope('ui');
-    ui.set('accent', random(palette, { type: 'color' }));
+    ui.set('accent', random(ref('palette'), { type: 'color' }));
 
     const first = book.resolve('ui.accent');
     const second = book.resolve('ui.accent');
@@ -58,8 +58,8 @@ describe('random', () => {
     mixed.set('d', px(16));
 
     const ui = book.addScope('ui');
-    ui.set('only-color', random(mixed, { type: 'color', seed: 1 }));
-    ui.set('only-dim', random(mixed, { type: 'dimension', seed: 1 }));
+    ui.set('only-color', random(ref('mixed'), { type: 'color', seed: 1 }));
+    ui.set('only-dim', random(ref('mixed'), { type: 'dimension', seed: 1 }));
 
     expect(book.resolve('ui.only-color')).toBe('#abcdef');
     const dim = book.resolve('ui.only-dim');
@@ -73,7 +73,7 @@ describe('random', () => {
     dims.set('b', px(16));
 
     const ui = book.addScope('ui');
-    ui.set('bad', random(dims, { type: 'color', seed: 1 }));
+    ui.set('bad', random(ref('dims'), { type: 'color', seed: 1 }));
 
     expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
     expect(() => book.resolve('ui.bad')).toThrow(/no "color" candidates/);
@@ -87,7 +87,7 @@ describe('random', () => {
 
     const ui = book.addScope('ui');
     // Exclude 'a' — only 'b' should ever be picked, regardless of seed.
-    ui.set('accent', random(palette, { type: 'color', seed: 'whatever', not: ['palette.a'] }));
+    ui.set('accent', random(ref('palette'), { type: 'color', seed: 'whatever', not: ['palette.a'] }));
     expect(book.resolve('ui.accent')).toBe('#bbbbbb');
   });
 
@@ -102,7 +102,7 @@ describe('random', () => {
     const picks = new Set<string>();
     for (let i = 0; i < 10; i++) {
       const tokenName = `t${i}`;
-      ui.set(tokenName, random(palette, { type: 'color', seed: `seed-${i}` }));
+      ui.set(tokenName, random(ref('palette'), { type: 'color', seed: `seed-${i}` }));
       picks.add(book.resolve(`ui.${tokenName}`));
     }
     // With 16 candidates and 10 distinct seeds we expect at least a couple of
@@ -141,7 +141,7 @@ describe('random', () => {
     palette.set('a', color('#abcdef'));
 
     const ui = book.addScope('ui');
-    ui.set('accent', random(palette, { type: 'color' }));
+    ui.set('accent', random(ref('palette'), { type: 'color' }));
 
     const inspection = book.inspect('ui.accent');
     expect(inspection.returnType).toBe('color');
