@@ -586,7 +586,7 @@ callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
 - Only `extends` makes a parent. Reading from a scope (`ref('palette.white')`) does not.
 - `inParent` past the top of the chain throws (`"card" has no parent`, `"callout" has only 2 levels above it`); `inRoot` on a scope that extends nothing is that scope. Levels are whole numbers of 1 or more, and `inParent(inParent(x))` is `inParent(x, 2)`.
 - A reference that ends on its own key is a cycle and is rejected when written, as with `ref`.
-- `sibling` and `variant` do not take an `inParent` / `inRoot` anchor yet.
+- `sibling` and `variant` take a navigated reference too: `sibling(inParent(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `variant(inParent(ref('.title')), { fontWeight: '700' })` is a live variant of the title this scope replaces.
 
 ### Positions: `nth`, `sibling`, `nextLarger`, `nextSmaller`
 

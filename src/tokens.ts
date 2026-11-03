@@ -294,6 +294,10 @@ function traitsOf(token: unknown): TokenTraits {
     if (Array.isArray(options.not)) {
       for (const n of options.not) merge(typeof n === 'string' ? { relative: isRelativeKey(n), navigates: false } : traitsOf(n));
     }
+    // sibling's anchor / a variant's base: a key, or a navigated reference.
+    for (const key of [options.from, options.base]) {
+      if (isReferenceValue(key)) merge(traitsOf(key));
+    }
     if (isRelativeKey(options.from)
       || isRelativeKey(options.base)
       || (metadata?.dependencies ?? []).some(isRelativeKey)
@@ -397,10 +401,23 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
   } else {
     const fn = token as unknown as FunctionTokenValue;
     let options = fn.options;
+    // Keys a navigated anchor / base lands on: they become the token's
+    // dependencies (and, for an anchor, the scope it walks) once known.
+    const landed: { from?: string; base?: string } = {};
     if (options) {
       options = { ...options };
-      if (typeof options.from === 'string') options.from = q(options.from);
-      if (typeof options.base === 'string') options.base = q(options.base);
+      for (const name of ['from', 'base'] as const) {
+        const key = options[name];
+        if (typeof key === 'string') options[name] = q(key);
+        else if (isReferenceValue(key)) {
+          const bound = bindReference(key, scope, context);
+          if (isUnresolvableReference(bound)) options[name] = bound;
+          else {
+            options[name] = bound.key;
+            landed[name] = bound.key;
+          }
+        }
+      }
       if (Array.isArray(options.not)) {
         options.not = options.not.map((n: unknown) => {
           if (typeof n === 'string') return q(n);
@@ -415,6 +432,14 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
       if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map(q);
       if (metadata.visualDependencies) metadata.visualDependencies = metadata.visualDependencies.map(q);
       if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
+      for (const key of [landed.from, landed.base]) {
+        if (key === undefined) continue;
+        metadata.dependencies = [...(metadata.dependencies ?? []), key];
+        metadata.visualDependencies = [...(metadata.visualDependencies ?? []), key];
+      }
+      if (landed.from !== undefined) {
+        metadata.iteratedScopes = [...(metadata.iteratedScopes ?? []), landed.from.slice(0, landed.from.indexOf('.'))];
+      }
     }
     bound = { ...fn, args: fn.args.map((arg) => bindToken(arg, scope, context)), options, metadata };
   }
@@ -431,7 +456,7 @@ export function unresolvableIn(token: unknown): string | undefined {
       const error = unresolvableIn(arg);
       if (error) return error;
     }
-    for (const n of (token.options?.not ?? []) as unknown[]) {
+    for (const n of [...((token.options?.not ?? []) as unknown[]), token.options?.from, token.options?.base]) {
       const error = unresolvableIn(n);
       if (error) return error;
     }

@@ -192,9 +192,47 @@ describe('inParent / inRoot', () => {
     expect(() => card.set('color', inParent(ref('palette.color')))).toThrow(CircularDependencyError);
   });
 
-  it('cannot yet anchor sibling or variant on a navigated reference', () => {
-    expect(() => sibling(inParent(ref('.a')), 1)).toThrow(FunctionError);
-    expect(() => variant(inParent(ref('.title')), { fontWeight: '700' })).toThrow(FunctionError);
+  it('anchors sibling on a navigated reference: it walks the scope the anchor lands in', () => {
+    const book = new DesignBook('t');
+    const gray = book.addScope('gray');
+    gray.set('g100', color('#f2f2f2'));
+    gray.set('g300', color('#c8c8c8'));
+    gray.set('g500', color('#6e6e6e'));
+    gray.set('next', sibling(ref('.g100'), 1));
+    const warm = book.addScope('gray-warm', { extends: 'gray' });
+    warm.set('g300', color('#d0c8c0'));
+    warm.set('parent-next', sibling(inParent(ref('.g100')), 1));
+
+    // relative: walks the reading scope; navigated: walks the parent
+    expect(book.resolve('gray-warm.next')).toBe('#d0c8c0');
+    expect(book.resolve('gray-warm.parent-next')).toBe('#c8c8c8');
+
+    const watcher = vi.fn();
+    book.watch('gray-warm.parent-next', watcher);
+    gray.set('g300', color('#bbbbbb'));
+    expect(watcher).toHaveBeenCalledWith('#bbbbbb', expect.anything());
+
+    expect(() => gray.set('x', sibling(inParent(ref('.g100')), 1))).toThrow(/"gray" has no parent/);
+  });
+
+  it('builds a live variant on a navigated base', () => {
+    const book = new DesignBook('t');
+    const type = book.addScope('type');
+    type.set('title', typography({ fontSize: rem(2), fontWeight: '400' }));
+    const article = book.addScope('article', { extends: 'type' });
+    // a variant of the title it replaces: not a variant of itself
+    article.set('title', variant(inParent(ref('.title')), { fontWeight: '700' }));
+
+    expect(book.resolve('article.title')).toBe('font-size: 2rem; font-weight: 700');
+    expect(book.resolve('article.title.fontSize')).toBe('2rem');
+
+    const watcher = vi.fn();
+    book.watch('article.title', watcher);
+    type.set('title', typography({ fontSize: rem(2.5), fontWeight: '400' }));
+    expect(watcher).toHaveBeenCalledWith('font-size: 2.5rem; font-weight: 700', expect.anything());
+    expect(book.resolve('article.title.fontSize')).toBe('2.5rem');
+
+    expect(() => type.set('x', variant(inParent(ref('.title')), { fontWeight: '700' }))).toThrow(/"type" has no parent/);
   });
 
   it('re-binds when the chain is rebuilt with a different parent', () => {
@@ -247,6 +285,13 @@ describe('renderers and the editor', () => {
     const selector = parseTokenInput("lightest(inParent(ref('.')))", book, callout);
     callout.set('probe', selector);
     expect(getTokenDisplayValue(callout, 'probe')).toBe("lightest(inParent(ref('.')))");
+    for (const input of [
+      "sibling(inParent(ref('.surface')), 1)",
+      "variant(inParent(ref('.title')), { fontWeight: '700' })",
+    ]) {
+      callout.set('probe', parseTokenInput(input, book, callout));
+      expect(getTokenDisplayValue(callout, 'probe')).toBe(input);
+    }
     // a bare scope name is accepted and written back as a reference
     callout.set('probe', parseTokenInput('mostVivid(palette)', book, callout));
     expect(getTokenDisplayValue(callout, 'probe')).toBe("mostVivid(ref('palette'))");

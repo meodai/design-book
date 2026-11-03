@@ -4,6 +4,16 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-11-03
+
+### Added
+
+- `sibling` and `variant` take an `inParent` / `inRoot` reference:
+  `sibling(inParent(ref('.g100')), 1)` walks the parent's scope, and
+  `variant(inParent(ref('.title')), { fontWeight: '700' })` is a live
+  variant of the title the scope replaces. The editor parses and prints
+  both.
+
 ## [0.13.0] - 2026-11-03
 
 ### Added

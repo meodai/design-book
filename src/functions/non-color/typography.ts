@@ -17,8 +17,10 @@ export interface TypographyBook {
 interface TypographyOptions {
   /** Names of the token's own fields, one per arg. */
   fields: string[];
-  /** A live variant's base, `scope.token`: fields it doesn't set read the base's. */
-  base?: string;
+  /** A live variant's base, `scope.token`: fields it doesn't set read the
+   *  base's. A navigated base (`inParent(ref('.title'))`) is kept as the
+   *  reference until a scope binds the token. */
+  base?: string | ReferenceValue;
   /** Fields of the base the variant drops. */
   removed?: string[];
 }
@@ -46,7 +48,7 @@ function build(fields: TypographyFields, options: Omit<TypographyOptions, 'field
     description,
     options: opts,
     metadata: {
-      dependencies: [...extractDependencies(args), ...(options.base ? [options.base] : [])],
+      dependencies: [...extractDependencies(args), ...(typeof options.base === 'string' ? [options.base] : [])],
       visualDependencies: [],
       returnType: 'typography',
     },
@@ -82,6 +84,12 @@ function optionsOf(token: FunctionTokenValue): TypographyOptions {
   return (token.options ?? { fields: [] }) as TypographyOptions;
 }
 
+/** The base key of a variant as a scope reads it. A navigated base is a key
+ *  only once bound (`Scope.get`); unbound, it names nothing yet. */
+function baseKeyOf(options: TypographyOptions): string | undefined {
+  return typeof options.base === 'string' ? options.base : undefined;
+}
+
 /** A typography token's own fields, by name (a variant's inherited ones are
  *  not included — see `typographyFieldNames`). */
 export function typographyFields(token: FunctionTokenValue): TypographyFields {
@@ -95,7 +103,8 @@ export function typographyFields(token: FunctionTokenValue): TypographyFields {
 export function typographyFieldDependencies(token: AnyTokenValue | undefined, field: string): string[] | undefined {
   if (isReferenceValue(token)) return isTokenKey(token.key) ? [`${token.key}.${field}`] : undefined;
   if (!isTypographyToken(token)) return undefined;
-  const { fields, base, removed = [] } = optionsOf(token);
+  const { fields, removed = [] } = optionsOf(token);
+  const base = baseKeyOf(optionsOf(token));
   const own = fields.indexOf(field);
   if (own !== -1) return extractDependencies([token.args[own]]);
   if (base && !removed.includes(field)) return [`${base}.${field}`];
@@ -104,7 +113,7 @@ export function typographyFieldDependencies(token: AnyTokenValue | undefined, fi
 
 /** The base key of a live variant, or `undefined`. */
 export function typographyBase(token: FunctionTokenValue): string | undefined {
-  return optionsOf(token).base;
+  return baseKeyOf(optionsOf(token));
 }
 
 /** Every field name of the typography `token` holds — following refs and a
@@ -121,7 +130,8 @@ export function typographyFieldNames(
     token = book.getTokenByKey(token.key);
   }
   if (!isTypographyToken(token)) return undefined;
-  const { fields, base, removed = [] } = optionsOf(token);
+  const { fields, removed = [] } = optionsOf(token);
+  const base = baseKeyOf(optionsOf(token));
   if (!base) return [...fields];
   if (seen.has(base)) return undefined;
   seen.add(base);
@@ -134,7 +144,13 @@ export function typographyFieldNames(
 /** The resolved typography: one CSS declaration per field. A variant reads
  *  the fields it doesn't set from its base. */
 export function typographyImpl(book: TypographyBook, ...args: unknown[]): string {
-  const { fields, base, removed = [] } = args.pop() as TypographyOptions;
+  const options = args.pop() as TypographyOptions;
+  const { fields, removed = [] } = options;
+  if (options.base !== undefined && typeof options.base !== 'string') {
+    const reason = (options.base as { unresolvable?: string }).unresolvable;
+    throw new FunctionError(`typography: the base could not be read${reason ? `: ${reason}` : ''}`, 'typography');
+  }
+  const base = baseKeyOf(options);
   if (!base) return fields.map((field, i) => `${toKebab(field)}: ${String(args[i])}`).join('; ');
 
   const inherited = typographyFieldNames(book, book.getTokenByKey(base));
@@ -169,13 +185,11 @@ export function variant(
   assertFieldNames(Object.keys(overrides), 'variant');
 
   if (isReferenceValue(token)) {
-    if (token.up !== undefined) {
-      throw new FunctionError('variant: the base cannot be an inParent / inRoot reference yet; name the token directly', 'variant');
-    }
     if (!isTokenKey(token.key)) {
       throw new FunctionError(`variant: the base must be a "scope.token" key, got "${token.key}"`, 'variant');
     }
-    return build(set, { base: token.key, removed: dropped });
+    const base = token.up === undefined ? token.key : { type: 'reference' as const, key: token.key, up: token.up };
+    return build(set, { base, removed: dropped });
   }
   if (!isTypographyToken(token)) {
     throw new FunctionError('variant: expects a typography() token or a ref() to one', 'variant');

@@ -128,27 +128,28 @@ export function sibling(
   if (!isReferenceValue(anchor)) {
     throw new FunctionError('sibling: the anchor must be a ref(...) to a token', 'sibling');
   }
-  if (anchor.up !== undefined) {
-    throw new FunctionError('sibling: the anchor cannot be an inParent / inRoot reference yet; name the token directly', 'sibling');
-  }
   if (!Number.isInteger(offset)) {
     throw new FunctionError(`sibling: offset must be an integer, got ${offset}`, 'sibling');
   }
 
   const scopeName = scopeOfKey(anchor.key);
+  // A navigated anchor (`inParent(ref('.g100'))`) names its key only once a
+  // scope reads the token: keep the reference, and let binding add the key
+  // as the dependency and its scope as the one walked.
+  const navigated = anchor.up !== undefined;
 
   return createFunctionToken('sibling', [], {
     description: options?.description,
     options: {
-      from: anchor.key,
+      from: navigated ? { type: 'reference', key: anchor.key, up: anchor.up } : anchor.key,
       offset,
       wrap: options?.wrap ?? false,
       not: normalizeNotKeys(options?.not),
     },
     metadata: {
-      dependencies: [anchor.key],
-      visualDependencies: [anchor.key],
-      iteratedScopes: [scopeName],
+      dependencies: navigated ? [] : [anchor.key],
+      visualDependencies: navigated ? [] : [anchor.key],
+      iteratedScopes: navigated ? [] : [scopeName],
       returnType: undefined,
     },
   });

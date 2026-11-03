@@ -433,9 +433,10 @@ function serializeTypography(fn: any): string {
   for (const name of fn.options?.removed ?? []) pairs.push(`${name}: null`);
   const fields = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
   const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
-  return fn.options?.base
-    ? `variant(ref('${fn.options.base}'), ${fields}${tail})`
-    : `typography(${fields}${tail})`;
+  const base = fn.options?.base;
+  if (!base) return `typography(${fields}${tail})`;
+  // A navigated base (inParent / inRoot) is kept as the reference.
+  return `variant(${typeof base === 'string' ? `ref('${base}')` : serializePlainToken(base)}, ${fields}${tail})`;
 }
 
 function serializeFunctionToken(fn: any): string {
@@ -450,7 +451,8 @@ function serializeFunctionToken(fn: any): string {
     if (Array.isArray(not) && not.length > 0) extras.push(`not: ${JSON.stringify(not)}`);
     if (fn.description) extras.push(`description: ${JSON.stringify(fn.description)}`);
     const tail = extras.length > 0 ? `, { ${extras.join(', ')} }` : '';
-    return `sibling(ref('${from}'), ${offset}${tail})`;
+    const anchor = typeof from === 'string' ? `ref('${from}')` : serializePlainToken(from);
+    return `sibling(${anchor}, ${offset}${tail})`;
   }
 
   // The color selectors' `readableOn` backdrop is stored as a trailing
