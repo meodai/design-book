@@ -11,6 +11,7 @@ import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf,
 import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
+import { locateMember } from './functions/generic/sibling';
 import { FunctionError } from './errors';
 import { getTailwindRamps } from './data/tailwind-ramps';
 import { registerBuiltinRenderers } from './renderers/builtin';
@@ -860,6 +861,7 @@ export class DesignBook {
     // Fire tokenChanged for all dependents with their actual resolved values
     const dependents = this._collectDependents(qualifiedKey, [...previousDependents, ...shadows]);
     for (const dep of dependents) {
+      this._reindexDynamic(dep);
       changedKeys.push(dep);
       const depDotIndex = dep.indexOf('.');
       if (depDotIndex !== -1) {
@@ -1047,6 +1049,10 @@ export class DesignBook {
     if (this._readsSource(qualifiedKey)) return;
 
     const scopeNames = new Set(iteratedScopesOf(value as FunctionTokenValue));
+    // `sibling` steps along the scale its anchor's color lives on, which can
+    // be another scope than the anchor's — and can change when the anchor is
+    // re-pointed (`_reindexDynamic` re-runs this on every notification).
+    for (const name of this._walkedScopes(value as FunctionTokenValue)) scopeNames.add(name);
     if (scopeNames.size === 0) return;
     this._scopesBySelector.set(qualifiedKey, scopeNames);
     for (const scopeName of scopeNames) {
@@ -1056,6 +1062,30 @@ export class DesignBook {
         this._selectorsByScope.set(scopeName, selectors);
       }
       selectors.add(qualifiedKey);
+    }
+  }
+
+  /** The scopes a `sibling` token currently steps along: where its anchor
+   *  (and `toward` target) lives. Empty for any other token. */
+  private _walkedScopes(token: FunctionTokenValue): string[] {
+    if (token.name !== 'sibling') return [];
+    const names: string[] = [];
+    for (const key of [token.options?.from, token.options?.toward]) {
+      if (typeof key !== 'string') continue;
+      try {
+        const member = locateMember(this, key);
+        if (member) names.push(member.scope);
+      } catch { /* not resolvable yet; the next notification indexes it */ }
+    }
+    return names;
+  }
+
+  /** Re-index a notified `sibling`: what it steps along can change with
+   *  its anchor, which notifies it but is not its own write. */
+  private _reindexDynamic(key: string): void {
+    const token = this.getTokenByKey(key);
+    if (token?.type === 'function' && (token as FunctionTokenValue).name === 'sibling') {
+      this._indexSelector(key, token);
     }
   }
 
@@ -1584,6 +1614,7 @@ export class DesignBook {
       for (const dep of this._collectDependents(key, previousDependents.get(key))) {
         if (seen.has(dep)) continue;
         seen.add(dep);
+        this._reindexDynamic(dep);
         changedKeys.push(dep);
       }
     }

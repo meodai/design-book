@@ -445,8 +445,9 @@ function serializeFunctionToken(fn: any): string {
   // sibling keeps its anchor key in fn.options (it needs the key's position,
   // not its value); print it the way it is typed.
   if (fn.name === 'sibling' && fn.options?.from) {
-    const { from, offset, wrap, not } = fn.options;
+    const { from, offset, wrap, not, toward } = fn.options;
     const extras: string[] = [];
+    if (toward !== undefined) extras.push(`toward: ${typeof toward === 'string' ? `ref('${toward}')` : serializePlainToken(toward)}`);
     if (wrap) extras.push('wrap: true');
     if (Array.isArray(not) && not.length > 0) extras.push(`not: ${JSON.stringify(not)}`);
     if (fn.description) extras.push(`description: ${JSON.stringify(fn.description)}`);

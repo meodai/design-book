@@ -51,9 +51,9 @@ describe('sibling in the editor', () => {
       .toEqual(sibling(ref('ramp-12.a'), 1, { wrap: true, not: ['ramp-12.b'] }));
   });
 
-  it('requires a ref anchor and a numeric offset', () => {
+  it('defaults to one step and requires a numeric step count when given', () => {
     const ui = book.addScope('ui-12-bad');
-    expect(() => parseTokenInput("sibling(ref('ramp-12.a'))", book, ui)).toThrow(/2 arguments/);
-    expect(() => parseTokenInput("sibling(ref('ramp-12.a'), up)", book, ui)).toThrow(/offset/);
+    expect(parseTokenInput("sibling(ref('ramp-12.a'))", book, ui)).toEqual(sibling(ref('ramp-12.a'), 1));
+    expect(() => parseTokenInput("sibling(ref('ramp-12.a'), up)", book, ui)).toThrow(/step count/);
   });
 });

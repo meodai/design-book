@@ -294,12 +294,13 @@ function traitsOf(token: unknown): TokenTraits {
     if (Array.isArray(options.not)) {
       for (const n of options.not) merge(typeof n === 'string' ? { relative: isRelativeKey(n), navigates: false } : traitsOf(n));
     }
-    // sibling's anchor / a variant's base: a key, or a navigated reference.
-    for (const key of [options.from, options.base]) {
+    // sibling's anchor and target / a variant's base: a key, or a navigated reference.
+    for (const key of [options.from, options.base, options.toward]) {
       if (isReferenceValue(key)) merge(traitsOf(key));
     }
     if (isRelativeKey(options.from)
       || isRelativeKey(options.base)
+      || isRelativeKey(options.toward)
       || (metadata?.dependencies ?? []).some(isRelativeKey)
       || (metadata?.visualDependencies ?? []).some(isRelativeKey)
       || (metadata?.iteratedScopes ?? []).includes('')) {
@@ -403,10 +404,10 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
     let options = fn.options;
     // Keys a navigated anchor / base lands on: they become the token's
     // dependencies (and, for an anchor, the scope it walks) once known.
-    const landed: { from?: string; base?: string } = {};
+    const landed: { from?: string; base?: string; toward?: string } = {};
     if (options) {
       options = { ...options };
-      for (const name of ['from', 'base'] as const) {
+      for (const name of ['from', 'base', 'toward'] as const) {
         const key = options[name];
         if (typeof key === 'string') options[name] = q(key);
         else if (isReferenceValue(key)) {
@@ -432,7 +433,7 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
       if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map(q);
       if (metadata.visualDependencies) metadata.visualDependencies = metadata.visualDependencies.map(q);
       if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
-      for (const key of [landed.from, landed.base]) {
+      for (const key of [landed.from, landed.base, landed.toward]) {
         if (key === undefined) continue;
         metadata.dependencies = [...(metadata.dependencies ?? []), key];
         metadata.visualDependencies = [...(metadata.visualDependencies ?? []), key];
@@ -456,7 +457,7 @@ export function unresolvableIn(token: unknown): string | undefined {
       const error = unresolvableIn(arg);
       if (error) return error;
     }
-    for (const n of [...((token.options?.not ?? []) as unknown[]), token.options?.from, token.options?.base]) {
+    for (const n of [...((token.options?.not ?? []) as unknown[]), token.options?.from, token.options?.base, token.options?.toward]) {
       const error = unresolvableIn(n);
       if (error) return error;
     }

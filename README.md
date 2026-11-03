@@ -248,16 +248,40 @@ ui.set('muted-text', nth(ref('ramp'), 0.7));    // dark but not darkest
 ### Relative steps
 
 ```typescript
-sibling(ref('ramp.s300'), 1)                  // The member after ramp.s300
+sibling(ref('ramp.s300'))                     // The member after ramp.s300 (one step is the default)
 sibling(ref('ramp.s300'), -1)                 // The member before it
 sibling(ref('ramp.s900'), 1, { wrap: true })  // Past the end → back to the first
+sibling(ref('.button'), 4, { toward: ref('.page') })  // Four steps toward the page's color
 ```
 
 Where `nth` addresses a position in a scope, `sibling` steps from a token:
-it takes the anchor's position in its own scope (key order, inherited
-members included) and returns the value `offset` members away. Any integer
-works. Past either end it stops at the first or last member; pass
+it finds where the anchor's color lives and returns the value that many
+members along (key order, inherited members included). Any integer works.
+Past either end it stops at the first or last member; pass
 `{ wrap: true }` to wrap around instead. `not` skips keys while stepping.
+
+**Where it steps.** A plain value steps in its own scope. A reference is
+followed to the scale its color comes from: with `ui.surface =
+ref('ramp.s100')`, `sibling(ref('ui.surface'), 1)` is `ramp.s200`. A
+selector steps from the member it picked (`lightest(ref('ramp'))` → its
+lightest member), and a `sibling` of a `sibling` keeps walking the same
+scale. A computed color (`lighten(…)`) is on no scale and throws.
+
+**`toward`** takes the direction from where another token's color sits on
+the same scale, so one rule fits a light and a dark scope, and it stops
+when it reaches the target. A negative count walks away from it instead:
+
+```typescript
+// written once, inherited by a dark variant: lighter on a light page, darker on a dark one
+light.set('hover', sibling(ref('.button'), 2, { toward: ref('.page') }));
+
+// a hover state one step from its parent's interaction color, toward its parent's background
+hover.set('interaction', sibling(inParent(ref('.interaction')), { toward: inParent(ref('.background')) }));
+```
+
+Anchor and target must live on the same scale (otherwise it throws and names
+both), and `toward` does not combine with `wrap`. Like every reference,
+`toward` reads the scope that reads the rule — no implicit parent.
 
 ```typescript
 // ramp runs light → dark
@@ -590,7 +614,7 @@ callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
 
 ### Positions: `nth`, `sibling`, `nextLarger`, `nextSmaller`
 
-These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `nextLarger(ref('space.m'), ref('space'))` the next bigger step. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
+These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page, `nextLarger(ref('space.m'), ref('space'))` the next bigger step. See [Index selection](#index-selection-require-a-scope-to-search), [Relative steps](#relative-steps) and [Dimension selection](#dimension-selection-require-a-scope-to-search).
 
 ## Scope Ordering
 

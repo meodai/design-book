@@ -19,7 +19,7 @@ import { typographyImpl } from './non-color/typography';
 import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
-import { siblingImpl, scopeOfKey } from './generic/sibling';
+import { locateMember, siblingImpl, scopeOfKey } from './generic/sibling';
 import type { Scope } from '../scope';
 import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
@@ -166,19 +166,43 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction(
 		'sibling',
-		(options?: { from?: string; offset?: number; wrap?: boolean; not?: string[] }) => {
+		(options?: { from?: unknown; offset?: number; wrap?: boolean; not?: string[]; toward?: unknown }) => {
 			if (!options || typeof options.from !== 'string' || !options.from.includes('.')) {
-				throw new FunctionError('sibling: a fully-qualified `from` key is required', 'sibling');
+				const reason = (options?.from as { unresolvable?: string } | undefined)?.unresolvable;
+				throw new FunctionError(reason ? `sibling: ${reason}` : 'sibling: a fully-qualified `from` key is required', 'sibling');
 			}
 			if (!Number.isInteger(options.offset)) {
 				throw new FunctionError(`sibling: offset must be an integer, got ${options.offset}`, 'sibling');
 			}
-			const scopeName = scopeOfKey(options.from);
-			const scope = book.getScope(scopeName);
-			if (!scope) {
-				throw new FunctionError(`sibling: unknown scope "${scopeName}"`, 'sibling');
+			const anchorScope = scopeOfKey(options.from);
+			if (!book.getScope(anchorScope)) {
+				throw new FunctionError(`sibling: unknown scope "${anchorScope}"`, 'sibling');
 			}
-			return siblingImpl(scope, options.from, options.offset as number, options.wrap ?? false, options.not ?? []);
+			// Step along the scale the anchor's color lives on.
+			const anchor = locateMember(book, options.from);
+			if (!anchor) {
+				throw new FunctionError(`sibling: the value of "${options.from}" is not a member of any scope, so there is nothing to step along`, 'sibling');
+			}
+			const scope = book.getScope(anchor.scope);
+			if (!scope) {
+				throw new FunctionError(`sibling: unknown scope "${anchor.scope}"`, 'sibling');
+			}
+			let toward: string | undefined;
+			if (options.toward !== undefined) {
+				if (typeof options.toward !== 'string') {
+					const reason = (options.toward as { unresolvable?: string }).unresolvable;
+					throw new FunctionError(`sibling: \`toward\` could not be read${reason ? `: ${reason}` : ''}`, 'sibling');
+				}
+				const target = locateMember(book, options.toward);
+				if (!target || target.scope !== anchor.scope) {
+					throw new FunctionError(
+						`sibling: "${options.toward}" is ${target ? `in "${target.scope}"` : 'not a member of any scope'}, but "${options.from}" steps along "${anchor.scope}"`,
+						'sibling',
+					);
+				}
+				toward = target.key;
+			}
+			return siblingImpl(scope, anchor.key, options.offset as number, options.wrap ?? false, options.not ?? [], toward);
 		},
 	);
 }

@@ -620,24 +620,35 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return nth(scope, indexParsed.value as number, options);
   },
 
-  // sibling(ref('scope.token'), offset, { wrap?, not? }?)
+  // sibling(ref('scope.token'), steps?, { toward?, wrap?, not? }?)
   sibling(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 2) throw new Error('sibling requires 2 arguments: ref(...) and an offset');
+    if (args.length < 1) throw new Error('sibling requires an anchor: sibling(ref(...), steps?, { toward? })');
     const anchor = getTokenArg(parseArg(args[0], book));
-    const offsetParsed = parseArg(args[1], book);
-    if (offsetParsed.type !== 'raw' || typeof offsetParsed.value !== 'number') {
-      throw new Error('sibling requires a numeric offset as second argument');
+    // The step count is optional (1); the options object may follow the anchor directly.
+    let rest = args.slice(1);
+    let steps = 1;
+    if (rest.length > 0 && !rest[0].trim().startsWith('{')) {
+      const offsetParsed = parseArg(rest[0], book);
+      if (offsetParsed.type !== 'raw' || typeof offsetParsed.value !== 'number') {
+        throw new Error('sibling: the step count must be a number');
+      }
+      steps = offsetParsed.value;
+      rest = rest.slice(1);
     }
 
-    const options: { wrap?: boolean; not?: Array<ReferenceValue | string>; description?: string } = {};
-    for (const [key, valueStr] of optionPairs(args.slice(2).join(','))) {
-      if (key === 'wrap') options.wrap = valueStr === 'true';
+    const options: { toward?: ReferenceValue; wrap?: boolean; not?: Array<ReferenceValue | string>; description?: string } = {};
+    for (const [key, valueStr] of optionPairs(rest.join(','))) {
+      if (key === 'toward') {
+        const target = parseReference(valueStr);
+        if (!target) throw new Error("sibling: `toward` must be a ref(...), e.g. toward: ref('.surface')");
+        options.toward = target;
+      } else if (key === 'wrap') options.wrap = valueStr === 'true';
       else if (key === 'not') options.not = parseNotList(valueStr, book);
       else if (key === 'description') options.description = parseQuotedString(valueStr);
-      else throw new Error(`sibling: unknown option \`${key}\` (expected wrap, not or description)`);
+      else throw new Error(`sibling: unknown option \`${key}\` (expected toward, wrap, not or description)`);
     }
-    return sibling(anchor as ReferenceValue, offsetParsed.value as number, options);
+    return sibling(anchor as ReferenceValue, steps, options);
   },
 
   // random(scope, { type, seed?, not? })

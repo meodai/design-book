@@ -4,6 +4,25 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-11-03
+
+### Added
+
+- **`sibling(anchor, steps?, { toward })`.** `toward` takes the direction
+  from where another token's color sits on the same scale and stops there;
+  a negative count walks away from it. One rule fits a light and a dark
+  scope: `sibling(ref('.button'), 4, { toward: ref('.page') })` is lighter
+  on a light page, darker on a dark one. The step count defaults to 1:
+  `sibling(inParent(ref('.interaction')), { toward: inParent(ref('.background')) })`.
+
+### Changed
+
+- **`sibling` steps along the scale the anchor's color comes from.** A
+  reference is followed out of the anchor's scope (`ui.surface =
+  ref('ramp.s100')` steps along `ramp`), and a selector steps from the
+  member it picked. It used to step through the anchor's own scope. An
+  anchor whose color is computed (`lighten(…)`) now throws.
+
 ## [0.13.1] - 2026-11-03
 
 ### Added
