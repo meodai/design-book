@@ -2,12 +2,14 @@
 // One footer for every page: name and version, the same links in the same
 // order (the current page named, not linked), the license and Elastiq.
 import pkg from '../../package.json';
-interface Props { current: 'overview' | 'docs' | 'article' | 'editor' | 'naming' }
+interface Props { current: 'overview' | 'tour' | 'article' | 'editor' | 'naming' }
 const { current } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const links = [
   ['overview', 'Overview', base],
-  ['docs', 'Docs', `${base}docs/`],
+  ['tour', 'Tour', `${base}tour/`],
+  // The reference is the README on GitHub.
+  ['docs', 'Docs', 'https://github.com/meodai/design-book#readme'],
   ['article', 'Article', `${base}article/`],
   ['editor', 'Editor', `${base}editor/`],
   ['github', 'GitHub', 'https://github.com/meodai/design-book'],

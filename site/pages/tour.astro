@@ -4,14 +4,14 @@ import BrandMark from '../components/BrandMark.astro';
 import InstallBar from '../components/InstallBar.astro';
 import Footer from '../components/Footer.astro';
 import { partial } from '../lib/partial';
-import markup from '../partials/docs.html?raw';
+import markup from '../partials/tour.html?raw';
 import '../../marketing/style.css';
 import '../../marketing/shared.css';
 import '../../marketing/docs.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
-  title="Design Book — Rules behind a design system"
+  title="Design Book — a tour of the rules"
   description="A reactive engine for the decisions inside a design system. Express rules, not values; render the result to any target."
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
@@ -20,7 +20,7 @@ const [beforeBrand, afterBrand] = partial(markup);
   <BrandMark />
   <Fragment set:html={afterBrand} />
   <InstallBar />
-  <Footer current="docs" />
+  <Footer current="tour" />
   <script>
     // In this order: the folders are built before the demos fill them.
     import '../../marketing/docs-folders.js';
