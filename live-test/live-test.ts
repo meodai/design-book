@@ -72,9 +72,9 @@ surface.set('code', colorMix(ref('surface.card'), ref('surface.border'), { ratio
 // at 7 the pick can land on "barely sufficient" colors (a 7.5:1 orange
 // reads as decoration, not text).
 const text = book.addScope('text');
-text.set('body', minContrastWith(ref('surface.bg'), pool, { ratio: 10 }));
+text.set('body', minContrastWith(ref('surface.bg'), pool, { minContrast: 10 }));
 text.set('muted', colorMix(ref('surface.bg'), ref('text.body'), { ratio: 0.7 }));
-text.set('on-panel', minContrastWith(ref('surface.panel'), pool, { ratio: 4.5 }));
+text.set('on-panel', minContrastWith(ref('surface.panel'), pool, { minContrast: 4.5 }));
 
 // Action — what you click. Primary is the palette's most vivid, full
 // stop; the text on it is a palette color whenever one clears 7:1 —
@@ -85,7 +85,7 @@ text.set('on-panel', minContrastWith(ref('surface.panel'), pool, { ratio: 4.5 })
 // handling.
 const action = book.addScope('action');
 action.set('primary', mostVivid(beam));
-action.set('on-primary', minContrastWith(ref('action.primary'), pool, { ratio: 7 }));
+action.set('on-primary', minContrastWith(ref('action.primary'), pool, { minContrast: 7 }));
 action.set('link', darken(ref('action.primary'), { amount: 0.12 }));
 action.set('active', shade(ref('action.primary'), { amount: 0.2 }));
 action.set('focus', relativeTo(ref('action.primary'), 'oklch', [0.62, 0.18, '+160']));
@@ -104,7 +104,7 @@ state.set('success', closest(color('#1e8e4d'), beam));
 // Decor — badge and chips; the palette's odd one out and three spreads.
 const decor = book.addScope('decor');
 decor.set('badge', furthestFrom(beam));
-decor.set('on-badge', minContrastWith(ref('decor.badge'), pool, { ratio: 4.5 }));
+decor.set('on-badge', minContrastWith(ref('decor.badge'), pool, { minContrast: 4.5 }));
 decor.set('chip-1', nth(beam, 0.15));
 decor.set('chip-2', nth(beam, 0.5));
 decor.set('chip-3', nth(beam, 0.85));

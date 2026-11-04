@@ -3,17 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Design Book — Live Test</title>
+  <title>Live test · Design Book × token-beam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="./style.css" />
   <script type="module" src="./live-test.ts"></script>
 </head>
 <body>
 
-  <!-- ── Beam control bar (page chrome, not themed by the beam) ── -->
+  <!-- ── The beam panel: page chrome, not themed by the beam ── -->
   <aside class="beam-bar">
     <div class="beam-brand">
-      <strong>design-book</strong> <span>× token-beam</span>
+      <strong>Design Book</strong>
+      <span>× token-beam</span>
     </div>
+
+    <p class="beam-intro">
+      Beam a palette from any token-beam source. Every color on the page is
+      picked or mixed from it by rules.
+    </p>
 
     <form class="beam-connect" id="beam-form">
       <input
@@ -32,67 +41,78 @@
       <span id="beam-state-label">not connected</span>
     </div>
 
-    <button type="button" id="mode-toggle" class="mode-toggle">● dark</button>
+    <div class="beam-section">
+      <span class="beam-label">Palette</span>
+      <div class="beam-palette" id="beam-palette" aria-label="received palette"></div>
+    </div>
 
-    <div class="beam-palette" id="beam-palette" aria-label="received palette"></div>
+    <div class="beam-section">
+      <span class="beam-label">Mode</span>
+      <button type="button" id="mode-toggle" class="mode-toggle">● dark</button>
+    </div>
   </aside>
 
-  <!-- ── The specimen: a generic page themed entirely from the beam ── -->
+  <!-- ── The specimen: a made-up studio site, themed entirely from the beam ── -->
   <main class="page">
 
     <header class="page-header">
-      <div class="page-logo"><span class="logo-dot"></span> Acme&nbsp;Studio</div>
+      <div class="page-logo"><span class="logo-mark"></span> Acme Studio</div>
       <nav class="page-nav">
-        <a href="#" class="is-active">Overview</a>
-        <a href="#">Projects</a>
-        <a href="#">Team</a>
-        <a href="#">Settings</a>
+        <a href="#" class="is-active">Work</a>
+        <a href="#">Studio</a>
+        <a href="#">Journal</a>
+        <a href="#">Contact</a>
       </nav>
-      <button class="btn btn-primary btn-sm">Sign&nbsp;up</button>
+      <button class="btn btn-primary btn-sm">Start a project</button>
     </header>
 
     <section class="hero">
       <div class="hero-copy">
         <span class="badge" id="hero-badge">Live-themed</span>
-        <h1>Every color on this page<br />was derived, not chosen.</h1>
+        <h1>Every color here was <em>derived</em>, not chosen.</h1>
         <p>
-          Beam a palette from any color tool and design-book works out the rest:
-          readable text, surfaces, borders, states — recomputed live, every time
-          a color changes.
+          Beam a palette from any color tool and Design Book works out the
+          rest: readable text, surfaces, borders and states, picked again the
+          moment a color changes.
         </p>
         <div class="hero-actions">
-          <button class="btn btn-primary">Get started</button>
+          <button class="btn btn-primary">See the work</button>
           <button class="btn btn-ghost">How it works</button>
         </div>
       </div>
-      <!-- One ray in, the palette out: the token-beam prism. -->
-      <div class="hero-art" aria-hidden="true">
-        <svg viewBox="0 0 240 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="8" y1="96" x2="88" y2="96" class="art-ray-in" />
-          <polygon points="120,42 78,126 162,126" class="art-prism" />
-          <polygon points="146,88 232,24 232,58"  class="art-band art-band-1" />
-          <polygon points="146,92 232,64 232,96"  class="art-band art-band-2" />
-          <polygon points="146,98 232,102 232,134" class="art-band art-band-3" />
-          <polygon points="146,102 232,140 232,174" class="art-band art-band-4" />
-        </svg>
+
+      <!-- A poster cut from the derived colors. -->
+      <div class="poster" aria-hidden="true">
+        <span class="t t-1"></span><span class="t t-2"></span><span class="t t-3"></span>
+        <span class="t t-4"></span><span class="t t-5"></span><span class="t t-6"></span>
+        <span class="t t-7"></span><span class="t t-8"></span><span class="t t-9"></span>
       </div>
+    </section>
+
+    <section class="stats" aria-label="Studio in numbers">
+      <div><b>12</b><span>years of making</span></div>
+      <div><b>340</b><span>palettes shipped</span></div>
+      <div><b>4.5:1</b><span>or better, always</span></div>
     </section>
 
     <section class="cards">
       <article class="card">
         <span class="chip chip-1"></span>
+        <span class="card-kicker">01</span>
         <h3>Beamed in</h3>
-        <p>Raw colors arrive over a token-beam session as W3C design tokens and land in a scope.</p>
+        <p>Raw colors arrive over a token-beam session as W3C design tokens and land in one scope.</p>
         <a href="#">Read more →</a>
       </article>
       <article class="card">
         <span class="chip chip-2"></span>
+        <span class="card-kicker">02</span>
         <h3>Derived</h3>
-        <p>Functions like <code>bestContrastWith</code> and <code>mostVivid</code> pick and mix every UI color from the palette.</p>
+        <p>Rules like <code>minContrastWith</code> and <code>mostVivid</code> pick and mix every color the page uses.</p>
         <a href="#">Read more →</a>
       </article>
       <article class="card">
         <span class="chip chip-3"></span>
+        <span class="card-kicker">03</span>
         <h3>Reactive</h3>
         <p>Change one color at the source and the dependency graph restyles the whole page in one pass.</p>
         <a href="#">Read more →</a>
@@ -100,8 +120,10 @@
     </section>
 
     <section class="chart" aria-labelledby="chart-title">
-      <h2 id="chart-title">Favourite color spaces</h2>
-      <p class="chart-sub">Highly scientific survey<span aria-hidden="true">*</span> — every bar a step of the accent's ramp.</p>
+      <div class="chart-head">
+        <h2 id="chart-title">Favourite color spaces</h2>
+        <p class="chart-sub">A highly scientific survey<span aria-hidden="true">*</span>. Each bar is a step of the accent's ramp.</p>
+      </div>
       <div class="chart-bars" role="img" aria-label="Made-up bar chart: OKLCH 84%, Lab 61%, HSL 47%, sRGB 33%, CMYK 12%">
         <div class="bar-col"><span class="bar-val">84%</span><div class="bar bar-1" style="height: 84%"></div><span class="bar-lbl">OKLCH</span></div>
         <div class="bar-col"><span class="bar-val">61%</span><div class="bar bar-2" style="height: 61%"></div><span class="bar-lbl">Lab</span></div>
@@ -112,10 +134,18 @@
       <p class="chart-note"><span aria-hidden="true">*</span>n = 1, and it was us.</p>
     </section>
 
+    <figure class="quote">
+      <blockquote>
+        “We changed the brand color on a Friday afternoon. Nothing broke, and
+        the text still read.”
+      </blockquote>
+      <figcaption><span class="quote-mark"></span> A very relaxed client</figcaption>
+    </figure>
+
     <section class="panel">
       <div class="panel-copy">
         <h2>Stay in the loop</h2>
-        <p>A little form, because every design system demo needs one.</p>
+        <p>A little form, because every design system demo needs one. Leave the name empty to see the error color.</p>
         <div class="tags">
           <span class="tag">tokens</span>
           <span class="tag">contrast</span>
@@ -140,14 +170,14 @@
     <section class="graph" aria-labelledby="graph-title">
       <h2 id="graph-title">The receipts</h2>
       <p class="graph-sub">
-        Every decision on this page, drawn by the book's own SVG renderer —
-        solid curves are references, dashed ones are function dependencies.
+        Every decision on this page, drawn by the book's own SVG renderer.
+        Solid curves are references, dashed ones are rules reading their inputs.
       </p>
       <div class="graph-svg" id="dep-graph"></div>
     </section>
 
     <footer class="page-footer">
-      <span>Acme Studio — themed by whatever you beam at it.</span>
+      <span>Acme Studio, themed by whatever you beam at it.</span>
       <a href="https://github.com/meodai/token-beam">token-beam</a>
     </footer>
 
