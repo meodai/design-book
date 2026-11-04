@@ -25,5 +25,32 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   </head>
   <body {...bodyAttrs}>
     <slot />
+    <script>
+      // Safari's toolbar follows the rails' color, also when a page
+      // recolors itself (the landing's palette).
+      const meta = document.querySelector('meta[name="theme-color"]');
+      const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      let last = '';
+      function sync() {
+        const rail = document.querySelector('.rail');
+        const color = rail
+          ? getComputedStyle(rail).backgroundColor
+          : getComputedStyle(document.body).getPropertyValue('--blue').trim();
+        if (!color || !meta || !probe) return;
+        probe.clearRect(0, 0, 1, 1);
+        probe.fillStyle = color;
+        probe.fillRect(0, 0, 1, 1);
+        const [r, g, b] = probe.getImageData(0, 0, 1, 1).data;
+        const hex = '#' + [r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('');
+        if (hex !== last) meta.setAttribute('content', (last = hex));
+      }
+      let queued = false;
+      new MutationObserver(() => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => { queued = false; sync(); });
+      }).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'], subtree: true });
+      sync();
+    </script>
   </body>
 </html>
