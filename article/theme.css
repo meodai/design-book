@@ -170,12 +170,19 @@ body {
   border-top: 0;
 }
 
+/* The rules run past both rails: the page clips them and the rails
+   cover their ends. The sticky example stays on top of them. */
+html,
+body {
+  overflow-x: clip;
+}
+
 .article-content section + section::before {
   content: "";
   position: absolute;
   top: 0;
-  left: calc(50% - 50cqw);
-  width: 100cqw;
+  left: -100vw;
+  width: 300vw;
   height: 1px;
   background: var(--article-rule);
 }
@@ -184,8 +191,8 @@ body {
 .layout::before {
   content: "";
   position: absolute;
-  left: calc(50% - 50cqw);
-  width: 100cqw;
+  left: -100vw;
+  width: 300vw;
   height: 1px;
   margin-top: calc(var(--row) * -2);
   background: var(--article-rule);
@@ -382,7 +389,6 @@ body {
   --article-muted: color-mix(in srgb, var(--pp-text) 66%, transparent);
   --article-rule: color-mix(in srgb, var(--pp-text) 26%, transparent);
   position: relative;
-  margin-top: calc(var(--row) * 2.5);
   color: var(--pp-text);
   background-color: var(--pp);
   background-image: repeating-linear-gradient(
@@ -393,6 +399,12 @@ body {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* Room for the tab above each demo. Scoped to the article, because
+   [data-ledger] resets the margin with the same weight. */
+.article-content :is(.pair-demo, .extend-demo, .scale-demo, .poline-demo, .bezier-demo) {
+  margin-top: calc(var(--row) * 2.5);
 }
 
 
@@ -456,8 +468,10 @@ body {
 
 /* ═══ The live example: a folder of two papers ══════════════════════ */
 .example-panel {
+  z-index: 2;
   top: var(--row);
   gap: var(--row);
+  background: var(--paper);
 }
 
 .folder-sheet {
@@ -1010,31 +1024,9 @@ body {
   .article-content [data-ledger-head] {
     padding-left: calc(var(--row) * 2 + 14px);
   }
-}
 
-/* No one edits on a phone: the pointer to the editor goes too. */
-@media (max-width: 640px) {
+  /* No one edits on a phone: the pointer to the editor goes. */
   .article-coda {
     display: none;
   }
-}
-
-/* Room for the demo's tab above it, whatever order the stylesheets
-   load in ([data-ledger] resets the margin with the same weight). */
-.article-content :is(.pair-demo, .extend-demo, .scale-demo, .poline-demo, .bezier-demo) {
-  margin-top: calc(var(--row) * 2.5);
-}
-
-/* The rules between sections run from rail to rail, over the sticky
-   example; the page clips them, the rails cover their ends. */
-.article-content section + section::before,
-.layout::before {
-  left: -100vw;
-  width: 300vw;
-  z-index: 1;
-}
-
-html,
-body {
-  overflow-x: clip;
 }

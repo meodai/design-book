@@ -10,3 +10,4 @@ site-dist/
 marketing-dist/
 article-dist/
 .astro/
+docs/superpowers/
