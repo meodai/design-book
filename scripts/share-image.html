@@ -86,31 +86,12 @@
     letter-spacing: -0.03em;
   }
 
-  /* Three rules from the landing page, plain: the token, its rule, the
-     color it lands on. */
-  .rules {
+  .lede {
+    max-width: 30em;
     margin: 0;
-    padding: 0;
-    list-style: none;
-    font: 22px / 1.9 "Obel Mono", monospace;
+    font: 400 27px / 1.45 "Valley Sans", sans-serif;
+    text-wrap: pretty;
   }
-
-  .rules li {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .rules i {
-    flex: none;
-    width: 22px;
-    height: 22px;
-    background: var(--c);
-    box-shadow: inset 0 0 0 1px var(--rule);
-  }
-
-  .rules .fn { color: var(--ink-2); }
-  .rules .fn b { font-weight: 600; color: var(--black); }
 
   .foot {
     margin-top: auto;
@@ -136,11 +117,11 @@
 
     <h1>Design tokens that keep their reasons.</h1>
 
-<ul class="rules">
-      <li><i style="--c: #eee9dc"></i>ui.ground <span class="fn">= <b>lightest</b>(ledger)</span></li>
-      <li><i style="--c: #0d0a03"></i>ui.ink <span class="fn">= <b>bestContrastWith</b>(ui.ground, ledger)</span></li>
-      <li><i style="--c: #de5331"></i>ui.accent <span class="fn">= <b>mostVivid</b>(ledger, { readableOn: ui.ground })</span></li>
-    </ul>
+<p class="lede">
+      Design Book stores the rule behind each token, not only its value: ground
+      is the lightest color in the palette, ink the one that reads best on it.
+      Change the palette and every rule is worked out again.
+    </p>
 
     <div class="foot">
       <span>$ npm i design-book</span>
