@@ -155,23 +155,74 @@ leastVivid(ref('scope'))                           // Lowest OKLCH chroma — th
 
 ### Excluding candidates with `not`
 
-Every scope-iterating function above accepts a `not` option — an array of
-fully-qualified token keys (or `ref(...)` calls) that should be skipped during
-the search. Useful when a value carries a role you don't want to reuse
-elsewhere — `values.error` shouldn't be the accent color even if it happens
-to have the highest chroma.
+Every scope-iterating function above accepts a `not` option: a list of
+`ref(...)` calls (or key strings) naming members to skip during the search.
+Useful when a value carries a role you don't want to reuse elsewhere —
+`values.error` shouldn't be the accent color even if it happens to have the
+highest chroma.
 
 ```typescript
 ui.set('accent', mostVivid(ref('palette'), {
   not: [ref('palette.error'), ref('palette.success')],
 }));
 
-// `not` is also available on bestContrastWith, minContrastWith,
-// closest, furthestFrom, nextLarger, nextSmaller, nth and sibling.
+// `not` works on every function that searches a scope: bestContrastWith,
+// minContrastWith, closest (and nextLarger / nextSmaller / nextLighter /
+// nextDarker), furthestFrom, mostVivid, leastVivid, lightest, darkest,
+// largest, smallest, nth, random and sibling.
 ```
 
 Plain strings work too — `not: ['palette.error']` is equivalent to
 `not: [ref('palette.error')]`.
+
+**A `not` entry does not have to be a key of the pool.** It names a member
+the same way a `sibling` anchor does (see [How a key names a
+member](#how-a-key-names-a-member)), so you can write the role you mean
+instead of looking up where its color lives:
+
+```typescript
+// scale.900 is ref('brand.ink'): one exclusion works in either pool
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('brand.ink')] }));
+ui.set('mark', bestContrastWith(ref('.bg'), ref('brand'), { not: [ref('brand.ink')] }));
+
+// whatever the default text picked, the link is something else
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale')));
+ui.set('link', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('.text')] }));
+```
+
+An entry outside the pool is read for its value, so the rule follows it:
+when `.bg` turns dark and `.text` picks a light member, `.link` leaves
+that member out instead.
+
+An entry outside the pool that names no member **throws** rather than
+silently excluding nothing — a typo or a key from the wrong scope is a
+mistake you want to see:
+
+```text
+mostVivid: `not` entry "other.red" is not a member of "scale" and does not lead to one, so it would exclude nothing
+```
+
+A key of the pool itself never throws, even when it does not exist (yet), so
+a `not` list can name a member that comes and goes.
+
+### How a key names a member
+
+`not` entries, a `sibling` anchor and its `toward` target all name a
+*member of a scope*. They share one lookup, so a key means the same thing in
+all three places:
+
+| The key is… | It names… |
+|---|---|
+| a member of the pool (`scale.300`) | that member |
+| the key an inherited member comes from (`base.b` for `kid.b`) | the inherited member |
+| a reference (`ui.surface = ref('scale.0')`) | the member the reference leads to, followed one scope at a time |
+| a selector (`ui.text = bestContrastWith(…, ref('scale'))`) | the member of its pool with the value it resolved to |
+| the target of a member (`brand.ink`, with `scale.900 = ref('brand.ink')`) | that member — `not` only, since a `sibling` anchor needs one place to start |
+
+A selector is matched **by value**: the book does not record which key it
+picked, so the lookup takes the first member of the pool whose resolved value
+is the same text. In a pool where two members share a value, that is always
+the first of them. A computed value (`lighten(…)`) is on no scale.
 
 ### Keeping only readable candidates with `readableOn`
 
@@ -266,14 +317,16 @@ Where `nth` addresses a position in a scope, `sibling` steps from a token:
 it finds where the anchor's color lives and returns the value that many
 members along (key order, inherited members included). Any integer works.
 Past either end it stops at the first or last member; pass
-`{ wrap: true }` to wrap around instead. `not` skips keys while stepping.
+`{ wrap: true }` to wrap around instead. `not` skips members while stepping.
 
 **Where it steps.** A plain value steps in its own scope. A reference is
 followed to the scale its color comes from: with `ui.surface =
 ref('ramp.s100')`, `sibling(ref('ui.surface'), 1)` is `ramp.s200`. A
-selector steps from the member it picked (`lightest(ref('ramp'))` → its
-lightest member), and a `sibling` of a `sibling` keeps walking the same
-scale. A computed color (`lighten(…)`) is on no scale and throws.
+selector steps from the member of its pool with the value it picked
+(`lightest(ref('ramp'))` → its lightest member), and a `sibling` of a
+`sibling` keeps walking the same scale. A computed color (`lighten(…)`) is
+on no scale and throws. The lookup is the one `not` uses — see [How a key
+names a member](#how-a-key-names-a-member).
 
 **`toward`** takes the direction from where another token's color sits on
 the same scale, so one rule fits a light and a dark scope, and it stops

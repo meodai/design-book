@@ -23,6 +23,7 @@ import { locateMember, siblingImpl, scopeOfKey } from './generic/sibling';
 import type { Scope } from '../scope';
 import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
+import { excludedMembers } from './not';
 import { splitReadableArgs } from './color/readable';
 
 export { bestContrastWith } from './color/best-contrast';
@@ -63,11 +64,13 @@ export function registerBuiltinFunctions(book: {
 	resolve(key: string): string;
 	getTokenByKey(key: string): AnyTokenValue | undefined;
 }): void {
+	// `not` names members wherever its keys are written; see ./not.
+	const ex = (fn: string, scope: Scope, not: ReadonlyArray<unknown> | undefined) => excludedMembers(book, fn, scope, not ?? []);
 	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[]; direction?: Direction }) =>
-		bestContrastWithImpl(targetValue, scope, options?.not ?? [], options?.direction),
+		bestContrastWithImpl(targetValue, scope, ex('bestContrastWith', scope, options?.not), options?.direction),
 	);
 	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[]; direction?: Direction }) =>
-		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, options?.not ?? [], options?.direction),
+		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, ex('minContrastWith', scope, options?.not), options?.direction),
 	);
 	book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
@@ -89,31 +92,31 @@ export function registerBuiltinFunctions(book: {
 		const { readableOn, options } = splitReadableArgs<{
 			not?: string[]; minContrast?: number; direction?: Direction; minDistance?: number;
 		}>(rest);
-		return closestImpl(targetValue, scope, options.not ?? [], readableOn, options.minContrast, {
+		return closestImpl(targetValue, scope, ex('closest', scope, options.not), readableOn, options.minContrast, {
 			direction: options.direction, toward, minDistance: options.minDistance,
 		});
 	});
-	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, options));
-	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, options));
+	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, { ...options, not: ex('largest', scope, options?.not) }));
+	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, { ...options, not: ex('smallest', scope, options?.not) }));
 	book.registerFunction('furthestFrom', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number; type?: Kind }>(rest);
-		return furthestFromImpl(scope, options.not ?? [], readableOn, options.minContrast, options.type);
+		return furthestFromImpl(scope, ex('furthestFrom', scope, options.not), readableOn, options.minContrast, options.type);
 	});
 	book.registerFunction('mostVivid', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
-		return mostVividImpl(scope, options.not ?? [], readableOn, options.minContrast);
+		return mostVividImpl(scope, ex('mostVivid', scope, options.not), readableOn, options.minContrast);
 	});
 	book.registerFunction('leastVivid', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
-		return leastVividImpl(scope, options.not ?? [], readableOn, options.minContrast);
+		return leastVividImpl(scope, ex('leastVivid', scope, options.not), readableOn, options.minContrast);
 	});
 	book.registerFunction('lightest', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
-		return lightestImpl(scope, options.not ?? [], readableOn, options.minContrast);
+		return lightestImpl(scope, ex('lightest', scope, options.not), readableOn, options.minContrast);
 	});
 	book.registerFunction('darkest', (scope: Scope, ...rest: unknown[]) => {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number }>(rest);
-		return darkestImpl(scope, options.not ?? [], readableOn, options.minContrast);
+		return darkestImpl(scope, ex('darkest', scope, options.not), readableOn, options.minContrast);
 	});
 
 	book.registerFunction('shade', (colorValue: string, options?: { amount?: number }) =>
@@ -147,7 +150,7 @@ export function registerBuiltinFunctions(book: {
 					'random',
 				);
 			}
-			return randomImpl(scope, options.type, options.seed, options.not ?? []);
+			return randomImpl(scope, options.type, options.seed, ex('random', scope, options.not));
 		},
 	);
 	book.registerFunction(
@@ -162,7 +165,7 @@ export function registerBuiltinFunctions(book: {
 					'nth',
 				);
 			}
-			return nthImpl(scope, options.index, options.not ?? []);
+			return nthImpl(scope, options.index, ex('nth', scope, options.not));
 		},
 	);
 	book.registerFunction(
@@ -203,7 +206,7 @@ export function registerBuiltinFunctions(book: {
 				}
 				toward = target.key;
 			}
-			return siblingImpl(scope, anchor.key, options.offset as number, options.wrap ?? false, options.not ?? [], toward);
+			return siblingImpl(scope, anchor.key, options.offset as number, options.wrap ?? false, ex('sibling', scope, options.not), toward);
 		},
 	);
 }

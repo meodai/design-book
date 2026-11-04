@@ -493,7 +493,23 @@ export function extractDependencies(args: FunctionArg[]): string[] {
  *  A token built with `createFunctionToken` and no metadata still gets the
  *  edges its args imply. Deduplicated, first-seen order. */
 export function functionDependencies(fn: FunctionTokenValue): string[] {
-  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? [])])];
+  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? []), ...notDependencies(fn)])];
+}
+
+/** `not` entries outside the scopes a token iterates are read for their
+ *  value: `not: [ref('.text')]` leaves out whichever member `.text` picked,
+ *  so the token must follow `.text`. Entries inside an iterated scope are
+ *  pool members — the selector index already follows those, and an edge to
+ *  one could close a false cycle with a member derived from the token. */
+function notDependencies(fn: FunctionTokenValue): string[] {
+  const not = fn.options?.not;
+  if (!Array.isArray(not) || not.length === 0) return [];
+  const iterated = new Set(iteratedScopesOf(fn));
+  return not.filter((n): n is string => {
+    if (typeof n !== 'string' || isRelativeKey(n)) return false;
+    const dot = n.indexOf('.');
+    return dot > 0 && !iterated.has(n.slice(0, dot));
+  });
 }
 
 /** Normalises a `not` option into an array of fully-qualified token keys.

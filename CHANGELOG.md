@@ -4,6 +4,27 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`not` names members wherever the key is written.** An entry no longer
+  has to be a key of the pool: it names a member the way a `sibling` anchor
+  does — a reference that leads to a member, a selector's pick, or a key a
+  member is a reference to. `not: [ref('brand.ink')]` now leaves out
+  `scale.900 = ref('brand.ink')`, and `not: [ref('.text')]` leaves out
+  whatever `.text` picked. Applies to every function that takes `not`.
+- `not` entries outside the scopes a token searches are dependencies, so the
+  token re-resolves when they change.
+
+### Fixed
+
+- A `not` entry outside the pool that names no member used to exclude
+  nothing without a word; it now throws. Keys of the pool itself behave as
+  before, including ones that do not exist.
+- The README described a selector anchor as stepping from "the member it
+  picked"; it is the first member of the pool with the same value.
+
 ## [0.17.0] - 2026-11-03
 
 ### Changed
