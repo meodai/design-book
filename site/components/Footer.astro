@@ -1,15 +1,12 @@
 ---
-// One footer for every page: name and version, the same links in the same
-// order (the current page named, not linked), the license and Elastiq.
+// One footer for every page: the name and version (it leads home), the
+// links that are not in the bottom bar (the bar has Tour, Article and
+// Editor), the license and Elastiq.
 import pkg from '../../package.json';
 interface Props { current: 'overview' | 'tour' | 'article' | 'editor' | 'naming' }
 const { current } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const links = [
-  ['overview', 'Overview', base],
-  ['tour', 'Tour', `${base}tour/`],
-  ['article', 'Article', `${base}article/`],
-  ['editor', 'Editor', `${base}editor/`],
   // The reference is the README on GitHub.
   ['docs', 'Docs', 'https://github.com/meodai/design-book#readme'],
   ['github', 'GitHub', 'https://github.com/meodai/design-book'],
@@ -17,7 +14,9 @@ const links = [
 ];
 ---
 <footer class="imprint">
-  <span>Design Book {pkg.version}</span>
+  {current === 'overview'
+    ? <span>Design Book {pkg.version}</span>
+    : <a href={base}>Design Book {pkg.version}</a>}
   <nav class="imprint-nav" aria-label="Footer">
     {links.map(([id, label, href]) => (
       <a href={href} aria-current={id === current ? 'page' : undefined}>{label}</a>
