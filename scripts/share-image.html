@@ -86,53 +86,31 @@
     letter-spacing: -0.03em;
   }
 
-  /* Three rules from the landing page, as its ledger. */
-  .ledger {
-    width: 100%;
-    border-collapse: collapse;
-    font: 19px / var(--row) "Obel Mono", monospace;
+  /* Three rules from the landing page, plain: the token, its rule, the
+     color it lands on. */
+  .rules {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font: 22px / 1.9 "Obel Mono", monospace;
   }
 
-  .ledger td {
-    height: calc(var(--row) * 1.4);
-    padding: 0 16px;
-    box-shadow: inset 0 -1px 0 var(--rule);
-    white-space: nowrap;
+  .rules li {
+    display: flex;
+    align-items: center;
+    gap: 16px;
   }
 
-  .ledger tr:first-child td {
-    box-shadow: inset 0 -1px 0 var(--rule), inset 0 1px 0 var(--rule), inset 0 3px 0 var(--paper), inset 0 4px 0 var(--rule);
-  }
-
-  .ledger td + td { border-left: 1px solid var(--rule); }
-
-  .ledger .no {
-    width: 1ch;
-    text-align: right;
-    font-size: 15px;
-    color: var(--ink-2);
-    border-right: 3px double var(--margin);
-  }
-
-  .ledger .no + td { border-left: 0; }
-  .ledger .fn { color: var(--ink-2); }
-  .ledger .fn b { font-weight: 600; color: var(--black); }
-
-  .ledger .val {
-    position: relative;
-    width: 7.5em;
-    padding-left: 30px;
-  }
-
-  .ledger .val i {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 14px;
+  .rules i {
+    flex: none;
+    width: 22px;
+    height: 22px;
     background: var(--c);
     box-shadow: inset 0 0 0 1px var(--rule);
   }
+
+  .rules .fn { color: var(--ink-2); }
+  .rules .fn b { font-weight: 600; color: var(--black); }
 
   .foot {
     margin-top: auto;
@@ -158,26 +136,11 @@
 
     <h1>Design tokens that keep their reasons.</h1>
 
-    <table class="ledger">
-      <tr>
-        <td class="no">1</td>
-        <td>ui.ground</td>
-        <td class="fn"><b>lightest</b>(ledger)</td>
-        <td class="val"><i style="--c: #eee9dc"></i>#eee9dc</td>
-      </tr>
-      <tr>
-        <td class="no">2</td>
-        <td>ui.ink</td>
-        <td class="fn"><b>bestContrastWith</b>(ui.ground, ledger)</td>
-        <td class="val"><i style="--c: #0d0a03"></i>#0d0a03</td>
-      </tr>
-      <tr>
-        <td class="no">3</td>
-        <td>ui.accent</td>
-        <td class="fn"><b>mostVivid</b>(ledger, { readableOn: ui.ground })</td>
-        <td class="val"><i style="--c: #de5331"></i>#de5331</td>
-      </tr>
-    </table>
+<ul class="rules">
+      <li><i style="--c: #eee9dc"></i>ui.ground <span class="fn">= <b>lightest</b>(ledger)</span></li>
+      <li><i style="--c: #0d0a03"></i>ui.ink <span class="fn">= <b>bestContrastWith</b>(ui.ground, ledger)</span></li>
+      <li><i style="--c: #de5331"></i>ui.accent <span class="fn">= <b>mostVivid</b>(ledger, { readableOn: ui.ground })</span></li>
+    </ul>
 
     <div class="foot">
       <span>$ npm i design-book</span>

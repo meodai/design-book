@@ -13,7 +13,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const site = Astro.site ?? Astro.url;
 const url = new URL(Astro.url.pathname, site).href;
 const image = new URL(`${base}share.png`, site).href;
-const imageAlt = 'Design Book: design tokens that keep their reasons. Three rules from the landing page as a ledger: ground, ink and accent picked from a palette.';
+const imageAlt = 'Design Book: design tokens that keep their reasons. Three rules from the landing page: ground, ink and accent picked from a palette.';
 ---
 <!DOCTYPE html>
 <html lang="en">
