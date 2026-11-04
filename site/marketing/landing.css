@@ -569,7 +569,7 @@ pre {
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: calc(var(--row) * 2);
   align-items: start;
-  padding-top: var(--row);
+  padding-top: calc(var(--row) * 2);
   position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
