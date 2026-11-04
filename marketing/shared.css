@@ -1085,3 +1085,40 @@ color-input::part(controls) {
     display: none;
   }
 }
+
+/* ─── The book at the foot of the left rail ──────────────────────────
+   Level with the bottom bar, whose name it stands beside; the rail's
+   legend moves up to make room. The bar then names the book in words. */
+.rail .rail-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--row) * 1.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  pointer-events: auto;
+}
+
+.rail .rail-mark .logo {
+  width: 24px;
+  height: 20px;
+}
+
+.rail-left .rail-legend {
+  bottom: calc(var(--row) * 2.5);
+}
+
+/* The bar's name, in words, on the text column's edge (no book before
+   it, unless the page has no rail to carry it). */
+.install-bar .bar-brand:not(:has(.logo)) {
+  --logo-w: 0px;
+  --logo-gap: 0px;
+}
+
+/* The scale ends above the raised legend. */
+.rail-left .rail-scale {
+  bottom: calc(var(--row) * 7.5);
+}

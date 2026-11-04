@@ -4,8 +4,8 @@
 // (the current one named, not linked) and the install line. It comes to rest on top of the footer. Copy turns green for a
 // moment once copied.
 import Logo from './Logo.astro';
-interface Props { home?: boolean; current?: 'tour' | 'article' | 'editor' }
-const { home = false, current } = Astro.props;
+interface Props { home?: boolean; current?: 'tour' | 'article' | 'editor'; /** Pages without rails carry the book in the bar. */ logo?: boolean }
+const { home = false, current, logo = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const Brand = home ? 'span' : 'a';
 const links = [
@@ -16,7 +16,7 @@ const links = [
 ---
 <div class="install-bar">
   <Brand class="bar-brand" href={home ? undefined : base}>
-    <Logo /><span>DesignBook</span>
+    {logo && <Logo />}<span>Design Book</span>
   </Brand>
   <nav class="bar-nav" aria-label="Pages">
     {links.map(([id, label, href]) => (
