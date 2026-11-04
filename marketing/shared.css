@@ -1050,3 +1050,11 @@ color-input::part(controls) {
   border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
   padding-left: var(--row);
 }
+
+/* "DesignBook" starts on the text column's edge (--bar-text-left, set by
+   the bar's script); the book hangs in front of it. */
+.install-bar .bar-brand {
+  --logo-w: 26px;
+  --logo-gap: 10px;
+  padding-left: calc(var(--bar-text-left, calc(var(--row) + var(--logo-w) + var(--logo-gap))) - var(--logo-w) - var(--logo-gap));
+}
