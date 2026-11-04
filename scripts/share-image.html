@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- The share image (1200 × 630): rendered to site/public/share.png by
-     scripts/share-image.sh. The site's paper, rails, type and ledger. -->
+     scripts/share-image.sh. The site's paper and type. -->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -19,7 +19,6 @@
     --blue: #172c4f;
     --red: #de5331;
     --row: 30px;
-    --rail: 60px;
     --rule: color-mix(in srgb, var(--black) 28%, var(--paper));
     --margin: color-mix(in srgb, var(--black) 60%, var(--paper));
     --ink-2: color-mix(in srgb, var(--black) 72%, var(--paper));
@@ -35,30 +34,15 @@
   body {
     position: relative;
     box-sizing: border-box;
-    padding: 0 var(--rail);
     color: var(--black);
     background: var(--paper);
     font-family: "Valley Sans", sans-serif;
   }
 
-  /* The blue rails, a scale of ticks on each. */
-  .rail {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: var(--rail);
-    background:
-      repeating-linear-gradient(to bottom, transparent 0 calc(var(--row) - 1px), var(--on-black) calc(var(--row) - 1px) var(--row)) var(--x) var(--row) / 10px calc(100% - var(--row) * 2) no-repeat,
-      var(--blue);
-  }
-
-  .rail-left { left: 0; --x: right; }
-  .rail-right { right: 0; --x: left; }
-
   .page {
     box-sizing: border-box;
     height: 100%;
-    padding: calc(var(--row) * 2) calc(var(--row) * 2.5);
+    padding: calc(var(--row) * 2) calc(var(--row) * 3.5);
     display: flex;
     flex-direction: column;
   }
@@ -81,7 +65,7 @@
   }
 
   h1 {
-    margin: calc(var(--row) * 1.5) 0 calc(var(--row) * 1.5);
+    margin: var(--row) 0;
     font: 600 74px / 1 "Valley Sans", sans-serif;
     letter-spacing: -0.03em;
   }
@@ -103,8 +87,6 @@
 </style>
 </head>
 <body>
-  <div class="rail rail-left"></div>
-  <div class="rail rail-right"></div>
   <div class="page">
     <div class="brand">
       <svg viewBox="0 0 32 27" aria-hidden="true">
