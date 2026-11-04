@@ -66,6 +66,13 @@ function config({ mode }: ConfigEnv): UserConfig {
       server: { host: true },
       build: {
         outDir: '../marketing-dist',
+        // The landing page and the full feature tour are two pages.
+        rollupOptions: {
+          input: {
+            index: resolve(__dirname, 'marketing/index.html'),
+            docs: resolve(__dirname, 'marketing/docs.html'),
+          },
+        },
       },
     };
   }
