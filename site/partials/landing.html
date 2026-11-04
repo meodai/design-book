@@ -28,9 +28,9 @@
 <!-- ─── The ledger: one book, live ───────────────────────────────────── -->
 <section class="section" aria-labelledby="ledger-title">
   <div class="section-head">
-    <h2 id="ledger-title">Bring any colors. The rules only decide where they go.</h2>
+    <h2 id="ledger-title">Bring your own colors.</h2>
     <p>
-      Rules never choose your palette, so they never narrow your taste.
+      The rules don't choose your palette.
       Pick colors by eye, take them from a brand book, or generate them:
       here each palette is
       <button class="pill source-pill" type="button" id="source-pill">drawn with Poline</button>.
@@ -134,10 +134,10 @@
 <!-- ─── Three readers ───────────────────────────────────────────────── -->
 <section class="section" aria-labelledby="readers-title">
   <div class="section-head">
-    <h2 id="readers-title">One book, read three ways.</h2>
+    <h2 id="readers-title">One book for designers, developers and language models.</h2>
     <p>
-      A hex code says nothing about why it was picked. A rule does, and
-      each reader gets it in their own form. The sheets below are rendered
+      A hex code doesn't tell you why it was picked. A rule does, and
+      each of them can read it in their own form. The sheets below are rendered
       from the same book as the sentence at the top of this page.
     </p>
   </div>
@@ -159,7 +159,7 @@
   <p class="sheets-note">
     Tokens are plain, serializable data with no closures. A model can
     change <code>darkest</code> to <code>mostVivid</code> and explain the
-    change, which is safer than inventing a new hex code. The package ships a
+    change, instead of making up a new hex code. The package ships a
     <a href="https://github.com/meodai/design-book/blob/main/skills/design-book.md">skill file</a>
     that teaches agents to move an existing system onto rules.
   </p>
@@ -173,16 +173,16 @@
 
   <dl class="principles">
     <div>
-      <dt>Your taste stays yours</dt>
-      <dd>Rules select and mix the colors you give them; they never invent their own. Make the primitives however you like, with a generator, a brand book or your eye, and write a plain value wherever a rule is not what you mean.</dd>
+      <dt>You bring the colors</dt>
+      <dd>Rules pick and mix the colors you give them; they don't make up their own. Make the primitives however you like, with a generator, a brand book or by eye, and write a plain value wherever a rule isn't what you mean.</dd>
     </div>
     <div>
       <dt>Rules, not values</dt>
-      <dd>Selectors pick from a palette (<code>darkest</code>, <code>closest</code>, <code>bestContrastWith</code>). Transforms derive from a token (<code>lighten</code>, <code>colorMix</code>, <code>ramp</code>). A plain value is still allowed wherever it is the honest answer.</dd>
+      <dd>Selectors pick from a palette (<code>darkest</code>, <code>closest</code>, <code>bestContrastWith</code>). Transforms derive from a token (<code>lighten</code>, <code>colorMix</code>, <code>ramp</code>). A plain value is fine wherever a fixed value is what you mean.</dd>
     </div>
     <div>
-      <dt>Readable by construction</dt>
-      <dd>Pass <code>readableOn</code> to any color selector and it only considers colors that meet WCAG contrast on that surface. When nothing passes, you get an error, not an unreadable color.</dd>
+      <dt>Contrast built in</dt>
+      <dd>Pass <code>readableOn</code> to any color selector and it only considers colors that meet WCAG contrast on that surface. When nothing passes, you get an error instead of an unreadable color.</dd>
     </div>
     <div>
       <dt>A dependency graph</dt>
