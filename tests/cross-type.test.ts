@@ -73,14 +73,14 @@ describe('closest compares only the target\'s kind', () => {
     expect(book.resolve('ui.near')).toBe(book.resolve('type.h3'));
   });
 
-  it('toward works on sizes', () => {
+  it('upTo works on sizes', () => {
     const { book, ui } = mixed();
     ui.set('page', px(40));
-    ui.set('step', closest(ref('brand.s'), ref('brand'), { toward: ref('ui.page') }));
+    ui.set('step', closest(ref('brand.s'), ref('brand'), { upTo: ref('ui.page') }));
     expect(book.resolve('ui.step')).toBe('16px');
     ui.set('page', px(8));
     ui.set('from', px(40));
-    ui.set('back', closest(ref('ui.from'), ref('brand'), { toward: ref('ui.page') }));
+    ui.set('back', closest(ref('ui.from'), ref('brand'), { upTo: ref('ui.page') }));
     expect(book.resolve('ui.back')).toBe('24px');
   });
 

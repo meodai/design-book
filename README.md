@@ -96,7 +96,7 @@ nextLarger(target, ref('scope'), { minDistance })     // closest, larger  (sizes
 nextSmaller(target, ref('scope'), { minDistance })    // closest, smaller
 nextLighter(target, ref('scope'), { minDistance })    // closest, lighter (colors)
 nextDarker(target, ref('scope'), { minDistance })     // closest, darker
-closest(target, ref('scope'), { toward: ref('.page') })  // closest on the page's side
+closest(target, ref('scope'), { upTo: ref('.page') })  // closest on the page's side
 bestContrastWith(target, ref('scope'))                // Highest contrast
 minContrastWith(target, ref('scope'), { minContrast }) // Lowest contrast that reaches minContrast
 furthestFrom(ref('scope'))                            // Most distant from the others
@@ -116,7 +116,7 @@ largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes
 | extremes | `lightest` / `darkest` | `largest` / `smallest` | `largest` / `smallest` |
 | `readableOn` | yes | — | — |
 
-**`closest` and its direction.** Colors are compared by perceptual distance (Euclidean in OKLab), so `nextLighter` from a blue is the nearest lighter *blue*, not a yellow that happens to be the next step up in lightness. `nextLarger` / `nextSmaller` / `nextLighter` / `nextDarker` are `closest` with `direction: 'larger' | 'smaller' | 'lighter' | 'darker'` — the editor writes them back that way. `toward: ref('.page')` takes the side from where another value lies and stops there: one rule that is lighter on a light page and darker on a dark one, or that steps a size toward another. `minDistance` is the gap the pick must clear past the target. The target does not need to be a member, and the pool needs no order.
+**`closest` and its direction.** Colors are compared by perceptual distance (Euclidean in OKLab), so `nextLighter` from a blue is the nearest lighter *blue*, not a yellow that happens to be the next step up in lightness. `nextLarger` / `nextSmaller` / `nextLighter` / `nextDarker` are `closest` with `direction: 'larger' | 'smaller' | 'lighter' | 'darker'` — the editor writes them back that way. `upTo: ref('.page')` takes the side from where another value lies and stops there: one rule that is lighter on a light page and darker on a dark one, or that steps a size upTo another. `minDistance` is the gap the pick must clear past the target. The target does not need to be a member, and the pool needs no order.
 
 ```typescript
 // scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }

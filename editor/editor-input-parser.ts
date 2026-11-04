@@ -765,8 +765,8 @@ function parseSelectorTail(
       options.type = parseQuotedString(valueStr) as 'color' | 'size' | 'text';
     } else if (key === 'direction') {
       options.direction = parseQuotedString(valueStr) as SelectorTailOptions['direction'];
-    } else if (key === 'toward') {
-      options.toward = getTokenArg(parseArg(valueStr, book));
+    } else if (key === 'upTo') {
+      options.upTo = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'description') {
       options.description = parseQuotedString(valueStr);
     } else if (key === 'against') {
@@ -794,7 +794,7 @@ type SelectorTailOptions = {
   type?: 'color' | 'size' | 'text';
   minDistance?: number;
   direction?: 'lighter' | 'darker' | 'larger' | 'smaller';
-  toward?: AnyTokenValue;
+  upTo?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;
   readableOn?: AnyTokenValue;
   readableContrast?: number;

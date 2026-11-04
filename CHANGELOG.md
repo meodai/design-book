@@ -8,6 +8,9 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Changed
 
+- **`closest` takes `upTo`, not `toward`**: a value the pick goes toward and no
+  further than. `toward` now belongs to `sibling` alone, where it names a
+  member of the scale to step toward. No alias.
 - **`readableOn`'s threshold is `readableContrast`** (was `minContrast`) on every
   color selector, so `minContrast` only ever means `minContrastWith`'s
   contrast against its target. No alias.

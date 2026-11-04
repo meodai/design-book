@@ -24,7 +24,7 @@ export interface ClosestDirection {
    *  colors, larger / smaller for sizes and text styles. */
   direction?: Direction;
   /** The side another value lies on, and no further than its lightness. */
-  toward?: string;
+  upTo?: string;
   /** Gap in OKLCH lightness (0–1) a candidate must clear past the target. */
   minDistance?: number;
 }
@@ -71,13 +71,13 @@ function closestMeasured(
 
   let sign = side.direction === 'larger' ? 1 : side.direction === 'smaller' ? -1 : 0;
   let limit = Infinity;
-  if (side.toward !== undefined) {
-    const toward = measureOf(side.toward);
-    if (!toward || toward.kind !== target.kind || toward.unit !== target.unit) {
-      throw new FunctionError(`closest: \`toward\` ${side.toward} is not one of the ${describeKind(target.kind, target.unit)} the target is`, 'closest');
+  if (side.upTo !== undefined) {
+    const upTo = measureOf(side.upTo);
+    if (!upTo || upTo.kind !== target.kind || upTo.unit !== target.unit) {
+      throw new FunctionError(`closest: \`upTo\` ${side.upTo} is not one of the ${describeKind(target.kind, target.unit)} the target is`, 'closest');
     }
-    sign = Math.sign(toward.num - target.num);
-    limit = Math.abs(toward.num - target.num) + 1e-9;
+    sign = Math.sign(upTo.num - target.num);
+    limit = Math.abs(upTo.num - target.num) + 1e-9;
   }
   const minGap = (side.minDistance ?? 0) + 1e-9;
 
@@ -92,8 +92,8 @@ function closestMeasured(
     }
   }
   if (best === null) {
-    const where = side.toward !== undefined
-      ? `between ${targetValue} and ${side.toward}`
+    const where = side.upTo !== undefined
+      ? `between ${targetValue} and ${side.upTo}`
       : `${side.direction} than ${targetValue}`;
     throw new FunctionError(
       `closest: no member of scope "${scope.name}" is ${where}`
@@ -125,20 +125,20 @@ function closestColorImpl(
   }
 
   // A direction keeps only the candidates on one side of the target's OKLCH
-  // lightness — strictly past it by minDistance — and `toward` no further
+  // lightness — strictly past it by minDistance — and `upTo` no further
   // than the other color's lightness.
   const lightness = (c: Parameters<typeof toOklch>[0]) => toOklch(c)?.l ?? NaN;
   const targetL = lightness(targetParsed);
   let sign = side.direction === 'lighter' ? 1 : side.direction === 'darker' ? -1 : 0;
   let limit = Infinity;
-  if (side.toward !== undefined) {
-    const towardParsed = parse(side.toward);
-    if (!towardParsed) {
-      throw new FunctionError(`closest: cannot parse \`toward\` color "${side.toward}"`, 'closest');
+  if (side.upTo !== undefined) {
+    const upToParsed = parse(side.upTo);
+    if (!upToParsed) {
+      throw new FunctionError(`closest: cannot parse \`upTo\` color "${side.upTo}"`, 'closest');
     }
-    const towardL = lightness(towardParsed);
-    sign = Math.sign(towardL - targetL);
-    limit = Math.abs(towardL - targetL) + 1e-9;
+    const upToL = lightness(upToParsed);
+    sign = Math.sign(upToL - targetL);
+    limit = Math.abs(upToL - targetL) + 1e-9;
   }
   const minGap = (side.minDistance ?? 0) + 1e-9;
   const onSide = (l: number) => {
@@ -165,8 +165,8 @@ function closestColorImpl(
 
   if (!closestHex) {
     if (sign !== 0) {
-      const where = side.toward !== undefined
-        ? `between ${targetValue} and ${side.toward}`
+      const where = side.upTo !== undefined
+        ? `between ${targetValue} and ${side.upTo}`
         : `${side.direction} than ${targetValue}`;
       throw new FunctionError(
         `closest: no member of scope "${scope.name}" is ${where}`
@@ -187,7 +187,7 @@ export interface ClosestOptions extends ReadableOnOptions {
   /** Only consider candidates on this value's side of the target, and no
    *  further than it: one rule that goes lighter on a light page and darker
    *  on a dark one. */
-  toward?: TokenValue | ReferenceValue | FunctionTokenValue;
+  upTo?: TokenValue | ReferenceValue | FunctionTokenValue;
   /** With a direction: the gap the pick must clear past the target — OKLCH
    *  lightness (0–1) for colors, the target's unit for sizes. */
   minDistance?: number;
@@ -207,7 +207,7 @@ export interface ClosestOptions extends ReadableOnOptions {
  * - **sizes**: by value, same unit only; `direction: 'larger' | 'smaller'`.
  * - **text styles** (`typography()`): by their font size.
  *
- * `toward: ref('.page')` takes the side from where another value lies and
+ * `upTo: ref('.page')` takes the side from where another value lies and
  * stops there. `minDistance` is the gap the pick must clear. Aliases:
  * `nextLarger`, `nextSmaller`, `nextLighter`, `nextDarker`.
  */
@@ -218,14 +218,14 @@ export function closest(
 ): FunctionTokenValue {
   const scope = poolArg('closest', pool);
   valueArg('closest', target);
-  const { direction, toward, minDistance } = options ?? {};
+  const { direction, upTo, minDistance } = options ?? {};
   assertDirection('closest', direction);
-  if (direction !== undefined && toward !== undefined) {
-    throw new FunctionError('closest: pass `direction` or `toward`, not both', 'closest');
+  if (direction !== undefined && upTo !== undefined) {
+    throw new FunctionError('closest: pass `direction` or `upTo`, not both', 'closest');
   }
   if (minDistance !== undefined) {
-    if (direction === undefined && toward === undefined) {
-      throw new FunctionError('closest: `minDistance` needs a `direction` or `toward`', 'closest');
+    if (direction === undefined && upTo === undefined) {
+      throw new FunctionError('closest: `minDistance` needs a `direction` or `upTo`', 'closest');
     }
     if (typeof minDistance !== 'number' || !(minDistance >= 0)) {
       throw new FunctionError(`closest: \`minDistance\` is a gap of 0 or more, got ${String(minDistance)}`, 'closest');
@@ -234,26 +234,26 @@ export function closest(
       throw new FunctionError(`closest: \`minDistance\` for colors is a lightness gap between 0 and 1, got ${minDistance}`, 'closest');
     }
   }
-  if (toward !== undefined) valueArg('closest', toward);
+  if (upTo !== undefined) valueArg('closest', upTo);
   const readable = readableOnParts('closest', options);
-  // `toward` is an argument, so it resolves like one and is a dependency;
+  // `upTo` is an argument, so it resolves like one and is a dependency;
   // it sits before the optional readableOn backdrop, marked in the options.
-  const towardArgs = toward !== undefined ? [toward] : [];
+  const upToArgs = upTo !== undefined ? [upTo] : [];
   return createFunctionToken(
     'closest',
-    [target, scope, ...towardArgs, ...readable.args],
+    [target, scope, ...upToArgs, ...readable.args],
     {
       description: options?.description,
       options: {
         not: normalizeNotKeys(options?.not),
         ...(direction ? { direction } : {}),
-        ...(toward !== undefined ? { toward: true } : {}),
+        ...(upTo !== undefined ? { upTo: true } : {}),
         ...(minDistance ? { minDistance } : {}),
         ...readable.options,
       },
       metadata: {
-        dependencies: [...extractDependencies([target, ...towardArgs]), ...readable.dependencies],
-        visualDependencies: extractVisualDependencies([target, scope, ...towardArgs, ...readable.args]),
+        dependencies: [...extractDependencies([target, ...upToArgs]), ...readable.dependencies],
+        visualDependencies: extractVisualDependencies([target, scope, ...upToArgs, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },
@@ -262,7 +262,7 @@ export function closest(
 }
 
 /** Options of the direction aliases: `closest`'s, without the direction. */
-export type NextOptions = Omit<ClosestOptions, 'direction' | 'toward'>;
+export type NextOptions = Omit<ClosestOptions, 'direction' | 'upTo'>;
 
 /** The next larger size (or text style) in `pool`: `closest` with `direction: 'larger'`. */
 export function nextLarger(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {

@@ -461,23 +461,23 @@ function serializeFunctionToken(fn: any): string {
   // printed back inside the options object, the way it is typed.
   const args: any[] = fn.args ?? [];
   const backdropIdx = readableOnArgIndex({ args, options: fn.options });
-  // closest's `toward` is the argument after the pool, marked by
-  // `toward: true` in the options; it is printed as `toward: …` too.
-  const towardIdx = fn.name === 'closest' && fn.options?.toward === true ? 2 : -1;
+  // closest's `upTo` is the argument after the pool, marked by
+  // `upTo: true` in the options; it is printed as `upTo: …` too.
+  const upToIdx = fn.name === 'closest' && fn.options?.upTo === true ? 2 : -1;
   // A closest with a plain direction prints as its alias: nextLarger(…), nextLighter(…).
-  const alias = fn.name === 'closest' && towardIdx < 0 && typeof fn.options?.direction === 'string'
+  const alias = fn.name === 'closest' && upToIdx < 0 && typeof fn.options?.direction === 'string'
     ? ({ larger: 'nextLarger', smaller: 'nextSmaller', lighter: 'nextLighter', darker: 'nextDarker' } as Record<string, string>)[fn.options.direction]
     : undefined;
-  const argStrs = args.filter((_, i) => i !== backdropIdx && i !== towardIdx).map(serializeArg);
+  const argStrs = args.filter((_, i) => i !== backdropIdx && i !== upToIdx).map(serializeArg);
   const readableOn = backdropIdx >= 0 ? serializeArg(args[backdropIdx]) : undefined;
-  const toward = towardIdx >= 0 ? serializeArg(args[towardIdx]) : undefined;
+  const upTo = upToIdx >= 0 ? serializeArg(args[upToIdx]) : undefined;
   // Preserve options across edit-cycle round-trips so ratios, steps, etc.
   // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
   // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
   const optionKeys = fn.options
     ? Object.keys(fn.options).filter((k) => {
         if (k === 'description') return false;
-        if (k === 'toward' && towardIdx >= 0) return false;
+        if (k === 'upTo' && upToIdx >= 0) return false;
         if (k === 'direction' && alias) return false;
         const v = fn.options[k];
         if (v === undefined || v === null) return false;
@@ -486,7 +486,7 @@ function serializeFunctionToken(fn: any): string {
       })
     : [];
   const optionPairs = [
-    ...(toward ? [`toward: ${toward}`] : []),
+    ...(upTo ? [`upTo: ${upTo}`] : []),
     ...(readableOn ? [`readableOn: ${readableOn}`] : []),
     ...optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`),
     // The description lives on the token itself, not in fn.options.

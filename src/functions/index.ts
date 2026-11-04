@@ -89,14 +89,14 @@ export function registerBuiltinFunctions(book: {
 		relativeToImpl(baseColor, options?.colorSpace ?? 'oklch', options?.modifications ?? [null, null, null]),
 	);
 	book.registerFunction('closest', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
-		// [toward?, readableOn?, options]: options.toward marks the toward argument.
-		const marked = rest[rest.length - 1] as { toward?: unknown } | undefined;
-		const toward = marked?.toward === true ? rest.shift() as string : undefined;
+		// [upTo?, readableOn?, options]: options.upTo marks the upTo argument.
+		const marked = rest[rest.length - 1] as { upTo?: unknown } | undefined;
+		const upTo = marked?.upTo === true ? rest.shift() as string : undefined;
 		const { readableOn, options } = splitReadableArgs<{
 			not?: string[]; readableContrast?: number; direction?: Direction; minDistance?: number;
 		}>(rest);
 		return closestImpl(targetValue, scope, ex('closest', scope, options.not), readableOn, options.readableContrast, {
-			direction: options.direction, toward, minDistance: options.minDistance,
+			direction: options.direction, upTo, minDistance: options.minDistance,
 		});
 	});
 	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, { ...options, not: ex('largest', scope, options?.not) }));
