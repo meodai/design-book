@@ -962,3 +962,24 @@ body {
   background: currentColor;
   transform: translateY(calc(var(--row) / 2 - 2px));
 }
+
+/* The section number hangs in the margin on the title's baseline: an
+   inline box pulled left by its own width plus the gap, so it shares
+   the first line's baseline at any title size. */
+.article-content section > h2 .sec-no {
+  position: static;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 46px;
+  margin: 0 16px 0 -62px;
+  vertical-align: baseline;
+  line-height: 1;
+  border-right-color: color-mix(in srgb, var(--blue) 60%, var(--pp, var(--paper)));
+}
+
+@media (max-width: 899px) {
+  .article-content section > h2 .sec-no {
+    width: auto;
+    margin: 0 10px 0 0;
+  }
+}
