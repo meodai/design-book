@@ -3,8 +3,6 @@
 // for where you are. Right: the edge of printer paper, a column of feed
 // holes that runs past as the page scrolls.
 
-const LOGO = `<svg class="logo" viewBox="0 0 32 27" aria-hidden="true"><path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23" /><path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23" /><path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" /></svg>`;
-
 const left = document.createElement("aside");
 left.className = "rail rail-left";
 left.setAttribute("aria-label", "Sections of this page");
@@ -30,11 +28,7 @@ function pageFraction(element) {
 }
 
 function build() {
-  // The book at the foot of the rail, beside the bar's name; it leads
-  // home like the name does.
-  const home = document.querySelector("a.bar-brand")?.getAttribute("href") ?? "/";
   let l = `<span class="rail-legend">Sections, by position</span>` +
-    `<a class="rail-mark" href="${home}" aria-label="Design Book, home">${LOGO}</a>` +
     `<div class="rail-scale">`;
   sections.forEach(({ section, title }, i) => {
     const y = pageFraction(section) * 100;
