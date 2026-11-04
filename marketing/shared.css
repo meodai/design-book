@@ -1291,3 +1291,11 @@ footer.imprint {
   margin-top: calc(var(--row) * -1);
   border-top: 1px dashed var(--imprint-line);
 }
+
+/* The license sits at the right end of the credits line. */
+.imprint-made {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--row);
+}
