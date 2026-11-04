@@ -1,35 +1,25 @@
 /* Design Book — docs, in the landing page's style.
-   A layer over style.css: it keeps the page's structure and demos and
-   swaps its type, paper and inks for the landing page's. */
-
-@font-face {
-  font-family: "Obel Mono";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/ObelMono-VF.woff2") format("woff2");
-}
+   A layer over style.css (the old page) and shared.css (what all three
+   pages share): it keeps the page's structure and demos and only says
+   what is particular to the docs. */
 
 :root {
-  --font-sans: "Valley Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Valley Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Obel Mono", ui-monospace, "SF Mono", Menlo, monospace;
-
-  /* The landing page's paper and inks. */
-  --paper: #eee9dc;
-  --black: #0d0a03;
-  --on-black: #fffaed;
-  --blue: #3c61a0;
-  --red: #de5331;
-  --yellow: #dab43d;
-  --green: #479549;
+  /* Outside any paper, the page itself is the paper (for the shared
+     switch and tear line). */
+  --pp: var(--paper);
+  --pp-text: var(--black);
+  /* The inks, paper and fonts come from shared.css; here style.css's
+     own variables are pointed at them. */
+  --font-sans: var(--font-text);
+  --font-display: var(--font-text);
+  --font-mono: var(--font-code);
 
   --surface: var(--paper);
   --surface-2: color-mix(in srgb, var(--paper) 92%, var(--black));
   --text: var(--black);
-  --muted: color-mix(in srgb, var(--black) 62%, transparent);
-  --rule: color-mix(in srgb, var(--black) 16%, transparent);
-  --hair: color-mix(in srgb, var(--black) 8%, transparent);
+  --muted: color-mix(in srgb, var(--black) 62%, var(--pp, var(--paper)));
+  --rule: color-mix(in srgb, var(--black) 16%, var(--pp, var(--paper)));
+  --hair: color-mix(in srgb, var(--black) 8%, var(--pp, var(--paper)));
   --accent: var(--blue);
   --accent-hover: color-mix(in srgb, var(--blue) 80%, var(--black));
 }
@@ -57,13 +47,13 @@ h3 {
   text-wrap: balance;
 }
 
-/* The old page leaned on italics for emphasis; here the emphasised words
-   are set upright, in the blue. */
-h1 em,
-h2 em,
-h3 em {
+/* Titles are one voice: no italics, no colored words. ([class] lifts
+   this over the old sheet's per-section heading rules.) */
+[class] :is(h1, h2, h3) em,
+:is(h1, h2, h3) em {
   font-style: normal;
-  color: var(--blue);
+  font-weight: inherit;
+  color: inherit;
 }
 
 p,
@@ -74,6 +64,15 @@ li {
 /* Small labels and captions read like the landing page's tables. */
 .r-tab em {
   font-style: normal;
+}
+
+/* ── Opening: a first screen, the name and book in its top right ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  align-content: end;
+  padding-top: calc(var(--row) * 5);
 }
 
 /* ── Header and footer ──────────────────────────────────────────── */
@@ -91,22 +90,7 @@ li {
   color: var(--blue);
 }
 
-/* The footer is a strip of the blue, as on the landing page. */
-.foot {
-  max-width: none;
-  margin-top: 64px;
-  padding: 28px var(--gutter) 56px;
-  justify-content: center;
-  gap: 56px;
-  border-top: 0;
-  font-size: 15px;
-  color: var(--on-black);
-  background: var(--blue);
-}
 
-.foot a {
-  color: inherit;
-}
 
 /* ── Code: the black paper, written in its off-white ─────────────── */
 .code,
@@ -151,17 +135,17 @@ li {
 }
 
 .install .prompt {
-  color: color-mix(in srgb, var(--on-black) 50%, transparent);
+  color: color-mix(in srgb, var(--on-black) 50%, var(--pp, var(--paper)));
 }
 
 .copy {
   color: var(--on-black);
   background: transparent;
-  border-left: 1px solid color-mix(in srgb, var(--on-black) 45%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--on-black) 45%, var(--pp, var(--paper)));
 }
 
 .copy:hover {
-  background: color-mix(in srgb, var(--on-black) 16%, transparent);
+  background: color-mix(in srgb, var(--on-black) 16%, var(--pp, var(--paper)));
 }
 
 .copy.copied {
@@ -169,11 +153,6 @@ li {
 }
 
 /* ═══ The landing page's parts ═══════════════════════════════════════ */
-
-:root {
-  --row: 28px;
-  --rail: calc(var(--row) * 2);
-}
 
 html {
   overflow-x: clip;
@@ -228,16 +207,15 @@ body > section + section::before,
 .vivid-stage,
 .fn .demo,
 .extend-result,
-.graph-svg,
-.graph figure {
+.graph-viz {
   --pp: var(--blue);
   --pp-text: var(--on-black);
   --surface: var(--pp);
   --surface-2: color-mix(in srgb, var(--pp) 88%, var(--pp-text));
   --text: var(--pp-text);
-  --muted: color-mix(in srgb, var(--pp-text) 66%, transparent);
-  --rule: color-mix(in srgb, var(--pp-text) 28%, transparent);
-  --hair: color-mix(in srgb, var(--pp-text) 14%, transparent);
+  --muted: color-mix(in srgb, var(--pp-text) 66%, var(--pp, var(--paper)));
+  --rule: color-mix(in srgb, var(--pp-text) 28%, var(--pp, var(--paper)));
+  --hair: color-mix(in srgb, var(--pp-text) 14%, var(--pp, var(--paper)));
   --accent: var(--pp-text);
   --accent-hover: var(--pp-text);
   color: var(--text);
@@ -260,18 +238,19 @@ body > section + section::before,
   --pp-text: var(--black);
 }
 
+/* Black is the code's paper; a result is never black, so the two
+   sheets of a folder always read as two. */
 .ramp-stage,
 .min-stage,
 .nth-stage {
-  --pp: var(--black);
+  --pp: var(--blue);
   --pp-text: var(--on-black);
 }
 
 .names-stage,
 .typo-stage,
 .furthest-stage,
-.graph-svg,
-.graph figure {
+.graph-viz {
   --pp: var(--yellow);
   --pp-text: var(--black);
 }
@@ -284,30 +263,21 @@ body > section + section::before,
   --pp-text: var(--black);
 }
 
-/* ── Code: printer paper, feed holes down the left ───────────────── */
+/* ── Code: printer paper, feed holes down the left (.holes-left) ── */
 .code,
 .r-pane {
-  --hole: radial-gradient(circle, transparent 5px, #000 5.5px);
+  --pp: var(--black);
+  --pp-text: var(--on-black);
   padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
   font-size: 12px;
   line-height: var(--row);
-  background-color: var(--black);
-  background-image:
-    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--on-black) 28%, transparent) 0 3px, transparent 3px 7px),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 calc(var(--row) - 1px),
-      color-mix(in srgb, var(--on-black) 12%, transparent) calc(var(--row) - 1px) var(--row)
-    );
-  background-position: calc(var(--row) * 1.25) 0, 0 var(--row);
-  background-size: 1px 100%, auto;
-  background-repeat: no-repeat, repeat;
-  -webkit-mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
-  mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--on-black) 12%, var(--pp, var(--paper))) calc(var(--row) - 1px) var(--row)
+  );
+  background-position: 0 var(--row);
 }
 
 /* Code in tones of the paper's own off-white, as on the landing page. */
@@ -317,72 +287,49 @@ body > section + section::before,
 .code .c-num { color: color-mix(in srgb, var(--on-black) 72%, var(--black)); }
 .code .c-dim { color: color-mix(in srgb, var(--on-black) 45%, var(--black)); font-style: normal; }
 
-/* ── Selector tabs: folder tabs over a blue paper ────────────────
-   Each group is a column: its name above, set like a table head, and
-   its tabs below, standing on the paper's top edge. The chosen tab is
-   cut from the same blue as the edge, so it reads as one sheet. */
-.fn-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: calc(var(--row) / 2) 6px;
-  padding-top: var(--row);
-  padding-bottom: 0;
-}
-
-.fn-tabs-set {
+/* ── Selectors: an index of anchors, then every selector in turn ─── */
+.fn-index {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: var(--row) var(--gutter) 0;
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: auto var(--row);
-  column-gap: 2px;
-  row-gap: 6px;
-  margin: 0;
-  align-items: end;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 var(--row);
+  align-items: start;
 }
 
-.fn-tabs-group {
-  grid-row: 1;
-  grid-column: 1 / -1;
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: none;
-  font-variant-caps: all-small-caps;
-  color: var(--muted);
-}
-
-.fn-tabs [role="tab"] {
-  grid-row: 2;
-  height: var(--row);
-  padding: 0 7px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
+.fn-index-group ul {
   border: 0;
+}
+
+.fn-index a {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text);
-  background: var(--surface-2);
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  text-decoration: none;
 }
 
-.fn-tabs [role="tab"]:hover {
-  background: color-mix(in srgb, var(--blue) 22%, var(--paper));
-}
-
-.fn-tabs [role="tab"][aria-selected="true"] {
-  color: var(--on-black);
-  background: var(--blue);
-}
-
-.fn-tabs [role="tab"]:focus-visible {
-  outline: 1px solid var(--text);
-  outline-offset: 2px;
+.fn-index a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .fn-panels {
-  border-top: 4px solid var(--blue);
+  display: block;
+}
+
+.fn-panels > .fn,
+.fn-panels > .fn:not(.is-active) {
+  visibility: visible;
+  animation: none;
+  scroll-margin-top: var(--row);
+}
+
+@media (max-width: 899px) {
+  .fn-index {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ── Highlights: what can be chosen is blue, solid ───────────────── */
@@ -392,175 +339,24 @@ p em {
   font-style: normal;
 }
 
-/* ── Rails: a map of the page ────────────────────────────────────── */
-.rail {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: var(--rail);
-  z-index: 10;
-  color: var(--on-black);
-  background: var(--blue);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  line-height: 1;
-  font-variant-numeric: lining-nums;
-}
+/* ── Example folders (shared .folder): Result in front, Code behind ──
+   The result's tab takes the ink of the paper under it. */
+.folder-sheet--result { --pp: var(--blue); --pp-text: var(--on-black); --tab-left: 0px; }
+.folder-sheet--code { --pp: var(--black); --pp-text: var(--on-black); --tab-left: calc(var(--row) * 4); }
 
-.rail-left { left: 0; }
-.rail-right { right: 0; }
+.folder-sheet--result:has(.readable-stage, .order-stage),
+.extend-card:nth-child(2) .folder-sheet--result { --pp: var(--red); --pp-text: var(--black); }
+.folder-sheet--result:has(.ramp-stage, .min-stage, .nth-stage) { --pp: var(--blue); --pp-text: var(--on-black); }
+.folder-sheet--result:has(.names-stage, .typo-stage, .furthest-stage) { --pp: var(--yellow); --pp-text: var(--black); }
+.folder-sheet--result:has(.mix-stage, .lightness-stage, .random-stage),
+.extend-card:nth-child(1) .folder-sheet--result { --pp: var(--green); --pp-text: var(--black); }
 
-.rail-scale {
-  position: absolute;
-  top: calc(var(--row) * 2);
-  bottom: calc(var(--row) * 6);
-  left: 0;
-  right: 0;
-}
-
-.rail .tick {
-  position: absolute;
-  height: 1px;
-  background: currentColor;
-}
-
-.rail .tick.minor { width: 4px; opacity: 0.6; }
-.rail .tick.major { width: 9px; }
-.rail-left .tick { right: 0; }
-.rail-right .tick { left: 0; }
-
-.rail .num {
-  position: absolute;
-  transform: translateY(-50%);
-  opacity: 0.8;
-  color: inherit;
-  text-decoration: none;
-}
-
-.rail-left .num { right: 13px; }
-.rail-right .num { left: 13px; }
-
-.rail-left a.num:hover { opacity: 1; text-decoration: underline; }
-
-.rail .needle {
-  position: absolute;
-  height: 1px;
-  background: currentColor;
-  transform: translateY(-50%);
-}
-
-.rail-left .needle { left: 4px; right: 0; }
-.rail-right .needle { left: 0; right: 4px; }
-
-.rail .needle::after {
-  content: attr(data-label);
-  position: absolute;
-  top: 0;
-  left: 11px;
-  transform: translateY(-50%);
-  padding: 1px 2px;
-  background: var(--blue);
-  white-space: nowrap;
-}
-
-.rail-legend {
-  position: absolute;
-  bottom: var(--row);
-  left: 50%;
-  writing-mode: vertical-rl;
-  transform: translateX(-50%) rotate(180deg);
-  font-size: 10px;
-  white-space: nowrap;
-  opacity: 0.75;
-}
-
-@media (max-width: 640px) {
-  :root { --rail: 0px; }
-  .rail { display: none; }
-}
-
-/* ── Example folders: Result in front, Code behind ──────────────── */
-/* A paper behind can be brought forward by its tab or by any part of it
-   that shows. */
-.dfolder-sheet:not(.is-front) {
-  cursor: pointer;
-}
-
-.dfolder-sheet:not(.is-front) .dfolder-body {
-  pointer-events: none;
-}
-
-.dfolder {
-  display: grid;
-  padding-top: var(--row);
-  min-width: 0;
-}
-
-.dfolder-sheet {
-  grid-area: 1 / 1;
-  align-self: start;
-  position: relative;
-  min-width: 0;
-  transition: transform 0.25s ease;
-}
-
-.dfolder-sheet:not(.is-front) {
-  z-index: 0;
-  transform: translate(calc(var(--row) / 2), calc(var(--row) / -2));
-}
-
-.dfolder-sheet.is-front {
-  z-index: 1;
-}
-
-.dfolder-body > * {
+.folder-body > * {
   margin: 0;
 }
 
-.dfolder-tab {
-  position: absolute;
-  bottom: 100%;
-  height: var(--row);
-  padding: 0 var(--row);
-  font: 13px var(--font-sans);
-  border: 0;
-  cursor: pointer;
-}
-
-.dfolder-result .dfolder-tab {
-  left: 0;
-  color: var(--on-black);
-  background: var(--blue);
-}
-
-.dfolder-code .dfolder-tab {
-  left: calc(var(--row) * 4);
-  color: var(--on-black);
-  background: var(--black);
-}
-
-/* The result tab takes the color of the paper under it. */
-.dfolder-result:has(.readable-stage, .order-stage) .dfolder-tab,
-.extend-card:nth-child(2) .dfolder-result .dfolder-tab { background: var(--red); color: var(--black); }
-.dfolder-result:has(.ramp-stage, .min-stage, .nth-stage) .dfolder-tab { background: var(--black); color: var(--on-black); }
-.dfolder-result:has(.names-stage, .typo-stage, .furthest-stage) .dfolder-tab { background: var(--yellow); color: var(--black); }
-.dfolder-result:has(.mix-stage, .lightness-stage, .random-stage) .dfolder-tab,
-.extend-card:nth-child(1) .dfolder-result .dfolder-tab { background: var(--green); color: var(--black); }
-
-/* With the code in the folder, the code paper's tab must not be
-   masked away by the feed holes: holes are cut on the code itself. */
-.dfolder-code .code {
+.folder-sheet--code .code {
   max-height: none;
-}
-
-@media (min-width: 900px) {
-  .fn-body {
-    grid-template-areas: "pitch demo";
-  }
-
-  .fn-body > .dfolder {
-    grid-area: demo;
-  }
 }
 
 /* "Bring your own": the cards are just text over their folder. */
@@ -570,12 +366,1270 @@ p em {
   padding: 0;
 }
 
-.extend-card .dfolder {
+.extend-card .folder {
   margin-top: auto;
 }
 
-/* A paper behind shows only its color: what is written on it waits
-   until it is brought forward. */
-.dfolder-sheet:not(.is-front) .dfolder-body > * > * {
+
+
+
+
+
+/* ── Tables in the demos: the shared ledger ([data-ledger]) ──────── */
+.extends-pane {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+  font-size: 12px;
+}
+
+.extends-pane-head {
+  background: none;
+}
+
+/* One key column per table, wide enough for its longest key, so the
+   columns line up from row to row. */
+.extends-rows {
+  padding: 0;
+  --ledger-cols: calc(9ch + 28px) 10px minmax(0, 1fr);
+}
+
+.extends-rows--keys {
+  --ledger-cols: calc(11ch + 28px) 10px minmax(0, 1fr);
+}
+
+.ext-row {
+  gap: 0;
+  padding: 0;
+}
+
+/* The color column is the bar itself; the value sits right against it. */
+.ext-row > .ext-swatch {
+  justify-self: stretch;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--lg-rule);
+  box-shadow: inset 0 0 0 1px var(--lg-rule);
+}
+
+.ext-row > .ext-val {
+  border-left: 0;
+}
+
+.ext-resolved {
+  font-style: normal;
+}
+
+/* ── The graph: on the yellow paper, as on the landing page ───────── */
+.graph-viz {
+  --c-surface: var(--pp);
+  --c-surface-on: var(--pp-text);
+  --c-surface-on-alt: color-mix(in srgb, var(--pp-text) 55%, var(--pp));
+  --active-outline: var(--blue);
+}
+
+.graph-controls {
+  border-top: 1px solid var(--rule);
+}
+
+.graph-controls button {
+  min-height: var(--row);
+  padding: 3px 12px;
+  color: var(--pp-text);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--pp-text) 42%, var(--pp, var(--paper)));
+}
+
+.graph-controls button:hover {
+  color: var(--pp);
+  background: var(--pp-text);
+  border-color: var(--pp-text);
+}
+
+/* ── Every group of choices is the shared switch (.switch) ───────── */
+.switch button[aria-selected="true"] {
+  color: var(--pp);
+  background: var(--pp-text);
+  border-color: var(--pp-text);
+}
+
+.names-schemes.switch,
+.order-modes.switch,
+.ref-modes.switch,
+.extends-modes.switch,
+.readable-ratios.switch,
+.sibling-offsets.switch,
+.nth-presets.switch {
+  gap: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+/* ── One palette, six surfaces: six tiles that always fit ─────────── */
+.contrast-row {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  background: none;
+  border: 0;
+}
+
+.contrast-tile {
+  min-width: 0;
+  padding: 10px 8px;
+}
+
+.contrast-tile .cbig {
+  font-size: clamp(22px, 2.4vw, 34px);
+}
+
+/* ── A selector's head: its signature in quiet monospace, the kinds it
+      works on as a line, not boxes ─────────────────────────────────── */
+.fn-head .sig {
+  padding: 0;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: 0;
+}
+
+.fn-kinds {
+  gap: 0 var(--row);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.fn-kinds li {
+  padding: 0;
+  border: 0;
+}
+
+.fn-kinds b {
+  font-weight: 700;
+}
+
+/* ── Value transforms: one numbered ledger, name and what it does ── */
+.coda-list {
+  display: block;
+  gap: 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--lg-rule);
+  --ledger-cols: minmax(0, 1fr) calc(var(--row) * 3);
+}
+
+.coda-list li {
+  background: none;
+}
+
+/* Name and what it does on one line, read left to right. */
+.coda-list .coda-text {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px var(--row);
+  flex-wrap: wrap;
+  text-align: left;
+}
+
+.coda-list .coda-text b {
+  min-width: 14ch;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.coda-list .coda-icon {
+  text-align: center;
+}
+
+/* ── Renderers: folder tabs standing on the black paper ───────────── */
+.renderer-tabs {
+  gap: 2px;
+  align-items: end;
+  background: none;
+  border: 0;
+  overflow: visible;
+}
+
+.r-tab {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: var(--row);
+  padding: 0 var(--row);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.r-tab:hover {
+  background: color-mix(in srgb, var(--blue) 22%, var(--paper));
+}
+
+.r-tab.is-active {
+  color: var(--on-black);
+  background: var(--black);
+}
+
+/* A selector's claim reads as its subtitle: one voice too. */
+.fn-pitch .fn-claim em {
+  font-style: normal;
+  color: inherit;
+}
+
+/* Every code paper, wherever it sits, keeps the same inset: clear of
+   its feed holes and tear line, one line per ruling. (Outweighs the old
+   sheet's per-section code padding.) */
+pre.code.holes-left,
+.r-pane.holes-left {
+  padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
+  font-size: 12px;
+  line-height: var(--row);
+}
+
+
+/* ── Emphasis in running text: the blue, upright (no italics anywhere) ─ */
+[class] [class] :is(p, li) em,
+[class] :is(p, li) em {
+  font-style: normal;
+}
+
+/* ── The graph's paper is as tall as the graph ─────────────────────── */
+.graph-viz {
+  min-height: 0;
+  padding: var(--row);
+}
+
+/* ── Relative refs: the two scopes one above the other, so each ledger
+      has the full width ───────────────────────────────────────────── */
+.ref-panes {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--row);
+}
+
+/* The ledger's own columns (the old sheet set narrower ones here). */
+.ref-panes .ext-row {
+  grid-template-columns: calc(var(--row) * 2) var(--ledger-cols);
+}
+
+/* Every table head at the same size, whatever section it is in. */
+.extends-pane-head[data-ledger-head],
+.extends-pane-head[data-ledger-head] :is(.extends-pane-name, .extends-pane-meta) {
+  font-size: 15px;
+}
+
+.extends-pane-head[data-ledger-head] .extends-pane-meta {
+  font-size: 12px;
+}
+
+/* ── A result lies on its paper's rulings ────────────────────────────
+   Every box starts and ends on a line: controls are one row tall,
+   captions one row, a stage's padding and the gaps between its rows
+   whole rows. (docs-folders.js rounds each result's height up to
+   whole rows as its content changes.) */
+.folder-sheet--result :is(button, select, color-input, input:not([type="range"], [type="checkbox"], [type="radio"])) {
+  box-sizing: border-box;
+  height: var(--row);
+  min-height: 0;
+  margin-block: 0;
+  padding-block: 0;
+  line-height: calc(var(--row) - 2px);
+  vertical-align: top;
+}
+
+.folder-sheet--result input[type="range"] {
+  height: var(--row);
+  margin-block: 0;
+}
+
+.folder-sheet--result .demo > :not([class*="-stage"]) {
+  min-height: var(--row);
+  margin: 0;
+  padding-block: 0;
+  line-height: var(--row);
+}
+
+.folder-sheet--result .demo > [class*="-stage"] {
+  margin: 0;
+  padding-block: var(--row);
+  row-gap: var(--row);
+}
+
+/* Between a result's parts: one blank row. Captions are one row. */
+.folder-sheet--result .folder-body > * {
+  row-gap: var(--row);
+}
+
+.folder-sheet--result :is(figcaption, [class$="-caption"], [class$="-readout"], [class$="-note"]) {
+  margin-block: 0;
+  min-height: var(--row);
+  padding-block: 0;
+  line-height: var(--row);
+}
+
+/* Each stage's parts in whole rows. */
+.folder-sheet--result :is(
+  .ref-ramp-step, .contrast-tile, .cbadge, .rank, .min-label, .min-sample,
+  .step-cell, .ltile, .ntile, .rd-tile, .rd-result, .ramp-bar, .names-row,
+  .order-swatch, .mix-strip, .stile, .rtile, .swatch-fr
+) {
+  box-sizing: border-box;
+  padding-block: 0;
+}
+
+.folder-sheet--result :is(.cbadge, .min-label, .ramp-bar, .names-row) {
+  height: var(--row);
+  line-height: var(--row);
+}
+
+.folder-sheet--result :is(.ref-ramp-step, .rank, .rd-tile, .order-swatch, .mix-strip) {
+  height: calc(var(--row) * 2);
+}
+
+.folder-sheet--result :is(.step-cell) {
+  height: calc(var(--row) * 3);
+}
+
+.folder-sheet--result :is(.ltile, .ntile, .stile, .rtile, .swatch-fr) {
+  height: calc(var(--row) * 4);
+}
+
+.folder-sheet--result :is(.min-sample, .rd-result) {
+  height: calc(var(--row) * 5);
+}
+
+.folder-sheet--result .contrast-tile {
+  height: calc(var(--row) * 6);
+}
+
+.folder-sheet--result :is(.ref-buttons, .readable-pool, .ramp-bars, .contrast-palette, .step-readout) {
+  margin-block: 0;
+  padding-block: 0;
+  border-block: 0;
+}
+
+.folder-sheet--result :is(.names-stage, .ramp-stage, .readable-stage, .order-stage) > * {
+  margin-block: 0;
+}
+
+.folder-sheet--result .ramp-stage {
+  align-items: start;
+}
+
+.folder-sheet--result .names-row {
+  font-size: 15px;
+}
+
+.folder-sheet--result .ext-layer {
+  height: 20px;
+  line-height: 20px;
+  vertical-align: middle;
+}
+
+.folder-sheet--result .ref-buttons > div,
+.folder-sheet--result .names-head {
+  row-gap: 0;
+}
+
+.folder-sheet--result .ref-buttons > div > :not(button) {
+  min-height: var(--row);
+  line-height: var(--row);
+}
+
+.folder-sheet--result .contrast-tile {
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.folder-sheet--result .contrast-tile .cbadge {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.folder-sheet--result :is(.closest-stage, .closest-target, .closest-ranked) {
+  align-items: start;
+  align-content: start;
+}
+
+.folder-sheet--result .min-card {
+  border: 0;
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}
+
+.folder-sheet--result .step-scale {
+  height: calc(var(--row) * 3);
+}
+
+.folder-sheet--result .lightness-caption {
+  display: flex;
+  align-items: center;
+  height: var(--row);
+}
+
+.folder-sheet--result .readable-pool {
+  grid-auto-rows: calc(var(--row) * 2);
+  row-gap: 0;
+  align-items: stretch;
+}
+
+.folder-sheet--result .readable-pool .rd-tile {
+  height: auto;
+}
+
+.folder-sheet--result .mix-strip {
+  height: calc(var(--row) * 3);
+}
+
+/* States stay on the lines: no lifting or shrinking. The winner is
+   ringed, a filtered-out tile fades. */
+.folder-sheet--result :is(.rank, .rd-tile) {
+  transform: none;
+}
+
+.folder-sheet--result .rd-tile.is-out {
+  opacity: 0.3;
+}
+
+.folder-sheet--result .poline-strip {
+  grid-template-rows: repeat(3, var(--row));
+  border: 0;
+}
+
+.folder-sheet--result .extend-result-line {
+  min-height: var(--row);
+}
+
+.folder-sheet--result .closest-ranked .rank.winner {
+  transform: none;
+}
+
+.folder-sheet--result .extend-result.poline {
+  gap: var(--row);
+}
+
+.folder-sheet--result .extend-result-line {
+  align-items: start;
+  line-height: var(--row);
+}
+
+/* One paper per sheet: whatever sits in a result takes the sheet's
+   paper and draws no paper of its own. */
+.folder-sheet--result .folder-body > * {
+  --pp: inherit;
+  --pp-text: inherit;
+}
+
+.folder-sheet--result .folder-body > * [class*="-stage"] {
+  --pp: inherit;
+  --pp-text: inherit;
+  background: none;
+  border: 0;
+}
+
+/* Six surfaces, three to a row, each tall enough for its reading. */
+.folder-sheet--result .contrast-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.folder-sheet--result .contrast-tile {
+  height: calc(var(--row) * 5);
+}
+
+/* Tiles are sized by rows, not by aspect ratio, and fill their column. */
+.folder-sheet--result :is(.contrast-tile, .swatch-fr, .contrast-palette > span, .ltile, .ntile, .stile, .rtile, .rd-tile, .order-swatch) {
+  aspect-ratio: auto;
+  width: auto;
+  min-width: 0;
+}
+
+.folder-sheet--result .swatch-fr,
+.folder-sheet--result .swatch-fr:hover {
+  transform: none;
+}
+
+/* A contrast tile: surface · the sample (two rows) · badge · reading. */
+.folder-sheet--result .contrast-tile {
+  display: grid;
+  grid-template-rows: var(--row) calc(var(--row) * 2) var(--row) var(--row);
+  align-items: center;
+  padding: 0 10px;
+}
+
+.folder-sheet--result .contrast-tile :is(.ctop, .cbottom) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  word-break: normal;
+}
+
+.folder-sheet--result .contrast-tile .cbadge {
+  margin: 0;
+  height: 20px;
+  line-height: 18px;
+  padding: 0 6px;
+}
+
+.folder-sheet--result .contrast-palette {
+  margin: 0;
+  gap: 0;
+  border: 0;
+  background: none;
+}
+
+.folder-sheet--result .contrast-palette > span {
+  height: var(--row);
+}
+
+/* furthestFrom's members are buttons, but tiles, not controls. */
+.folder-sheet--result .furthest-stage button.swatch-fr {
+  height: calc(var(--row) * 3);
+  line-height: normal;
+  padding: 6px;
+}
+
+.folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
+  content: "odd one";
+  white-space: nowrap;
+}
+
+
+.folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
+  top: auto;
+  bottom: 6px;
+}
+
+.folder-sheet--result em,
+.folder-sheet--result i {
+  font-style: normal;
+}
+
+/* Any color drawn on a sheet keeps a hairline edge, so a member the
+   color of the paper is still there. */
+.folder-sheet--result :where([style*="background"]):not(.folder-body, .folder-sheet) {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pp-text) 28%, var(--pp, var(--paper)));
+}
+
+.folder-sheet--result button:is(.stile, .rtile, .ntile, .ltile, .rd-tile, .order-swatch) {
+  height: calc(var(--row) * 2);
+  line-height: normal;
+}
+
+.folder-sheet--result button:is(.is-active, [aria-pressed="true"], [aria-selected="true"]):not([class*="tile"], .swatch-fr, .order-swatch, .folder-tab) {
+  background: var(--pp-text);
+  color: var(--pp);
+}
+
+/* The two cards share their rows: titles, intros and folders line up. */
+.extend-grid {
+  grid-template-rows: auto auto auto;
+  row-gap: 0;
+}
+
+.extend-card {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  align-content: start;
+}
+
+@media (max-width: 899px) {
+  .extend-card {
+    grid-row: auto;
+    grid-template-rows: none;
+  }
+}
+
+.extend-card > .folder {
+  margin-top: 0;
+  align-self: start;
+}
+
+/* ── Strips and tables run to the paper's edges ──────────────────────
+   Text and controls keep the row's inset; a row of colors or a table
+   in a result goes from edge to edge, like the landing page's sheets. */
+.folder-sheet--result .folder-body > * {
+  padding-inline: var(--row);
+}
+
+.folder-sheet--result .demo > [class*="-stage"] {
+  padding-inline: 0;
+}
+
+.folder-sheet--result :is(
+  .extends-pane, .ref-ramp, .contrast-row, .contrast-palette,
+  .readable-pool, .readable-results, .names-rows, .order-swatches,
+  .furthest-stage, .vivid-stage, .lightness-stage, .random-stage,
+  .nth-stage, .step-readout, .poline-strip, .ramp-bars
+) {
+  margin-inline: calc(var(--row) * -1);
+  border-inline: 0;
+}
+
+/* The ramp: the seed on a line of its own, the scale below it. */
+.folder-sheet--result .ramp-stage {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--row);
+}
+
+.folder-sheet--result .ramp-arrow {
+  display: none;
+}
+
+.folder-sheet--result .ramp-seed {
+  flex-direction: row;
+  align-items: center;
+  justify-self: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ── Readable: one surface, a strip of the pool over a ledger of the
+      two answers ─────────────────────────────────────────────────── */
+.folder-sheet--result .readable-pool {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-auto-rows: calc(var(--row) * 2);
+  gap: 0;
+  padding: 0;
+  border: 0;
+}
+
+.folder-sheet--result .readable-pool .rd-tile {
+  align-items: flex-end;
+  padding: 0 0 4px;
+}
+
+.folder-sheet--result .readable-results {
+  --ledger-cols: minmax(0, 1fr) auto calc(16ch + 28px);
+  display: block;
+  margin-top: 0;
+}
+
+.folder-sheet--result .readable-results > .rd-result {
+  min-height: calc(var(--row) * 2);
+  padding: 0;
+  border: 0;
+}
+
+.folder-sheet--result .rd-result > * {
+  display: block;
+  align-content: center;
+  margin: 0;
+}
+
+.folder-sheet--result .rd-result .rd-call {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.folder-sheet--result .rd-result .rd-sample {
+  font-size: 20px;
+  line-height: var(--row);
+  white-space: nowrap;
+}
+
+.folder-sheet--result .rd-result .rd-meta {
+  font-size: 11px;
+}
+
+.folder-sheet--result .rd-result.is-fail .rd-sample {
+  white-space: normal;
+  font-size: 12px;
+  grid-column: span 2;
+}
+
+.folder-sheet--result .rd-result > * + * {
+  border-left-color: color-mix(in srgb, currentColor 25%, var(--pp, var(--paper)));
+}
+
+.folder-sheet--result .readable-results > .rd-result {
+  height: auto;
+}
+
+/* ── Renderers: a folder, a paper per output; the whole output shows,
+      no scrolling inside ──────────────────────────────────────────── */
+.renderer-folder .r-pane {
+  display: block;
+  max-height: none;
+  overflow: visible;
+  margin: 0;
+  color: var(--pp-text);
+  background-color: var(--pp);
+}
+
+.renderer-folder .folder-body {
+  overflow: visible;
+}
+
+.folder-sheet--r-css { --pp: var(--black); --pp-text: var(--on-black); }
+.folder-sheet--r-json { --pp: var(--blue); --pp-text: var(--on-black); }
+.folder-sheet--r-w3 { --pp: var(--green); --pp-text: var(--black); }
+.folder-sheet--r-tailwind { --pp: var(--red); --pp-text: var(--black); }
+
+.renderer-folder .r-pane {
+  --pp: inherit;
+  --pp-text: inherit;
+}
+
+/* Every row of the Poline strip is a full row. */
+.folder-sheet--result .poline-strip {
+  height: auto;
+  grid-template-rows: none;
+  grid-auto-rows: var(--row);
+}
+
+/* The rule on one line, its swatch and value after it. */
+.folder-sheet--result .extend-result-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-auto-rows: var(--row);
+  align-items: center;
+  gap: 0 10px;
+}
+
+.folder-sheet--result .extend-result-line > :first-child {
+  grid-column: 1 / -1;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.folder-sheet--result .vtile {
+  box-sizing: border-box;
+  aspect-ratio: auto;
+  height: calc(var(--row) * 4);
+}
+
+/* ── Color strips are set like the tables: no gaps, no rings, only a
+      1px line between neighbours (a shadow, so it takes no room) ─── */
+.folder-sheet--result {
+  --strip-line: color-mix(in srgb, var(--pp-text) 30%, var(--pp, var(--paper)));
+}
+
+.folder-sheet--result :is(
+  .ramp-bars, .names-rows, .readable-pool, .contrast-palette, .vivid-stage,
+  .lightness-stage, .random-stage, .nth-stage, .furthest-stage,
+  .order-swatches, .ref-ramp, .poline-strip, .contrast-row, .sibling-stage,
+  .closest-ranked
+) {
+  gap: 0;
+  border: 0;
+  outline: 0;
+  background-image: none;
+}
+
+.folder-sheet--result :is(
+  .ramp-bars, .names-rows, .readable-pool, .contrast-palette, .vivid-stage,
+  .lightness-stage, .random-stage, .nth-stage, .furthest-stage,
+  .order-swatches, .ref-ramp, .poline-strip, .contrast-row, .sibling-stage,
+  .closest-ranked
+) > * {
+  border: 0;
+  box-shadow: none;
+  outline-offset: -2px;
+}
+
+/* Stacked rows: a line above every row but the first. */
+.folder-sheet--result :is(.ramp-bars, .names-rows) > * + * {
+  box-shadow: inset 0 1px 0 var(--strip-line);
+}
+
+/* Side by side: a line left of every member but the first. */
+.folder-sheet--result :is(
+  .readable-pool, .contrast-palette, .vivid-stage, .lightness-stage,
+  .random-stage, .nth-stage, .furthest-stage, .order-swatches, .ref-ramp,
+  .sibling-stage, .closest-ranked
+) > * + * {
+  box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+/* Grids: a line left of every member but a row's first, above every
+   member but the first row's. */
+.folder-sheet--result .poline-strip > :not(:nth-child(7n + 1)) {
+  box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+.folder-sheet--result .poline-strip > :nth-child(n + 8) {
+  box-shadow: inset 0 1px 0 var(--strip-line);
+}
+
+.folder-sheet--result .poline-strip > :nth-child(n + 8):not(:nth-child(7n + 1)) {
+  box-shadow: inset 1px 1px 0 var(--strip-line);
+}
+
+.folder-sheet--result .contrast-row > :not(:nth-child(3n + 1)) {
+  box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+.folder-sheet--result .contrast-row > :nth-child(n + 4) {
+  box-shadow: inset 0 1px 0 var(--strip-line);
+}
+
+.folder-sheet--result .contrast-row > :nth-child(n + 4):not(:nth-child(3n + 1)) {
+  box-shadow: inset 1px 1px 0 var(--strip-line);
+}
+
+/* (Repeated with more weight, so the stage resets above don't undo it.) */
+.folder-sheet--result .folder-body :is(
+  .extends-pane, .ref-ramp, .contrast-row, .contrast-palette,
+  .readable-pool, .readable-results, .names-rows, .order-swatches,
+  .furthest-stage, .vivid-stage, .lightness-stage, .random-stage,
+  .nth-stage, .step-readout, .poline-strip, .ramp-bars
+) {
+  margin-inline: calc(var(--row) * -1);
+}
+
+/* closest: the stray color on its own line, the ranking below it as an
+   edge-to-edge strip like the others. */
+.folder-sheet--result .closest-stage {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--row);
+}
+
+.folder-sheet--result .closest-arrow {
+  display: none;
+}
+
+.folder-sheet--result .closest-target {
+  justify-self: start;
+}
+
+.folder-sheet--result .folder-body .closest-ranked {
+  margin-inline: calc(var(--row) * -1);
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  grid-auto-flow: column;
+  column-gap: 0;
+  row-gap: 0;
+}
+
+.folder-sheet--result .closest-ranked .rank {
+  width: auto;
+  margin: 0;
+  border-radius: 0;
+}
+
+.folder-sheet--result .folder-body .closest-ranked {
+  grid-template-columns: none;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.folder-sheet--result .closest-ranked .rank {
+  min-width: 0;
+  max-width: none;
+}
+
+.folder-sheet--result .closest-ranked .rank {
+  aspect-ratio: auto;
+}
+
+/* A result's own output (code it prints) is a strip of black paper
+   across the sheet, not a box inside it. */
+.folder-sheet--result .folder-body :is(.ref-css, .ref-stage > pre, .ref-stage > code) {
+  margin-inline: calc(var(--row) * -1);
+}
+
+/* inParent: the ramp as a list, a row per step, number left and the
+   role it plays right; the two buttons on a strip of the page color. */
+.folder-sheet--result .ref-ramp {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: var(--row);
+}
+
+.folder-sheet--result .ref-ramp-step {
+  aspect-ratio: auto;
+  height: var(--row);
+  flex-direction: row-reverse;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1ch;
+  padding: 0 var(--row);
+  font-size: 12px;
+  line-height: var(--row);
+}
+
+.folder-sheet--result .ref-ramp > * + * {
+  box-shadow: inset 0 1px 0 var(--strip-line);
+}
+
+.folder-sheet--result .folder-body .ref-buttons {
+  margin-inline: calc(var(--row) * -1);
+  padding: var(--row);
+  border: 0;
+  gap: 0 var(--row);
+}
+
+.folder-sheet--result .ref-ramp-step {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.folder-sheet--result .ref-ramp-step > span {
+  order: -1;
+  margin-right: auto;
+}
+
+/* minContrastWith: three answers side by side across the sheet, the
+   ratio as a head over each, a line between them. */
+.folder-sheet--result .folder-body .min-stage {
+  margin-inline: calc(var(--row) * -1);
+  gap: 0;
+}
+
+.folder-sheet--result .min-card {
+  outline: 0;
+  border: 0;
+}
+
+.folder-sheet--result .min-card + .min-card {
+  box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+.folder-sheet--result .min-label {
+  height: var(--row);
+  padding: 0 var(--row);
+  line-height: var(--row);
+  background: none;
+  color: inherit;
+  border: 0;
+  box-shadow: inset 0 -1px 0 var(--strip-line);
+}
+
+.folder-sheet--result .min-sample {
+  aspect-ratio: auto;
+  height: calc(var(--row) * 4);
+  padding: 0 var(--row);
+}
+
+.folder-sheet--result .folder-body .sibling-stage {
+  margin-inline: calc(var(--row) * -1);
+  gap: 0;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+.folder-sheet--result .sibling-stage > .stile {
+  margin: 0;
+  outline-offset: -2px;
+}
+
+/* colorMix: the two ends on one line, the path between them below as an
+   edge-to-edge strip. */
+.folder-sheet--result .mix-row {
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  row-gap: var(--row);
+  column-gap: 0;
+}
+
+.folder-sheet--result .mix-row > :first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.folder-sheet--result .mix-row > :last-child {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.folder-sheet--result .folder-body .mix-strip {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  height: calc(var(--row) * 2);
+  margin-inline: calc(var(--row) * -1);
+  gap: 0;
+}
+
+.folder-sheet--result .mix-strip > span {
+  border: 0;
+  box-shadow: none;
+}
+
+.folder-sheet--result .mix-strip > span + span {
+  box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+/* Renderers: the papers behind peek out under the front one, no more. */
+.renderer-folder .folder-sheet:not(.is-front) .folder-body {
+  max-height: calc(var(--row) * 4);
+  overflow: hidden;
+}
+
+/* Value transforms: each entry two rows tall, no padding of its own. */
+.coda-list[data-ledger] > * {
+  min-height: calc(var(--row) * 2);
+  padding-block: 0;
+  margin: 0;
+}
+
+/* ── Ramps and color strips keep the content's inset ─────────────────
+   They sit in the same column as the text and controls of a result
+   (28px from each edge); only tables and printed code run edge to
+   edge. Still no gaps inside a strip, a 1px line between members. */
+.folder-sheet--result .folder-body :is(
+  .ref-ramp, .ref-buttons, .contrast-row, .contrast-palette,
+  .readable-pool, .readable-results, .names-rows, .order-swatches,
+  .furthest-stage, .vivid-stage, .lightness-stage, .random-stage,
+  .nth-stage, .sibling-stage, .closest-ranked, .step-readout,
+  .poline-strip, .ramp-bars, .mix-strip, .min-stage
+) {
+  margin-inline: 0;
+}
+
+/* Name it: the color and the naming schemes on one row. */
+.folder-sheet--result .names-head {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--row);
+}
+
+.folder-sheet--result .names-schemes {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Table cells in a result cover the paper's rulings, like the ledger:
+   only the table's own lines show, never a ruling through a cell. */
+.folder-sheet--result :is(.step-cell, .min-label) {
+  background-color: var(--pp);
+}
+
+/* Readable's answers are written on the sample surface: their cells
+   take the row's surface, not the sheet's paper. */
+.folder-sheet--result .rd-result > * {
+  background-color: transparent;
+}
+
+.folder-sheet--result .step-cell:nth-child(2) {
+  background-color: color-mix(in srgb, var(--pp-text) 14%, var(--pp));
+}
+
+/* The ramps show their steps; no hex values beside them. */
+.ramp-bar .hex,
+.names-row code {
+  display: none;
+}
+
+/* ── Color strips: no hex values on the swatches, and a swatch's state
+      (most vivid, lightest, picked, …) written under it, on the row
+      below, in the sheet's text, not as a box on the color ───────── */
+.folder-sheet--result :is(.vtile, .ltile, .rtile, .ntile, .stile, .rank) > span:not([class]),
+.folder-sheet--result .swatch-fr .hex {
+  display: none;
+}
+
+.folder-sheet--result :is(.vivid-stage, .lightness-stage, .random-stage, .nth-stage, .sibling-stage, .furthest-stage) {
+  overflow: visible;
+}
+
+.folder-sheet--result :is(.vtile, .ltile, .rtile, .ntile, .stile, .swatch-fr) {
+  overflow: visible;
+}
+
+.folder-sheet--result :is(
+  .vtile.crown, .vtile.floor, .ltile.is-lightest, .ltile.is-darkest,
+  .stile.is-anchor, .stile.is-pick, .rtile.picked, .ntile.picked,
+  .swatch-fr.furthest
+)::before {
+  position: absolute;
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: auto;
+  margin: 0;
+  padding: 0;
+  height: var(--row);
+  line-height: var(--row);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--pp-text);
+  background: none;
+}
+
+/* As many columns as the pool has members. */
+.folder-sheet--result .readable-pool {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+/* The call gets room and wraps between words, never inside one. */
+.folder-sheet--result .readable-results {
+  --ledger-cols: minmax(0, 1.3fr) minmax(0, 1fr) calc(15ch + 28px);
+}
+
+.folder-sheet--result .rd-result .rd-call {
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 18px;
+}
+
+.folder-sheet--result .readable-results {
+  --ledger-cols: minmax(0, 1fr) max-content calc(15ch + 28px);
+}
+
+/* The pool and the answers are one sample surface: a hairline frames
+   it, so a member the color of the sheet still has an edge. */
+.folder-sheet--result :is(.readable-pool, .readable-results) {
+  box-shadow:
+    inset 1px 0 0 color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper))),
+    inset -1px 0 0 color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper)));
+}
+
+.folder-sheet--result .readable-pool {
+  box-shadow:
+    inset 1px 0 0 color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper))),
+    inset -1px 0 0 color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper))),
+    inset 0 1px 0 color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper)));
+  outline: 1px solid color-mix(in srgb, var(--pp-text) 35%, var(--pp, var(--paper)));
+  outline-offset: -1px;
+}
+
+/* The label under a swatch: a white block, centered on its swatch. */
+.folder-sheet--result :is(
+  .vtile.crown, .vtile.floor, .ltile.is-lightest, .ltile.is-darkest,
+  .stile.is-anchor, .stile.is-pick, .rtile.picked, .ntile.picked,
+  .swatch-fr.furthest
+)::before {
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 4px);
+  height: auto;
+  padding: 0 6px;
+  line-height: 20px;
+  color: var(--black);
+  background: var(--on-black);
+  z-index: 3;
+}
+
+.folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
+  top: calc(100% + 4px);
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* The label is a full row under its swatch, as wide as the swatch. */
+.folder-sheet--result :is(
+  .vtile.crown, .vtile.floor, .ltile.is-lightest, .ltile.is-darkest,
+  .stile.is-anchor, .stile.is-pick, .rtile.picked, .ntile.picked
+)::before,
+.folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
+  top: 100%;
+  left: 0;
+  right: 0;
+  width: auto;
+  transform: none;
+  height: var(--row);
+  padding: 0 4px;
+  line-height: var(--row);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-sheet--result :is(
+  .vtile.crown, .vtile.floor, .ltile.is-lightest, .ltile.is-darkest,
+  .stile.is-anchor, .stile.is-pick, .rtile.picked, .ntile.picked
+)::before,
+.folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
+  padding: 0 2px;
+  font-size: 10px;
+}
+
+/* The tile's own text clears the label under it. */
+.folder-sheet--result :is(.vtile, .ltile, .stile, .rtile, .ntile) {
+  padding-bottom: 6px;
+}
+
+/* ── States without transparency ─────────────────────────────────────
+   A member that is out (fails the ratio, filtered, excluded): its
+   color hatched with the sheet's paper and a dashed frame. Inherited
+   rows: text in a solid mid tone and a dashed row line. Dim bars: a
+   dashed outline. */
+.folder-sheet--result :is(.rd-tile.is-out, .ltile.is-filtered, .swatch-fr.excluded) {
+  opacity: 1;
+  background-image: repeating-linear-gradient(135deg, var(--pp) 0 3px, transparent 3px 7px);
+  outline: 1px dashed var(--pp-text);
+  outline-offset: -1px;
+}
+
+.folder-sheet--result .step-scale .bar.dim {
+  opacity: 1;
+  background: none;
+  outline: 1px dashed var(--pp-text);
+  outline-offset: -1px;
+}
+
+.folder-sheet--result :is(.ext-row--inherited, .ref-panes .ext-row--inherited) {
+  opacity: 1;
+  color: color-mix(in srgb, var(--pp-text) 55%, var(--pp));
+  box-shadow: none;
+  background:
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--pp-text) 45%, var(--pp)) 0 3px, var(--pp) 3px 6px) bottom / 100% 1px no-repeat,
+    var(--pp);
+}
+
+.folder-sheet--result .ext-row--inherited * {
+  color: inherit;
+}
+
+.folder-sheet--result .contrast-tile .cbadge.is-fail,
+.folder-sheet--result .contrast-tile .cbadge.is-aalg {
+  opacity: 1;
+  border-style: dashed;
+}
+
+/* Secondary text in a solid tone, not faded. */
+.r-tab em,
+.ref-modes button.is-active code,
+.ramp-bar .shade,
+.rd-result .rd-meta {
+  opacity: 1;
+}
+
+/* A swatch with a label under it keeps a clear row before whatever
+   comes next. */
+.folder-sheet--result :is(.vivid-stage, .lightness-stage, .random-stage, .nth-stage, .sibling-stage, .furthest-stage) {
+  margin-bottom: var(--row);
+}
+
+.folder-sheet--result button:is(.stile, .rtile, .ntile, .ltile, .vtile) {
+  padding-bottom: 6px;
+}
+
+.folder-sheet--result :is(.contrast-tile .ctop, .contrast-tile .cbottom, .min-text span) {
+  opacity: 1;
+}
+
+/* Order swatches show their name on hover: hidden, not transparent. */
+.folder-sheet--result .order-swatch span {
+  opacity: 1;
   visibility: hidden;
+}
+
+.folder-sheet--result .order-swatch:is(:hover, :focus-within) span {
+  visibility: visible;
+}
+
+/* The inline swatch color must not reset the hatch. */
+.folder-sheet--result :is(.rd-tile.is-out, .ltile.is-filtered, .swatch-fr.excluded) {
+  background-image: repeating-linear-gradient(135deg, var(--pp) 0 3px, transparent 3px 7px) !important;
+}
+
+/* A labelled strip keeps a clear row before the controls under it. */
+.folder-sheet--result .demo > :is(.vivid-stage, .lightness-stage, .random-stage, .nth-stage, .sibling-stage, .furthest-stage) {
+  margin-bottom: var(--row);
+}
+
+/* Hatched in the tile's own ink, which always reads on its color. */
+.folder-sheet--result :is(.rd-tile.is-out, .ltile.is-filtered, .swatch-fr.excluded) {
+  background-image: repeating-linear-gradient(135deg, currentColor 0 1.5px, transparent 1.5px 6px) !important;
+}
+
+.folder-sheet--result .min-card .min-sample .min-text span {
+  opacity: 1;
 }

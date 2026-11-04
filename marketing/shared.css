@@ -1,0 +1,877 @@
+/* Design Book — the parts the landing page, the docs and the article share.
+   Each page loads this first and its own sheet after it; a page's sheet
+   only sets what is particular to it (which ink a paper is cut from,
+   where a tab sits, how big a thing is).
+
+   A paper is any element with --pp (its ink) and --pp-text (what is
+   written on it). Everything below reads those two. */
+
+/* ─── Type ──────────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Obel Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/ObelMono-VF.woff2") format("woff2");
+}
+
+/* ─── Inks, paper and the row ───────────────────────────────────── */
+:root {
+  --paper: #eee9dc;
+  --black: #0d0a03;
+  --on-black: #fffaed;
+  --blue: #3c61a0;
+  --red: #de5331;
+  --yellow: #dab43d;
+  --green: #479549;
+
+  --font-text: "Valley Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-code: "Obel Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Every line, ruling, padding and gap is a multiple of the row. */
+  --row: 28px;
+  --rail: calc(var(--row) * 2);
+
+  /* One feed hole of printer paper, cut with a mask. */
+  --hole: radial-gradient(circle, transparent 5px, #000 5.5px);
+  /* One dash of a perforation. */
+  --tear: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--pp-text, var(--black)) 32%, var(--pp, var(--paper))) 0 3px, transparent 3px 7px);
+}
+
+/* Papers cut from each ink, with the text color that reads on it. */
+.ink-blue { --pp: var(--blue); --pp-text: var(--on-black); }
+.ink-black { --pp: var(--black); --pp-text: var(--on-black); }
+.ink-red { --pp: var(--red); --pp-text: var(--black); }
+.ink-yellow { --pp: var(--yellow); --pp-text: var(--black); }
+.ink-green { --pp: var(--green); --pp-text: var(--black); }
+
+/* Ruled paper: a faint line under every row. */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 12%, var(--pp, var(--paper))) calc(var(--row) - 1px) var(--row)
+  );
+}
+
+/* ─── Printer paper ─────────────────────────────────────────────────
+   holes-left: torn off on one side — feed holes down the left edge and
+   a perforation beside them. holes-both: continuous paper, holes down
+   both sides; the paper is painted on ::before so the holes can be cut
+   without cutting off a tab above it. */
+.holes-left {
+  position: relative;
+  -webkit-mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
+  mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
+}
+
+.holes-left::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--row) * 1.25);
+  width: 1px;
+  background: var(--tear);
+  pointer-events: none;
+}
+
+.holes-both {
+  position: relative;
+  z-index: 0;
+  background: none;
+}
+
+.holes-both::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    var(--tear) calc(var(--row) * 1.25) 0 / 1px 100% no-repeat,
+    var(--tear) calc(100% - var(--row) * 1.25) 0 / 1px 100% no-repeat,
+    repeating-linear-gradient(to bottom, transparent 0 calc(var(--row) - 1px), color-mix(in srgb, var(--pp-text) 12%, var(--pp, var(--paper))) calc(var(--row) - 1px) var(--row)),
+    var(--pp);
+  -webkit-mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    var(--hole) right top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) center / calc(100% - var(--row) * 2.5) 100% no-repeat;
+  mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    var(--hole) right top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) center / calc(100% - var(--row) * 2.5) 100% no-repeat;
+}
+
+/* ─── Folder ────────────────────────────────────────────────────────
+   Papers that share one grid cell. Each carries a tab on its top edge,
+   at its own place along it (--tab-left), so the tabs of the papers
+   behind still show; a paper behind sits a little up and to the right,
+   shows what is written on it where it sticks out, and comes forward
+   when its tab, or any part of it that shows, is selected. Each paper is
+   as long as its content. */
+.folder {
+  display: grid;
+  min-width: 0;
+  padding-top: var(--row);
+}
+
+.folder-sheet {
+  grid-area: 1 / 1;
+  align-self: start;
+  position: relative;
+  min-width: 0;
+  color: var(--pp-text);
+  transition: transform 0.25s ease;
+}
+
+.folder-sheet.is-front {
+  z-index: 1;
+}
+
+.folder-sheet:not(.is-front) {
+  z-index: 0;
+  cursor: pointer;
+  transform: translate(calc(var(--row) / 2), calc(var(--row) / -2));
+}
+
+.folder-sheet:not(.is-front) .folder-body {
+  pointer-events: none;
+}
+
+.folder-body {
+  overflow-x: auto;
+}
+
+.folder-tab {
+  position: absolute;
+  bottom: 100%;
+  left: var(--tab-left, 0);
+  height: var(--row);
+  padding: 0 var(--row);
+  font: 14px var(--font-text);
+  white-space: nowrap;
+  color: var(--pp-text);
+  background: var(--pp);
+  border: 0;
+  cursor: pointer;
+}
+
+.folder-sheet:not(.is-front) .folder-tab:hover {
+  text-decoration: underline;
+}
+
+.folder-tab:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* ─── Ledger ────────────────────────────────────────────────────────
+   The table of the landing page, for every table on every page. Head
+   in small caps over a double rule; a rule under every row and between
+   columns; the first column numbered, set off by a double rule; a color
+   as a bar the height of its row, flush with its cell's left rule.
+
+   Two forms, one look:
+     <table class="ledger"> with td.no for the number and td.val for a
+       value with a .swatch;
+     [data-ledger] on a list whose children are the rows and whose
+       grandchildren are the cells (numbered automatically), with an
+       optional [data-ledger-head] above it. */
+.ledger,
+[data-ledger],
+[data-ledger-head] {
+  --lg-ink: color-mix(in srgb, var(--pp-text) 72%, var(--pp));
+  --lg-rule: color-mix(in srgb, var(--pp-text) 28%, var(--pp, var(--paper)));
+  --lg-margin: color-mix(in srgb, var(--pp-text) 60%, var(--pp, var(--paper)));
+}
+
+/* On ruled paper a table draws only its own lines: its cells are filled
+   with the paper's color, covering the rulings, and every row is exactly
+   one row tall (or a whole number of rows when it wraps), so its lines
+   keep the paper's rhythm. Lines are drawn as inset shadows, which take
+   no height. */
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+  line-height: var(--row);
+}
+
+.ledger th,
+.ledger td {
+  height: var(--row);
+  padding: 0 14px;
+  background: var(--pp);
+  border: 0;
+  vertical-align: middle;
+}
+
+.ledger td {
+  box-shadow: inset 0 -1px 0 var(--lg-rule);
+}
+
+.ledger th,
+[data-ledger-head] {
+  text-align: left;
+  font-weight: 400;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+  color: var(--lg-ink);
+  /* a double rule: line, gap, line */
+  box-shadow:
+    inset 0 -1px 0 var(--lg-rule),
+    inset 0 -2px 0 var(--pp),
+    inset 0 -3px 0 var(--lg-rule);
+}
+
+.ledger th + th,
+.ledger td + td {
+  border-left: 1px solid var(--lg-rule);
+}
+
+.ledger th:first-child,
+.ledger td.no {
+  text-align: right;
+  color: var(--lg-ink);
+  border-right: 3px double var(--lg-margin);
+  font-family: var(--font-code);
+  font-size: 12px;
+  font-variant-numeric: lining-nums;
+}
+
+.ledger td.no + td {
+  border-left: 0;
+}
+
+.ledger td.val {
+  position: relative;
+  padding-left: calc(var(--row) * 0.375 + 12px);
+}
+
+.ledger .swatch,
+[data-ledger] .swatch {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--row) * 0.375);
+}
+
+/* The list form. */
+[data-ledger] {
+  counter-reset: ledger-row;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: var(--row);
+}
+
+[data-ledger-head] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--row);
+  margin: 0;
+  padding: 0 14px 0 calc(var(--row) * 2 + 14px);
+  font-size: 15px;
+  line-height: var(--row);
+  background-color: var(--pp);
+  border: 0;
+}
+
+[data-ledger] > :not([data-ledger-skip]) {
+  counter-increment: ledger-row;
+  display: grid;
+  grid-template-columns: calc(var(--row) * 2) var(--ledger-cols, minmax(0, 1fr));
+  align-items: stretch;
+  margin: 0;
+  min-height: var(--row);
+  background: var(--pp);
+  border: 0;
+  box-shadow: inset 0 -1px 0 var(--lg-rule);
+}
+
+[data-ledger] > :not([data-ledger-skip])::before {
+  content: counter(ledger-row);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 12px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  font-variant-numeric: lining-nums;
+  color: var(--lg-ink);
+  border-right: 3px double var(--lg-margin);
+}
+
+/* A cell is a block, so text and its inline pieces flow as written;
+   align-content centers it in the row's height. */
+[data-ledger] > :not([data-ledger-skip]) > * {
+  position: relative;
+  display: block;
+  align-content: center;
+  min-width: 0;
+  padding: 0 14px;
+  line-height: var(--row);
+  overflow-wrap: anywhere;
+}
+
+[data-ledger] > :not([data-ledger-skip]) > * + * {
+  border-left: 1px solid var(--lg-rule);
+}
+
+/* A cell that is only a color: the bar, no padding. */
+[data-ledger] > :not([data-ledger-skip]) > .swatch-cell {
+  padding: 0;
+}
+
+/* ─── Switch: a few choices side by side, full width, no gaps ─────── */
+.switch {
+  display: flex;
+}
+
+.switch button {
+  flex: 1;
+  white-space: nowrap;
+  min-height: var(--row);
+  padding: 3px 10px;
+  font: 12px var(--font-code);
+  color: var(--pp-text);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--pp-text) 42%, var(--pp, var(--paper)));
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.switch button + button {
+  margin-left: -1px;
+}
+
+.switch button:hover {
+  border-color: var(--pp-text);
+}
+
+.switch button:is([aria-pressed="true"], .is-active) {
+  color: var(--pp);
+  background: var(--pp-text);
+  border-color: var(--pp-text);
+}
+
+.switch button code {
+  color: inherit;
+  background: none;
+  padding: 0;
+  font: inherit;
+}
+
+/* ─── Curve editor ──────────────────────────────────────────────────
+   An outlined frame, the straight diagonal it bends away from, the two
+   arms and handles, a dot on the curve for each step with a faint line
+   out to its value. */
+.curve-frame,
+.curve-diagonal,
+.curve-arm,
+.curve-tick,
+.curve-path {
+  fill: none;
+  stroke: var(--pp-text);
+  vector-effect: non-scaling-stroke;
+}
+
+.curve-frame { stroke: color-mix(in srgb, currentColor 60%, var(--pp, var(--paper))); }
+.curve-diagonal { stroke-dasharray: 2 3; }
+.curve-tick { stroke-dasharray: 1 2; }
+.curve-arm { stroke-dasharray: 3 2; }
+.curve-path { stroke-width: 1.5; }
+
+.curve-step {
+  fill: var(--pp-text);
+}
+
+.curve-handle {
+  fill: var(--pp);
+  stroke: var(--pp-text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  cursor: grab;
+}
+
+.curve-handle:active { cursor: grabbing; }
+
+.curve-handle:is(:hover, :focus-visible) {
+  outline: none;
+  fill: var(--pp-text);
+}
+
+.curve-label {
+  fill: var(--pp-text);
+  font-family: var(--font-code);
+  font-size: var(--curve-label-size, 3.4px);
+}
+
+/* ─── Rails: the blue gutters ───────────────────────────────────────
+   A scale on each side: ticks, numbers, a needle, a vertical legend.
+   The right rail of the docs and the article is the edge of printer
+   paper instead (rail-feed): feed holes that run past with the page. */
+.rail {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--rail);
+  z-index: 10;
+  color: var(--rail-ink, var(--on-black));
+  background: var(--rail-bg, var(--blue));
+  font-family: var(--font-code);
+  font-size: 9px;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+}
+
+.rail-left { left: 0; }
+.rail-right { right: 0; }
+
+.rail-scale {
+  position: absolute;
+  top: calc(var(--row) * 2);
+  bottom: calc(var(--row) * 6);
+  left: 0;
+  right: 0;
+}
+
+.rail .tick {
+  position: absolute;
+  height: 1px;
+  background: currentColor;
+}
+
+.rail .tick.minor { width: 4px; }
+.rail .tick.major { width: 9px; }
+.rail-left .tick { right: 0; }
+.rail-right .tick { left: 0; }
+
+.rail .num {
+  position: absolute;
+  transform: translateY(-50%);
+  color: inherit;
+  text-decoration: none;
+}
+
+.rail-left .num { right: 13px; }
+.rail-right .num { left: 13px; }
+.rail-left a.num:hover { opacity: 1; text-decoration: underline; }
+
+.rail .needle {
+  position: absolute;
+  height: 1px;
+  background: currentColor;
+  transform: translateY(-50%);
+}
+
+.rail-left .needle { left: 4px; right: 0; }
+.rail-right .needle { left: 0; right: 4px; }
+
+.rail .needle::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 0;
+  left: 11px;
+  transform: translateY(-50%);
+  padding: 1px 2px;
+  background: var(--rail-bg, var(--blue));
+  white-space: nowrap;
+}
+
+.rail-legend {
+  position: absolute;
+  bottom: var(--row);
+  left: 50%;
+  writing-mode: vertical-rl;
+  transform: translateX(-50%) rotate(180deg);
+  font-family: var(--font-code);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.rail-feed {
+  --pp-text: var(--rail-ink, var(--on-black));
+  background-image: var(--tear);
+  background-position: 10px var(--feed, 0px);
+  background-size: 1px 7px;
+  background-repeat: repeat-y;
+  -webkit-mask: var(--hole) 0 var(--feed, 0px) / 100% var(--row) repeat-y;
+  mask: var(--hole) 0 var(--feed, 0px) / 100% var(--row) repeat-y;
+}
+
+@media (max-width: 640px) {
+  :root { --rail: 0px; }
+  .rail { display: none; }
+}
+
+/* ─── Footer: a strip from rail to rail ─────────────────────────── */
+.imprint {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: calc(var(--row) / 2) calc(var(--row) * 2);
+  margin: 0;
+  padding: var(--row) 40px calc(var(--row) * 2);
+  font: 15px var(--font-text);
+  color: var(--imprint-ink, var(--on-black));
+  background: var(--imprint-bg, var(--blue));
+}
+
+.imprint-nav {
+  display: flex;
+  gap: var(--row);
+}
+
+.imprint a {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .imprint {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+/* ─── The name and the book, in the top right of the first screen ── */
+.brand-mark {
+  position: absolute;
+  top: calc(var(--row) * 1.5);
+  left: var(--brand-left, 40px);
+  z-index: 2;
+  font: 600 clamp(22px, 2.2vw, 30px) / var(--row) var(--font-text);
+  letter-spacing: -0.01em;
+  color: var(--brand-ink, var(--blue));
+  text-align: left;
+  text-decoration: none;
+}
+
+/* [book] Design Book: the logo in front of the name, on its line,
+   about as tall as the capitals. */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.brand-mark .logo {
+  order: -1;
+  flex: none;
+  width: 1.25em;
+  height: 1.05em;
+  /* Hangs in the margin: the name's D starts on the text column's edge,
+     the book sits left of it. */
+  margin: 0 0.3em 0 -1.55em;
+}
+
+/* ─── The book, drawn in outline ────────────────────────────────── */
+.logo {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1px;
+  stroke-linejoin: miter;
+  overflow: visible;
+}
+
+.logo * {
+  vector-effect: non-scaling-stroke;
+}
+
+/* ─── Jumps: the rail's section numbers glide to their section ──── */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ─── Slider: a ruler with a marker ──────────────────────────────────
+   One row tall, so it sits exactly in a table cell. A hairline track,
+   a tick per step (sliders.js sets --ticks from min, max and step;
+   long ends), and the marker a thin bar in the text color, set off
+   from the track by a ring of the paper. */
+input[type="range"] {
+  --ticks: 10;
+  --thumb: 3px;
+  --tick-ink: color-mix(in srgb, currentColor 55%, var(--pp, var(--paper)));
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  display: block;
+  min-width: 0;
+  height: var(--row);
+  margin: 0;
+  padding: 0 calc(var(--thumb) / 2);
+  color: inherit;
+  background:
+    /* the two ends */
+    linear-gradient(currentColor, currentColor) left center / 1px 13px no-repeat,
+    linear-gradient(currentColor, currentColor) right center / 1px 13px no-repeat,
+    /* a tick per step */
+    linear-gradient(to right, var(--tick-ink) 1px, transparent 1px) left center / calc((100% - 1px) / var(--ticks)) 7px repeat-x,
+    /* the track */
+    linear-gradient(var(--tick-ink), var(--tick-ink)) center / 100% 1px no-repeat;
+  background-origin: content-box;
+  background-clip: content-box;
+  accent-color: currentColor;
+  cursor: ew-resize;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--row);
+  background: none;
+  border: 0;
+}
+
+input[type="range"]::-moz-range-track {
+  height: var(--row);
+  background: none;
+  border: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--thumb);
+  height: 18px;
+  margin-top: calc((var(--row) - 18px) / 2);
+  background: currentColor;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 0 0 2px var(--pp, var(--paper));
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: var(--thumb);
+  height: 18px;
+  background: currentColor;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 0 0 2px var(--pp, var(--paper));
+}
+
+input[type="range"]:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb,
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  width: 5px;
+}
+
+input[type="range"]:hover::-moz-range-thumb,
+input[type="range"]:focus-visible::-moz-range-thumb {
+  width: 5px;
+}
+
+/* ─── Checkbox: a square in the text color, filled when on ───────── */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  margin: 0 6px 0 0;
+  vertical-align: middle;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+  background: currentColor;
+  box-shadow: inset 0 0 0 2px var(--pp, var(--paper));
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Inline pieces in a ledger cell get a short line height, so a cell that
+   mixes fonts (text and code) stays exactly one row: the cell's own
+   line decides the height. */
+.ledger :is(td, th) > :not(.swatch),
+[data-ledger] > * > * :is(code, span, b, a) {
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+/* ─── Color picker (hdr-color-input) ─────────────────────────────────
+   Written on the paper like everything else: a one-row square swatch
+   with a hairline in the paper's text color, the hex as text on the
+   paper, underlined like the other choices. Its panel is a flat black
+   paper, no shadow, no rounding. */
+color-input {
+  /* The component's own palette: its panel is black paper. */
+  --canvas: var(--black);
+  --canvas-text: var(--on-black);
+  --radius-2: 0;
+  --radius-round: 0;
+  display: inline-flex;
+  align-items: center;
+  height: var(--row);
+  color: inherit;
+  vertical-align: top;
+  border: 0;
+  background: none;
+}
+
+color-input::part(trigger) {
+  box-sizing: border-box;
+  width: var(--row);
+  height: var(--row);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+color-input::part(chip) {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 40%, var(--pp, var(--paper)));
+}
+
+color-input::part(input) {
+  box-sizing: border-box;
+  width: 9ch;
+  height: var(--row);
+  margin: 0 0 0 10px;
+  padding: 0;
+  font: 12px/var(--row) var(--font-code);
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 currentColor;
+  outline: 0;
+}
+
+color-input::part(input):focus {
+  box-shadow: inset 0 -2px 0 currentColor;
+}
+
+color-input::part(panel) {
+  color-scheme: dark;
+  color: var(--on-black);
+  background: var(--black);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+color-input::part(controls) {
+  color: var(--on-black);
+  font-family: var(--font-code);
+}
+
+
+/* The current page in the footer: named, not a link to itself. */
+.imprint-nav a[aria-current="page"] {
+  text-decoration: none;
+  pointer-events: none;
+}
+
+/* Elastiq's mark at the end of the footer, about two lines tall. */
+.imprint-by {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--row);
+}
+
+.imprint .elastiq {
+  display: inline-flex;
+  color: inherit;
+}
+
+.elastiq-logo {
+  display: block;
+  width: auto;
+  height: calc(var(--row) * 1.6);
+}
+
+/* ─── Install line (docs, article; the home page has its own) ───────
+   Sticks to the bottom right of the window, flush against the right
+   rail, and comes to rest on top of the footer. */
+.install-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 11;
+  width: max-content;
+  margin-left: auto;
+  display: flex;
+  align-items: stretch;
+  color: var(--install-ink, var(--on-black));
+  background: var(--install-bg, var(--blue));
+  font: 14px var(--font-code);
+}
+
+.install-bar code {
+  padding: 0 var(--row) 0 12px;
+  font: inherit;
+  line-height: calc(var(--row) * 1.5);
+  color: inherit;
+  background: none;
+}
+
+.install-bar .prompt {
+  margin-right: 0.4em;
+  color: color-mix(in srgb, var(--install-ink, var(--on-black)) 55%, var(--install-bg, var(--blue)));
+}
+
+.install-bar .copy {
+  font: 15px var(--font-text);
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.install-bar .copy:hover {
+  color: var(--install-bg, var(--blue));
+  background: var(--install-ink, var(--on-black));
+}
+
+/* Copied: the button turns green for a moment, then back. */
+.install-bar .copy.copied,
+.install .copy.copied {
+  color: var(--black);
+  background: var(--green);
+}
+
+/* Copy: black with white text on hover; green once copied. */
+.install-bar .copy:hover,
+.install .copy:hover {
+  color: var(--on-black);
+  background: var(--black);
+}
+
+.install-bar .copy.copied,
+.install .copy.copied,
+.install-bar .copy.copied:hover,
+.install .copy.copied:hover {
+  color: var(--black);
+  background: #479549;
+}

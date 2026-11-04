@@ -59,7 +59,7 @@ export function buildBook () {
   ui.set('accent',   ref('values.complement'));
   ui.set('onAccent', bestContrastWith(ref('ui.accent'), values));
   ui.set('subtle',  minContrastWith(ref('ui.surface'), values, {
-    ratio: 3,
+    minContrast: 3,
     not:   [ref('ui.accent')],
   }));
   ui.set('hover',   darken(ref('ui.accent'), { amount: 0.12 }));

@@ -1,7 +1,7 @@
-// Docs: the gutters are a map of the page, like the landing page's scales.
-// Left: where each section sits on the page, numbered (select one to go
-// there). Right: how far down the page you are. Both carry a needle that
-// follows the scroll.
+// The gutters of the docs and the article. Left: a map of the page, each
+// section numbered where it sits (select one to go there), with a needle
+// for where you are. Right: the edge of printer paper, a column of feed
+// holes that runs past as the page scrolls.
 
 const left = document.createElement("aside");
 left.className = "rail rail-left";
@@ -11,7 +11,8 @@ right.className = "rail rail-right";
 right.setAttribute("aria-hidden", "true");
 document.body.prepend(left, right);
 
-const sections = [...document.querySelectorAll("body > section")]
+// Which elements count as sections: the page can say so on <body>.
+const sections = [...document.querySelectorAll(document.body.dataset.sections ?? "body > section")]
   .map((section, i) => {
     const heading = section.querySelector("h1, h2");
     if (!heading) return null;
@@ -36,14 +37,7 @@ function build() {
   l += `<i class="needle" id="rail-here"></i></div>`;
   left.innerHTML = l;
 
-  let r = `<span class="rail-legend">Read, percent</span><div class="rail-scale">`;
-  for (let p = 0; p <= 100; p += 5) {
-    const major = p % 25 === 0;
-    r += `<i class="tick ${major ? "major" : "minor"}" style="top:${p}%"></i>`;
-    if (major) r += `<span class="num" style="top:${p}%">${p}</span>`;
-  }
-  r += `<i class="needle" id="rail-read"></i></div>`;
-  right.innerHTML = r;
+  right.classList.add("rail-feed");
   follow();
 }
 
@@ -51,8 +45,9 @@ function follow() {
   const height = document.documentElement.scrollHeight - innerHeight;
   const read = height > 0 ? scrollY / height : 0;
   const here = document.getElementById("rail-here");
-  const readNeedle = document.getElementById("rail-read");
-  if (!here || !readNeedle) return;
+  // The feed holes travel with the page.
+  right.style.setProperty("--feed", `${-scrollY}px`);
+  if (!here) return;
   // The section whose top has passed the middle of the window.
   let current = 0;
   sections.forEach(({ section }, i) => {
@@ -60,8 +55,6 @@ function follow() {
   });
   here.style.top = `${read * 100}%`;
   here.dataset.label = String(current + 1);
-  readNeedle.style.top = `${read * 100}%`;
-  readNeedle.dataset.label = `${Math.round(read * 100)}`;
 }
 
 addEventListener("scroll", follow, { passive: true });

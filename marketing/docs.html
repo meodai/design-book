@@ -6,6 +6,7 @@
   <title>Design Book — Rules behind a design system</title>
   <meta name="description" content="A reactive engine for the decisions inside a design system. Express rules, not values; render the result to any target." />
 
+  <link rel="icon" type="image/svg+xml" href="./logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -13,23 +14,18 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./shared.css" />
   <link rel="stylesheet" href="./docs.css" />
 </head>
 <body>
 
-<header class="top">
-  <a href="./" class="top-mark">Design Book</a>
-  <nav class="top-nav">
-    <a href="./">Overview</a>
-    <a href="https://github.com/meodai/design-book">GitHub</a>
-    <a href="editor/">Editor</a>
-    <a href="article/">Article</a>
-  </nav>
-</header>
-
 <section class="hero">
+  <a class="brand-mark" href="./"><span>Design</span><svg class="logo" viewBox="0 0 32 27" aria-hidden="true">
+    <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23" />
+    <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23" />
+    <path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" />
+  </svg><span>Book</span></a>
   <div class="hero-text">
-    <p class="kicker">A reactive engine for design decisions</p>
     <h1>The rules behind a design system, not the values.</h1>
     <p class="deck">
       Design systems are normally stored as fixed answers — a hex picked
@@ -40,10 +36,6 @@
       dependent re-decides itself — accessibility included.
     </p>
 
-    <div class="install">
-      <code><span class="prompt">$</span> npm i design-book</code>
-      <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
-    </div>
     <p class="install-note">
       TypeScript · ESM · two dependencies
       (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>,
@@ -220,35 +212,43 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
     </p>
   </header>
 
-  <div class="fn-tabs" role="tablist" aria-label="Selectors">
-    <span class="fn-tabs-set" role="presentation">
-      <span class="fn-tabs-group" aria-hidden="true">Compare</span>
-      <button type="button" role="tab" id="tab-closest" aria-controls="closest" aria-selected="false" tabindex="-1">closest</button>
-      <button type="button" role="tab" id="tab-next-step" aria-controls="next-step" aria-selected="false" tabindex="-1">nextLarger · nextSmaller</button>
-      <button type="button" role="tab" id="tab-furthest" aria-controls="furthest" aria-selected="false" tabindex="-1">furthestFrom</button>
-      <button type="button" role="tab" id="tab-lightness" aria-controls="lightness" aria-selected="false" tabindex="-1">lightest · darkest</button>
-    </span>
-    <span class="fn-tabs-set" role="presentation">
-      <span class="fn-tabs-group" aria-hidden="true">Contrast</span>
-      <button type="button" role="tab" id="tab-best-contrast" aria-controls="best-contrast" aria-selected="true" tabindex="0" class="is-active">bestContrastWith</button>
-      <button type="button" role="tab" id="tab-min-contrast" aria-controls="min-contrast" aria-selected="false" tabindex="-1">minContrastWith</button>
-    </span>
-    <span class="fn-tabs-set" role="presentation">
-      <span class="fn-tabs-group" aria-hidden="true">Color only</span>
-      <button type="button" role="tab" id="tab-vivid" aria-controls="vivid" aria-selected="false" tabindex="-1">mostVivid · leastVivid</button>
-    </span>
-    <span class="fn-tabs-set" role="presentation">
-      <span class="fn-tabs-group" aria-hidden="true">Position</span>
-      <button type="button" role="tab" id="tab-nth" aria-controls="nth" aria-selected="false" tabindex="-1">nth</button>
-      <button type="button" role="tab" id="tab-sibling" aria-controls="sibling" aria-selected="false" tabindex="-1">sibling</button>
-      <button type="button" role="tab" id="tab-random" aria-controls="random" aria-selected="false" tabindex="-1">random</button>
-    </span>
-  </div>
+  <nav class="fn-index" aria-label="Selectors">
+    <div class="fn-index-group">
+      <p class="fn-index-head" data-ledger-head>Compare</p>
+      <ul data-ledger>
+        <li><a href="#closest">closest</a></li>
+        <li><a href="#next-step">nextLarger · nextSmaller</a></li>
+        <li><a href="#furthest">furthestFrom</a></li>
+        <li><a href="#lightness">lightest · darkest</a></li>
+      </ul>
+    </div>
+    <div class="fn-index-group">
+      <p class="fn-index-head" data-ledger-head>Contrast</p>
+      <ul data-ledger>
+        <li><a href="#best-contrast">bestContrastWith</a></li>
+        <li><a href="#min-contrast">minContrastWith</a></li>
+      </ul>
+    </div>
+    <div class="fn-index-group">
+      <p class="fn-index-head" data-ledger-head>Color only</p>
+      <ul data-ledger>
+        <li><a href="#vivid">mostVivid · leastVivid</a></li>
+      </ul>
+    </div>
+    <div class="fn-index-group">
+      <p class="fn-index-head" data-ledger-head>Position</p>
+      <ul data-ledger>
+        <li><a href="#nth">nth</a></li>
+        <li><a href="#sibling">sibling</a></li>
+        <li><a href="#random">random</a></li>
+      </ul>
+    </div>
+  </nav>
 
   <div class="fn-panels">
 
   <!-- bestContrastWith -->
-  <article class="fn is-active" id="best-contrast" role="tabpanel" aria-labelledby="tab-best-contrast" tabindex="0">
+  <article class="fn" id="best-contrast">
     <header class="fn-head">
       <h3>bestContrastWith</h3>
       <code class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
@@ -272,7 +272,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   </article>
 
   <!-- closest -->
-  <article class="fn" id="closest" role="tabpanel" aria-labelledby="tab-closest" tabindex="0">
+  <article class="fn" id="closest">
     <header class="fn-head">
       <h3>closest</h3>
       <code class="sig">closest( target, scope, { direction?, upTo?, minDistance?, readableOn?, not? } )</code>
@@ -301,7 +301,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   </article>
 
   <!-- furthestFrom -->
-  <article class="fn" id="furthest" role="tabpanel" aria-labelledby="tab-furthest" tabindex="0">
+  <article class="fn" id="furthest">
     <header class="fn-head">
       <h3>furthestFrom</h3>
       <code class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
@@ -324,7 +324,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   </article>
 
   <!-- minContrastWith -->
-  <article class="fn" id="min-contrast" role="tabpanel" aria-labelledby="tab-min-contrast" tabindex="0">
+  <article class="fn" id="min-contrast">
     <header class="fn-head">
       <h3>minContrastWith</h3>
       <code class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
@@ -361,7 +361,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   </article>
 
   <!-- nextLarger / nextSmaller -->
-  <article class="fn" id="next-step" role="tabpanel" aria-labelledby="tab-next-step" tabindex="0">
+  <article class="fn" id="next-step">
     <header class="fn-head">
       <h3>nextLarger · nextSmaller</h3>
       <code class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } ) = closest( …, { direction } )</code>
@@ -413,7 +413,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   </article>
 
   <!-- mostVivid / leastVivid -->
-  <article class="fn" id="vivid" role="tabpanel" aria-labelledby="tab-vivid" tabindex="0">
+  <article class="fn" id="vivid">
     <header class="fn-head">
       <h3>mostVivid · leastVivid</h3>
       <code class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
@@ -434,7 +434,7 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
   </article>
 
   <!-- lightest / darkest -->
-  <article class="fn" id="lightness" role="tabpanel" aria-labelledby="tab-lightness" tabindex="0">
+  <article class="fn" id="lightness">
     <header class="fn-head">
       <h3>lightest · darkest</h3>
       <code class="sig">lightest|darkest( scope, { readableOn?, readableContrast?, not? } )</code>
@@ -465,7 +465,7 @@ ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>
   </article>
 
   <!-- random -->
-  <article class="fn" id="random" role="tabpanel" aria-labelledby="tab-random" tabindex="0">
+  <article class="fn" id="random">
     <header class="fn-head">
       <h3>random</h3>
       <code class="sig">random( scope, { type, seed?, not? } )</code>
@@ -497,7 +497,7 @@ ui.set(<span class="c-str">'promo-bg'</span>, <span class="c-fn">random</span>(b
   </article>
 
   <!-- nth -->
-  <article class="fn" id="nth" role="tabpanel" aria-labelledby="tab-nth" tabindex="0">
+  <article class="fn" id="nth">
     <header class="fn-head">
       <h3>nth</h3>
       <code class="sig">nth( scope, index, { not? } )</code>
@@ -533,7 +533,7 @@ ui.set(<span class="c-str">'subtle'</span>,  <span class="c-fn">nth</span>(ramp,
   </article>
 
   <!-- sibling -->
-  <article class="fn" id="sibling" role="tabpanel" aria-labelledby="tab-sibling" tabindex="0">
+  <article class="fn" id="sibling">
     <header class="fn-head">
       <h3>sibling</h3>
       <code class="sig">sibling( ref, offset, { wrap?, not? } )</code>
@@ -658,8 +658,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
     <div class="names-stage">
       <div class="names-head">
         <div class="names-seed">
-          <color-input id="names-seed-input" value="#ffdd00" initial-colorspace="hsl" no-alpha></color-input>
-          <span class="names-seed-lbl">brand.primary</span>
+          <color-input id="names-seed-input" value="#dab43d" initial-colorspace="hsl" no-alpha></color-input>
         </div>
         <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
           <button type="button" data-scheme="intensity" class="is-active">intensity</button>
@@ -762,10 +761,10 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
 
 <span class="c-dim">// a store is only what sets it apart</span>
 <span class="c-fn">const</span> oldTown = <span class="c-fn">layer</span>(<span class="c-str">'old-town'</span>, {
-  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) },
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) },
 });
 <span class="c-fn">const</span> harbour = <span class="c-fn">layer</span>(<span class="c-str">'harbour'</span>, {
-  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#0c8599'</span>) },
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#479549'</span>) },
 });
 
 <span class="c-fn">composeBook</span>(<span class="c-str">'old-town'</span>, [system, oldTown]);</code></pre>
@@ -780,23 +779,23 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
           <div class="extends-rows extends-rows--keys">
             <div class="ext-row ext-row--override">
               <span class="ext-key">brand.highlight</span>
-              <span class="ext-swatch" style="background:#d9480f"></span>
-              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#d9480f'</span>) <span class="ext-layer">old-town</span></span>
+              <span class="ext-swatch" style="background:#de5331"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) <span class="ext-layer">old-town</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.link</span>
-              <span class="ext-swatch" style="background:#d9480f"></span>
-              <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #d9480f</span></span>
+              <span class="ext-swatch" style="background:#de5331"></span>
+              <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #de5331</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.hover</span>
-              <span class="ext-swatch" style="background:#a13308"></span>
-              <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a13308</span></span>
+              <span class="ext-swatch" style="background:#a53b22"></span>
+              <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a53b22</span></span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">ui.tint</span>
-              <span class="ext-swatch" style="background:#fdddcb"></span>
-              <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #fdddcb</span></span>
+              <span class="ext-swatch" style="background:#f0d4c1"></span>
+              <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #f0d4c1</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.ink</span>
@@ -830,18 +829,18 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
           theme has to change roots across the whole system.
         </p>
         <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
-light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));
-light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
-light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#ff8800'</span>));
-light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#888888'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#908b7f'</span>));
 
 <span class="c-dim">// dark inherits all five, overrides two</span>
 <span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, {
   <span class="c-key">extends</span>: <span class="c-str">'light'</span>,
 });
-dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
-dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));</code></pre>
+dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>));
+dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>));</code></pre>
       </div>
 
       <figure class="extends-stage">
@@ -853,13 +852,13 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
           <div class="extends-rows">
             <div class="ext-row ext-row--override">
               <span class="ext-key">bg</span>
-              <span class="ext-swatch" style="background:#1a1a1a"></span>
-              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>)</span>
+              <span class="ext-swatch" style="background:#0d0a03"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>)</span>
             </div>
             <div class="ext-row ext-row--override">
               <span class="ext-key">text</span>
-              <span class="ext-swatch" style="background:#f5f5f5"></span>
-              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>)</span>
+              <span class="ext-swatch" style="background:#fffaed"></span>
+              <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>)</span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">primary</span>
@@ -868,13 +867,13 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">accent</span>
-              <span class="ext-swatch" style="background:#ff8800"></span>
-              <span class="ext-val">inherit <span class="ext-resolved">→ #ff8800</span></span>
+              <span class="ext-swatch" style="background:#de5331"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #de5331</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">muted</span>
-              <span class="ext-swatch" style="background:#888888"></span>
-              <span class="ext-val">inherit <span class="ext-resolved">→ #888888</span></span>
+              <span class="ext-swatch" style="background:#908b7f"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #908b7f</span></span>
             </div>
           </div>
         </div>
@@ -938,7 +937,7 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
         <span>Blend two colors in any space.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
-        <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#3c61a0"/><circle cx="28" cy="12" r="9" fill="#88679a"/><circle cx="44" cy="12" r="9" fill="#de5331"/></svg>
+        <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#3c61a0"/><circle cx="28" cy="12" r="9" fill="#9f5e6a"/><circle cx="44" cy="12" r="9" fill="#de5331"/></svg>
       </span>
     </li>
     <li>
@@ -947,7 +946,7 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
         <span>Mix toward white in OKLCH.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
-        <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#1d3a6c"/><circle cx="28" cy="12" r="9" fill="#a5c0e6"/></svg>
+        <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#192d4e"/><circle cx="28" cy="12" r="9" fill="#9aaed1"/></svg>
       </span>
     </li>
     <li>
@@ -956,7 +955,7 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
         <span>Mix toward black in OKLCH.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
-        <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#a5c0e6"/><circle cx="28" cy="12" r="9" fill="#1d3a6c"/></svg>
+        <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#9aaed1"/><circle cx="28" cy="12" r="9" fill="#192d4e"/></svg>
       </span>
     </li>
     <li>
@@ -1177,7 +1176,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'warm'</span>, <span class=
 poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
 
 ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
-  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">ratio</span>: <span class="c-num">3</span> },
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">minContrast</span>: <span class="c-num">3</span> },
 ));</code></pre>
       <div class="extend-result poline" id="extend-poline-result">
         <div class="poline-strip" id="extend-poline-strip"></div>
@@ -1195,25 +1194,14 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
 <!-- ─── Outro ─────────────────────────────────────────────────────── -->
 <section class="outro">
   <h2>Express the rules. Let the system resolve them.</h2>
-  <div class="install big">
-    <code><span class="prompt">$</span> npm i design-book</code>
-    <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
-  </div>
-  <ul class="outro-links">
-    <li><a href="https://github.com/meodai/design-book" target="_blank" rel="noopener">GitHub</a></li>
-    <li><a href="https://meodai.github.io/design-book/editor/" target="_blank" rel="noopener">Editor</a></li>
-    <li><a href="https://meodai.github.io/design-book/article/" target="_blank" rel="noopener">Article</a></li>
-    <li><a href="https://www.npmjs.com/package/design-book" target="_blank" rel="noopener">npm</a></li>
-  </ul>
 </section>
 
-<footer class="foot">
-  <span>Design Book — © <span id="year">2026</span> Elastiq</span>
-  <span>AGPL-3.0</span>
-</footer>
+<footer class="imprint" data-base="./" data-current="docs"></footer>
 
 <script type="module" src="./docs-folders.js"></script>
 <script type="module" src="./script.js"></script>
 <script type="module" src="./docs-rails.js"></script>
+<script type="module" src="./sliders.js"></script>
+<script type="module" src="./imprint.js"></script>
 </body>
 </html>

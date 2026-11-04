@@ -21,14 +21,15 @@
   <meta name="twitter:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens.">
   <meta name="twitter:image" content="https://meodai.github.io/design-book/article/og.png">
 
+  <link rel="icon" type="image/svg+xml" href="./logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-sections=".article-content > section">
   <header class="top">
-    <a href="https://github.com/meodai/design-book" class="top-mark">Design Book</a>
+    <a href="../" class="top-mark">Design Book</a>
     <nav class="top-nav">
       <a href="https://github.com/meodai/design-book">GitHub</a>
       <a href="../editor/">Editor</a>
@@ -70,7 +71,6 @@
 
     <article class="article-content">
       <header class="article-header">
-        <p class="kicker">A Design Book demo</p>
         <h1>Procedural Tokens — encoding design decisions</h1>
         <p class="lede">
           Most token systems already separate values from semantics. The
@@ -218,9 +218,9 @@
             data-token="color.surface"
             data-display="key"
             type="button"
-          ></button><code>, ramp, { ratio:&nbsp;</code><button
+          ></button><code>, ramp, { minContrast:&nbsp;</code><button
             class="token-chip"
-            data-fn-option="color.line.ratio"
+            data-fn-option="color.line.minContrast"
             data-min="1"
             data-max="7"
             data-step="0.1"
@@ -565,10 +565,6 @@
           Try the same tokens in the <a href="../editor/">interactive editor</a> —
           the editor exposes the same Design Book graph, with every scope,
           every ref, and every function token editable inline.
-        </p>
-        <p>
-          Source on <a href="https://github.com/meodai/design-book" target="_blank" rel="noopener">GitHub</a>.
-          By <a href="https://elastiq.ch/" target="_blank" rel="noopener">Elastiq</a>.
         </p>
       </footer>
     </article>

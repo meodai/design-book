@@ -53,7 +53,9 @@
 
 html {
   overflow-x: clip;
-  scrollbar-color: var(--highlight) var(--ground);
+  /* The rail beside it is the mark's color, so the scrollbar is the
+     other way round: the page's color on the mark's. */
+  scrollbar-color: var(--ground) var(--highlight);
 }
 
 /* The papers (ledger, sheets, code) are solid inks from the book, each
@@ -104,31 +106,6 @@ html {
 
 .sh__token--keyword {
   font-weight: 700;
-}
-
-/* Code and numbers: Obel Mono (SIL OFL 1.1, typographic.systems). */
-@font-face {
-  font-family: "Obel Mono";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./fonts/ObelMono-VF.woff2") format("woff2");
-}
-
-/* Before the book has resolved, a dark system gets dark defaults, so the
-   page does not flash light first. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ground: #0d0a03;
-    --ink: #eee9dc;
-  }
-}
-
-/* Paragraphs avoid lonely last words and ragged ends. */
-p,
-li,
-dd {
-  text-wrap: pretty;
 }
 
 /* Lining figures wherever the mono sets numbers. */
@@ -266,11 +243,16 @@ pre {
 }
 
 /* Each color in the palettes, at its lightness. */
+/* A diamond per color, centered on the small tick its lightness falls
+   on. */
 .rail-left .mark.pool {
-  left: 8px;
-  width: 7px;
-  height: 7px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  box-sizing: border-box;
   border: 1px solid color-mix(in oklch, currentColor 60%, transparent);
+  border-radius: 0;
+  transform: translateY(-50%) rotate(45deg);
 }
 
 /* The two that were picked, and the contrast between them: a needle
@@ -335,13 +317,17 @@ pre {
   border-left-width: 0;
 }
 
-/* Every color swatch on the page is a circle, the one round form
-   among the square rules. */
-.chip,
-.rail-left .mark.pool,
+/* Every color swatch in the text is a circle, the one round form
+   among the square rules. On the lightness gutter each color is a
+   diamond on the scale. */
+.chip {
+  border-radius: 50%;
+}
+
 .rail-left .mark.ground::before,
 .rail-left .mark.ink::before {
-  border-radius: 50%;
+  border-radius: 0;
+  transform: rotate(45deg);
 }
 
 /* ─── Hero ───────────────────────────────────────────────────────── */
@@ -363,16 +349,9 @@ pre {
   text-align: left;
 }
 
-.hero .brand {
-  position: absolute;
-  top: calc(var(--row) * 1.5);
-  right: var(--gutter);
-  margin: 0;
-  text-align: right;
-}
-
-.hero .brand .logo {
-  margin-left: auto;
+.hero .brand-mark {
+  --brand-ink: var(--highlight);
+  --brand-left: var(--gutter);
 }
 
 /* The claim */
@@ -395,7 +374,7 @@ pre {
 }
 
 .out.missing .hex {
-  font-style: italic;
+  font-style: normal;
 }
 
 .chip {
@@ -505,10 +484,6 @@ pre {
 }
 
 .fn-icon *,
-.logo * {
-  vector-effect: non-scaling-stroke;
-}
-
 .fn-icon .fill {
   fill: currentColor;
 }
@@ -638,68 +613,16 @@ pre {
    at its own place along the edge, so the tab of the paper behind still
    shows; the paper behind sits a little up and to the right. */
 .folder {
-  display: grid;
   padding-top: calc(var(--row) * 1.5);
 }
 
-.folder-sheet {
-  grid-area: 1 / 1;
-  align-self: start; /* each paper as long as its content */
-  position: relative;
-  color: var(--ink-0);
-  transition: transform 0.25s ease;
-}
-
-.folder-sheet:not(.is-front) {
-  z-index: 0;
-  transform: translate(calc(var(--row) / 2), calc(var(--row) / -2));
-}
-
-.folder-sheet.is-front {
-  z-index: 1;
-}
-
-.folder-body {
-  overflow-x: auto;
-}
-
-/* A paper behind keeps what is written on it in view where it sticks
-   out; it is only read, not used, until it is brought forward. */
-.folder-sheet:not(.is-front) .folder-body {
-  pointer-events: none;
-}
-
-/* A paper behind can be brought forward by its tab or by any part of it
-   that shows. */
-.folder-sheet:not(.is-front) {
-  cursor: pointer;
-}
+.sheet-palette { --tab-left: 0px; }
+.sheet-rules { --tab-left: calc(var(--row) * 5); }
+.sheet-sizes { --tab-left: calc(var(--row) * 9.5); }
+.sheet-graph { --tab-left: calc(var(--row) * 14); }
 
 .folder-tab {
-  position: absolute;
-  bottom: 100%;
-  height: var(--row);
-  padding: 0 var(--row);
-  font: inherit;
   font-size: 15px;
-  color: var(--pp-text);
-  background: var(--pp);
-  border: 0;
-  cursor: pointer;
-}
-
-.sheet-palette .folder-tab { left: 0; }
-.sheet-rules .folder-tab { left: calc(var(--row) * 5); }
-.sheet-graph .folder-tab { left: calc(var(--row) * 14); }
-.sheet-sizes .folder-tab { left: calc(var(--row) * 9.5); }
-
-.folder-sheet:not(.is-front) .folder-tab:hover {
-  text-decoration: underline;
-}
-
-.folder-tab:focus-visible {
-  outline: 1px solid var(--ink);
-  outline-offset: 2px;
 }
 
 /* ─── Graph ──────────────────────────────────────────────────────────
@@ -745,26 +668,45 @@ pre {
 }
 
 /* By hand: the eleven colors as squares, each one a color picker. */
+/* The hand palette is set like the other strips: no gaps, two rows a
+   swatch, a 1px line between neighbours. Each swatch is a picker whose
+   swatch fills the cell (its hex field hidden). */
 .hand-swatches {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: calc(var(--row) * 2);
+  gap: 0;
 }
 
-.hand-swatch {
-  position: relative;
-  aspect-ratio: 1;
-  cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--pp-text) 30%, transparent);
+.hand-swatches > .hand-swatch {
+  display: block;
+  height: 100%;
+  --hand-line: color-mix(in oklch, var(--pp-text) 35%, transparent);
 }
 
-.hand-swatch input {
-  position: absolute;
-  inset: 0;
+.hand-swatch::part(trigger) {
   width: 100%;
   height: 100%;
-  opacity: 0;
-  cursor: pointer;
+}
+
+.hand-swatch::part(chip) {
+  box-shadow: none;
+}
+
+.hand-swatch::part(input) {
+  display: none;
+}
+
+.hand-swatches > :not(:nth-child(4n + 1))::part(chip) {
+  box-shadow: inset 1px 0 0 var(--hand-line);
+}
+
+.hand-swatches > :nth-child(n + 5)::part(chip) {
+  box-shadow: inset 0 1px 0 var(--hand-line);
+}
+
+.hand-swatches > :nth-child(n + 5):not(:nth-child(4n + 1))::part(chip) {
+  box-shadow: inset 1px 1px 0 var(--hand-line);
 }
 
 /* RampenSau: the ramp as one strip, and its start hue. */
@@ -781,7 +723,8 @@ pre {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: calc(var(--row) / 2);
+  height: var(--row);
+  margin-top: var(--row);
   font-family: var(--mono);
   font-size: var(--size-small, 11px);
 }
@@ -793,33 +736,18 @@ pre {
 
 /* Which source: three small buttons, the chosen one inverted. */
 .source-switch {
-  display: flex;
-  margin-bottom: calc(var(--row) / 2);
+  margin: 0;
 }
 
-/* Full width, no gaps: the three share their borders. */
 .source-switch button {
-  flex: 1;
-  padding: 3px 8px;
-  font: inherit;
-  color: var(--pp-text);
-  background: transparent;
-  border: 1px solid color-mix(in oklch, var(--pp-text) 40%, transparent);
-  cursor: pointer;
-}
-
-.source-switch button + button {
-  margin-left: -1px;
-}
-
-.source-switch button[aria-pressed="true"] {
-  color: var(--pp);
-  background: var(--pp-text);
-  border-color: var(--pp-text);
+  height: var(--row);
+  min-height: 0;
+  padding-block: 0;
 }
 
 .poline-panel figcaption span#source-hint {
   display: block;
+  margin-top: var(--row);
 }
 
 /* In the section text, the source reads as a choice in the sentence. */
@@ -839,56 +767,13 @@ pre {
   touch-action: none;
 }
 
-.curve-frame,
-.curve-diagonal,
-.curve-arm,
-.curve-tick,
-.curve-path {
-  fill: none;
-  stroke: var(--pp-text);
-  vector-effect: non-scaling-stroke;
-}
-
-.curve-frame { stroke-opacity: 0.6; }
-.curve-diagonal { stroke-opacity: 0.25; stroke-dasharray: 2 3; }
-.curve-tick { stroke-opacity: 0.25; }
-.curve-arm { stroke-opacity: 0.8; }
-.curve-path { stroke-width: 1.5; }
-
-.curve-step {
-  fill: var(--pp-text);
-}
-
-.curve-handle {
-  fill: var(--pp);
-  stroke: var(--pp-text);
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-  cursor: grab;
-}
-
-.curve-handle:active { cursor: grabbing; }
-
-.curve-handle:focus-visible {
-  outline: none;
-  fill: var(--pp-text);
-}
-
-.curve-label {
-  fill: var(--pp-text);
-  font-family: var(--mono);
-  font-size: 3.4px;
-}
-
-/* Captions under the wheel and the curve read like the tables: in
-   the monospace, at the small size. */
 .poline-panel figcaption,
 .curve-panel figcaption {
-  margin-top: calc(var(--row) / 2);
+  margin-top: var(--row);
   font-family: var(--mono);
   font-style: normal;
   font-size: var(--size-small, 11px);
-  line-height: 1.6;
+  line-height: var(--row);
 }
 
 .poline-panel figcaption b,
@@ -901,10 +786,9 @@ pre {
 .ledger tr.group th {
   /* Set like the column heads (small caps, spaced, in the ruling color),
      indented past the No. column so it lines up with the keys. */
-  padding: 11px 14px 11px calc(var(--row) * 2 + 14px);
+  padding: 0 14px 0 calc(var(--row) * 2 + 14px);
   text-align: left;
   border-right: 0;
-  border-bottom: 3px double var(--green-rule);
 }
 
 /* A size in a table is a bar as long as the size. */
@@ -945,32 +829,10 @@ pre {
   border-left: 1px solid var(--green-rule);
 }
 
-/* The palette is continuous printer paper: a strip of feed holes down
-   each side, one per row, and a perforation to tear them off. The paper
-   is painted on a pseudo-element so the holes can be cut with a mask
-   without cutting off the tab above it. */
+/* The palette is continuous printer paper (.holes-both, shared); its
+   own background is left to the paper painted under the holes. */
 .sheet-palette {
   background-color: transparent;
-}
-
-.sheet-palette::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    repeating-linear-gradient(to bottom, var(--green-rule) 0 3px, transparent 3px 7px) calc(var(--row) * 1.25) 0 / 1px 100% no-repeat,
-    repeating-linear-gradient(to bottom, var(--green-rule) 0 3px, transparent 3px 7px) calc(100% - var(--row) * 1.25) 0 / 1px 100% no-repeat,
-    var(--pp);
-  --hole: radial-gradient(circle, transparent 5px, #000 5.5px);
-  -webkit-mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    var(--hole) right top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) center / calc(100% - var(--row) * 2.5) 100% no-repeat;
-  mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    var(--hole) right top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) center / calc(100% - var(--row) * 2.5) 100% no-repeat;
 }
 
 .poline-panel {
@@ -988,53 +850,15 @@ pre {
 }
 
 .ledger {
-  width: 100%;
-  border-collapse: collapse;
   font-size: 16px;
-  /* Tight leading inside a cell; the padding keeps a one-line row at
-     the old height, so only wrapped rules get denser. */
-  line-height: 20px;
 }
 
 .ledger col.c-no { width: calc(var(--row) * 2); }
 .ledger col.c-key { width: 22%; }
 .ledger col.c-val { width: 220px; }
 
-.ledger th {
-  text-align: left;
-  font-weight: 400;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.08em;
-  color: var(--green);
-  padding: 11px 14px;
-  border-bottom: 3px double var(--green-rule);
-}
-
-.ledger td {
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--green-rule);
-  vertical-align: middle;
-}
-
-.ledger th + th,
-.ledger td + td {
-  border-left: 1px solid var(--green-rule);
-}
-
 .ledger th:first-child,
-.ledger td.no {
-  text-align: right;
-  color: var(--green);
-  border-right: 3px double var(--red-rule);
-  font-family: var(--mono);
-  font-size: var(--size-small, 12px);
-  font-variant-numeric: lining-nums;
-}
-
-.ledger td.no + td {
-  border-left: 0;
-}
-
+.ledger td.no,
 .ledger code {
   font-size: var(--size-small, 12px);
 }
@@ -1050,28 +874,12 @@ pre {
   color: color-mix(in oklch, var(--ink-0) 55%, transparent);
 }
 
-
 .ledger tr.is-value + tr.is-rule td {
   border-top: 1px solid var(--red-rule);
 }
 
-/* In the tables the swatch is a block of the color filling the cell's
-   height, flush with its left rule, like a sample pasted into a ledger. */
-.ledger td.val {
-  position: relative;
-  padding-left: calc(var(--row) * 0.375 + 12px);
-}
-
-.ledger .swatch {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(var(--row) * 0.375);
-}
-
 .ledger .err {
-  font-style: italic;
+  font-style: normal;
   color: var(--red);
   cursor: help;
 }
@@ -1194,7 +1002,7 @@ pre {
 }
 
 .sheet header span {
-  font-style: italic;
+  font-style: normal;
   font-size: 14px;
   line-height: 20px;
   opacity: 0.7;
@@ -1271,45 +1079,20 @@ pre {
   align-items: start;
 }
 
-/* Printer paper torn off on one side: feed holes down the left only. */
-.holes-left {
-  --hole: radial-gradient(circle, transparent 5px, #000 5.5px);
-  -webkit-mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
-  mask:
-    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
-    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
-}
-
 .sheet.holes-left {
   padding-left: calc(var(--row) * 1.75);
-  background-image:
-    repeating-linear-gradient(to bottom, var(--green-rule) 0 3px, transparent 3px 7px),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 calc(var(--row) - 1px),
-      var(--sheet-line) calc(var(--row) - 1px) var(--row)
-    );
-  background-position: calc(var(--row) * 1.25) 0, 0 calc(var(--row) * 3);
-  background-size: 1px 100%, auto;
-  background-repeat: no-repeat, repeat-y;
 }
 
 .start-code {
   margin: 0;
   color: var(--ink-0);
   padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
-  background-image:
-    repeating-linear-gradient(to bottom, var(--green-rule) 0 3px, transparent 3px 7px),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0 calc(var(--row) - 1px),
-      var(--green-rule) calc(var(--row) - 1px) var(--row)
-    );
-  background-position: calc(var(--row) * 1.25) 0, 0 var(--row);
-  background-size: 1px 100%, auto;
-  background-repeat: no-repeat, repeat;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    var(--green-rule) calc(var(--row) - 1px) var(--row)
+  );
+  background-position: 0 var(--row);
 
   font-size: var(--size-small, 12px);
   line-height: var(--row);
@@ -1336,7 +1119,7 @@ pre {
 
 .start-links span {
   display: block;
-  font-style: italic;
+  font-style: normal;
   font-size: 15px;
   opacity: 0.75;
 }
@@ -1346,23 +1129,8 @@ pre {
 /* The footer is a strip of the mark across the whole page, from one
    rail to the other: with the rails, it frames the page in blue. */
 .imprint {
-  margin: 0;
-  padding: var(--row) var(--gutter) calc(var(--row) * 2);
-  display: flex;
-  justify-content: center;
-  gap: calc(var(--row) * 2);
-  font-size: 15px;
-  color: var(--on-highlight);
-  background: var(--highlight);
-}
-
-.imprint-nav {
-  display: flex;
-  gap: var(--row);
-}
-
-.imprint a {
-  color: inherit;
+  --imprint-bg: var(--highlight);
+  --imprint-ink: var(--on-highlight);
 }
 
 /* ─── Narrow screens ─────────────────────────────────────────────── */
@@ -1423,4 +1191,32 @@ pre {
   .mark {
     transition: none !important;
   }
+}
+
+/* A section row is set like the column heads, not like the No. column. */
+.ledger tr.group th:first-child {
+  font-size: inherit;
+  font-family: inherit;
+}
+
+/* A sheet's table keeps its 28px rows; it does not stretch to the
+   height of the drawing beside it. */
+.palette-body > table {
+  align-self: start;
+}
+
+.rail .mark[data-label]::after {
+  font-style: normal;
+}
+
+/* The '#' of a value in the claim, in the value's own color. */
+.claim .hash {
+  transition: color 0.5s ease;
+}
+
+.claim .hash {
+  font-size: 0.6em;
+  font-weight: 700;
+  vertical-align: baseline;
+  margin-right: 0.05em;
 }

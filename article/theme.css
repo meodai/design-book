@@ -1,0 +1,949 @@
+/* Design Book — the article, in the landing page's style.
+   A layer over style.css (the old article) and marketing/shared.css (what
+   all three pages share), with dress.js moving a few things into place.
+   The live example still reads the book's own variables (--color-*,
+   --space-*, --ramp-*, --radius-*): it is the specimen the article is
+   about, so it keeps whatever the book decides. */
+
+:root {
+  /* The inks, paper, row and fonts come from shared.css; here the old
+     stylesheet's variables are pointed at them. */
+  --font-sans: var(--font-text);
+  --font-mono: var(--font-code);
+  --font-article: var(--font-text);
+  --font-article-display: var(--font-text);
+
+  --article-surface: var(--paper);
+  --article-text: var(--black);
+  --article-muted: color-mix(in srgb, var(--black) 62%, transparent);
+  --article-rule: color-mix(in srgb, var(--black) 16%, transparent);
+  --article-link: var(--blue);
+  --article-link-hover: color-mix(in srgb, var(--blue) 80%, var(--black));
+  --article-accent: var(--blue);
+
+  --chip-bg: var(--blue);
+  --chip-onBg: var(--on-black);
+  --chip-bg-hover: var(--black);
+  --chip-border: transparent;
+}
+
+html {
+  overflow-x: clip;
+  scrollbar-color: var(--blue) var(--paper);
+}
+
+body {
+  padding: 0 var(--rail);
+  container-type: inline-size;
+  font-family: var(--font-article);
+}
+
+::selection {
+  background: var(--blue);
+  color: var(--on-black);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ═══ Opening: a first screen of its own ════════════════════════════ */
+.article-hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 88rem;
+  margin: 0 auto;
+  padding: calc(var(--row) * 3) 40px calc(var(--row) * 3);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+
+
+.article-header {
+  margin: 0;
+  max-width: none;
+}
+
+.article-hero .kicker {
+  margin: 0 0 var(--row);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: var(--blue);
+}
+
+.article-hero h1 {
+  margin: 0 0 calc(var(--row) * 1.5);
+  max-width: 14em;
+  font-family: var(--font-article-display);
+  font-size: clamp(40px, 5.6vw, 84px);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+/* The dash in the title is the turn from what tokens are to what they
+   can do; it is set in the blue. */
+.article-hero .lede {
+  margin: 0;
+  max-width: 38em;
+  font-size: clamp(18px, 1.5vw, 21px);
+  line-height: 1.55;
+  color: var(--article-text);
+  text-wrap: pretty;
+}
+
+/* ═══ The page's columns ════════════════════════════════════════════ */
+.layout {
+  position: relative;
+  padding-top: calc(var(--row) * 2);
+  gap: calc(var(--row) * 2.5);
+}
+
+/* ═══ Type ══════════════════════════════════════════════════════════ */
+.article-content h2,
+.article-content h3 {
+  font-family: var(--font-article-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.article-content h2 {
+  position: relative;
+  font-size: clamp(28px, 2.6vw, 38px);
+  line-height: 1.1;
+}
+
+/* The section number hangs in the margin like the No. column of a
+   ledger: small, in the monospace, on a double rule. */
+.sec-no {
+  position: absolute;
+  right: calc(100% + 16px);
+  top: 0.35em;
+  min-width: 2.2em;
+  padding-right: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: right;
+  color: var(--blue);
+  border-right: 3px double color-mix(in srgb, var(--blue) 60%, transparent);
+}
+
+.article-content p,
+.article-content li {
+  text-wrap: pretty;
+}
+
+.article-content em {
+  font-style: normal;
+  color: var(--blue);
+}
+
+.article-content a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.article-content code {
+  border-radius: 0;
+  background: color-mix(in srgb, var(--paper) 90%, var(--black));
+}
+
+/* ═══ Sections: rules from rail to rail ═════════════════════════════ */
+.article-content section {
+  position: relative;
+  border-top: 0;
+}
+
+.article-content section + section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50cqw);
+  width: 100cqw;
+  height: 1px;
+  background: var(--article-rule);
+}
+
+/* The hero's rule: where the article proper starts. */
+.layout::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - 50cqw);
+  width: 100cqw;
+  height: 1px;
+  margin-top: calc(var(--row) * -2);
+  background: var(--article-rule);
+}
+
+/* ═══ Token lists: the shared ledger ═══════════════════════════════ */
+.article-content .token-list {
+  --pp: var(--paper);
+  --pp-text: var(--black);
+  --ledger-cols: calc(16ch + 28px) auto minmax(0, 1fr);
+  margin-left: 2.2rem;
+  border-top: 3px double color-mix(in srgb, var(--black) 28%, transparent);
+}
+
+.token-list code {
+  background: none;
+  padding: 0;
+}
+
+.token-list .aside {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ═══ Token chips: square blocks of the blue ════════════════════════
+   One look for every chip, a reference or not: the blue, written in
+   its off-white. Pointing at one turns it black. */
+.token-chip,
+.token-chip--ref {
+  border: 0;
+  border-radius: 0;
+  padding: 2px 8px;
+  color: var(--chip-onBg);
+  background: var(--chip-bg);
+  transition: none;
+}
+
+.token-chip:hover {
+  background: var(--chip-bg-hover);
+}
+
+.token-chip:active {
+  transform: none;
+}
+
+.token-chip .chip-value {
+  color: inherit;
+  background: none;
+}
+
+.token-chip .chip-arrow {
+  opacity: 0.7;
+}
+
+/* ═══ Popovers: a sheet of the black paper, its title on a tab ══════ */
+.popover,
+.color-picker-wrapper {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--pp-text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 10%, transparent) calc(var(--row) - 1px) var(--row)
+  );
+  font-family: var(--font-article);
+}
+
+.popover {
+  margin-top: var(--row);
+  padding: calc(var(--row) / 2) var(--row) var(--row);
+}
+
+/* The title is the sheet's tab. */
+.popover-title {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin: 0;
+  height: var(--row);
+  padding: 0 var(--row);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--on-black);
+  background: var(--blue);
+  white-space: nowrap;
+}
+
+.popover-note {
+  color: color-mix(in srgb, var(--pp-text) 65%, transparent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.slider-wrap input[type="range"] {
+  accent-color: var(--blue);
+}
+
+.slider-value {
+  color: var(--pp-text);
+}
+
+/* Choosing a reference reads like the ledger: one row per token, a
+   rule under each, the current one filled with the blue. */
+.ref-list {
+  gap: 0;
+  margin-top: 0;
+  border-top: 3px double color-mix(in srgb, var(--pp-text) 30%, transparent);
+}
+
+.ref-group-header {
+  padding: 10px 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  font-variant-caps: all-small-caps;
+  color: color-mix(in srgb, var(--pp-text) 60%, transparent);
+}
+
+.ref-option {
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--pp-text) 14%, transparent);
+  border-radius: 0;
+  padding: 6px 0;
+  color: var(--pp-text);
+}
+
+.ref-option:hover {
+  background: color-mix(in srgb, var(--pp-text) 10%, transparent);
+}
+
+.ref-option--selected {
+  padding-inline: 8px;
+  color: var(--on-black);
+  background: var(--blue);
+}
+
+.ref-option--selected::after {
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.ref-option--error {
+  background: color-mix(in srgb, var(--red) 40%, transparent);
+}
+
+.ref-option-swatch {
+  border: 1px solid color-mix(in srgb, var(--pp-text) 40%, transparent);
+}
+
+.color-picker-wrapper {
+  padding: 8px;
+}
+
+/* ═══ Formulas: a strip of printer paper (.holes-left, shared) ══════ */
+.rule-line {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+  min-height: var(--row);
+  margin-left: 2.2rem;
+  padding: 10px var(--row) 10px calc(var(--row) * 1.75);
+  font-size: 13px;
+  color: var(--pp-text);
+  background: var(--pp);
+  box-shadow: none;
+  --article-muted: color-mix(in srgb, var(--on-black) 60%, transparent);
+}
+
+.rule-line code {
+  color: inherit;
+  background: none;
+}
+
+/* ═══ Demos: papers cut from the inks, a tab on each ════════════════
+   Their text and rules read --article-*; redefining those on the paper
+   is enough for them to follow. */
+.pair-demo,
+.extend-demo,
+.scale-demo,
+.poline-demo,
+.bezier-demo {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  --article-text: var(--pp-text);
+  --article-muted: color-mix(in srgb, var(--pp-text) 66%, transparent);
+  --article-rule: color-mix(in srgb, var(--pp-text) 26%, transparent);
+  position: relative;
+  margin-top: calc(var(--row) * 2.5);
+  color: var(--pp-text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 12%, transparent) calc(var(--row) - 1px) var(--row)
+  );
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+
+.bezier-demo {
+  --pp: var(--green);
+  --pp-text: var(--black);
+}
+
+.poline-demo {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+}
+
+/* Captions inside a demo are part of it, not a box of their own. */
+.poline-demo__caption,
+.bezier-demo__caption {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  max-width: none;
+}
+
+/* The tab with the demo's name, standing on its top edge. */
+.demo-tab {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin: 0;
+  height: var(--row);
+  padding: 0 var(--row);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-article);
+  font-size: 13px;
+  font-variant-caps: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--pp-text);
+  background: var(--pp);
+  white-space: nowrap;
+}
+
+/* Chips on a paper keep the paper's own contrast. */
+.bezier-demo .token-chip {
+  --chip-bg: var(--black);
+  --chip-onBg: var(--on-black);
+}
+
+.poline-demo .token-chip {
+  --chip-bg: var(--blue);
+}
+
+/* Toggles and small buttons: square, outlined in the paper's text,
+   the chosen one inverted. */
+:is(.extend-demo__modes, .poline-demo__toggle, .ref-list) button,
+.poline-demo__toggle {
+  border-radius: 0;
+}
+
+/* ═══ The live example: a folder of two papers ══════════════════════ */
+.example-panel {
+  top: var(--row);
+  gap: var(--row);
+}
+
+.folder-sheet {
+  padding: var(--row);
+  background-color: var(--pp);
+}
+
+.folder-sheet--example {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  --tab-left: 0px;
+}
+
+/* The token graph, as on the landing page: the yellow paper. */
+.folder-sheet--graph {
+  --pp: var(--yellow);
+  --pp-text: var(--black);
+  --tab-left: calc(var(--row) * 6.5);
+  --c-surface: var(--pp);
+  --c-surface-on: var(--pp-text);
+  --c-surface-on-alt: color-mix(in srgb, var(--pp-text) 55%, var(--pp));
+  --active-outline: var(--blue);
+}
+
+.folder-tab {
+  font-size: 13px;
+}
+
+/* The specimen card is set in the page's own type; its colors, sizes
+   and corners still come from the article's book. */
+.example-frame {
+  font-family: var(--font-article);
+}
+
+.example-title {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.example-button {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* The graph sits flat on its paper. */
+.dep-graph-figure {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+/* Resetting is the one action of the panel: a blue strip under the
+   folder, as the install line is on the landing page. */
+.reset-btn {
+  align-self: stretch;
+  height: calc(var(--row) * 1.5);
+  padding: 0 var(--row);
+  font: 14px var(--font-mono);
+  text-align: left;
+  color: var(--on-black);
+  background: var(--blue);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+/* Pointing at it underlines what it does and lights the strip a little,
+   like the landing page's Copy. */
+.reset-btn:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  background: color-mix(in srgb, var(--blue) 82%, var(--on-black));
+}
+
+/* ═══ Coda and footer ═══════════════════════════════════════════════ */
+.article-coda {
+  margin: calc(var(--row) * 3) 0 calc(var(--row) * 2) 2.2rem;
+  padding: var(--row) 0 0;
+  border-top: 3px double var(--article-rule);
+  font-size: 0.95em;
+  color: var(--article-muted);
+}
+
+
+
+@media (max-width: 860px) {
+  .sec-no {
+    position: static;
+    display: inline-block;
+    margin-right: 10px;
+    border-right: 0;
+  }
+}
+
+/* The wheel draws in the paper's own text color. */
+.poline-demo poline-picker {
+  --poline-picker-line-color: var(--pp-text);
+  --poline-picker-bg-color: var(--pp);
+}
+
+
+/* ═══ Table demos: the shared ledger, on the blue paper ═════════════ */
+.pair-demo,
+.scale-demo {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  max-width: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background-image: none;
+}
+
+.pair-demo__rows {
+  display: block;
+  gap: 0;
+  margin: 0;
+  --ledger-cols: calc(10ch + 28px) minmax(0, 1fr);
+}
+
+.scale-demo {
+  --ledger-cols: calc(10ch + 28px) minmax(0, 1fr);
+}
+
+/* The demo's tab: the article's paragraph spacing must not reach it. */
+.article-content .demo-tab {
+  margin: 0;
+}
+
+.article-content :is(.pair-demo, .scale-demo) p {
+  max-width: none;
+}
+
+:is(.pair-demo, .scale-demo) code {
+  color: inherit;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+}
+
+.scale-demo__label,
+.pair-demo__label {
+  min-width: 0;
+}
+
+.scale-demo__equals {
+  color: color-mix(in srgb, var(--pp-text) 60%, transparent);
+}
+
+/* Values you can change: off-white blocks with the blue, like the
+   landing page's highlights. */
+:is(.pair-demo, .scale-demo) .token-chip {
+  --chip-bg: var(--on-black);
+  --chip-onBg: var(--blue);
+  --chip-bg-hover: var(--black);
+  justify-self: start;
+  font-size: 12px;
+}
+
+:is(.pair-demo, .scale-demo) .token-chip:hover {
+  --chip-onBg: var(--on-black);
+}
+
+.article-content .pair-demo__note {
+  margin: 0;
+  padding: 10px 14px 12px calc(var(--row) * 2 + 14px);
+  font-family: var(--font-article);
+  font-size: 14px;
+  color: color-mix(in srgb, var(--pp-text) 72%, transparent);
+}
+
+/* Rows are paragraphs in the markup; the article's reading measure must
+   not cut them short of the paper's edge. */
+.article-content :is(.pair-demo, .scale-demo) p {
+  max-width: none;
+}
+
+
+
+
+/* ═══ Card and inverted card ════════════════════════════════════════
+   On the blue paper, so a light card and a dark one both stand out:
+   the two ways of reading surface as one full-width switch, the two
+   cards side by side as flat specimens, the reading under them. */
+.extend-demo {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  max-width: none;
+  padding: var(--row);
+  background-image: none;
+}
+
+.article-content .extend-demo p {
+  margin: 0;
+  max-width: none;
+}
+
+.extend-demo__modes {
+  margin: 0 0 var(--row);
+}
+
+.extend-demo__cards {
+  gap: var(--row);
+  margin: 0 0 var(--row);
+}
+
+/* The cards are the specimen: their colors come from the article's
+   book; only their shape is the page's. */
+.extend-demo__card {
+  min-height: calc(var(--row) * 4);
+  padding: 14px var(--row) var(--row);
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--row);
+}
+
+.extend-demo__name {
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.extend-demo__text {
+  font-family: var(--font-article);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.extend-demo__note {
+  padding-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--pp-text) 75%, transparent);
+  border-top: 3px double color-mix(in srgb, var(--pp-text) 30%, transparent);
+}
+
+/* ═══ The Poline palette: continuous printer paper (.holes-both) ═══ */
+.poline-demo {
+  padding-left: calc(var(--row) * 2);
+  padding-right: calc(var(--row) * 2);
+  background: none; /* the paper is painted under the holes */
+}
+
+/* ═══ The spacing curve: the shared curve editor ════════════════════ */
+.bezier-svg {
+  --curve-label-size: 6px;
+  max-width: 100%;
+  margin-left: 0;
+  overflow: visible;
+}
+
+/* A table's head is a paragraph in the markup; keep the article's
+   paragraph indent off it. */
+.article-content [data-ledger-head] {
+  margin: 0;
+  max-width: none;
+}
+
+
+/* The curve on one half of its paper, what it does on the other. */
+.bezier-demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "curve text";
+  align-items: center;
+  gap: var(--row);
+  padding: var(--row);
+}
+
+.bezier-demo .bezier-svg {
+  grid-area: curve;
+}
+
+.article-content .bezier-demo__caption {
+  grid-area: text;
+  align-self: center;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--pp-text);
+}
+
+.bezier-demo__caption code {
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+
+@media (max-width: 860px) {
+  .bezier-demo {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "text" "curve";
+  }
+}
+
+
+/* A formula strip is as wide as its formula, up to the column, and
+   exactly one row per line, so each line has its own feed hole. */
+.article-content .rule-line {
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--row);
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: var(--row);
+  row-gap: 0;
+}
+
+/* A table head that is a line of code stays code: no small caps. */
+.article-content .pair-demo__rule[data-ledger-head] {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-caps: normal;
+  letter-spacing: 0;
+}
+
+/* Inline code on a paper is written in the paper's own text. */
+:is(.poline-demo, .bezier-demo, .extend-demo, .pair-demo, .scale-demo) :not(pre) > code {
+  color: inherit;
+  background: color-mix(in srgb, var(--pp-text) 14%, transparent);
+}
+
+/* A picker sits inside its row: centered on the line's middle and no
+   taller than the row, so a row with one is still one row. */
+.article-content .token-chip {
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 6px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.article-content :is([data-ledger], .rule-line, .scale-demo, .pair-demo) :is(code, input, .token-chip) {
+  vertical-align: middle;
+}
+
+.article-content :is(.scale-demo, .pair-demo) input {
+  box-sizing: border-box;
+  height: 20px;
+  line-height: 18px;
+  padding-block: 0;
+}
+
+.article-content :is(.scale-demo__row, .pair-demo__row, .token-list > li) {
+  min-height: var(--row);
+  padding-block: 0;
+  line-height: var(--row);
+}
+
+.article-content .extend-demo__note {
+  margin: 0;
+  min-height: var(--row);
+  line-height: var(--row);
+}
+
+/* The shared ledger draws the row lines (as shadows, which take no
+   height); the article's own row borders would add a pixel a row. */
+.article-content :is([data-ledger] > *, .scale-demo__row, .pair-demo__row, .token-list > li) {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.article-content .extend-demo__note,
+.article-content .extend-demo__note * {
+  line-height: var(--row);
+}
+
+/* Inside a row, inline pieces (code, chips, inputs) get a short line
+   height: the row's own 28px line decides the height, and fonts with
+   different baselines can no longer push it to 29. */
+.article-content :is([data-ledger] > * > *, .rule-line__row, .scale-demo__row, .pair-demo__row) :is(code, span, b, a, input, .token-chip) {
+  line-height: 18px;
+}
+
+.article-content .token-list {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.article-content :is(.pair-demo__note, .extend-demo__note) {
+  padding-block: 0;
+  line-height: var(--row);
+}
+
+.article-content .rule-line__gap {
+  height: var(--row);
+}
+
+.article-content .rule-line__row {
+  min-height: var(--row);
+  line-height: var(--row);
+}
+
+/* The note's double rule as shadows, so it takes no height. */
+.article-content .extend-demo__note {
+  border-top: 0;
+  box-shadow:
+    inset 0 1px 0 currentColor,
+    inset 0 3px 0 -1px transparent;
+}
+
+/* The tab is never wider than its sheet. */
+.popover-title {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  line-height: var(--row);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* In a table, code is just the table's text: no boxes of its own. */
+.article-content :is([data-ledger], [data-ledger-head], .pair-demo, .scale-demo, .token-list) code:not(.token-chip *) {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+}
+
+/* The two cards run edge to edge, a 1px line between them. */
+.article-content .extend-demo__cards {
+  gap: 0;
+  margin-inline: calc(var(--row) * -1);
+}
+
+.article-content .extend-demo__card + .extend-demo__card {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--pp-text) 30%, transparent);
+}
+
+.article-content .extend-demo__card {
+  padding: 0 var(--row);
+  min-height: calc(var(--row) * 4);
+  justify-content: center;
+  gap: 0;
+}
+
+.article-content .extend-demo__name {
+  line-height: var(--row);
+}
+
+.article-content .extend-demo__text {
+  line-height: var(--row);
+}
+
+/* Scrollbars inside a popover are drawn in the popover's own inks. */
+.popover,
+.popover * {
+  scrollbar-color: color-mix(in srgb, var(--pp-text) 45%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+/* Like the docs: strips keep the content's inset. */
+.article-content .extend-demo__cards {
+  margin-inline: 0;
+}
+
+/* Every chip in a table (each opens a dropdown) is the off-white block,
+   whichever table it sits in. */
+.article-content :is([data-ledger], .token-list, .pair-demo, .scale-demo) .token-chip {
+  --chip-bg: var(--on-black);
+  --chip-onBg: var(--blue);
+  --chip-bg-hover: var(--black);
+  --chip-border: color-mix(in srgb, var(--black) 25%, transparent);
+}
+
+.article-content :is([data-ledger], .token-list, .pair-demo, .scale-demo) .token-chip:hover {
+  --chip-onBg: var(--on-black);
+}
+
+
+/* The page's margin, as wide as the docs': the text column starts well
+   clear of the rail, with room for the logo to hang beside the name. */
+:root {
+  --article-gutter: clamp(40px, 6vw, 96px);
+}
+
+.article-hero,
+.layout {
+  padding-left: var(--article-gutter);
+  padding-right: var(--article-gutter);
+}
+
+.article-hero .brand-mark {
+  --brand-left: var(--article-gutter);
+}

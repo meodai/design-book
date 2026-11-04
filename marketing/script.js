@@ -114,8 +114,7 @@ function indexOfColor (values, hex) {
 
 // ── Shared palettes for plates ─────────────────────────────────────
 const PALETTE_BRAND = [
-  "#0d0a03", "#de5331", "#dab43d", "#479549",
-  "#3c61a0", "#7a3c8e", "#dcd2b8", "#1d6b6a",
+  "#0d0a03", "#de5331", "#dab43d", "#479549", "#3c61a0", "#eee9dc",
 ];
 const PALETTE_CONTRAST_SURFACES = [
   "#0d0a03", "#eee9dc", "#de5331", "#3c61a0", "#479549", "#dab43d",
@@ -132,9 +131,7 @@ const PALETTE_CONTRAST_SURFACES = [
   if (!root || !ringEl || !fnSel || !centerEl) return;
 
   const PALETTE = [
-    "#de5331", "#dab43d", "#479549", "#3c61a0",
-    "#7a3c8e", "#dcd2b8", "#1d6b6a", "#0d0a03",
-    "#e85b3e", "#3b6dd3", "#2f8a7a", "#a04a8e",
+    "#de5331", "#dab43d", "#479549", "#3c61a0", "#eee9dc", "#0d0a03",
   ];
   const INITIAL_CENTER = centerEl.getAttribute("value") || "#0d0a03";
   centerEl.value = INITIAL_CENTER;
@@ -298,6 +295,24 @@ book.registerRenderer("tailwind", tailwindRenderer);
 // (tailwindRenderer is defined and registered above, before the first
 // paintRenderers() call fires inside the hero IIFE.)
 
+// JSON as a person would write it: arrays of plain values and small
+// objects on one line, everything else indented.
+function compactJSON (text, width = 110) {
+  let value;
+  try { value = typeof text === "string" ? JSON.parse(text) : text; }
+  catch { return text; }
+  const out = (v, indent) => {
+    const flat = JSON.stringify(v);
+    if (v === null || typeof v !== "object" || flat.length + indent.length <= width) {
+      return flat.replace(/([,:])(?=["\d\[{tfn-])/g, "$1 ");
+    }
+    const next = indent + "  ";
+    if (Array.isArray(v)) return `[\n${v.map((x) => next + out(x, next)).join(",\n")}\n${indent}]`;
+    return `{\n${Object.entries(v).map(([k, x]) => `${next}${JSON.stringify(k)}: ${out(x, next)}`).join(",\n")}\n${indent}}`;
+  };
+  return out(value, "");
+}
+
 function paintRenderers () {
   const css  = document.getElementById("r-css");
   const json = document.getElementById("r-json");
@@ -311,7 +326,7 @@ function paintRenderers () {
   catch (e) { css.textContent = `/* ${e.message} */`; }
   try { json.textContent = book.render("json"); }
   catch (e) { json.textContent = `// ${e.message}`; }
-  try { w3.textContent   = book.render("w3-design-tokens"); }
+  try { w3.textContent   = compactJSON(book.render("w3-design-tokens")); }
   catch (e) { w3.textContent  = `// ${e.message}`; }
   try { tw.textContent   = book.render("tailwind"); }
   catch (e) { tw.textContent  = `// ${e.message}`; }
@@ -567,7 +582,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");
   if (!stage) return;
-  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#7a3c8e","#dcd2b8","#1d6b6a","#0d0a03"];
+  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
   const crown = pick(palette, (s) => mostVivid(s));
   const floor = pick(palette, (s) => leastVivid(s));
   // Sort by chroma so the highlighted tiles sit at opposite ends of the row.
@@ -585,7 +600,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const stage = document.getElementById("lightness-stage");
   const toggle = document.getElementById("lightness-readable");
   if (!stage || !toggle) return;
-  const palette = ["#de5331","#dab43d","#3c61a0","#dcd2b8","#479549","#f3ead8","#7a3c8e","#0d0a03"];
+  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
   const SURFACE = "#eee9dc";
 
   function render () {
@@ -613,7 +628,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   if (!stage || !seedEl || !shufEl) return;
 
   // Same palette as the vivid demo so the two read as a pair.
-  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#7a3c8e","#dcd2b8","#1d6b6a","#0d0a03"];
+  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
 
   function render () {
     const seed = seedEl.value || "0";
@@ -642,9 +657,9 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 
   // 9-stop ramp, lightest → darkest — typical output of a ramp generator.
   const ramp = [
-    "#faf3eb", "#ecd7b8", "#d4ab7a",
-    "#b88042", "#96612b", "#744a1f",
-    "#533417", "#352112", "#1a110a",
+    "#efcdbb", "#eeb09a", "#ea9379",
+    "#e57557", "#de5331", "#af4427",
+    "#82351c", "#582713", "#311809",
   ];
 
   function render () {
@@ -682,8 +697,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   if (!stage || !offsets || !wrapEl) return;
 
   const GRAY = [
-    ["g50", "#faf7f2"], ["g100", "#efe9df"], ["g200", "#ddd4c6"], ["g300", "#c4b8a6"],
-    ["g500", "#8f8372"], ["g700", "#5b5246"], ["g900", "#2a251f"],
+    ["g50", "#eee9dc"], ["g100", "#cec9bc"], ["g200", "#aeaa9d"], ["g300", "#908b7f"],
+    ["g500", "#736e63"], ["g700", "#3c382e"], ["g900", "#0d0a03"],
   ];
   let anchor = "g100";
   let offset = 1;
@@ -926,7 +941,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
       bar.style.background = stopHex;
       bar.querySelector(".hex").textContent = stopHex;
       const L = lch(stopHex)?.l ?? 0.5;
-      bar.style.color = L > 0.6 ? "#1a1a1a" : "#eee9dc";
+      bar.style.color = L > 0.6 ? "#0d0a03" : "#eee9dc";
     }
   }
 
@@ -980,7 +995,6 @@ function wireTabs (list, { hash = false } = {}) {
   fromHash();
 }
 
-wireTabs(document.querySelector(".fn-tabs"), { hash: true });
 wireTabs(document.querySelector(".extends-modes"));
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1073,8 +1087,8 @@ wireTabs(document.querySelector(".extends-modes"));
   if (!modesEl || !rampEl || !buttonsEl) return;
 
   const BLUE = {
-    "50": "#eef4ff", "100": "#dbe7ff", "200": "#bcd2ff", "300": "#8fb3ff", "400": "#5c8cf5",
-    "500": "#3a6ae0", "600": "#2650c2", "700": "#1d3e9c", "800": "#172f75", "900": "#101f4d",
+    "50": "#ccd0d3", "100": "#aab7c8", "200": "#8a9ebe", "300": "#6a86b2", "400": "#4b6da6",
+    "500": "#385890", "600": "#2f4870", "700": "#263852", "800": "#1e2835", "900": "#15191a",
   };
   const book = new DesignBook("parent-demo");
   const blue = book.addScope("blue");
@@ -1085,7 +1099,7 @@ wireTabs(document.querySelector(".extends-modes"));
   book.addScope("base-hover", { extends: "base" })
     .set("interaction", sibling(inParent(ref(".interaction")), { toward: inParent(ref(".background")) }));
 
-  const ink = (bg) => (contrast(bg, "#ffffff") >= contrast(bg, "#101f4d") ? "#ffffff" : "#101f4d");
+  const ink = (bg) => (contrast(bg, "#fffaed") >= contrast(bg, "#0d0a03") ? "#fffaed" : "#0d0a03");
 
   function paint () {
     const page = book.resolve("base.background");
@@ -1130,8 +1144,9 @@ wireTabs(document.querySelector(".extends-modes"));
   const poolEl    = document.getElementById("readable-pool");
   const resultsEl = document.getElementById("readable-results");
   if (!surfaceIn || !ratiosEl || !poolEl || !resultsEl) return;
+  resultsEl.setAttribute("data-ledger", "");
 
-  const BRAND = ["#de5331", "#ff7a1a", "#dab43d", "#f2c14e", "#3b6dd3", "#3c61a0", "#2f8a7a", "#7a3c8e"];
+  const BRAND = ["#de5331", "#dab43d", "#479549", "#3c61a0", "#0d0a03", "#fffaed"];
   const INITIAL = surfaceIn.getAttribute("value") || "#eee9dc";
   surfaceIn.value = INITIAL;
   let ratio = 4.5;
@@ -1188,7 +1203,7 @@ wireTabs(document.querySelector(".extends-modes"));
   const code    = document.getElementById("names-code");
   if (!seedIn || !schemes || !countIn || !rows || !code) return;
 
-  const INITIAL = seedIn.getAttribute("value") || "#ffdd00";
+  const INITIAL = seedIn.getAttribute("value") || "#dab43d";
   seedIn.value = INITIAL;
   let scheme = "intensity";
 

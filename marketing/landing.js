@@ -6,6 +6,9 @@
 import { converter, formatHex, parse, wcagContrast } from "culori";
 import { Poline } from "poline/picker"; // also defines <poline-picker>
 import { generateColorRamp, colorUtils } from "rampensau";
+import "./sliders.js";
+import "./imprint.js";
+import "hdr-color-input";
 import { highlight } from "sugar-high";
 import {
   DesignBook,
@@ -27,7 +30,6 @@ import {
   rampStops,
   scaleNames,
 } from "../src/index";
-import pkg from "../package.json";
 
 const oklch = converter("oklch");
 
@@ -461,7 +463,9 @@ function drawMarks(ground, ink) {
     for (const key of book.getScope(pal).ownKeys()) {
       const hex = book.resolve(`${pal}.${key}`);
       if (hex === ground || hex === ink) continue; // drawn below, with a needle
-      left += `<i class="mark pool" style="top:${100 - lightnessOf(hex)}%;background:${hex}"></i>`;
+      // On the nearest small tick (every 2 points of lightness).
+      const onTick = Math.round(lightnessOf(hex) / 2) * 2;
+      left += `<i class="mark pool" style="top:${100 - onTick}%;background:${hex}" title="${hex} · L ${lightnessOf(hex)}"></i>`;
     }
   }
   if (ground) left += `<i class="mark ground" style="top:${100 - lightnessOf(ground)}%;--c:${ground}" data-label="ground"></i>`;
@@ -808,9 +812,11 @@ function renderSource() {
   sourcePill.textContent = SOURCE_WORDS[source];
   document.getElementById("source-hint").innerHTML = HINTS[source](name);
   if (source === "hand") {
+    // Each swatch is the site's own picker (hdr-color-input), so it opens
+    // the same black-paper panel as the docs, not the system dialog.
     handSwatches.innerHTML = HAND[name].map((hex, i) =>
-      `<label class="hand-swatch" style="background:${hex}" title="${name} color ${i + 1}: ${hex}">` +
-      `<input type="color" value="${hex}" data-index="${i}" aria-label="${name} color ${i + 1}" /></label>`).join("");
+      `<color-input class="hand-swatch" value="${hex}" initial-colorspace="hsl" no-alpha ` +
+      `data-index="${i}" title="${name} color ${i + 1}: ${hex}" aria-label="${name} color ${i + 1}"></color-input>`).join("");
   }
   if (source === "ramp") {
     rampHue.value = RAMP_START[name];
@@ -832,15 +838,21 @@ for (const button of document.querySelectorAll(".source-switch button")) {
   button.addEventListener("click", () => setSource(button.dataset.source));
 }
 
-handSwatches.addEventListener("input", (event) => {
-  const input = event.target.closest("input[type=color]");
-  if (!input) return;
+function onHandPick(event) {
+  const input = event.target.closest?.("color-input.hand-swatch");
+  const color = input && parse(input.value);
+  if (!color) return;
+  const hex = formatHex(color);
   const name = pickerPalette;
-  HAND[name][Number(input.dataset.index)] = input.value;
-  input.parentElement.style.background = input.value;
+  const index = Number(input.dataset.index);
+  if (HAND[name][index] === hex) return;
+  HAND[name][index] = hex;
+  input.title = `${name} color ${index + 1}: ${hex}`;
   fillPalette(name);
   update();
-});
+}
+handSwatches.addEventListener("input", onHandPick);
+handSwatches.addEventListener("change", onHandPick);
 
 rampHue.addEventListener("input", () => {
   RAMP_START[pickerPalette] = Number(rampHue.value);
@@ -948,9 +960,9 @@ function update() {
 
   for (const key of ["ground", "ink"]) {
     const out = claim.querySelector(`[data-out="${key}"]`);
-    // The sentence shows the hex without its '#', like a reading.
+    // The value's '#' is drawn in the color itself; the digits follow.
     out.querySelector(".hex").textContent = values[key]?.replace(/^#/, "") ?? "nothing";
-    out.querySelector(".chip").style.background = values[key] ?? "transparent";
+    out.querySelector(".hash").style.color = values[key] ?? "";
     out.classList.toggle("missing", !values[key]);
   }
 
@@ -1002,14 +1014,18 @@ document.querySelectorAll("[data-copy]").forEach((btn) => {
     try {
       await navigator.clipboard.writeText(btn.dataset.copy);
       btn.textContent = "Copied";
-      setTimeout(() => (btn.textContent = "Copy"), 1400);
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1400);
     } catch {
       /* clipboard refused; the command is still selectable */
     }
   });
 });
 
-document.getElementById("version").textContent = pkg.version;
+
 
 buildScales();
 darkScheme.addEventListener("change", () => {

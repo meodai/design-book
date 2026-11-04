@@ -13,6 +13,7 @@
     rel="stylesheet"
   />
   <link rel="icon" type="image/svg+xml" href="./logo.svg" />
+  <link rel="stylesheet" href="./shared.css" />
   <link rel="stylesheet" href="./landing.css" />
 </head>
 <body>
@@ -30,9 +31,9 @@
 <!-- ─── Hero: the claim as a live sentence ─────────────────────────── -->
 <section class="hero" id="hero">
   <h1 class="claim" id="claim">
-    <span class="out" data-out="ground"><i class="chip"></i><span class="hex">eee9dc</span></span>
+    <span class="out" data-out="ground"><span class="hash" aria-hidden="true">#</span><span class="hex">eee9dc</span></span>
     and
-    <span class="out" data-out="ink"><i class="chip"></i><span class="hex">0d0a03</span></span>
+    <span class="out" data-out="ink"><span class="hash" aria-hidden="true">#</span><span class="hex">0d0a03</span></span>
     become
     <span class="call"><button class="pill fn" data-slot="fn1" type="button">lightest</button><span class="paren">(</span><button class="pill pool" data-slot="pal1" type="button">ledger</button><span class="paren">)</span></span>
     and
@@ -40,13 +41,14 @@
     tokens that keep their reasons, so <span class="pill words" data-slot="who" role="button" tabindex="0">designers, developers and language models</span> can work from the same rules.
   </h1>
 
-  <p class="brand">
-    Design Book
+  <p class="brand brand-mark">
+    <span>Design</span>
     <svg class="logo" viewBox="0 0 32 27" aria-hidden="true">
-      <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23 Z" />
-      <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23 Z" />
+      <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23" />
+      <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23" />
       <path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" />
     </svg>
+    <span>Book</span>
   </p>
 
 </section>
@@ -69,7 +71,7 @@
   <!-- Two papers in a folder, one behind the other. Each has a tab on its
        top edge; selecting a tab brings that paper to the front. -->
   <div class="folder" id="folder">
-    <article class="folder-sheet sheet-palette" data-sheet="palette">
+    <article class="folder-sheet sheet-palette holes-both" data-sheet="palette">
       <button class="folder-tab" type="button" data-sheet="palette" aria-pressed="false">Palette</button>
       <div class="folder-body palette-body">
         <figure class="poline-panel">
@@ -84,7 +86,7 @@
             <label class="ramp-hue">Start hue <input type="range" id="ramp-hue" min="0" max="359" step="1" /></label>
           </div>
           <figcaption>
-            <span class="source-switch" role="group" aria-label="Where the palette comes from">
+            <span class="source-switch switch" role="group" aria-label="Where the palette comes from">
               <button type="button" data-source="poline" aria-pressed="true">Poline</button>
               <button type="button" data-source="hand" aria-pressed="false">By hand</button>
               <button type="button" data-source="ramp" aria-pressed="false">RampenSau</button>
@@ -264,16 +266,7 @@ book.render('css-variables');</pre>
   <button class="copy" type="button" data-copy="npm i design-book">Copy</button>
 </div>
 
-<footer class="imprint">
-  <span>Design Book <span id="version"></span></span>
-  <nav class="imprint-nav" aria-label="Footer">
-    <a href="docs.html">Docs</a>
-    <a href="editor/">Editor</a>
-    <a href="article/">Article</a>
-    <a href="https://github.com/meodai/design-book">GitHub</a>
-  </nav>
-  <span>Published by <a href="https://elastiq.ch/">Elastiq</a></span>
-</footer>
+<footer class="imprint" data-base="./" data-current="overview"></footer>
 
 <script type="module" src="./landing.js"></script>
 </body>

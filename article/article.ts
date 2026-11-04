@@ -25,6 +25,13 @@ import { Poline, positionFunctions } from 'poline';
 import 'poline/picker';
 import 'hdr-color-input';
 import './style.css';
+import '../marketing/shared.css';
+// The landing page's style on top, and its rails mapping the sections.
+import './theme.css';
+import './dress.js';
+import '../marketing/docs-rails.js';
+import '../marketing/sliders.js';
+import '../marketing/imprint.js';
 
 // ---------------------------------------------------------------------------
 // 1. Token setup
@@ -36,13 +43,13 @@ const book = new DesignBook('article');
 // it is (a color, a length), not what it MEANS. No semantics, no roles —
 // just raw material the rest of the system can reference.
 const values = book.addScope('values');
-values.set('gray50',   color('#fafafa'));
-values.set('gray500',  color('#717c8f'));
-values.set('gray800',  color('#202126'));
-values.set('gray900',  color('#1a1a1a'));
-values.set('blue500',  color('#1d4eb8'));
-values.set('red500',   color('#dc2626'));
-values.set('white',    color('#ffffff'));
+values.set('gray50',   color('#eee9dc'));
+values.set('gray500',  color('#7d786c'));
+values.set('gray800',  color('#24211b'));
+values.set('gray900',  color('#0d0a03'));
+values.set('blue500',  color('#3c61a0'));
+values.set('red500',   color('#de5331'));
+values.set('white',    color('#fffaed'));
 
 // ---------------------------------------------------------------------------
 // Poline (§6) — a procedural palette that takes over the values pool on scroll
@@ -157,13 +164,13 @@ function deactivateProceduralPalette() {
 
   // Restore original descriptive tokens before pulling poline tokens out,
   // so semantic refs always point at something valid in between.
-  values.set('gray50',   color('#fafafa'));
-  values.set('gray500',  color('#717c8f'));
-  values.set('gray800',  color('#202126'));
-  values.set('gray900',  color('#1a1a1a'));
-  values.set('blue500',  color('#1d4eb8'));
-  values.set('red500',   color('#dc2626'));
-  values.set('white',    color('#ffffff'));
+  values.set('gray50',   color('#eee9dc'));
+  values.set('gray500',  color('#7d786c'));
+  values.set('gray800',  color('#24211b'));
+  values.set('gray900',  color('#0d0a03'));
+  values.set('blue500',  color('#3c61a0'));
+  values.set('red500',   color('#de5331'));
+  values.set('white',    color('#fffaed'));
 
   // Re-point semantic refs back to the originals.
   colorScope.set('surface',     ref('values.gray50'));
@@ -253,8 +260,8 @@ type.set('h2',   typographyScale(ref('type.base'), { ratio: 1.2, step: 2 }));
 type.set('h1',   typographyScale(ref('type.base'), { ratio: 1.2, step: 3 }));
 
 const radius = book.addScope('radius');
-radius.set('base', px(6));
-radius.set('lg',   px(10));
+radius.set('base', px(0));
+radius.set('lg',   px(0));
 
 // All scopes we manage, in display order. Used for the defaults snapshot
 // and the reference-token candidate picker.
@@ -547,7 +554,10 @@ function closePopover() {
 
 function positionPopover(pop: HTMLElement, chip: HTMLElement) {
   const rect = chip.getBoundingClientRect();
-  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - 280, rect.left))}px`;
+  // Keep it on the page: left of the feed-hole rail, if there is one.
+  const edge = document.querySelector('.rail-right')?.getBoundingClientRect().left ?? window.innerWidth;
+  const width = pop.offsetWidth || 280;
+  pop.style.left = `${Math.max(8, Math.min(edge - width - 8, rect.left))}px`;
   pop.style.top = `${rect.bottom + 8}px`;
 }
 
@@ -1296,41 +1306,27 @@ if (bezierSvg) {
     const [p1x, p1y] = bezierToSvg(bezierState.p1[0], bezierState.p1[1]);
     const [p2x, p2y] = bezierToSvg(bezierState.p2[0], bezierState.p2[1]);
 
-    // Sample dots — one per spacing step, drawn on the curve so the reader
-    // can see which step maps where.
-    const dots = BEZIER_STEPS.map(([, t]) => {
+    // One dot per spacing step on the curve, with a faint line out to the
+    // frame's edge and the step's name, drawn with the shared curve
+    // classes (marketing/shared.css) so it reads like the landing page's.
+    const right = SVG_W - PAD;
+    const steps = BEZIER_STEPS.map(([name, t]) => {
       const [bx, by] = cubicBezierPoint(t, bezierState.p1, bezierState.p2);
       const [sx, sy] = bezierToSvg(bx, by);
-      return `<circle cx="${sx}" cy="${sy}" r="3" fill="var(--article-text)" />`;
+      return `<line class="curve-tick" x1="${sx}" y1="${sy}" x2="${right}" y2="${sy}" />` +
+        `<circle class="curve-step" cx="${sx}" cy="${sy}" r="2.6" />` +
+        `<text class="curve-label" x="${right + 4}" y="${sy + 2.4}">${name}</text>`;
     }).join('');
 
     bezierSvg!.innerHTML = `
-      <g vector-effect="non-scaling-stroke">
-        <!-- Reference frame -->
-        <rect x="${PAD}" y="${PAD}" width="${SVG_W - 2 * PAD}" height="${SVG_H - 2 * PAD}"
-              fill="none" stroke="var(--article-rule)" stroke-width="1"
-              vector-effect="non-scaling-stroke" />
-        <!-- Control lines -->
-        <line x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}"
-              stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3"
-              vector-effect="non-scaling-stroke" />
-        <line x1="${p3x}" y1="${p3y}" x2="${p2x}" y2="${p2y}"
-              stroke="var(--article-muted)" stroke-width="1" stroke-dasharray="3,3"
-              vector-effect="non-scaling-stroke" />
-        <!-- Curve -->
-        <path d="M ${p0x} ${p0y} C ${p1x} ${p1y}, ${p2x} ${p2y}, ${p3x} ${p3y}"
-              fill="none" stroke="var(--article-accent)" stroke-width="2"
-              vector-effect="non-scaling-stroke" />
-        <!-- Step dots -->
-        ${dots}
-        <!-- Handles -->
-        <circle data-handle="p1" cx="${p1x}" cy="${p1y}" r="7"
-                fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
-                vector-effect="non-scaling-stroke" style="cursor: grab;" />
-        <circle data-handle="p2" cx="${p2x}" cy="${p2y}" r="7"
-                fill="var(--article-surface)" stroke="var(--article-accent)" stroke-width="2"
-                vector-effect="non-scaling-stroke" style="cursor: grab;" />
-      </g>
+      <rect class="curve-frame" x="${PAD}" y="${PAD}" width="${SVG_W - 2 * PAD}" height="${SVG_H - 2 * PAD}" />
+      <line class="curve-diagonal" x1="${p0x}" y1="${p0y}" x2="${p3x}" y2="${p3y}" />
+      ${steps}
+      <line class="curve-arm" x1="${p0x}" y1="${p0y}" x2="${p1x}" y2="${p1y}" />
+      <line class="curve-arm" x1="${p3x}" y1="${p3y}" x2="${p2x}" y2="${p2y}" />
+      <path class="curve-path" d="M ${p0x} ${p0y} C ${p1x} ${p1y}, ${p2x} ${p2y}, ${p3x} ${p3y}" />
+      <circle class="curve-handle" data-handle="p1" cx="${p1x}" cy="${p1y}" r="5.5" />
+      <circle class="curve-handle" data-handle="p2" cx="${p2x}" cy="${p2y}" r="5.5" />
     `;
   }
 
