@@ -986,3 +986,36 @@ color-input::part(controls) {
 .folder-sheet.is-front > .folder-tab::after {
   transform: translateY(calc(var(--row) / 2 - 2px));
 }
+
+/* The name on the very left, the book on the very right: one line
+   across the top, inset the same on both sides. */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  right: var(--brand-left, 40px);
+  row-gap: 0;
+}
+
+.brand-mark > span {
+  grid-row: auto;
+}
+
+
+.brand-mark .logo {
+  order: 1;
+  grid-column: auto;
+  grid-row: auto;
+  width: 1.6em;
+  height: 1.35em;
+  margin: 0;
+}
+
+/* "DesignBook" together on the left; only the book pushed right. */
+.brand-mark {
+  justify-content: flex-start;
+}
+
+.brand-mark .logo {
+  margin-left: auto;
+}
