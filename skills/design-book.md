@@ -171,6 +171,7 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | `--text: <darkest readable gray>` | `darkest(ref('grays'), { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
 | `--button-hover`: the next stop of the ramp | `sibling(ref('values.blue-500'), 1)` |
+| `--border`: a few steps from the text toward the surface | `sibling(ref('color.text'), 2, { toward: ref('color.surface') })` |
 | `--space-sm/md/lg/xl`: multiples of a base | `spacingScale(ref('space.base'), { multiplier })` |
 | `--gap-loose`: the next size up from another | `nextLarger(ref('space.m'), ref('space'))` / `nextSmaller` |
 | `--font-h1/h2/h3`: modular scale | `typographyScale(ref('font-size.base'), { ratio, step })` |
@@ -183,6 +184,11 @@ functions mix or pick existing tokens; they don't invent new primitives.
 pool to colors readable on a backdrop before ranking; if none qualify, it
 throws instead of returning an unreadable color. `not` excludes keys from
 any scope-iterating function.
+
+`minContrastWith` is the exception: when no member reaches `minContrast`,
+it quietly returns the member with the highest contrast instead of
+throwing. A rule built on it can therefore ship a color below its ratio;
+check contrast separately (step 10).
 
 **Don't over-procedural-ise.** If a value isn't related to anything else,
 leave it as a value or a ref. Procedural tokens are for relationships,
@@ -213,7 +219,67 @@ CSS output gets one variable per field (`--type-title-font-size`) plus a
 `.type-title` class; a variant's unchanged fields render as `var()` of its
 base's.
 
-### 7. Themes, modes and breakpoints: books and layers
+### 7. Contexts side by side: `extends` and relative refs
+
+Many systems have **contexts** that live on the same page at once: a
+normal area, a weak (quieter) one, a strong (inverted) one, status areas
+for errors and warnings. Each holds the same roles (`surface`, `text`,
+`border`, `major-action`, …) with its own colors. These are scopes of one
+book, and the ones that share rules `extend` a base context.
+
+**Write the shared rules once, with relative refs.** A key with a leading
+dot reads that token in whichever scope reads the rule, so a rule a
+context inherits judges against that context's own colors:
+
+```typescript
+const normal = book.addScope('context-normal');
+normal.set('surface',            nth(ref('scale'), 0));
+normal.set('surface--alternate', nth(ref('scale'), 1));
+normal.set('text',   bestContrastWith(ref('.surface--alternate'), ref('scale')));
+normal.set('border', sibling(ref('.text'), 2, { toward: ref('.surface') }));
+
+// Weak only says what differs; text and border are worked out on its surfaces.
+const weak = book.addScope('context-weak', { extends: 'context-normal' });
+weak.set('surface',            nth(ref('scale'), 2));
+weak.set('surface--alternate', nth(ref('scale'), 3));
+```
+
+Use a full key (`ref('context-normal.action')`) only where a context should
+deliberately read another one: an inherited relative rule follows the
+inheriting context, which is sometimes exactly the bug. `inParent(ref('.x'))`
+reads the value a context overrides, for "one step from what it replaces".
+
+**Pick from one curated pool.** Put one ordered scale of refs between the
+raw palette families and the contexts (light to dark, say `scale.0` …
+`scale.2000`), plus a small scope naming the few brand roots it is built
+from. Contexts pick from the scale by rule rather than from the raw
+families, so changing a brand root re-flows everywhere. Step names on such
+a scale show order only, not perceived distance.
+
+**Two surfaces: judge against the harder one.** When a context has a
+surface and an alternate (nested) surface, pick text against the one with
+less contrast to spare, and check the pick on both.
+
+**Keep a key contract.** List the roles every context must have and check
+each context against it once the book is built. `getAllKeys()` includes
+inherited keys:
+
+```typescript
+const roles = ['surface', 'surface--alternate', 'text', 'border' /* … */];
+for (const name of ['context-normal', 'context-weak', 'context-strong']) {
+  const keys = new Set(book.getScope(name)!.getAllKeys());
+  const missing = roles.filter((role) => !keys.has(role));
+  if (missing.length) throw new Error(`${name} is missing ${missing.join(', ')}`);
+}
+```
+
+**Status contexts stay off the brand.** Give error, success and warning
+contexts positions on their own ramp, and pick their button text from a
+neutral pool (`bestContrastWith(ref('.major-action'), ref('gray'))`), so
+changing the brand never moves a status color. A function that builds such
+a context from its ramp keeps the three of them in step.
+
+### 8. Themes, modes and breakpoints: books and layers
 
 Every variation — light / dark, brand B, dense mode, a breakpoint — is a
 **separate book built from the same layers**. Write the base system as one
@@ -249,6 +315,32 @@ keysFromLayer(darkBook, 'dark'); // exactly what the dark theme changes
 the other book, so the dark block holds just the overrides; `var()`
 references are inherited by the cascade.
 
+**Dark mode by reversing a scale.** When surfaces are positions on an
+ordered scale (`nth(ref('scale'), 0)`) and everything else is picked
+against them, dark mode is the same rules over the same scale in reverse
+order: position 0 becomes the darkest color, and the contrast rules pick
+light text on it. No rule needs a dark branch:
+
+```typescript
+function createColors(mode: 'light' | 'dark') {
+  const book = new DesignBook(mode);
+  // … palettes …
+  const scale = book.addScope('scale');
+  for (const [step, source] of mode === 'dark' ? [...steps].reverse() : steps) {
+    scale.set(step, ref(source));
+  }
+  // … contexts as in step 7, unchanged …
+  return book;
+}
+```
+
+Status ramps that contexts read by position flip the same way. Colors left
+as plain refs (decorations, fixed borders) do not adapt; list them.
+
+**Trying a change first.** To show what a proposed rule would change,
+apply it to a second book built the same way and compare with
+`diffBooks(current, proposed)`, rather than editing the real tokens.
+
 Breakpoints work the same way, with `media` instead of `selector`. With
 text styles built on a type scale, a breakpoint layer usually only changes
 the scale:
@@ -278,9 +370,9 @@ overrides and create missing scopes.
 Don't model themes or breakpoints as scopes that `extend` each other: an
 inherited `ref('brand.x')` keeps reading the base `brand`, so a theme's root
 overrides never reach the tokens derived from them. Scope `extends` is for
-sharing members between scopes of one book.
+contexts that sit side by side in one book (step 7).
 
-### 8. Generate the Design Book code
+### 9. Generate the Design Book code
 
 A typical migration produces something like:
 
@@ -336,9 +428,9 @@ type.set('hero',  variant(ref('type.title'), { fontWeight: '800' }));
 ```
 
 Wrap it in `layer('base', (book) => { … })` as soon as the system has a
-second theme or breakpoint (step 7).
+second theme or breakpoint (step 8).
 
-### 9. Verify
+### 10. Verify
 
 Diff the output against the original.
 
@@ -356,7 +448,20 @@ diffBooks(light, darkBook);            // { changed, added, removed } by resolve
 ```
 
 Loop through the original token list and check that every entry has a
-counterpart in the rendered output. For themes, `diffBooks` / `keysFromLayer`
+counterpart in the rendered output.
+
+**Reproducing an existing export.** When rules replace hand-picked colors,
+tune each rule's settings (a `minContrast` ratio, a `sibling` step count,
+the pool's `not` list) until its pick equals the exported color, and pin
+every pick in a test so a later change to the pool can't move it unnoticed.
+Where no rule reproduces a value, keep the plain ref and say why in a
+comment. Where the export contradicts itself, write the deviation down.
+
+**Audit contrast separately.** Rules with `readableOn` throw when nothing
+qualifies, but `minContrastWith` falls back silently (step 5), and a pick
+can be readable on one surface and not on the other. Measure every text
+color against every background it sits on, both surfaces of a context
+included, as its own check. For themes, `diffBooks` / `keysFromLayer`
 should list exactly the tokens the source changed per theme. If something
 doesn't match, the most common causes:
 
@@ -575,8 +680,13 @@ After importing:
   returns the surface itself.
 - **Re-creating tokens on Figma sync instead of mutating.** `scope.set` on
   an existing key updates the value and keeps its dependents.
+- **A full key in a rule that other contexts inherit.** `ref('context-normal.surface')`
+  keeps reading Normal's surface in every context that extends it. Shared
+  rules read `ref('.surface')`.
+- **Trusting `minContrastWith` to fail.** It returns the best it has when
+  nothing reaches the ratio. Audit contrast (step 10).
 - **Themes or breakpoints as `extends` scopes.** Use layers and one book per
-  variation (step 7); render with `selector` / `media` and `changedFrom`.
+  variation (step 8); render with `selector` / `media` and `changedFrom`.
 - **Text styles as loose variables.** `--h1-size`, `--h1-weight`,
   `--h1-line-height` that always travel together belong in one
   `typography()` token.
@@ -603,7 +713,12 @@ function myCustom(base, options) {
 }
 ```
 
-Then use it like any built-in. Refs in the args become graph edges
+Then use it like any built-in. A common one: keep ramps opaque and apply
+alpha where a color is used, with a small `opacity(ref('scale.1800'), 0.3)`
+function on the token that needs it, instead of storing translucent copies
+of ramp steps.
+
+Refs in the args become graph edges
 automatically, so custom functions nest, re-evaluate when their inputs
 change, and round-trip through renderers (CSS output falls back to the
 resolved string unless you also register a
