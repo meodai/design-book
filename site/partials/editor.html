@@ -1,25 +1,19 @@
-<header class="top">
-    <a href="https://github.com/meodai/design-book" class="top-mark">Design Book</a>
-    <nav class="top-nav">
-      <a href="https://github.com/meodai/design-book">GitHub</a>
-      <a href="{{base}}editor/" aria-current="page">Editor</a>
-      <a href="{{base}}article/">Article</a>
-    </nav>
-  </header>
-
-  <header class="intro">
-    <p>
-      A reactive design-token framework. Tokens hold values, references, or
-      <strong>rules</strong>: change one input and every dependent token
-      recomputes. Edit the scopes on the left, watch the example, CSS, JSON,
-      W3 Design Tokens, and dependency graph on the right reflect each
-      change instantly.
-    </p>
-    <p class="intro__links">
-      <a href="{{base}}article/">Read the article →</a>
-      <a href="https://github.com/meodai/design-book" target="_blank" rel="noopener">GitHub</a>
-    </p>
-  </header>
+<section class="editor-hero">
+    <!--brand-->
+    <header class="intro">
+      <h1>The editor.</h1>
+      <p>
+        Tokens hold values, references, or <strong>rules</strong>: change one
+        input and every dependent token recomputes. Edit the scopes on the
+        left; the example, CSS, JSON, W3 Design Tokens, the table and the
+        dependency graph on the right follow each change.
+      </p>
+      <p class="intro__links">
+        <a href="{{base}}docs/">What the functions do</a>
+        <a href="{{base}}article/">Read the article</a>
+      </p>
+    </header>
+  </section>
   <div class="layout">
     <div class="input-column" id="input-column">
       <!-- Scopes and tokens will be rendered here -->
@@ -30,7 +24,7 @@
         <button class="tab" data-format="log">Log</button>
         <button class="tab" data-format="css-variables">CSS</button>
         <button class="tab" data-format="json">JSON</button>
-        <button class="tab" data-format="w3-design-tokens">W3 Design Tokens</button>
+        <button class="tab" data-format="w3-design-tokens" title="W3 Design Tokens">W3</button>
         <button class="tab" data-format="table">Table</button>
         <button class="tab" data-format="svg">SVG</button>
       </div>

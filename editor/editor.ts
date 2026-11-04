@@ -11,7 +11,7 @@ import type { Scope, ScopeOrder } from '../src/index';
 import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';
 import { readableOnArgIndex } from '../src/functions/color/readable';
 
-import { EditorView, keymap, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap } from '@codemirror/commands';
 import { autocompletion, CompletionContext, CompletionResult, acceptCompletion } from '@codemirror/autocomplete';
@@ -1208,6 +1208,8 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
   const state = EditorState.create({
     doc: initialDoc,
     extensions: [
+      // Numbered like the rows of a ledger.
+      lineNumbers(),
       // Tab accepts the active completion; falls through to default Tab when
       // no completion is open
       keymap.of([{ key: 'Tab', run: acceptCompletion }]),
@@ -1247,18 +1249,20 @@ function createScopeEditor(scope: Scope, container: HTMLElement, _book: DesignBo
           }
         }
       }),
+      // A ledger: the site's mono, one ruled row per line.
       EditorView.theme({
-        '&': { fontSize: '13px' },
+        '&': { fontSize: '12px' },
         '.cm-content': {
-          fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', Menlo, monospace",
-          padding: '8px 0',
+          fontFamily: 'var(--font-code)',
+          padding: '0',
+          lineHeight: 'var(--row)',
         },
-        '.cm-line': { padding: '1px 8px' },
+        '.cm-line': { padding: '0 var(--row) 0 0' },
         '.cm-focused': { outline: 'none' },
-        '.cm-scroller': { overflow: 'auto' },
-        '&.cm-focused .cm-cursor': { borderLeftColor: '#0066cc' },
+        '.cm-scroller': { overflow: 'auto', lineHeight: 'var(--row)' },
+        '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--black)' },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': {
-          background: 'rgba(0, 102, 204, 0.15)',
+          background: 'var(--yellow)',
         },
       }),
     ],

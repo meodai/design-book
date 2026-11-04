@@ -1,0 +1,550 @@
+/* The editor in the site's style (on top of editor/style.css, which keeps
+   the editor's mechanics). The page is the cream paper of the docs; each
+   scope is a sheet of black printer paper, its tokens one ruled row each;
+   the outputs are a folder whose tabs carry the paper of what they show. */
+
+:root {
+  color-scheme: light;
+  --editor-gutter: clamp(40px, 6vw, 96px);
+
+  /* The editor's own variables, mapped onto ours. */
+  --c-white: var(--on-black);
+  --c-black: var(--black);
+  --c-surface: var(--paper);
+  --c-surface-on: var(--black);
+  --c-surface-on-alt: color-mix(in srgb, var(--black) 60%, var(--paper));
+  --c-border: color-mix(in srgb, var(--black) 25%, var(--paper));
+  --c-surface-subtle: var(--paper);
+  --c-page-surface: var(--paper);
+  --c-accent: var(--blue);
+  --font-mono: var(--font-code);
+  --font-sans: var(--font-text);
+  --font-display: var(--font-text);
+
+  font-family: var(--font-text);
+  font-weight: 400;
+  scrollbar-color: var(--blue) var(--paper);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--black);
+  background: var(--paper);
+  font: 17px/1.55 var(--font-text);
+}
+
+/* ─── Opening: the top line, a title, what the editor does ────────── */
+.editor-hero {
+  position: relative;
+  padding: calc(84px + var(--row) * 3) var(--editor-gutter) calc(var(--row) * 2);
+}
+
+.editor-hero .brand-mark {
+  --brand-left: var(--editor-gutter);
+}
+
+.editor-hero .intro {
+  max-width: 44rem;
+  margin: 0;
+}
+
+.editor-hero h1 {
+  margin: 0 0 calc(var(--row) / 2);
+  font: 600 clamp(40px, 4.6vw, 68px) / 1.02 var(--font-text);
+  letter-spacing: -0.025em;
+}
+
+.editor-hero .intro p {
+  max-width: 38em;
+  margin: 0 0 var(--row);
+  font-size: clamp(17px, 1.4vw, 20px);
+  line-height: 1.55;
+  color: var(--black);
+  text-wrap: pretty;
+}
+
+.editor-hero .intro__links {
+  display: flex;
+  gap: var(--row);
+  margin: 0;
+}
+
+.editor-hero .intro__links a {
+  color: var(--blue);
+  border: 0;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* ─── The two columns ─────────────────────────────────────────────── */
+.layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: calc(var(--row) * 2);
+  align-items: start;
+  max-height: none;
+  margin: 0 var(--editor-gutter) calc(var(--row) * 3);
+}
+
+.input-column {
+  gap: var(--row);
+  overflow: visible;
+}
+
+/* The outputs stay in view while the scopes scroll past. */
+.output-column {
+  position: sticky;
+  top: var(--row);
+  height: calc(100vh - var(--row) * 2);
+  margin: 0;
+  padding-top: var(--row);
+}
+
+/* ─── A scope: black printer paper ───────────────────────────────── */
+.scope-block {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+  padding: 0 0 0 calc(var(--row) * 2);
+  color: var(--pp-text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 12%, var(--pp)) calc(var(--row) - 1px) var(--row)
+  );
+  box-shadow: none;
+}
+
+.scope-header {
+  height: var(--row);
+  padding: 0 var(--row) 0 0;
+  gap: 10px;
+  font-family: var(--font-code);
+  font-size: 12px;
+  background: none;
+  box-shadow: none;
+}
+
+.scope-header .scope-name {
+  letter-spacing: 0;
+  font-variant-caps: all-small-caps;
+  font-size: 14px;
+}
+
+.scope-header .scope-extends,
+.scope-header .scope-order {
+  font-size: 11px;
+  color: color-mix(in srgb, var(--on-black) 60%, var(--black));
+}
+
+.scope-order-select {
+  height: 20px;
+  padding: 0 1.1rem 0 6px;
+  font: 11px/18px var(--font-code);
+  color: var(--on-black);
+  background-color: var(--black);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-black) 45%, var(--black));
+}
+
+.scope-editor {
+  border: 0;
+  background: none;
+}
+
+.scope-editor .cm-editor,
+.scope-editor .cm-content {
+  color: var(--on-black);
+  background: none;
+}
+
+.scope-editor .cm-cursor {
+  border-left-color: var(--on-black);
+}
+
+/* Inherited lines: a solid mid tone, not faded. */
+.cm-inherited-line {
+  opacity: 1;
+  color: color-mix(in srgb, var(--on-black) 50%, var(--black));
+}
+
+.cm-inherited-value {
+  opacity: 1;
+  font-style: normal;
+  color: color-mix(in srgb, var(--on-black) 50%, var(--black));
+}
+
+.cm-error-line {
+  background: none;
+  text-decoration: wavy underline var(--red);
+}
+
+/* The color swatches in a line: square, with a hairline. */
+.cm-color-swatch {
+  border-radius: 0 !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-black) 40%, var(--black)) !important;
+}
+
+/* Autocomplete: a black sheet, the choice inverted. */
+.cm-tooltip-autocomplete {
+  font-family: var(--font-code) !important;
+  font-size: 12px !important;
+  color: var(--on-black) !important;
+  background: var(--black) !important;
+  box-shadow: none !important;
+}
+
+.cm-tooltip-autocomplete ul li[aria-selected] {
+  color: var(--black) !important;
+  background: var(--on-black) !important;
+}
+
+.cm-completionDetail {
+  color: color-mix(in srgb, var(--on-black) 55%, var(--black));
+}
+
+.cm-completionIcon {
+  opacity: 1;
+}
+
+/* Adding a scope: a quiet button at the end of the stack. */
+.add-scope-btn,
+.new-scope-form button {
+  align-self: start;
+  height: var(--row);
+  padding: 0 var(--row);
+  font: 14px/var(--row) var(--font-text);
+  color: var(--black);
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--black);
+  transform: none;
+}
+
+.add-scope-btn:hover,
+.new-scope-form button:hover {
+  color: var(--on-black);
+  background: var(--black);
+  box-shadow: none;
+  transform: none;
+}
+
+/* ─── Outputs: a folder ───────────────────────────────────────────── */
+.tabs {
+  gap: 4px;
+  padding-left: 0;
+}
+
+.tab {
+  --pp: var(--paper-tab);
+  height: var(--row);
+  margin: 0;
+  padding: 0 var(--row);
+  font: 14px/var(--row) var(--font-text);
+  color: var(--pp-text);
+  background: var(--pp);
+  box-shadow: none;
+  transform: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Each tab's paper: the paper of what it shows. */
+.tab[data-format="example"] { --pp: var(--on-black); --pp-text: var(--black); }
+.tab[data-format="log"] { --pp: var(--red); --pp-text: var(--black); }
+.tab[data-format="css-variables"] { --pp: var(--black); --pp-text: var(--on-black); }
+.tab[data-format="json"] { --pp: var(--blue); --pp-text: var(--on-black); }
+.tab[data-format="w3-design-tokens"] { --pp: var(--green); --pp-text: var(--black); }
+.tab[data-format="table"] { --pp: var(--on-black); --pp-text: var(--black); }
+.tab[data-format="svg"] { --pp: var(--yellow); --pp-text: var(--black); }
+
+.tab:hover,
+.tab.active {
+  color: var(--pp-text);
+  background: var(--pp);
+  box-shadow: none;
+  transform: none;
+}
+
+/* The tab's dot, as on every folder: drops in on hover, stays on the
+   tab in front. */
+.tab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--row) / 2 - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateY(-100%);
+  transition: transform 0.2s ease;
+}
+
+.tab:hover::after,
+.tab.active::after {
+  transform: translateY(calc(var(--row) / 2 - 2px));
+}
+
+/* The sheet under the tabs takes the paper of the tab in front. */
+.output-column:has(.tab.active[data-format="example"]) { --sheet: var(--on-black); --sheet-text: var(--black); }
+.output-column:has(.tab.active[data-format="log"]) { --sheet: var(--red); --sheet-text: var(--black); }
+.output-column:has(.tab.active[data-format="css-variables"]) { --sheet: var(--black); --sheet-text: var(--on-black); }
+.output-column:has(.tab.active[data-format="json"]) { --sheet: var(--blue); --sheet-text: var(--on-black); }
+.output-column:has(.tab.active[data-format="w3-design-tokens"]) { --sheet: var(--green); --sheet-text: var(--black); }
+.output-column:has(.tab.active[data-format="table"]) { --sheet: var(--on-black); --sheet-text: var(--black); }
+.output-column:has(.tab.active[data-format="svg"]) { --sheet: var(--yellow); --sheet-text: var(--black); }
+
+.output,
+.event-log,
+.example-view,
+.visualization,
+.table-view {
+  --pp: var(--sheet, var(--black));
+  --pp-text: var(--sheet-text, var(--on-black));
+  margin: 0;
+  color: var(--pp-text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 12%, var(--pp)) calc(var(--row) - 1px) var(--row)
+  );
+  box-shadow: none;
+}
+
+/* Code outputs: one ruled row per line. */
+.output,
+.event-log {
+  padding: 0 var(--row);
+  font: 12px/var(--row) var(--font-code);
+}
+
+.event-log .event-time,
+.event-log .event-type,
+.event-log .event-phase,
+.event-log .event-message {
+  opacity: 1;
+  color: color-mix(in srgb, var(--pp-text) 65%, var(--pp));
+}
+
+/* The example: the live card on its sheet, no ruling behind it. */
+.example-view {
+  background-image: none;
+  padding: calc(var(--row) * 2);
+}
+
+.example-error {
+  color: var(--on-black);
+  background: var(--red);
+  box-shadow: none;
+  font-family: var(--font-code);
+}
+
+/* The table: the ledger's look. */
+.table-view {
+  padding: var(--row);
+  background-image: none;
+}
+
+.table-view table {
+  border-collapse: collapse;
+  font-family: var(--font-code);
+  font-size: 12px;
+  line-height: var(--row);
+}
+
+.table-view th,
+.table-view td {
+  padding: 0 14px;
+  border: 0;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--pp-text) 28%, var(--pp));
+}
+
+.table-view th {
+  font-weight: 400;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+  box-shadow:
+    inset 0 -1px 0 color-mix(in srgb, var(--pp-text) 28%, var(--pp)),
+    inset 0 -2px 0 var(--pp),
+    inset 0 -3px 0 color-mix(in srgb, var(--pp-text) 28%, var(--pp));
+}
+
+/* The graph: the SVG renderer on the yellow paper, as in the docs. */
+.visualization {
+  --c-surface: var(--pp);
+  --c-surface-on: var(--pp-text);
+  --c-surface-on-alt: color-mix(in srgb, var(--pp-text) 55%, var(--pp));
+  padding: var(--row);
+  background-image: none;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.visualization label {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--row);
+  color: var(--pp-text);
+}
+
+/* The new-scope form: the site's controls. */
+.new-scope-form select,
+.new-scope-form input {
+  height: var(--row);
+  font: 12px var(--font-code);
+  color: var(--black);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--black);
+}
+
+@media (max-width: 899px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .output-column {
+    position: static;
+    height: 70vh;
+  }
+}
+
+/* One ruled row per line: no padding above or below a line. */
+.scope-editor .cm-line {
+  padding: 0 var(--row) 0 0;
+  line-height: var(--row);
+}
+
+.scope-editor .cm-content {
+  padding: 0;
+}
+
+/* Tabs as wide as their names. */
+.tab {
+  flex: none;
+}
+
+.tab {
+  padding: 0 18px 0 22px;
+}
+
+.tab::after {
+  left: 9px;
+}
+
+.tab:hover::after,
+.tab.active::after {
+  transform: translateY(calc(var(--row) / 2 - 2px));
+}
+
+/* ─── A scope: a ledger, as the landing page's Rules table ───────────
+   Straight on the page's paper: the scope's name as the section head
+   over a double rule, a numbered column set off by a double rule, a
+   rule under every row. (Replaces the black paper above.) */
+.scope-block {
+  --pp: var(--paper);
+  --pp-text: var(--black);
+  --lg-rule: color-mix(in srgb, var(--black) 28%, var(--paper));
+  --lg-ink: color-mix(in srgb, var(--black) 60%, var(--paper));
+  --no-width: calc(var(--row) * 2);
+  padding: 0;
+  color: var(--black);
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+}
+
+.scope-block::after {
+  content: none;
+}
+
+.scope-header {
+  height: var(--row);
+  padding: 0 0 0 calc(var(--no-width) + 14px);
+  color: var(--black);
+  box-shadow:
+    inset 0 -1px 0 var(--lg-rule),
+    inset 0 -2px 0 var(--pp),
+    inset 0 -3px 0 var(--lg-rule);
+}
+
+.scope-header .scope-name {
+  font-family: var(--font-code);
+  font-size: 14px;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.08em;
+}
+
+.scope-header .scope-extends,
+.scope-header .scope-order {
+  color: var(--lg-ink);
+}
+
+.scope-order-select {
+  color: var(--black);
+  background-color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--black);
+}
+
+.scope-editor .cm-editor,
+.scope-editor .cm-content {
+  color: var(--black);
+}
+
+.scope-editor .cm-cursor {
+  border-left-color: var(--black);
+}
+
+/* The numbers: CodeMirror's line numbers, set as the ledger's No. */
+.scope-editor .cm-gutters {
+  display: flex;
+  min-width: var(--no-width);
+  color: var(--lg-ink);
+  background: none;
+  border: 0;
+  border-right: 3px double var(--lg-ink);
+}
+
+.scope-editor .cm-lineNumbers {
+  flex: 1;
+}
+
+.scope-editor .cm-lineNumbers .cm-gutterElement {
+  box-sizing: border-box;
+  min-width: calc(var(--no-width) - 3px);
+  padding: 0 12px;
+  font: 12px/var(--row) var(--font-code);
+  text-align: right;
+  box-shadow: inset 0 -1px 0 var(--lg-rule);
+}
+
+.scope-editor .cm-line {
+  padding: 0 var(--row) 0 14px;
+  box-shadow: inset 0 -1px 0 var(--lg-rule);
+}
+
+.scope-editor .cm-activeLineGutter,
+.scope-editor .cm-activeLine {
+  background: none;
+}
+
+.cm-inherited-line,
+.cm-inherited-value {
+  color: var(--lg-ink);
+}
+
+.cm-color-swatch {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--black) 40%, var(--paper)) !important;
+}
+
+/* CodeMirror's own theme sets the gutter's border; the ledger's double
+   rule wins. */
+.scope-editor .cm-editor .cm-gutters {
+  border-right: 3px double var(--lg-ink) !important;
+  background: none !important;
+}
+
+/* A long line scrolls sideways under a thin rule-colored bar. */
+.scope-editor .cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lg-ink) transparent;
+}
