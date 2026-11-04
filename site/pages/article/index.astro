@@ -10,22 +10,12 @@ import '../../article/theme.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
-  title="Procedural Tokens — encoding design decisions"
-  description="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens that re-decide themselves when their inputs change."
+  title="Procedural tokens: encoding design decisions · Design Book"
+  description="Most design tokens hold a value; some are better as a rule. A walk, with live examples, from static references to tokens that are worked out again when their inputs change."
+  type="article"
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
   bodyAttrs={{ 'data-sections': '.article-content > section' }}
 >
-    <meta slot="head" property="og:type" content="article">
-    <meta slot="head" property="og:site_name" content="Design Book">
-    <meta slot="head" property="og:title" content="Procedural Tokens — encoding design decisions">
-    <meta slot="head" property="og:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens that re-decide themselves when their inputs change.">
-    <meta slot="head" property="og:url" content="https://meodai.github.io/design-book/article/">
-    <meta slot="head" property="og:image" content="https://meodai.github.io/design-book/article/og.png">
-    <meta slot="head" property="og:image:alt" content="Procedural Tokens — encoding design decisions. A Design Book demo.">
-    <meta slot="head" name="twitter:card" content="summary_large_image">
-    <meta slot="head" name="twitter:title" content="Procedural Tokens — encoding design decisions">
-    <meta slot="head" name="twitter:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens.">
-    <meta slot="head" name="twitter:image" content="https://meodai.github.io/design-book/article/og.png">
   <Fragment set:html={beforeBrand} />
   <Fragment set:html={afterBrand} />
   <InstallBar current="article" />

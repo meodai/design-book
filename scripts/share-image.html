@@ -1,0 +1,188 @@
+<!doctype html>
+<!-- The share image (1200 × 630): rendered to site/public/share.png by
+     scripts/share-image.sh. The site's paper, rails, type and ledger. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Valley+Sans:wght@400;600&display=block" />
+<style>
+  @font-face {
+    font-family: "Obel Mono";
+    font-weight: 100 900;
+    src: url("../site/marketing/fonts/ObelMono-VF.woff2") format("woff2");
+  }
+
+  :root {
+    --paper: #eee9dc;
+    --black: #0d0a03;
+    --on-black: #fffaed;
+    --blue: #172c4f;
+    --red: #de5331;
+    --row: 30px;
+    --rail: 60px;
+    --rule: color-mix(in srgb, var(--black) 28%, var(--paper));
+    --margin: color-mix(in srgb, var(--black) 60%, var(--paper));
+    --ink-2: color-mix(in srgb, var(--black) 72%, var(--paper));
+  }
+
+  html, body {
+    margin: 0;
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+  }
+
+  body {
+    position: relative;
+    box-sizing: border-box;
+    padding: 0 var(--rail);
+    color: var(--black);
+    background: var(--paper);
+    font-family: "Valley Sans", sans-serif;
+  }
+
+  /* The blue rails, a scale of ticks on each. */
+  .rail {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--rail);
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 calc(var(--row) - 1px), var(--on-black) calc(var(--row) - 1px) var(--row)) var(--x) var(--row) / 10px calc(100% - var(--row) * 2) no-repeat,
+      var(--blue);
+  }
+
+  .rail-left { left: 0; --x: right; }
+  .rail-right { right: 0; --x: left; }
+
+  .page {
+    box-sizing: border-box;
+    height: 100%;
+    padding: calc(var(--row) * 2) calc(var(--row) * 2.5);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font: 600 24px / 1 "Valley Sans", sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  .brand svg {
+    width: 36px;
+    height: 30px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+  }
+
+  h1 {
+    margin: calc(var(--row) * 1.5) 0 calc(var(--row) * 1.5);
+    font: 600 74px / 1 "Valley Sans", sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  /* Three rules from the landing page, as its ledger. */
+  .ledger {
+    width: 100%;
+    border-collapse: collapse;
+    font: 19px / var(--row) "Obel Mono", monospace;
+  }
+
+  .ledger td {
+    height: calc(var(--row) * 1.4);
+    padding: 0 16px;
+    box-shadow: inset 0 -1px 0 var(--rule);
+    white-space: nowrap;
+  }
+
+  .ledger tr:first-child td {
+    box-shadow: inset 0 -1px 0 var(--rule), inset 0 1px 0 var(--rule), inset 0 3px 0 var(--paper), inset 0 4px 0 var(--rule);
+  }
+
+  .ledger td + td { border-left: 1px solid var(--rule); }
+
+  .ledger .no {
+    width: 1ch;
+    text-align: right;
+    font-size: 15px;
+    color: var(--ink-2);
+    border-right: 3px double var(--margin);
+  }
+
+  .ledger .no + td { border-left: 0; }
+  .ledger .fn { color: var(--ink-2); }
+  .ledger .fn b { font-weight: 600; color: var(--black); }
+
+  .ledger .val {
+    position: relative;
+    width: 7.5em;
+    padding-left: 30px;
+  }
+
+  .ledger .val i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 14px;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px var(--rule);
+  }
+
+  .foot {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    font: 20px "Obel Mono", monospace;
+    color: var(--ink-2);
+  }
+</style>
+</head>
+<body>
+  <div class="rail rail-left"></div>
+  <div class="rail rail-right"></div>
+  <div class="page">
+    <div class="brand">
+      <svg viewBox="0 0 32 27" aria-hidden="true">
+        <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23" />
+        <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23" />
+        <path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" />
+      </svg>
+      Design Book
+    </div>
+
+    <h1>Design tokens that keep their reasons.</h1>
+
+    <table class="ledger">
+      <tr>
+        <td class="no">1</td>
+        <td>ui.ground</td>
+        <td class="fn"><b>lightest</b>(ledger)</td>
+        <td class="val"><i style="--c: #eee9dc"></i>#eee9dc</td>
+      </tr>
+      <tr>
+        <td class="no">2</td>
+        <td>ui.ink</td>
+        <td class="fn"><b>bestContrastWith</b>(ui.ground, ledger)</td>
+        <td class="val"><i style="--c: #0d0a03"></i>#0d0a03</td>
+      </tr>
+      <tr>
+        <td class="no">3</td>
+        <td>ui.accent</td>
+        <td class="fn"><b>mostVivid</b>(ledger, { readableOn: ui.ground })</td>
+        <td class="val"><i style="--c: #de5331"></i>#de5331</td>
+      </tr>
+    </table>
+
+    <div class="foot">
+      <span>$ npm i design-book</span>
+      <span>meodai.github.io/design-book</span>
+    </div>
+  </div>
+</body>
+</html>

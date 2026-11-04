@@ -1,6 +1,8 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
+  // The address the site is served from, for absolute links in its metadata.
+  site: 'https://meodai.github.io',
   srcDir: './site',
   publicDir: './site/public',
   outDir: './site-dist',

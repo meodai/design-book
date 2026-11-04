@@ -10,21 +10,10 @@ import '../../editor/theme.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
-  title="Design Book Editor"
-  description="Interactive editor for Design Book — a reactive TypeScript design system framework. Define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or W3 Design Tokens."
+  title="Editor · Design Book"
+  description="Write a design book in the browser: tokens with values, references and rules, rendered live to CSS, JSON, W3 Design Tokens and a dependency graph."
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
-  <meta slot="head" property="og:type" content="website">
-  <meta slot="head" property="og:site_name" content="Design Book">
-  <meta slot="head" property="og:title" content="Design Book Editor">
-  <meta slot="head" property="og:description" content="Interactive editor for Design Book: define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or W3 Design Tokens.">
-  <meta slot="head" property="og:url" content="https://meodai.github.io/design-book/editor/">
-  <meta slot="head" property="og:image" content="https://meodai.github.io/design-book/editor/og.png">
-  <meta slot="head" property="og:image:alt" content="Design Book — a reactive TypeScript design system framework.">
-  <meta slot="head" name="twitter:card" content="summary_large_image">
-  <meta slot="head" name="twitter:title" content="Design Book Editor">
-  <meta slot="head" name="twitter:description" content="Interactive editor for Design Book: tokens with relationships, derived values, and live CSS / JSON / W3 output.">
-  <meta slot="head" name="twitter:image" content="https://meodai.github.io/design-book/editor/og.png">
   <Fragment set:html={beforeBrand} />
   <Fragment set:html={afterBrand} />
   <InstallBar current="editor" />
