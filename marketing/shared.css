@@ -1256,3 +1256,18 @@ body:has(> .rail-left) footer.imprint {
     left: 7px;
   }
 }
+
+/* Under the footer's links: what the site is set in and built with. */
+.imprint-made {
+  flex: 1 0 100%;
+  order: 3;
+  margin: 0;
+  padding-top: calc(var(--row) / 2);
+  border-top: 1px dashed var(--imprint-line);
+  font: 12px/var(--row) var(--font-code);
+  color: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 70%, var(--imprint-bg, var(--blue)));
+}
+
+.imprint-made a {
+  color: var(--imprint-ink, var(--on-black));
+}
