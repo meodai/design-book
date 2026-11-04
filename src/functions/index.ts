@@ -69,8 +69,8 @@ export function registerBuiltinFunctions(book: {
 	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[]; direction?: Direction }) =>
 		bestContrastWithImpl(targetValue, scope, ex('bestContrastWith', scope, options?.not), options?.direction),
 	);
-	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { ratio?: number; not?: string[]; direction?: Direction }) =>
-		minContrastWithImpl(targetValue, scope, options?.ratio ?? 4.5, ex('minContrastWith', scope, options?.not), options?.direction),
+	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { minContrast?: number; not?: string[]; direction?: Direction }) =>
+		minContrastWithImpl(targetValue, scope, options?.minContrast ?? 4.5, ex('minContrastWith', scope, options?.not), options?.direction),
 	);
 	book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>

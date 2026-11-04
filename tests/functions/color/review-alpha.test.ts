@@ -43,7 +43,7 @@ describe('selectors and translucent candidates', () => {
     pool.set('faint', color('#eeeeee'));
 
     const ui = book.addScope('ui');
-    ui.set('text', minContrastWith(color('#ffffff'), ref('pool'), { ratio: 1.05 }));
+    ui.set('text', minContrastWith(color('#ffffff'), ref('pool'), { minContrast: 1.05 }));
 
     expect(book.resolve('ui.text')).toBe('#0000000d');
   });

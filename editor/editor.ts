@@ -79,7 +79,7 @@ function bootDesignSystem() {
   const ui = book.addScope('ui');
   ui.set('complement', relativeTo(ref('brand.primary'), 'oklch', [null, null, '+180']));
   ui.set('muted', relativeTo(ref('brand.primary'), 'oklch', [null, '*0.5', null]));
-  ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), ref('brand'), { ratio: 4.5 }));
+  ui.set('accessible-text', minContrastWith(ref('brand.neutral-light'), ref('brand'), { minContrast: 4.5 }));
   ui.set('heading-lg', typographyScale(ref('brand.font-base'), { ratio: 1.25, step: 3 }));
   ui.set('section-spacing', spacingScale(ref('brand.space-md'), { multiplier: 2 }));
   // Step UP from m → l (16px). Add minDistance to skip steps that are too close.

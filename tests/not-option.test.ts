@@ -64,7 +64,7 @@ describe('"not" option excludes keys from the candidate pool', () => {
     const ui = book.addScope('ui');
     // Without exclusion, picks the lowest-contrast option that still
     // clears 4.5 (justOver).
-    ui.set('low', minContrastWith(color('#ffffff'), ref('palette'), { ratio: 4.5 }));
+    ui.set('low', minContrastWith(color('#ffffff'), ref('palette'), { minContrast: 4.5 }));
     // Excluding it forces the higher-contrast fallback.
     ui.set('lowNotJustOver', minContrastWith(color('#ffffff'), ref('palette'), {
       ratio: 4.5,

@@ -106,7 +106,7 @@ describe('contrast across kinds', () => {
   it('minContrastWith on text styles is a type scale written as a rule', () => {
     const { book, ui } = mixed();
     // the smallest style at least 1.25× the body, going up
-    ui.set('step', minContrastWith(ref('type.body'), ref('type'), { ratio: 1.25, direction: 'larger' }));
+    ui.set('step', minContrastWith(ref('type.body'), ref('type'), { minContrast: 1.25, direction: 'larger' }));
     expect(book.resolve('ui.step')).toBe(book.resolve('type.h3'));
   });
 
@@ -120,7 +120,7 @@ describe('contrast across kinds', () => {
 
   it('colors take a direction too', () => {
     const { book, ui } = mixed();
-    ui.set('dark', minContrastWith(color('#ffffff'), ref('brand'), { ratio: 4.5, direction: 'darker' }));
+    ui.set('dark', minContrastWith(color('#ffffff'), ref('brand'), { minContrast: 4.5, direction: 'darker' }));
     expect(book.resolve('ui.dark')).toBe('#2d60a5');
   });
 });

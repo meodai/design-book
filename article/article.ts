@@ -207,7 +207,7 @@ colorScope.set('buttonText', bestContrastWith(ref('color.brand'), ramp));
 // surface — visible but not loud. minContrastWith picks the lowest candidate
 // above the threshold, so this gives a soft border that auto-flips when the
 // surface goes dark.
-colorScope.set('line',       minContrastWith(ref('color.surface'), ramp, { ratio: 1.5 }));
+colorScope.set('line',       minContrastWith(ref('color.surface'), ramp, { minContrast: 1.5 }));
 
 // §4 — a treatment and its inverted variant. card-inverted extends card
 // and overrides only its surface; its onSurface / line are inherited. With
@@ -223,7 +223,7 @@ function setCardRules(mode: SurfaceMode) {
   const surface = ref(mode === 'relative' ? '.surface' : 'card.surface');
   inBatch(() => {
     card.set('onSurface', bestContrastWith(surface, values));
-    card.set('line',      minContrastWith(surface, ramp, { ratio: 1.5 }));
+    card.set('line',      minContrastWith(surface, ramp, { minContrast: 1.5 }));
   });
 }
 card.set('surface', ref('color.surface'));
@@ -770,7 +770,7 @@ function buildFnOptionUI(
 }
 
 function getSnapValuesForFnOption(tok: FunctionTokenValue, optionName: string): number[] | null {
-  if (tok.name !== 'minContrastWith' || optionName !== 'ratio') return null;
+  if (tok.name !== 'minContrastWith' || optionName !== 'minContrast') return null;
 
   const [targetArg, candidateScope] = tok.args;
   const targetValue = resolveColorArg(targetArg);

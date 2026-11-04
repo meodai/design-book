@@ -167,7 +167,7 @@ const PALETTE_CONTRAST_SURFACES = [
   // the vivid/lightness ones ignore the centre — they rank the ring itself.
   const selectors = {
     bestContrastWith: (s) => bestContrastWith(color(CENTER), s),
-    minContrastWith:  (s) => minContrastWith(color(CENTER), s, { ratio: 3 }),
+    minContrastWith:  (s) => minContrastWith(color(CENTER), s, { minContrast: 3 }),
     closest:     (s) => closest(color(CENTER), s),
     furthestFrom:     (s) => furthestFrom(s),
     mostVivid:        (s) => mostVivid(s),
@@ -383,7 +383,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   // Convert poline css colors (hsl strings) to hex and let the library pick.
   const hexes = cssColors.map((c) => hex(parse(c))).filter(Boolean);
   const surface = book.getScope("ui").resolve("surface");
-  const border = pick(hexes, (s) => minContrastWith(color(surface), s, { ratio: 3 }));
+  const border = pick(hexes, (s) => minContrastWith(color(surface), s, { minContrast: 3 }));
   if (border) {
     swatchOut.style.background = border;
     hexOut.textContent = border;
@@ -497,7 +497,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   function paint (id, ratio) {
     const el = document.getElementById(id);
     if (!el) return;
-    const text = pick(ramp, (s) => minContrastWith(color(surface), s, { ratio }));
+    const text = pick(ramp, (s) => minContrastWith(color(surface), s, { minContrast: ratio }));
     el.style.background = surface;
     const out = el.querySelector(".min-text");
     if (!text) {

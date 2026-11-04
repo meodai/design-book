@@ -98,7 +98,7 @@ nextLighter(target, ref('scope'), { minDistance })    // closest, lighter (color
 nextDarker(target, ref('scope'), { minDistance })     // closest, darker
 closest(target, ref('scope'), { toward: ref('.page') })  // closest on the page's side
 bestContrastWith(target, ref('scope'))                // Highest contrast
-minContrastWith(target, ref('scope'), { ratio })      // Lowest contrast that reaches the ratio
+minContrastWith(target, ref('scope'), { minContrast }) // Lowest contrast that reaches minContrast
 furthestFrom(ref('scope'))                            // Most distant from the others
 lightest(ref('scope')) / darkest(ref('scope'))        // Extremes of lightness (colors)
 largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes, text styles)
@@ -130,10 +130,10 @@ ui.set('hover',  nextLighter(ref('.button'), ref('brand')));                   /
 
 ```typescript
 // the smallest style at least 1.25× the body, going up
-type.set('lead', minContrastWith(ref('type.body'), ref('type'), { ratio: 1.25, direction: 'larger' }));
+type.set('lead', minContrastWith(ref('type.body'), ref('type'), { minContrast: 1.25, direction: 'larger' }));
 ```
 
-`direction` works here too. `minContrastWith` falls back to the highest contrast when nothing reaches the ratio.
+`direction` works here too. `minContrastWith` falls back to the highest contrast when nothing reaches `minContrast`.
 
 `lightest` and `darkest` rank by OKLCH L — not HSL lightness, which calls `#ffff00` and `#0000ff` equally light, and not WCAG luminance. Alpha is ignored when ranking; a translucent winner keeps its alpha.
 

@@ -137,7 +137,7 @@ export function onLightnessSide(direction: Direction | undefined, target: Color,
 /**
  * Contrast between sizes or text styles: the ratio of the larger to the
  * smaller value (`2rem` against `1rem` is 2). `best` picks the highest ratio,
- * `min` the lowest that reaches `ratio`, or the highest when none does — the
+ * `min` the lowest that reaches `minContrast`, or the highest when none does — the
  * same rules as for colors. `direction` keeps the larger or smaller members.
  */
 export function measuredContrast(
@@ -147,7 +147,7 @@ export function measuredContrast(
   scope: Scope,
   not: ReadonlyArray<string>,
   direction: Direction | undefined,
-  mode: { pick: 'best' } | { pick: 'min'; ratio: number },
+  mode: { pick: 'best' } | { pick: 'min'; minContrast: number },
 ): string {
   assertDirectionFits(fn, direction, target.kind);
   if (!(target.num > 0)) {
@@ -164,7 +164,7 @@ export function measuredContrast(
     );
   }
   if (mode.pick === 'min') {
-    const meeting = candidates.filter((c) => c.ratio >= mode.ratio - 1e-9);
+    const meeting = candidates.filter((c) => c.ratio >= mode.minContrast - 1e-9);
     if (meeting.length > 0) return meeting.reduce((a, b) => (b.ratio < a.ratio ? b : a)).value;
   }
   return candidates.reduce((a, b) => (b.ratio > a.ratio ? b : a)).value;

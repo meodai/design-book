@@ -778,7 +778,7 @@ ui.set('primary-muted', relativeTo(ref('brand.primary'), 'oklch', [null, "*0.5",
 ui.set('primary-light', relativeTo(ref('brand.primary'), 'oklch', ["+0.2", null, null], ui));
 
 // Minimum contrast (AA-compliant but not maximized)
-ui.set('subtle-text', minContrastWith(ref('brand.neutral-light'), brand, { ratio: 4.5 }));
+ui.set('subtle-text', minContrastWith(ref('brand.neutral-light'), brand, { minContrast: 4.5 }));
 
 // Spacing with multipliers
 ui.set('large-spacing', spacingScale(ref('brand.space-md'), ui, { multiplier: 2 }));

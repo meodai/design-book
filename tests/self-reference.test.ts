@@ -42,7 +42,7 @@ describe('scope-iterating functions resolve safely inside their own scope', () =
     surface.set('bg', color('#ffffff'));
     surface.set('a', color('#777777'));
     surface.set('b', color('#111111'));
-    surface.set('text', minContrastWith(ref('surface.bg'), ref('surface'), { ratio: 4.5 }));
+    surface.set('text', minContrastWith(ref('surface.bg'), ref('surface'), { minContrast: 4.5 }));
 
     expect(() => book.resolve('surface.text')).not.toThrow();
     expect(calls).toBe(1);

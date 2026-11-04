@@ -8,6 +8,9 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Changed
 
+- **`minContrastWith` takes `minContrast`, not `ratio`** — the name the color
+  selectors' `readableOn` already uses for the same thing. `ratio` is gone;
+  rename it in your calls.
 - **`not` names members wherever the key is written.** An entry no longer
   has to be a key of the pool: it names a member the way a `sibling` anchor
   does — a reference that leads to a member, a selector's pick, or a key a

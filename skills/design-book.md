@@ -165,7 +165,7 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | `--hover: <darker version of base>` | `darken(ref('color.brand'), { amount: 0.15 })` |
 | `--press: <even darker>` | `darken(ref('color.brand'), { amount: 0.3 })` |
 | `--button-text: white` / `black` chosen by hand | `bestContrastWith(ref('color.brand'), ref('values'))` |
-| `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ref('values'), { ratio: 1.5 })` |
+| `--border: <faint shade>` | `minContrastWith(ref('color.surface'), ref('values'), { minContrast: 1.5 })` |
 | `--border: <the nearest shade to the surface>` | `closest(ref('color.surface'), ref('values'), { not: ['values.gray-50'] })` |
 | `--accent: <one of the brand colors>` | `mostVivid(ref('values'), { readableOn: ref('color.surface'), not: [ref('values.error')] })` |
 | `--text: <darkest readable gray>` | `darkest(ref('grays'), { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
@@ -311,7 +311,7 @@ colorScope.set('text',        ref('color.on-surface'));
 
 // ---- procedural -------------------------------------------------------
 colorScope.set('link-hover', darken(ref('color.interaction'), { amount: 0.15 }));
-colorScope.set('line',       minContrastWith(ref('color.surface'), ref('values'), { ratio: 1.5 }));
+colorScope.set('line',       minContrastWith(ref('color.surface'), ref('values'), { minContrast: 1.5 }));
 colorScope.set('on-brand',   bestContrastWith(ref('color.brand'), ref('values'), {
   not: [ref('values.red-500')], // exclude role-loaded tokens
 }));
