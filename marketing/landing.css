@@ -1232,3 +1232,100 @@ pre {
 .hero {
   --first-inset: calc(max(0px, (100% - var(--measure)) / 2) + var(--gutter));
 }
+
+/* ─── Phones ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* The claim's calls may break between their parts. */
+  .claim .call,
+  .claim .out {
+    white-space: normal;
+  }
+
+  .claim {
+    font-size: 28px;
+  }
+
+  /* Four folder tabs side by side, narrower. */
+  .folder-tab {
+    padding: 0 10px 0 18px;
+    font-size: 13px;
+  }
+
+  .folder-tab::after {
+    left: 7px;
+  }
+
+  .sheet-palette { --tab-left: 0px; }
+  .sheet-rules { --tab-left: 74px; }
+  .sheet-sizes { --tab-left: 136px; }
+  .sheet-graph { --tab-left: 200px; }
+
+  /* A table row: number, token and value on the first line, the rule
+     (or the source) on its own line below, at full width. */
+  .ledger thead {
+    display: none;
+  }
+
+  .ledger,
+  .ledger tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .ledger tbody tr {
+    display: grid;
+    grid-template-columns: calc(var(--row) * 1.5) minmax(0, 1fr) auto;
+    box-shadow: inset 0 -1px 0 var(--lg-rule);
+  }
+
+  .ledger tbody tr > * {
+    display: block;
+    height: auto;
+    min-height: var(--row);
+    box-shadow: none;
+    border-left: 0;
+  }
+
+  .ledger td.no {
+    grid-row: span 2;
+    padding: 0 6px 0 0;
+  }
+
+  .ledger td.key {
+    grid-column: 2;
+  }
+
+  .ledger td.val {
+    grid-column: 3;
+    min-width: 7.5em;
+  }
+
+  .ledger td.rule,
+  .ledger td:nth-child(3):not(.val) {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    padding-bottom: 6px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ledger tr.group th,
+  .ledger tbody tr > [colspan] {
+    grid-column: 1 / -1;
+  }
+
+  /* The readers' sheets one under the other, not overlapping. */
+  .sheet + .sheet {
+    margin: var(--row) 0 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .sheet-rules { --tab-left: 92px; }
+  .sheet-sizes { --tab-left: 160px; }
+  .sheet-graph { --tab-left: 228px; }
+
+  .ledger tbody tr {
+    border-bottom: 1px solid var(--lg-rule);
+  }
+}

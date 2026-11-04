@@ -1,9 +1,7 @@
 ---
-// Every page's document: head, fonts, favicon, and the body it is given.
 interface Props {
   title: string;
   description?: string;
-  /** Google Fonts stylesheet URLs this page uses. */
   fonts?: string[];
   /** Attributes for <body> (e.g. data-sections for the rails). */
   bodyAttrs?: Record<string, string>;

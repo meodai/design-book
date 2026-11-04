@@ -1,8 +1,4 @@
 ---
-// The bar along the bottom of the window: the name and the book on the
-// left (a link home, except on the home page); on the right the pages
-// (the current one named, not linked) and the install line. It comes to rest on top of the footer. Copy turns green for a
-// moment once copied.
 import Logo from './Logo.astro';
 interface Props { home?: boolean; current?: 'tour' | 'article' | 'editor' }
 const { home = false, current } = Astro.props;

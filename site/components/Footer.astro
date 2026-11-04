@@ -1,12 +1,8 @@
 ---
-// One footer for every page: the links that are not in the bottom bar
-// (the bar has the name, Tour, Article and Editor) on the left, the
-// license and Elastiq on the right.
 interface Props { current: 'overview' | 'tour' | 'article' | 'editor' | 'naming' }
 const { current } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const links = [
-  // The reference is the README on GitHub.
   ['docs', 'Docs', 'https://github.com/meodai/design-book#readme'],
   ['github', 'GitHub', 'https://github.com/meodai/design-book'],
   ['npm', 'npm', 'https://www.npmjs.com/package/design-book'],

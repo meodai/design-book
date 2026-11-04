@@ -1192,3 +1192,67 @@ footer.imprint {
 body:has(> .rail-left) footer.imprint {
   padding-left: var(--rail);
 }
+
+/* ─── Phones ──────────────────────────────────────────────────────────
+   No one installs from a phone: the bar keeps the name and the pages.
+   The footer's two halves wrap; tables stack their cells. */
+@media (max-width: 640px) {
+  .install-bar code,
+  .install-bar .copy {
+    display: none;
+  }
+
+  .install-bar .bar-nav {
+    display: flex;
+    gap: 14px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+
+  .install-bar .bar-brand,
+  body:has(> .rail-left) .install-bar .bar-brand {
+    gap: 8px;
+    padding-left: 14px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  body:has(> .rail-left) .install-bar .bar-brand .logo {
+    width: 22px;
+    height: 18px;
+    padding: 0;
+  }
+
+  footer.imprint,
+  body:has(> .rail-left) footer.imprint {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--row);
+    padding: var(--row) 14px calc(var(--row) * 2);
+  }
+
+  .imprint-nav {
+    gap: 14px;
+  }
+}
+
+/* No one edits a design book on a phone: the bar drops the editor. */
+@media (max-width: 640px) {
+  .install-bar .bar-nav a[href$="editor/"] {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Folder tabs, narrower on every page. */
+  .folder-tab {
+    padding: 0 10px 0 18px;
+    font-size: 13px;
+  }
+
+  .folder-tab::after {
+    left: 7px;
+  }
+}

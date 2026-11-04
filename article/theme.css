@@ -988,3 +988,26 @@ body {
 .article-hero {
   --first-inset: calc(max(0px, (100% - 88rem) / 2) + var(--article-gutter));
 }
+
+/* ─── Phones ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* The text uses the whole column; no indent under the headings. */
+  .article-content section > :not(h2) {
+    margin-left: 0;
+  }
+
+  /* A ledger's cells one under another, beside the number: the token,
+     its value and the note each get the full width. */
+  .article-content [data-ledger] {
+    --ledger-cols: minmax(0, 1fr);
+  }
+
+  .article-content [data-ledger] > :not([data-ledger-skip]) > * {
+    grid-column: 2;
+    border-left: 0;
+  }
+
+  .article-content [data-ledger-head] {
+    padding-left: calc(var(--row) * 2 + 14px);
+  }
+}

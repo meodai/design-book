@@ -1,7 +1,3 @@
-// The website (landing, docs, article, editor, naming playground) is one
-// Astro site. Its sources sit in site/; the pages import the existing
-// scripts and stylesheets from marketing/, article/, editor/ and naming/.
-// The library itself still builds with plain Vite (vite.config.ts).
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({

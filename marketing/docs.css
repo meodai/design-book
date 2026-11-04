@@ -1638,3 +1638,29 @@ pre.code.holes-left,
 .hero {
   --first-inset: calc(max(0px, (100% - var(--max)) / 2) + var(--gutter));
 }
+
+/* ─── Phones ─────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Readable's answers: the call, the sample and the reading one under
+     another, beside the number. */
+  .folder-sheet--result .readable-results {
+    --ledger-cols: minmax(0, 1fr);
+  }
+
+  .folder-sheet--result .readable-results > .rd-result > * {
+    grid-column: 2;
+    border-left: 0;
+  }
+
+  .folder-sheet--result .rd-result .rd-sample {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 640px) {
+  /* A renderer's long lines scroll inside its paper. */
+  .renderer-folder .folder-body,
+  .renderer-folder .r-pane {
+    overflow-x: auto;
+  }
+}

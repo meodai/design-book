@@ -555,3 +555,20 @@ body {
   background: var(--pp) !important;
   z-index: 2;
 }
+
+@media (max-width: 640px) {
+  /* The output tabs scroll sideways rather than widen the page. */
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tab {
+    padding: 0 10px 0 18px;
+    font-size: 13px;
+  }
+
+  .tab::after {
+    left: 7px;
+  }
+}
