@@ -349,11 +349,6 @@ pre {
   text-align: left;
 }
 
-.hero .brand-mark {
-  --brand-ink: var(--highlight);
-  --brand-left: var(--gutter);
-}
-
 /* The claim */
 
 .claim {
@@ -592,7 +587,6 @@ pre {
   background: var(--hair);
 }
 
-
 .section-head h2 {
   margin: 0;
   font-size: var(--size-heading, 36px);
@@ -620,7 +614,6 @@ pre {
 .sheet-rules { --tab-left: calc(var(--row) * 5); }
 .sheet-sizes { --tab-left: calc(var(--row) * 9.5); }
 .sheet-graph { --tab-left: calc(var(--row) * 14); }
-
 
 /* ─── Graph ──────────────────────────────────────────────────────────
    The SVG renderer's output on the yellow paper (ui.paper-yellow): its
@@ -1096,7 +1089,6 @@ pre {
   overflow-x: auto;
 }
 
-
 .start-links {
   margin: 0;
   padding: 0;
@@ -1173,12 +1165,6 @@ pre {
   .hero {
     padding-top: calc(var(--row) * 4);
   }
-
-  .imprint {
-    flex-direction: column;
-    align-items: center;
-    gap: calc(var(--row) / 2);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1216,10 +1202,6 @@ pre {
   font-weight: 700;
   vertical-align: baseline;
   margin-right: 0.05em;
-}
-
-.hero .brand-mark {
-  margin: 0;
 }
 
 /* The install bar on the landing takes the page's mark and its text. */

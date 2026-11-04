@@ -510,64 +510,256 @@
   .rail { display: none; }
 }
 
-/* ─── Footer: a strip from rail to rail ─────────────────────────── */
-.imprint {
+/* ─── The bottom bar ─────────────────────────────────────────────────
+   Stuck to the bottom of the window, at rest on the footer at the end of
+   the page: the book and the name on the left, the pages and the install
+   line on the right. On pages with rails it runs over the left rail, the
+   book centered over it. */
+:root {
+  --bar-h: calc(var(--row) * 1.5);
+}
+
+.install-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 11;
   display: flex;
-  justify-content: center;
+  align-items: stretch;
+  height: var(--bar-h);
+  font: 14px var(--font-code);
+  color: var(--install-ink, var(--on-black));
+  background: var(--install-bg, var(--blue));
+}
+
+.install-bar .bar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  padding: 0 var(--row);
+  font: 600 16px / var(--bar-h) var(--font-text);
+  letter-spacing: -0.01em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.install-bar .bar-brand .logo {
+  width: 26px;
+  height: 22px;
+}
+
+body:has(> .rail-left) .install-bar {
+  margin-left: calc(var(--rail) * -1);
+  margin-right: 0;
+}
+
+body:has(> .rail-left) .install-bar .bar-brand {
+  gap: 0;
+  padding-left: 0;
+}
+
+body:has(> .rail-left) .install-bar .bar-brand .logo {
+  box-sizing: content-box;
+  width: 24px;
+  height: 20px;
+  padding: 0 calc((var(--rail) - 24px) / 2);
+}
+
+.install-bar .bar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--row);
+  padding: 0 var(--row);
+  font: 15px var(--font-text);
+}
+
+.install-bar .bar-nav a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* The current page: named, not a link to itself. */
+.install-bar .bar-nav a[aria-current="page"] {
+  text-decoration: none;
+  pointer-events: none;
+}
+
+.install-bar code {
+  padding: 0 var(--row);
+  font: inherit;
+  line-height: var(--bar-h);
+  color: inherit;
+  background: none;
+  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
+}
+
+.install-bar .prompt {
+  margin-right: 0.4em;
+  color: color-mix(in srgb, var(--install-ink, var(--on-black)) 55%, var(--install-bg, var(--blue)));
+}
+
+.install-bar .copy {
+  padding: 0 14px;
+  font: 15px var(--font-text);
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
+  cursor: pointer;
+}
+
+.install-bar .copy:hover {
+  color: var(--on-black);
+  background: var(--black);
+}
+
+/* Copied: green for a moment. */
+.install-bar .copy.copied,
+.install-bar .copy.copied:hover {
+  color: var(--black);
+  background: #479549;
+}
+
+/* No one installs or edits from a phone: the bar keeps the name and the
+   tour and the article. */
+@media (max-width: 640px) {
+  .install-bar code,
+  .install-bar .copy,
+  .install-bar .bar-nav a[href$="editor/"] {
+    display: none;
+  }
+
+  .install-bar .bar-brand,
+  body:has(> .rail-left) .install-bar .bar-brand {
+    gap: 8px;
+    padding-left: 14px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  body:has(> .rail-left) .install-bar .bar-brand .logo {
+    width: 22px;
+    height: 18px;
+    padding: 0;
+  }
+
+  .install-bar .bar-nav {
+    gap: 14px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────
+   Links bottom left, Elastiq bottom right; under a dashed line, what the
+   site is set in and built with, and the license. Its links start where
+   the bar's name does, and on pages with rails it runs over the left
+   rail too. */
+footer.imprint {
+  --imprint-line: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
+  position: relative;
+  display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
   gap: calc(var(--row) / 2) calc(var(--row) * 2);
   margin: 0;
-  padding: var(--row) 40px calc(var(--row) * 2);
+  padding: var(--row) 40px calc(var(--row) * 2) calc(var(--row) + 36px);
   font: 15px var(--font-text);
   color: var(--imprint-ink, var(--on-black));
   background: var(--imprint-bg, var(--blue));
+  border-top: 1px solid var(--imprint-line);
+  border-right: 1px solid var(--imprint-line);
+}
+
+body:has(> .rail-left) footer.imprint {
+  z-index: 11;
+  margin-left: calc(var(--rail) * -1);
+  padding-left: var(--rail);
+}
+
+footer.imprint > * {
+  line-height: var(--row);
+}
+
+footer.imprint a {
+  color: inherit;
 }
 
 .imprint-nav {
   display: flex;
+  align-items: center;
   gap: var(--row);
 }
 
-.imprint a {
-  color: inherit;
+.imprint-nav a {
+  line-height: var(--row);
+}
+
+.imprint-nav a[aria-current="page"] {
+  text-decoration: none;
+  pointer-events: none;
+}
+
+.imprint-by {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--row);
+}
+
+footer.imprint .elastiq {
+  display: inline-flex;
+}
+
+/* About two lines tall, nudged so its lettering, not its swoosh, sits on
+   the line. */
+.elastiq-logo {
+  position: relative;
+  top: 0.18em;
+  display: block;
+  width: auto;
+  height: calc(var(--row) * 1.6);
+}
+
+.imprint-made {
+  flex: 1 0 100%;
+  order: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--row);
+  margin: var(--row) 0 0;
+  padding-top: var(--row);
+  font: 12px / var(--row) var(--font-code);
+  color: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 70%, var(--imprint-bg, var(--blue)));
+}
+
+/* Its line runs the footer's full width. */
+.imprint-made::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-top: calc(var(--row) * -1);
+  border-top: 1px dashed var(--imprint-line);
+}
+
+footer.imprint .imprint-made a {
+  color: var(--imprint-ink, var(--on-black));
 }
 
 @media (max-width: 640px) {
-  .imprint {
-    flex-direction: column;
-    align-items: center;
+  footer.imprint,
+  body:has(> .rail-left) footer.imprint {
+    gap: var(--row);
+    padding: var(--row) 14px calc(var(--row) * 2);
   }
-}
 
-/* ─── The name and the book, in the top right of the first screen ── */
-.brand-mark {
-  position: absolute;
-  top: calc(var(--row) * 1.5);
-  left: var(--brand-left, 40px);
-  z-index: 2;
-  font: 600 clamp(22px, 2.2vw, 30px) / var(--row) var(--font-text);
-  letter-spacing: -0.01em;
-  color: var(--brand-ink, var(--blue));
-  text-align: left;
-  text-decoration: none;
-}
-
-/* [book] Design Book: the logo in front of the name, on its line,
-   about as tall as the capitals. */
-.brand-mark {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.brand-mark .logo {
-  order: -1;
-  flex: none;
-  width: 1.25em;
-  height: 1.05em;
-  /* Hangs in the margin: the name's D starts on the text column's edge,
-     the book sits left of it. */
-  margin: 0 0.3em 0 -1.55em;
+  .imprint-nav {
+    gap: 14px;
+  }
 }
 
 /* ─── The book, drawn in outline ────────────────────────────────── */
@@ -785,143 +977,6 @@ color-input::part(controls) {
   font-family: var(--font-code);
 }
 
-
-/* The current page in the footer: named, not a link to itself. */
-.imprint-nav a[aria-current="page"] {
-  text-decoration: none;
-  pointer-events: none;
-}
-
-/* Elastiq's mark at the end of the footer, about two lines tall. */
-.imprint-by {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--row);
-}
-
-.imprint .elastiq {
-  display: inline-flex;
-  color: inherit;
-}
-
-.elastiq-logo {
-  display: block;
-  width: auto;
-  height: calc(var(--row) * 1.6);
-}
-
-/* ─── Install line (docs, article; the home page has its own) ───────
-   Sticks to the bottom right of the window, flush against the right
-   rail, and comes to rest on top of the footer. */
-.install-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 11;
-  width: max-content;
-  margin-left: auto;
-  display: flex;
-  align-items: stretch;
-  color: var(--install-ink, var(--on-black));
-  background: var(--install-bg, var(--blue));
-  font: 14px var(--font-code);
-}
-
-.install-bar code {
-  padding: 0 var(--row) 0 12px;
-  font: inherit;
-  line-height: calc(var(--row) * 1.5);
-  color: inherit;
-  background: none;
-}
-
-.install-bar .prompt {
-  margin-right: 0.4em;
-  color: color-mix(in srgb, var(--install-ink, var(--on-black)) 55%, var(--install-bg, var(--blue)));
-}
-
-.install-bar .copy {
-  font: 15px var(--font-text);
-  color: inherit;
-  background: transparent;
-  border: 0;
-  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
-  padding: 0 14px;
-  cursor: pointer;
-}
-
-.install-bar .copy:hover {
-  color: var(--install-bg, var(--blue));
-  background: var(--install-ink, var(--on-black));
-}
-
-/* Copied: the button turns green for a moment, then back. */
-.install-bar .copy.copied,
-.install .copy.copied {
-  color: var(--black);
-  background: var(--green);
-}
-
-/* Copy: black with white text on hover; green once copied. */
-.install-bar .copy:hover,
-.install .copy:hover {
-  color: var(--on-black);
-  background: var(--black);
-}
-
-.install-bar .copy.copied,
-.install .copy.copied,
-.install-bar .copy.copied:hover,
-.install .copy.copied:hover {
-  color: var(--black);
-  background: #479549;
-}
-
-/* Every item in the footer on one center line; the Elastiq mark is
-   nudged so its lettering, not its swoosh, sits on that line. */
-.imprint,
-.imprint-nav {
-  align-items: center;
-}
-
-.imprint > *,
-.imprint-nav a {
-  line-height: var(--row);
-}
-
-.elastiq-logo {
-  position: relative;
-  top: 0.18em;
-}
-
-/* The book over the name: the logo on a line of its own, the name under
-   it, both starting on the text column's edge. */
-.brand-mark {
-  display: grid;
-  grid-template-columns: max-content max-content;
-  justify-content: start;
-  align-items: end;
-  row-gap: 0.45em;
-}
-
-.brand-mark .logo {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  justify-self: start;
-  width: 1.6em;
-  height: 1.35em;
-  margin: 0;
-}
-
-.brand-mark > span {
-  grid-row: 2;
-}
-
-/* The mark stands the same distance from the top on every page. */
-.brand-mark {
-  top: 84px;
-  margin: 0;
-}
-
 /* Hovering a tab behind: a dot drops in from its top edge (the tab
    clips it until then), instead of an underline. */
 .folder-tab {
@@ -987,111 +1042,7 @@ color-input::part(controls) {
   transform: translateY(calc(var(--row) / 2 - 2px));
 }
 
-/* The name on the very left, the book on the very right: one line
-   across the top, inset the same on both sides. */
-.brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  right: var(--brand-left, 40px);
-  row-gap: 0;
-}
-
-.brand-mark > span {
-  grid-row: auto;
-}
-
-
-.brand-mark .logo {
-  order: 1;
-  grid-column: auto;
-  grid-row: auto;
-  width: 1.6em;
-  height: 1.35em;
-  margin: 0;
-}
-
-/* "DesignBook" together on the left; only the book pushed right. */
-.brand-mark {
-  justify-content: flex-start;
-}
-
-.brand-mark .logo {
-  margin-left: auto;
-}
-
-/* ─── The bottom bar: the name on the left, the install line right ───
-   A full bar across the page, stuck to the bottom of the window; at the
-   end of the page it comes to rest on the footer. It replaces the mark
-   that sat at the top of every page. */
-.install-bar {
-  width: auto;
-  margin-left: 0;
-}
-
-.install-bar .bar-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-right: auto;
-  padding: 0 var(--row);
-  font: 600 16px / calc(var(--row) * 1.5) var(--font-text);
-  letter-spacing: -0.01em;
-  color: inherit;
-  text-decoration: none;
-}
-
-.install-bar .bar-brand .logo {
-  width: 26px;
-  height: 22px;
-}
-
-.install-bar code {
-  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
-  padding-left: var(--row);
-}
-
-/* "DesignBook" starts on the text column's edge (--bar-text-left, set by
-   the bar's script); the book hangs in front of it. */
-.install-bar .bar-brand {
-  --logo-w: 26px;
-  --logo-gap: 10px;
-  padding-left: calc(var(--bar-text-left, calc(var(--row) + var(--logo-w) + var(--logo-gap))) - var(--logo-w) - var(--logo-gap));
-}
-
-/* The pages, in the bar before the install line. */
-.install-bar .bar-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--row);
-  padding: 0 var(--row);
-  font: 15px var(--font-text);
-}
-
-.install-bar .bar-nav a {
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
-}
-
-.install-bar .bar-nav a[aria-current="page"] {
-  text-decoration: none;
-  pointer-events: none;
-}
-
-@media (max-width: 640px) {
-  .install-bar .bar-nav {
-    display: none;
-  }
-}
-
-/* ─── The bar over the rails ─────────────────────────────────────────
-   On pages with rails the bar runs the full width of the window, over
-   both rails; the book sits in its left end, centered over the left
-   rail, and the name starts on the text column's edge. The rails'
-   legends end above it. */
-/* Both rails: legends and scales end at the same heights. */
+/* Both rails, above the bar: legends and scales end at the same heights. */
 .rail .rail-legend {
   bottom: calc(var(--row) * 2.5);
 }
@@ -1100,62 +1051,7 @@ color-input::part(controls) {
   bottom: calc(var(--row) * 7.5);
 }
 
-body:has(> .rail-left) .install-bar {
-  /* Over the left rail (the book sits there); on the right it ends at
-     the rail's inner edge. */
-  margin-left: calc(var(--rail) * -1);
-  margin-right: 0;
-}
-
-body:has(> .rail-left) .install-bar .bar-brand {
-  gap: 0;
-  padding-left: 0;
-}
-
-body:has(> .rail-left) .install-bar .bar-brand .logo {
-  box-sizing: content-box;
-  width: 24px;
-  height: 20px;
-  padding: 0 calc((var(--rail) - 24px) / 2);
-}
-
-body:has(> .rail-left) .install-bar .bar-brand > span {
-  margin-left: calc(var(--bar-text-left, calc(var(--rail) + var(--row))) - var(--rail));
-}
-
-/* The footer runs over the left rail too, like the bar above it. */
-body:has(> .rail-left) footer.imprint {
-  margin-left: calc(var(--rail) * -1);
-  padding-left: calc(var(--rail) + 40px);
-  position: relative;
-  z-index: 11;
-}
-
-/* The name right after the book, at the bar's very left: no inset. */
-.install-bar .bar-brand {
-  padding-left: var(--row);
-  gap: 10px;
-}
-
-body:has(> .rail-left) .install-bar .bar-brand {
-  padding-left: 0;
-  gap: 0;
-}
-
-body:has(> .rail-left) .install-bar .bar-brand > span {
-  margin-left: 0;
-}
-
-/* The bar is exactly a row and a half tall; first screens subtract it. */
-:root {
-  --bar-h: calc(var(--row) * 1.5);
-}
-
-.install-bar {
-  height: var(--bar-h);
-}
-
-/* A first screen: as tall as the window above the bar, centered by its
+/* A first screen: as tall as the window above the bar (--bar-h), centered by its
    own padding rather than by margins, so that one value (--first-inset,
    a percentage of the page's width plus the gutter) is the space beside
    its text and the space below it. */
@@ -1170,81 +1066,6 @@ section.first-screen {
   padding-bottom: var(--first-inset);
 }
 
-/* Lines along the top and the right of the footer, in its own colors. */
-footer.imprint {
-  --imprint-line: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
-  border-top: 1px solid var(--imprint-line);
-  border-right: 1px solid var(--imprint-line);
-}
-
-/* The footer: links bottom left, license and Elastiq bottom right, the
-   links and the license on one baseline. */
-footer.imprint {
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-/* The footer's links start where the bar's name does. */
-footer.imprint {
-  padding-left: calc(var(--row) + 26px + 10px);
-}
-
-body:has(> .rail-left) footer.imprint {
-  padding-left: var(--rail);
-}
-
-/* ─── Phones ──────────────────────────────────────────────────────────
-   No one installs from a phone: the bar keeps the name and the pages.
-   The footer's two halves wrap; tables stack their cells. */
-@media (max-width: 640px) {
-  .install-bar code,
-  .install-bar .copy {
-    display: none;
-  }
-
-  .install-bar .bar-nav {
-    display: flex;
-    gap: 14px;
-    padding: 0 14px;
-    font-size: 14px;
-  }
-
-  .install-bar .bar-brand,
-  body:has(> .rail-left) .install-bar .bar-brand {
-    gap: 8px;
-    padding-left: 14px;
-    font-size: 15px;
-    white-space: nowrap;
-  }
-
-  body:has(> .rail-left) .install-bar .bar-brand .logo {
-    width: 22px;
-    height: 18px;
-    padding: 0;
-  }
-
-  footer.imprint,
-  body:has(> .rail-left) footer.imprint {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--row);
-    padding: var(--row) 14px calc(var(--row) * 2);
-  }
-
-  .imprint-nav {
-    gap: 14px;
-  }
-}
-
-/* No one edits a design book on a phone: the bar drops the editor. */
-@media (max-width: 640px) {
-  .install-bar .bar-nav a[href$="editor/"] {
-    display: none;
-  }
-}
-
 @media (max-width: 640px) {
   /* Folder tabs, narrower on every page. */
   .folder-tab {
@@ -1255,47 +1076,4 @@ body:has(> .rail-left) footer.imprint {
   .folder-tab::after {
     left: 7px;
   }
-}
-
-/* Under the footer's links: what the site is set in and built with. */
-.imprint-made {
-  flex: 1 0 100%;
-  order: 3;
-  margin: 0;
-  padding-top: calc(var(--row) / 2);
-  border-top: 1px dashed var(--imprint-line);
-  font: 12px/var(--row) var(--font-code);
-  color: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 70%, var(--imprint-bg, var(--blue)));
-}
-
-.imprint-made a {
-  color: var(--imprint-ink, var(--on-black));
-}
-
-/* Its line runs the footer's full width, with room above it. */
-footer.imprint {
-  position: relative;
-}
-
-.imprint-made {
-  margin-top: var(--row);
-  padding-top: var(--row);
-  border-top: 0;
-}
-
-.imprint-made::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  margin-top: calc(var(--row) * -1);
-  border-top: 1px dashed var(--imprint-line);
-}
-
-/* The license sits at the right end of the credits line. */
-.imprint-made {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0 var(--row);
 }

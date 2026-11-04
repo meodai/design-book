@@ -65,8 +65,6 @@ body {
   justify-content: flex-end;
 }
 
-
-
 .article-header {
   margin: 0;
   max-width: none;
@@ -407,7 +405,6 @@ body {
   margin-top: calc(var(--row) * 2.5);
 }
 
-
 .bezier-demo {
   --pp: var(--green);
   --pp-text: var(--black);
@@ -496,7 +493,6 @@ body {
   --active-outline: var(--blue);
 }
 
-
 /* The specimen card is set in the page's own type; its colors, sizes
    and corners still come from the article's book. */
 .example-frame {
@@ -554,8 +550,6 @@ body {
   color: var(--article-muted);
 }
 
-
-
 @media (max-width: 860px) {
   .sec-no {
     position: static;
@@ -570,7 +564,6 @@ body {
   --poline-picker-line-color: var(--pp-text);
   --poline-picker-bg-color: var(--pp);
 }
-
 
 /* ═══ Table demos: the shared ledger, on the blue paper ═════════════ */
 .pair-demo,
@@ -647,9 +640,6 @@ body {
 .article-content :is(.pair-demo, .scale-demo) p {
   max-width: none;
 }
-
-
-
 
 /* ═══ Card and inverted card ════════════════════════════════════════
    On the blue paper, so a light card and a dark one both stand out:
@@ -732,7 +722,6 @@ body {
   max-width: none;
 }
 
-
 /* The curve on one half of its paper, what it does on the other. */
 .bezier-demo {
   display: grid;
@@ -767,7 +756,6 @@ body {
     grid-template-areas: "text" "curve";
   }
 }
-
 
 /* A formula strip is as wide as its formula, up to the column, and
    exactly one row per line, so each line has its own feed hole. */
@@ -942,7 +930,6 @@ body {
   --chip-onBg: var(--on-black);
 }
 
-
 /* The page's margin, as wide as the docs': the text column starts well
    clear of the rail, with room for the logo to hang beside the name. */
 :root {
@@ -953,10 +940,6 @@ body {
 .layout {
   padding-left: var(--article-gutter);
   padding-right: var(--article-gutter);
-}
-
-.article-hero .brand-mark {
-  --brand-left: var(--article-gutter);
 }
 
 /* A demo's tab is the tab of its only sheet, so it is always in front

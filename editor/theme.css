@@ -40,10 +40,6 @@ body {
   padding: calc(var(--row) * 4) var(--editor-gutter) calc(var(--row) * 2);
 }
 
-.editor-hero .brand-mark {
-  --brand-left: var(--editor-gutter);
-}
-
 .editor-hero .intro {
   max-width: 44rem;
   margin: 0;
