@@ -9,15 +9,13 @@ import type { Scope } from '../scope';
  */
 
 /**
- * True when `key` is excluded by `not`: by its qualified key in the iterated
- * scope (`kid.b`) or, for an inherited member, by the key it is inherited
- * from (`base.b`) — the latter is what an author naturally writes.
+ * True when `key` is excluded. `excluded` holds qualified member keys of
+ * `scope` (`kid.b`): the registry has already turned every `not` entry into
+ * the members it names (`excludedMembers` in `./members`), so this is a set
+ * lookup and nothing else interprets `not`.
  */
 export function isExcluded(scope: Scope, key: string, excluded: ReadonlySet<string>): boolean {
-  if (excluded.size === 0) return false;
-  if (excluded.has(`${scope.name}.${key}`)) return true;
-  const sourceKey = scope.getSourceKey(key);
-  return sourceKey !== undefined && excluded.has(sourceKey);
+  return excluded.has(`${scope.name}.${key}`);
 }
 
 /**

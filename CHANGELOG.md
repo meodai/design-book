@@ -19,6 +19,10 @@ All notable changes to Design Book are recorded here. The format follows
   whatever `.text` picked. Applies to every function that takes `not`.
 - `not` entries outside the scopes a token searches are dependencies, so the
   token re-resolves when they change.
+- **`minContrastWith` no longer excludes by value.** It used to drop any
+  candidate whose color equalled a `not` entry from another scope; that
+  entry now follows the same rule as every other function — it names the
+  members it leads to, or throws.
 
 ### Fixed
 

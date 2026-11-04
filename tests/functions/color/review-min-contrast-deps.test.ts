@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color, ref } from '../../../src/tokens';
+import { color, functionDependencies, ref } from '../../../src/tokens';
 import { minContrastWith } from '../../../src/functions/color/min-contrast';
 import { colorMix } from '../../../src/functions/color/color-mix';
 
@@ -30,13 +30,14 @@ describe('minContrastWith dependencies', () => {
     const s = book.addScope('s');
     s.set('white', color('#ffffff'));
 
-    // A cross-scope exclusion is value-based (the candidate whose hex matches
-    // it is dropped), so it stays a real dependency.
+    // An entry outside the pool names whichever member it leads to, which
+    // can change with its value, so it is a real dependency — for every
+    // function that takes `not`, not just this one.
     const token = minContrastWith(ref('s.white'), ref('s'), {
       not: [ref('other.avoid'), 's.accent'],
     });
 
-    expect(token.metadata?.dependencies).toContain('other.avoid');
-    expect(token.metadata?.dependencies).not.toContain('s.accent');
+    expect(functionDependencies(token)).toContain('other.avoid');
+    expect(functionDependencies(token)).not.toContain('s.accent');
   });
 });

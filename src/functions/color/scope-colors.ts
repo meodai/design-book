@@ -113,10 +113,9 @@ export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): nu
  * are not colors, or that fail to resolve, are skipped.
  *
  * @param scope Scope to iterate.
- * @param not Fully-qualified keys to exclude from the pool. An inherited
- *   candidate is excluded by either its key in the iterated scope
- *   (`dark.black`) or the key it is inherited from (`palette.black`) — the
- *   latter is what an author naturally writes.
+ * @param not Qualified member keys of `scope` to leave out (`dark.black`), as
+ *   `excludedMembers` in `../members` maps them from what the author wrote —
+ *   an inherited member's source key (`palette.black`) included.
  */
 export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []): ScopeColor[] {
   const excluded = new Set(not);

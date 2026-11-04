@@ -8,6 +8,7 @@ import { nextLarger } from '../../src/functions/generic/closest';
 import { nextSmaller } from '../../src/functions/generic/closest';
 import { lighten } from '../../src/functions/color/lighten';
 import { poolKeys } from '../../src/functions/scope-members';
+import { excludedMembers } from '../../src/functions/members';
 
 function grayWithSibling() {
   const book = new DesignBook('test');
@@ -43,8 +44,10 @@ describe('poolKeys', () => {
   });
 
   it('honours `not` by local key and by an inherited member’s source key', () => {
-    const { kid } = inheritedDims();
-    expect(poolKeys(kid, ['kid.a', 'base.b'])).toEqual(['c']);
+    const { book, kid } = inheritedDims();
+    const not = excludedMembers(book, 'nth', kid, ['kid.a', 'base.b']);
+    expect(not).toEqual(['kid.a', 'kid.b']);
+    expect(poolKeys(kid, not)).toEqual(['c']);
   });
 });
 

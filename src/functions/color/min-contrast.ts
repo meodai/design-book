@@ -12,7 +12,7 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
 import type { Direction } from '../kinds';
-import { collectScopeColors, contrastAgainst, formatColor } from './scope-colors';
+import { collectScopeColors, contrastAgainst } from './scope-colors';
 
 export interface MinContrastOptions {
   /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
@@ -46,25 +46,9 @@ export function minContrastWithImpl(
     );
   }
 
-  // `not` may also reference tokens outside the iterated scope (e.g. another
-  // scope's selector). Pre-resolve those to hex so candidates whose value
-  // matches one are excluded — lets `not: [ref('ui.accent')]` keep this
-  // selector from landing on whatever accent currently picks.
-  const excludedHexes = new Set<string>();
-  const localPrefix = `${scope.name}.`;
-  for (const k of not) {
-    if (k.startsWith(localPrefix)) continue;
-    try {
-      const parsed = parse(scope.resolveKey(k));
-      const hex = parsed ? formatColor(parsed) : null;
-      if (hex) excludedHexes.add(hex);
-    } catch { /* unresolvable — skip */ }
-  }
-
   const candidates: Array<{ hex: string; contrast: number }> = [];
 
   for (const candidate of collectScopeColors(scope, not)) {
-    if (excludedHexes.has(candidate.hex)) continue;
     if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
     candidates.push({
       hex: candidate.hex,
@@ -103,14 +87,6 @@ export function minContrastWith(
   assertDirection('minContrastWith', direction);
   const notKeys = normalizeNotKeys(not);
 
-  // Only `not` keys outside the iterated scope are dependencies: those are
-  // excluded by value, so this selector must re-evaluate when they change.
-  // A key inside the scope is excluded by name alone, so its value is never
-  // read; declaring it anyway can close a false cycle — `s.text` excluding
-  // `s.accent` while `s.accent` is derived from `s.text`.
-  const poolPrefix = scope.key === '.' ? '.' : `${scope.key}.`;
-  const externalNotKeys = notKeys.filter((k): k is string => typeof k === 'string' && !k.startsWith(poolPrefix));
-
   return createFunctionToken(
     'minContrastWith',
     [targetValue, scope],
@@ -119,7 +95,7 @@ export function minContrastWith(
       ...rest,
       options: { minContrast, not: notKeys, ...(direction ? { direction } : {}) },
       metadata: {
-        dependencies: [...extractDependencies([targetValue]), ...externalNotKeys],
+        dependencies: extractDependencies([targetValue]),
         visualDependencies: extractVisualDependencies([targetValue, scope]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
