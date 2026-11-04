@@ -1165,58 +1165,7 @@ pre {
   .hero {
     padding-top: calc(var(--row) * 4);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  html,
-  .chip,
-  .pill,
-  .mark {
-    transition: none !important;
-  }
-}
-
-/* A section row is set like the column heads, not like the No. column. */
-.ledger tr.group th:first-child {
-  font-size: inherit;
-  font-family: inherit;
-}
-
-/* A sheet's table keeps its 28px rows; it does not stretch to the
-   height of the drawing beside it. */
-.palette-body > table {
-  align-self: start;
-}
-
-.rail .mark[data-label]::after {
-  font-style: normal;
-}
-
-/* The '#' of a value in the claim, in the value's own color. */
-.claim .hash {
-  transition: color 0.5s ease;
-}
-
-.claim .hash {
-  font-size: 0.6em;
-  font-weight: 700;
-  vertical-align: baseline;
-  margin-right: 0.05em;
-}
-
-/* The install bar on the landing takes the page's mark and its text. */
-.install-bar {
-  --install-bg: var(--highlight);
-  --install-ink: var(--on-highlight);
-}
-
-/* The first screen (see .first-screen in shared.css). */
-.hero {
-  --first-inset: calc(max(0px, (100% - var(--measure)) / 2) + var(--gutter));
-}
-
-/* ─── Phones ─────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
   /* The claim's calls may break between their parts. */
   .claim .call,
   .claim .out {
@@ -1300,9 +1249,7 @@ pre {
   .sheet + .sheet {
     margin: var(--row) 0 0;
   }
-}
 
-@media (max-width: 640px) {
   .sheet-rules { --tab-left: 92px; }
   .sheet-sizes { --tab-left: 160px; }
   .sheet-graph { --tab-left: 228px; }
@@ -1310,4 +1257,52 @@ pre {
   .ledger tbody tr {
     border-bottom: 1px solid var(--lg-rule);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  .chip,
+  .pill,
+  .mark {
+    transition: none !important;
+  }
+}
+
+/* A section row is set like the column heads, not like the No. column. */
+.ledger tr.group th:first-child {
+  font-size: inherit;
+  font-family: inherit;
+}
+
+/* A sheet's table keeps its 28px rows; it does not stretch to the
+   height of the drawing beside it. */
+.palette-body > table {
+  align-self: start;
+}
+
+.rail .mark[data-label]::after {
+  font-style: normal;
+}
+
+/* The '#' of a value in the claim, in the value's own color. */
+.claim .hash {
+  transition: color 0.5s ease;
+}
+
+.claim .hash {
+  font-size: 0.6em;
+  font-weight: 700;
+  vertical-align: baseline;
+  margin-right: 0.05em;
+}
+
+/* The install bar on the landing takes the page's mark and its text. */
+.install-bar {
+  --install-bg: var(--highlight);
+  --install-ink: var(--on-highlight);
+}
+
+/* The first screen (see .first-screen in shared.css). */
+.hero {
+  --first-inset: calc(max(0px, (100% - var(--measure)) / 2) + var(--gutter));
 }

@@ -90,8 +90,6 @@ li {
   color: var(--blue);
 }
 
-
-
 /* ── Code: the black paper, written in its off-white ─────────────── */
 .code,
 .r-pane,
@@ -370,11 +368,6 @@ p em {
   margin-top: auto;
 }
 
-
-
-
-
-
 /* ── Tables in the demos: the shared ledger ([data-ledger]) ──────── */
 .extends-pane {
   background: none;
@@ -589,7 +582,6 @@ pre.code.holes-left,
   font-size: 12px;
   line-height: var(--row);
 }
-
 
 /* ── Emphasis in running text: the blue, upright (no italics anywhere) ─ */
 [class] [class] :is(p, li) em,
@@ -896,7 +888,6 @@ pre.code.holes-left,
   content: "odd one";
   white-space: nowrap;
 }
-
 
 .folder-sheet--result .furthest-stage .swatch-fr.furthest::before {
   top: auto;
@@ -1655,9 +1646,7 @@ pre.code.holes-left,
   .folder-sheet--result .rd-result .rd-sample {
     white-space: normal;
   }
-}
 
-@media (max-width: 640px) {
   /* A renderer's long lines scroll inside its paper. */
   .renderer-folder .folder-body,
   .renderer-folder .r-pane {
