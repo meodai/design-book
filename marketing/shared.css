@@ -1122,3 +1122,11 @@ body:has(> .rail-left) .install-bar .bar-brand .logo {
 body:has(> .rail-left) .install-bar .bar-brand > span {
   margin-left: calc(var(--bar-text-left, calc(var(--rail) + var(--row))) - var(--rail));
 }
+
+/* The footer runs over the left rail too, like the bar above it. */
+body:has(> .rail-left) footer.imprint {
+  margin-left: calc(var(--rail) * -1);
+  padding-left: calc(var(--rail) + 40px);
+  position: relative;
+  z-index: 11;
+}
