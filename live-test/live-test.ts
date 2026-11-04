@@ -16,7 +16,7 @@ import {
   leastVivid,
   minContrastWith,
   furthestFrom,
-  closestColor,
+  closest,
   relativeTo,
   lighten,
   darken,
@@ -98,8 +98,8 @@ for (const step of ['300', '400', '500', '600', '800']) {
 
 // State — the palette's own semantics: its red-est and green-est colors.
 const state = book.addScope('state');
-state.set('error', closestColor(color('#c0392b'), beam));
-state.set('success', closestColor(color('#1e8e4d'), beam));
+state.set('error', closest(color('#c0392b'), beam));
+state.set('success', closest(color('#1e8e4d'), beam));
 
 // Decor — badge and chips; the palette's odd one out and three spreads.
 const decor = book.addScope('decor');
