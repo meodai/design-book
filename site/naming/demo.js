@@ -2,7 +2,7 @@ import "hdr-color-input";
 import { converter, formatHex, toGamut, interpolate } from "culori";
 import {
   DesignBook, color, px, nameValues, nameBetween, namingScheme, schemes,
-} from "../src/index";
+} from "../../src/index";
 
 const $ = (id) => document.getElementById(id);
 const toOklch = converter("oklch");

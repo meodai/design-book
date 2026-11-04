@@ -59,7 +59,7 @@ import {
   nth,
   sibling,
   inParent,
-} from "../src/index";
+} from "../../src/index";
 
 import { Poline } from "poline";
 

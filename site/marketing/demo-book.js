@@ -13,7 +13,7 @@ import {
   nextLarger,
   nextSmaller,
   darken,
-} from '../src/index';
+} from '../../src/index';
 
 /** Ordered top-to-bottom in the values table — flipping reverses this list. */
 export const RAMP_SHADES = ['50', '200', '400', '600', '800', '900'];

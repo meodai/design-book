@@ -4,9 +4,9 @@ import InstallBar from '../../components/InstallBar.astro';
 import Footer from '../../components/Footer.astro';
 import { partial } from '../../lib/partial';
 import markup from '../../partials/article.html?raw';
-import '../../../article/style.css';
-import '../../../marketing/shared.css';
-import '../../../article/theme.css';
+import '../../article/style.css';
+import '../../marketing/shared.css';
+import '../../article/theme.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
@@ -31,6 +31,6 @@ const [beforeBrand, afterBrand] = partial(markup);
   <InstallBar current="article" />
   <Footer current="article" />
   <script>
-    import '../../../article/article.ts';
+    import '../../article/article.ts';
   </script>
 </Page>

@@ -2,7 +2,7 @@
 import Page from '../../layouts/Page.astro';
 import { partial } from '../../lib/partial';
 import markup from '../../partials/naming.html?raw';
-import '../../../naming/style.css';
+import '../../naming/style.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
@@ -13,6 +13,6 @@ const [beforeBrand, afterBrand] = partial(markup);
 
   <Fragment set:html={beforeBrand} />
   <script>
-    import '../../../naming/demo.js';
+    import '../../naming/demo.js';
   </script>
 </Page>

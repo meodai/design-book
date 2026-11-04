@@ -4,9 +4,9 @@ import InstallBar from '../components/InstallBar.astro';
 import Footer from '../components/Footer.astro';
 import { partial } from '../lib/partial';
 import markup from '../partials/tour.html?raw';
-import '../../marketing/style.css';
-import '../../marketing/shared.css';
-import '../../marketing/docs.css';
+import '../marketing/style.css';
+import '../marketing/shared.css';
+import '../marketing/docs.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
@@ -21,9 +21,9 @@ const [beforeBrand, afterBrand] = partial(markup);
   <Footer current="tour" />
   <script>
     // In this order: the folders are built before the demos fill them.
-    import '../../marketing/docs-folders.js';
-    import '../../marketing/script.js';
-    import '../../marketing/docs-rails.js';
-    import '../../marketing/sliders.js';
+    import '../marketing/docs-folders.js';
+    import '../marketing/script.js';
+    import '../marketing/docs-rails.js';
+    import '../marketing/sliders.js';
   </script>
 </Page>

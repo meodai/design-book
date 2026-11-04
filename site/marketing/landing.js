@@ -28,7 +28,7 @@ import {
   nth,
   rampStops,
   scaleNames,
-} from "../src/index";
+} from "../../src/index";
 
 const oklch = converter("oklch");
 

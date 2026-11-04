@@ -20,10 +20,6 @@
     "skills"
   ],
   "sideEffects": [
-    "./marketing/**",
-    "./article/**",
-    "./editor/**",
-    "./naming/**",
     "./site/**"
   ],
   "keywords": [

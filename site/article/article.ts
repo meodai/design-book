@@ -14,12 +14,12 @@ import {
   colorMix,
   nextLarger,
   nextSmaller,
-} from '../src';
+} from '../../src';
 import type {
   FunctionTokenValue,
   ReferenceValue,
   TokenValue,
-} from '../src';
+} from '../../src';
 import { parse, wcagContrast } from 'culori';
 import { Poline, positionFunctions } from 'poline';
 import 'poline/picker';

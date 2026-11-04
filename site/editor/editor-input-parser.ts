@@ -8,9 +8,9 @@ import {
   nextLarger, nextSmaller,
   nth, random, sibling,
   typography, variant,
-} from '../src/index';
-import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../src/index';
-import { isScopeKey } from '../src/tokens';
+} from '../../src/index';
+import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../../src/index';
+import { isScopeKey } from '../../src/tokens';
 import { parse } from 'culori';
 
 /**

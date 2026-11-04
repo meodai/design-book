@@ -5,11 +5,11 @@ import {
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
   Renderer, SVGRenderer, TableViewRenderer, qualifyKey,
-} from '../src/index';
-import type { RenderFormat } from '../src/index';
-import type { Scope, ScopeOrder } from '../src/index';
+} from '../../src/index';
+import type { RenderFormat } from '../../src/index';
+import type { Scope, ScopeOrder } from '../../src/index';
 import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';
-import { readableOnArgIndex } from '../src/functions/color/readable';
+import { readableOnArgIndex } from '../../src/functions/color/readable';
 
 import { EditorView, keymap, lineNumbers, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';

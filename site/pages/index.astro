@@ -4,8 +4,8 @@ import InstallBar from '../components/InstallBar.astro';
 import Footer from '../components/Footer.astro';
 import { partial } from '../lib/partial';
 import markup from '../partials/landing.html?raw';
-import '../../marketing/shared.css';
-import '../../marketing/landing.css';
+import '../marketing/shared.css';
+import '../marketing/landing.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
@@ -19,6 +19,6 @@ const [beforeBrand, afterBrand] = partial(markup);
   <InstallBar home />
   <Footer current="overview" />
   <script>
-    import '../../marketing/landing.js';
+    import '../marketing/landing.js';
   </script>
 </Page>

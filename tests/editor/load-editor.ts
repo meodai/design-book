@@ -104,5 +104,5 @@ vi.mock('@codemirror/view', async (importOriginal) => {
  *  module-scope boot, and return its exports. */
 export async function loadEditorModule() {
   vi.stubGlobal('document', getFakeDocument());
-  return import('../../editor/editor.ts');
+  return import('../../site/editor/editor.ts');
 }
