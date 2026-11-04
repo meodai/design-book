@@ -1145,3 +1145,8 @@ body:has(> .rail-left) .install-bar .bar-brand {
 body:has(> .rail-left) .install-bar .bar-brand > span {
   margin-left: 0;
 }
+
+/* The bar is exactly a row and a half tall. */
+.install-bar {
+  height: calc(var(--row) * 1.5);
+}
