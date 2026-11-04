@@ -115,11 +115,7 @@
           <code>color.buttonText</code> =
           <code>bestContrastWith(</code><button class="token-chip" data-token="color.brand" data-display="key" type="button"></button><code>, ramp)</code>
         </p>
-        <p>
-          Re-point the brand color and the label re-decides itself. The
-          token does not just expose the outcome. It exposes the logic that
-          produced it.
-        </p>
+        <p>Re-point the brand color and the label is picked again. The token keeps the logic that produced the outcome, so you can read why it is white.</p>
       </section>
 
       <section>
@@ -141,14 +137,7 @@
           <code>color.onSurface</code> =
           <code>bestContrastWith(color.surface, values)</code>
         </p>
-        <p>
-          Edit
-          <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
-          and the foreground re-decides itself. The pair
-          <code>surface</code> / <code>onSurface</code> stops being two
-          separate pinned choices and becomes one relationship the system can
-          maintain.
-        </p>
+        <p>Edit <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button> and the foreground is picked again. The pair <code>surface</code> / <code>onSurface</code> becomes one relationship the system can maintain, where before it was two separate pinned choices.</p>
         <div class="pair-demo" aria-label="Paired surface and on-surface treatment demo">
           <p class="pair-demo__title">Paired treatment</p>
           <p class="pair-demo__rule">
@@ -164,18 +153,11 @@
               <button class="token-chip" data-token="color.onSurface" type="button"></button>
             </p>
           </div>
-          <p class="pair-demo__note">
-            Treat these as one named decision, not two unrelated variables:
-            edit the surface and the readable foreground re-decides itself to
-            keep the pair coherent.
-          </p>
+          <p class="pair-demo__note">These are one named decision: edit the surface and the readable foreground is picked again, so the pair stays coherent.</p>
         </div>
 
         <h3>The faintest line that still works</h3>
-        <p>
-          The same pattern can choose not the strongest option, but the
-          weakest one that still satisfies a condition.
-        </p>
+        <p>The same pattern can also pick the weakest option that still satisfies a condition.</p>
         <p class="rule-line">
           <code>color.line</code> =
           <code>minContrastWith(</code><button
@@ -192,34 +174,15 @@
             type="button"
           ></button><code> })</code>
         </p>
-        <p>
-          Where <code>bestContrastWith</code> picks the <em>highest</em>
-          contrast available, <code>minContrastWith</code> picks the
-          <em>lowest</em> step that still clears the threshold. The token is
-          not saying "use this grey." It is saying "pick the weakest
-          boundary that still reads as a boundary."
-        </p>
+        <p>Where <code>bestContrastWith</code> picks the <em>highest</em> contrast available, <code>minContrastWith</code> picks the <em>lowest</em> step that still clears the threshold. Instead of "use this grey", the token says "pick the weakest boundary that still reads as a boundary".</p>
 
         <h3>One step up, one step down</h3>
-        <p>
-          The same "pick from a set" pattern works on dimensional scopes —
-          spacing, type, motion. Given a scale and a starting member,
-          <code>nextLarger</code> and <code>nextSmaller</code> return the
-          adjacent step. The unit can be anything (<code>px</code>,
-          <code>rem</code>, <code>ms</code>); members in a different unit
-          from the starting one are skipped.
-        </p>
+        <p>The same "pick from a set" pattern works on dimensional scopes like spacing, type and motion. Given a scale and a starting member, <code>nextLarger</code> and <code>nextSmaller</code> return the adjacent step. The unit can be anything (<code>px</code>, <code>rem</code>, <code>ms</code>); members in a different unit from the starting one are skipped.</p>
         <p class="rule-line">
           <code>space.emphasis</code> =
           <code>nextLarger(space.m, space)</code>
         </p>
-        <p>
-          Add a sixth spacing step and <code>space.emphasis</code> may move
-          to it without any code change. Pass <code>{ minDistance: 6 }</code>
-          to skip neighbours that are too close — useful when the scale has
-          fine-grained steps and the derived token should still read as a
-          jump, not a nudge.
-        </p>
+        <p>Add a sixth spacing step and <code>space.emphasis</code> may move to it without any code change. Pass <code>{ minDistance: 6 }</code> to skip neighbours that are too close, for scales with fine-grained steps where the derived token should still be a noticeable jump.</p>
       </section>
 
       <section>
@@ -300,19 +263,7 @@
         </p>
 
         <h3>Scale from a base</h3>
-        <p>
-          Every gap inside the example panel — title to paragraph, paragraph
-          to chart, chart to button — is a multiple of
-          <button
-            class="token-chip"
-            data-token="space.base"
-            data-min="8"
-            data-max="32"
-            data-step="1"
-            type="button"
-          ></button>. Pull the base and the whole rhythm scales together via
-          <code>spacingScale</code>.
-        </p>
+        <p>Every gap inside the example panel (title to paragraph, paragraph to chart, chart to button) is a multiple of <button class="token-chip" data-token="space.base" data-min="8" data-max="32" data-step="1" type="button" ></button>. Pull the base and the whole rhythm scales together via <code>spacingScale</code>.</p>
         <div class="scale-demo" aria-label="Editable spacing scale demo">
           <p class="scale-demo__title">Edit the scale here</p>
           <p class="scale-demo__row">
@@ -369,12 +320,7 @@
         </div>
 
         <h3>Shift a value</h3>
-        <p>
-          The simplest version of this kind of rule takes one input and
-          nudges it. The link's hover state in the example panel is one of
-          those: a darker shade of <code>color.interaction</code> computed
-          on the fly, not stored.
-        </p>
+        <p>The simplest version of this kind of rule takes one input and nudges it. The link's hover state in the example panel is one of those: a darker shade of <code>color.interaction</code>, computed on the fly instead of stored.</p>
         <p class="rule-line">
           <code>color.linkHover</code> =
           <code>darken(color.interaction,&nbsp;</code><button
@@ -410,38 +356,15 @@
             type="button"
           ></button><code>, ratio)</code>
         </p>
-        <p>
-          Drag either endpoint and the bars re-tone together because the
-          connection stores a formula, not seven frozen outputs. A hover
-          shade or pressed state works the same way; the scale changes, not
-          the idea.
-        </p>
+        <p>Drag either endpoint and the bars change together, because the connection stores the formula. A hover shade or a pressed state works the same way with a different scale.</p>
       </section>
 
       <section>
         <h2>6. Truly procedural design</h2>
-        <p>
-          Tokenising everything used to feel like the death of creative
-          freedom. Every choice locked in. Every relationship buried in a
-          dependency graph that no human wanted to climb. Once the system
-          was set up, exploration moved elsewhere — back into Figma, back
-          into a script, back to ad-hoc decisions made outside the system
-          and then patched in.
-        </p>
-        <p>
-          Procedural tokens flip that. The exploration tool can live inside
-          the system. Every value token in this article — every grey, every
-          accent — is now a point on a single color line. Drag any anchor
-          and the entire system shifts together: the values move, the refs
-          that point at them follow, the ramp re-interpolates, the contrast
-          rules re-pick. One small input. Hundreds of coherent outputs.
-        </p>
+        <p>For a long time, tokenising everything felt like the end of creative freedom to me. Every choice was locked in, and every relationship was buried in a dependency graph nobody wanted to climb. Once the system was set up, exploring happened somewhere else: in Figma, in a script, in ad-hoc decisions made outside the system and patched in later.</p>
+        <p>With procedural tokens the exploring can happen inside the system. Every value token in this article, every grey and every accent, is a point on a single color line. Drag any anchor and the whole system shifts together: the values move, the refs that point at them follow, the ramp is interpolated again and the contrast rules pick again.</p>
         <div class="poline-demo" aria-label="Palette generator driving every value token">
-          <p class="poline-demo__caption">
-            Each dot on the wheel is an anchor; the line between them is
-            the palette. Every <code>values.*</code> token is sampled
-            somewhere on that line — even the ones named for greys.
-          </p>
+          <p class="poline-demo__caption">Each dot on the wheel is an anchor; the line between them is the palette. Every <code>values.*</code> token is sampled somewhere on that line, even the ones named for greys.</p>
           <poline-picker id="poline" interactive></poline-picker>
           <label class="poline-demo__toggle">
             <input type="checkbox" id="poline-invert">
@@ -449,20 +372,10 @@
           </label>
         </div>
 
-        <p>
-          The names <code>values.gray800</code>, <code>values.red500</code>
-          stay where they were. Their colors don't. That is the point: a
-          token system that can be explored rather than just maintained.
-          Coherence is enforced by the structure; freedom is restored at
-          the input.
-        </p>
+        <p>The names <code>values.gray800</code>, <code>values.red500</code> stay where they were, but their colors change. I like that: a token system you can explore and not only maintain. The structure keeps it coherent, and the inputs stay free to play with.</p>
 
         <div class="bezier-demo" aria-label="Bezier curve editor for the spacing scale">
-          <p class="bezier-demo__caption">
-            Each <code>space.*</code> token reads its multiplier from this
-            curve. Drag the two handles to reshape the scale — gap, padding
-            and the chart bars' spacing in the panel all follow.
-          </p>
+          <p class="bezier-demo__caption">Each <code>space.*</code> token reads its multiplier from this curve. Drag the two handles to reshape the scale; the gap, the padding and the spacing between the chart bars in the panel all follow.</p>
           <svg id="bezier-svg" class="bezier-svg" viewBox="0 0 200 150" role="img" aria-label="Cubic bezier curve controlling the spacing scale">
             <!-- rendered by article.ts -->
           </svg>
@@ -493,44 +406,13 @@
           only the handful of roots that change, a dark surface and a light
           ink, and everything derived from them follows.
         </p>
-        <p>
-          Once a token system can encode relationships instead of only
-          results, consistency turns into discovery. It can preserve
-          coherence across more complexity than anyone wants to track by
-          hand, and it can surface combinations that would not have been
-          picked manually.
-        </p>
-        <p>
-          That is the part that feels genuinely exploratory. Change the
-          surface, shift the interaction color, alter the spacing base, and
-          the system answers back. Sometimes the answer is simply robust.
-          Sometimes it is surprising. That is where emergence starts to
-          matter: not as mystique, but as the practical result of encoding
-          relationships instead of pinning every outcome in advance.
-        </p>
-        <p>
-          That is the shift I care about. Not more tokens. Not cleverness
-          for its own sake. Just better links: static when enough,
-          formula-based when necessary. Color and spacing make the pattern
-          easy to see, but the same logic applies anywhere the relationship
-          matters more than the stored result: type treatments, motion
-          rules, icon choices, grouped decisions like a surface/on-surface
-          pair. A text style is already one of those: size, weight and
-          line height travel as one token, and a variant that changes only
-          the weight keeps following the rest. At that point a token system stops being a catalogue of
-          frozen answers and starts behaving more like a design
-          spreadsheet, or at its best, a small design program: one that
-          makes flexibility part of the design instead of a chore that shows
-          up later.
-        </p>
+        <p>Once a token system can encode relationships and not only results, it becomes a way to find things. It keeps more complexity coherent than anyone wants to track by hand, and it turns up combinations I would not have picked manually.</p>
+        <p>That is the part I find exciting. Change the surface, shift the interaction color, alter the spacing base, and the system answers back. Sometimes the answer is simply robust, sometimes it is surprising. That is what I mean by emergence: the practical result of encoding relationships instead of pinning every outcome in advance.</p>
+        <p>So what I want are better links: static when that is enough, a formula when it is needed. Color and spacing make the pattern easy to see, but the same logic applies anywhere the relationship matters more than the stored result: type treatments, motion rules, icon choices, grouped decisions like a surface/on-surface pair. A text style is already one of those: size, weight and line height travel as one token, and a variant that changes only the weight keeps following the rest. At that point a token system is less a catalogue of frozen answers and more a design spreadsheet, or at its best a small design program, one where flexibility is part of the design from the start.</p>
       </section>
 
       <footer class="article-coda">
-        <p>
-          Try the same tokens in the <a href="{{base}}editor/">interactive editor</a> —
-          the editor exposes the same Design Book graph, with every scope,
-          every ref, and every function token editable inline.
-        </p>
+        <p>Try the same tokens in the <a href="{{base}}editor/">interactive editor</a>. It shows the same Design Book graph, with every scope, ref and function token editable inline.</p>
       </footer>
     </article>
   </div>
