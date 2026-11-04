@@ -983,3 +983,8 @@ body {
     margin: 0 10px 0 0;
   }
 }
+
+/* The first screen (see .first-screen in shared.css). */
+.article-hero {
+  --first-inset: calc(max(0px, (100% - 88rem) / 2) + var(--article-gutter));
+}

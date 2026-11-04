@@ -1146,7 +1146,31 @@ body:has(> .rail-left) .install-bar .bar-brand > span {
   margin-left: 0;
 }
 
-/* The bar is exactly a row and a half tall. */
+/* The bar is exactly a row and a half tall; first screens subtract it. */
+:root {
+  --bar-h: calc(var(--row) * 1.5);
+}
+
 .install-bar {
-  height: calc(var(--row) * 1.5);
+  height: var(--bar-h);
+}
+
+/* A first screen: as tall as the window above the bar, centered by its
+   own padding rather than by margins, so that one value (--first-inset,
+   a percentage of the page's width plus the gutter) is the space beside
+   its text and the space below it. */
+section.first-screen {
+  box-sizing: border-box;
+  min-height: calc(100dvh - var(--bar-h));
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: var(--first-inset);
+  padding-right: var(--first-inset);
+  padding-bottom: var(--first-inset);
+}
+
+/* A line across the top of the footer, in its own colors. */
+footer.imprint {
+  border-top: 1px solid color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
 }

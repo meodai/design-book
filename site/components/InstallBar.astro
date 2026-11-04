@@ -27,26 +27,6 @@ const links = [
   <button class="copy" type="button" data-install-copy>Copy</button>
 </div>
 
-<script is:inline>
-  // The first screen keeps the same space below its last line as beside
-  // it: its bottom padding is the headline's inset from the rail plus the
-  // bar's height. Runs as the bar is parsed (before the first paint) and
-  // on resize, since the inset follows the window.
-  (() => {
-    const first = document.querySelector('.hero, .article-hero');
-    const head = first && first.querySelector('.claim, h1');
-    if (!head) return;
-    const pad = () => {
-      const rail = parseFloat(getComputedStyle(document.body).paddingLeft) || 0;
-      const bar = document.querySelector('.install-bar');
-      const inset = head.getBoundingClientRect().left - rail;
-      first.style.paddingBottom = `${Math.round(inset + (bar ? bar.offsetHeight : 0))}px`;
-    };
-    pad();
-    addEventListener('resize', pad);
-  })();
-</script>
-
 <script>
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-install-copy]')) {
     button.addEventListener('click', async () => {

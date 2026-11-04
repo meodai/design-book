@@ -1227,3 +1227,8 @@ pre {
   --install-bg: var(--highlight);
   --install-ink: var(--on-highlight);
 }
+
+/* The first screen (see .first-screen in shared.css). */
+.hero {
+  --first-inset: calc(max(0px, (100% - var(--measure)) / 2) + var(--gutter));
+}

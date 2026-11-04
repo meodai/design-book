@@ -1633,3 +1633,8 @@ pre.code.holes-left,
 .folder-sheet--result .min-card .min-sample .min-text span {
   opacity: 1;
 }
+
+/* The first screen (see .first-screen in shared.css). */
+.hero {
+  --first-inset: calc(max(0px, (100% - var(--max)) / 2) + var(--gutter));
+}
