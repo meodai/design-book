@@ -1,0 +1,581 @@
+/* Design Book — docs, in the landing page's style.
+   A layer over style.css: it keeps the page's structure and demos and
+   swaps its type, paper and inks for the landing page's. */
+
+@font-face {
+  font-family: "Obel Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/ObelMono-VF.woff2") format("woff2");
+}
+
+:root {
+  --font-sans: "Valley Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Valley Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Obel Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* The landing page's paper and inks. */
+  --paper: #eee9dc;
+  --black: #0d0a03;
+  --on-black: #fffaed;
+  --blue: #3c61a0;
+  --red: #de5331;
+  --yellow: #dab43d;
+  --green: #479549;
+
+  --surface: var(--paper);
+  --surface-2: color-mix(in srgb, var(--paper) 92%, var(--black));
+  --text: var(--black);
+  --muted: color-mix(in srgb, var(--black) 62%, transparent);
+  --rule: color-mix(in srgb, var(--black) 16%, transparent);
+  --hair: color-mix(in srgb, var(--black) 8%, transparent);
+  --accent: var(--blue);
+  --accent-hover: color-mix(in srgb, var(--blue) 80%, var(--black));
+}
+
+html,
+body {
+  font-size: 17px;
+}
+
+::selection {
+  background: var(--blue);
+  color: var(--on-black);
+}
+
+html {
+  scrollbar-color: var(--blue) var(--paper);
+}
+
+/* ── Type ───────────────────────────────────────────────────────── */
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* The old page leaned on italics for emphasis; here the emphasised words
+   are set upright, in the blue. */
+h1 em,
+h2 em,
+h3 em {
+  font-style: normal;
+  color: var(--blue);
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+/* Small labels and captions read like the landing page's tables. */
+.r-tab em {
+  font-style: normal;
+}
+
+/* ── Header and footer ──────────────────────────────────────────── */
+.top-mark {
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.top-nav a {
+  border-bottom: 0;
+}
+
+.top-nav a:hover,
+.top-nav a[aria-current="page"] {
+  color: var(--blue);
+}
+
+/* The footer is a strip of the blue, as on the landing page. */
+.foot {
+  max-width: none;
+  margin-top: 64px;
+  padding: 28px var(--gutter) 56px;
+  justify-content: center;
+  gap: 56px;
+  border-top: 0;
+  font-size: 15px;
+  color: var(--on-black);
+  background: var(--blue);
+}
+
+.foot a {
+  color: inherit;
+}
+
+/* ── Code: the black paper, written in its off-white ─────────────── */
+.code,
+.r-pane,
+.r-tab.is-active {
+  background: var(--black);
+  color: var(--on-black);
+}
+
+.code::-webkit-scrollbar-track,
+.r-pane::-webkit-scrollbar-track,
+.code::-webkit-scrollbar-corner,
+.r-pane::-webkit-scrollbar-corner {
+  background: var(--black);
+}
+
+/* Active buttons and toggles take the blue, like the landing page's
+   highlights, with the off-white on it. */
+.graph-controls button:hover,
+.sibling-offsets button.is-active,
+.ref-modes button.is-active,
+.readable-ratios button.is-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--on-black);
+}
+
+/* Square corners everywhere; only real circles stay round. */
+:where(button, select, input, .code, .demo, figure) {
+  border-radius: 0;
+}
+
+/* The install line is the blue, as on the landing page. */
+.install {
+  background: var(--blue);
+  border: 0;
+  box-shadow: none;
+}
+
+.install code {
+  color: var(--on-black);
+}
+
+.install .prompt {
+  color: color-mix(in srgb, var(--on-black) 50%, transparent);
+}
+
+.copy {
+  color: var(--on-black);
+  background: transparent;
+  border-left: 1px solid color-mix(in srgb, var(--on-black) 45%, transparent);
+}
+
+.copy:hover {
+  background: color-mix(in srgb, var(--on-black) 16%, transparent);
+}
+
+.copy.copied {
+  background: var(--green);
+}
+
+/* ═══ The landing page's parts ═══════════════════════════════════════ */
+
+:root {
+  --row: 28px;
+  --rail: calc(var(--row) * 2);
+}
+
+html {
+  overflow-x: clip;
+}
+
+body {
+  padding: 0 var(--rail);
+  container-type: inline-size;
+}
+
+/* ── Section rules run from rail to rail ────────────────────────── */
+body > section {
+  position: relative;
+  border-top: 0;
+}
+
+body > section + section::before,
+.fn + .fn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50cqw);
+  width: 100cqw;
+  height: 1px;
+  background: var(--rule);
+}
+
+.fn {
+  position: relative;
+}
+
+/* ── Papers ─────────────────────────────────────────────────────────
+   Each demo sits on a sheet of one of the inks. The demos are written
+   against style.css's variables, so redefining them on the sheet is
+   enough for its text, rules and controls to follow. */
+.closest-stage,
+.extends-stage,
+.furthest-stage,
+.lightness-stage,
+.min-stage,
+.mix-stage,
+.names-stage,
+.nth-stage,
+.order-stage,
+.ramp-stage,
+.random-stage,
+.readable-stage,
+.ref-stage,
+.sibling-stage,
+.step-stage,
+.typo-stage,
+.vivid-stage,
+.fn .demo,
+.extend-result,
+.graph-svg,
+.graph figure {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  --surface: var(--pp);
+  --surface-2: color-mix(in srgb, var(--pp) 88%, var(--pp-text));
+  --text: var(--pp-text);
+  --muted: color-mix(in srgb, var(--pp-text) 66%, transparent);
+  --rule: color-mix(in srgb, var(--pp-text) 28%, transparent);
+  --hair: color-mix(in srgb, var(--pp-text) 14%, transparent);
+  --accent: var(--pp-text);
+  --accent-hover: var(--pp-text);
+  color: var(--text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    var(--hair) calc(var(--row) - 1px) var(--row)
+  );
+  border: 0;
+  padding: var(--row);
+}
+
+/* Which ink each sheet is cut from: the four inks and the black, so
+   neighbouring demos differ. */
+.readable-stage,
+.order-stage,
+.extend-card:nth-child(2) .extend-result {
+  --pp: var(--red);
+  --pp-text: var(--black);
+}
+
+.ramp-stage,
+.min-stage,
+.nth-stage {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+}
+
+.names-stage,
+.typo-stage,
+.furthest-stage,
+.graph-svg,
+.graph figure {
+  --pp: var(--yellow);
+  --pp-text: var(--black);
+}
+
+.mix-stage,
+.lightness-stage,
+.random-stage,
+.extend-card:nth-child(1) .extend-result {
+  --pp: var(--green);
+  --pp-text: var(--black);
+}
+
+/* ── Code: printer paper, feed holes down the left ───────────────── */
+.code,
+.r-pane {
+  --hole: radial-gradient(circle, transparent 5px, #000 5.5px);
+  padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
+  font-size: 12px;
+  line-height: var(--row);
+  background-color: var(--black);
+  background-image:
+    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--on-black) 28%, transparent) 0 3px, transparent 3px 7px),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--row) - 1px),
+      color-mix(in srgb, var(--on-black) 12%, transparent) calc(var(--row) - 1px) var(--row)
+    );
+  background-position: calc(var(--row) * 1.25) 0, 0 var(--row);
+  background-size: 1px 100%, auto;
+  background-repeat: no-repeat, repeat;
+  -webkit-mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
+  mask:
+    var(--hole) left top / calc(var(--row) * 1.25) var(--row) repeat-y,
+    linear-gradient(#000 0 0) right / calc(100% - var(--row) * 1.25) 100% no-repeat;
+}
+
+/* Code in tones of the paper's own off-white, as on the landing page. */
+.code .c-fn,
+.code .c-key { color: var(--on-black); font-weight: 700; }
+.code .c-str,
+.code .c-num { color: color-mix(in srgb, var(--on-black) 72%, var(--black)); }
+.code .c-dim { color: color-mix(in srgb, var(--on-black) 45%, var(--black)); font-style: normal; }
+
+/* ── Selector tabs: folder tabs over a blue paper ────────────────
+   Each group is a column: its name above, set like a table head, and
+   its tabs below, standing on the paper's top edge. The chosen tab is
+   cut from the same blue as the edge, so it reads as one sheet. */
+.fn-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(var(--row) / 2) 6px;
+  padding-top: var(--row);
+  padding-bottom: 0;
+}
+
+.fn-tabs-set {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: auto var(--row);
+  column-gap: 2px;
+  row-gap: 6px;
+  margin: 0;
+  align-items: end;
+}
+
+.fn-tabs-group {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  font-variant-caps: all-small-caps;
+  color: var(--muted);
+}
+
+.fn-tabs [role="tab"] {
+  grid-row: 2;
+  height: var(--row);
+  padding: 0 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  border: 0;
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fn-tabs [role="tab"]:hover {
+  background: color-mix(in srgb, var(--blue) 22%, var(--paper));
+}
+
+.fn-tabs [role="tab"][aria-selected="true"] {
+  color: var(--on-black);
+  background: var(--blue);
+}
+
+.fn-tabs [role="tab"]:focus-visible {
+  outline: 1px solid var(--text);
+  outline-offset: 2px;
+}
+
+.fn-panels {
+  border-top: 4px solid var(--blue);
+}
+
+/* ── Highlights: what can be chosen is blue, solid ───────────────── */
+.hero h1 em,
+.graph-text em,
+p em {
+  font-style: normal;
+}
+
+/* ── Rails: a map of the page ────────────────────────────────────── */
+.rail {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--rail);
+  z-index: 10;
+  color: var(--on-black);
+  background: var(--blue);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+}
+
+.rail-left { left: 0; }
+.rail-right { right: 0; }
+
+.rail-scale {
+  position: absolute;
+  top: calc(var(--row) * 2);
+  bottom: calc(var(--row) * 6);
+  left: 0;
+  right: 0;
+}
+
+.rail .tick {
+  position: absolute;
+  height: 1px;
+  background: currentColor;
+}
+
+.rail .tick.minor { width: 4px; opacity: 0.6; }
+.rail .tick.major { width: 9px; }
+.rail-left .tick { right: 0; }
+.rail-right .tick { left: 0; }
+
+.rail .num {
+  position: absolute;
+  transform: translateY(-50%);
+  opacity: 0.8;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rail-left .num { right: 13px; }
+.rail-right .num { left: 13px; }
+
+.rail-left a.num:hover { opacity: 1; text-decoration: underline; }
+
+.rail .needle {
+  position: absolute;
+  height: 1px;
+  background: currentColor;
+  transform: translateY(-50%);
+}
+
+.rail-left .needle { left: 4px; right: 0; }
+.rail-right .needle { left: 0; right: 4px; }
+
+.rail .needle::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 0;
+  left: 11px;
+  transform: translateY(-50%);
+  padding: 1px 2px;
+  background: var(--blue);
+  white-space: nowrap;
+}
+
+.rail-legend {
+  position: absolute;
+  bottom: var(--row);
+  left: 50%;
+  writing-mode: vertical-rl;
+  transform: translateX(-50%) rotate(180deg);
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+  :root { --rail: 0px; }
+  .rail { display: none; }
+}
+
+/* ── Example folders: Result in front, Code behind ──────────────── */
+/* A paper behind can be brought forward by its tab or by any part of it
+   that shows. */
+.dfolder-sheet:not(.is-front) {
+  cursor: pointer;
+}
+
+.dfolder-sheet:not(.is-front) .dfolder-body {
+  pointer-events: none;
+}
+
+.dfolder {
+  display: grid;
+  padding-top: var(--row);
+  min-width: 0;
+}
+
+.dfolder-sheet {
+  grid-area: 1 / 1;
+  align-self: start;
+  position: relative;
+  min-width: 0;
+  transition: transform 0.25s ease;
+}
+
+.dfolder-sheet:not(.is-front) {
+  z-index: 0;
+  transform: translate(calc(var(--row) / 2), calc(var(--row) / -2));
+}
+
+.dfolder-sheet.is-front {
+  z-index: 1;
+}
+
+.dfolder-body > * {
+  margin: 0;
+}
+
+.dfolder-tab {
+  position: absolute;
+  bottom: 100%;
+  height: var(--row);
+  padding: 0 var(--row);
+  font: 13px var(--font-sans);
+  border: 0;
+  cursor: pointer;
+}
+
+.dfolder-result .dfolder-tab {
+  left: 0;
+  color: var(--on-black);
+  background: var(--blue);
+}
+
+.dfolder-code .dfolder-tab {
+  left: calc(var(--row) * 4);
+  color: var(--on-black);
+  background: var(--black);
+}
+
+/* The result tab takes the color of the paper under it. */
+.dfolder-result:has(.readable-stage, .order-stage) .dfolder-tab,
+.extend-card:nth-child(2) .dfolder-result .dfolder-tab { background: var(--red); color: var(--black); }
+.dfolder-result:has(.ramp-stage, .min-stage, .nth-stage) .dfolder-tab { background: var(--black); color: var(--on-black); }
+.dfolder-result:has(.names-stage, .typo-stage, .furthest-stage) .dfolder-tab { background: var(--yellow); color: var(--black); }
+.dfolder-result:has(.mix-stage, .lightness-stage, .random-stage) .dfolder-tab,
+.extend-card:nth-child(1) .dfolder-result .dfolder-tab { background: var(--green); color: var(--black); }
+
+/* With the code in the folder, the code paper's tab must not be
+   masked away by the feed holes: holes are cut on the code itself. */
+.dfolder-code .code {
+  max-height: none;
+}
+
+@media (min-width: 900px) {
+  .fn-body {
+    grid-template-areas: "pitch demo";
+  }
+
+  .fn-body > .dfolder {
+    grid-area: demo;
+  }
+}
+
+/* "Bring your own": the cards are just text over their folder. */
+.extend-card {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+.extend-card .dfolder {
+  margin-top: auto;
+}
+
+/* A paper behind shows only its color: what is written on it waits
+   until it is brought forward. */
+.dfolder-sheet:not(.is-front) .dfolder-body > * > * {
+  visibility: hidden;
+}

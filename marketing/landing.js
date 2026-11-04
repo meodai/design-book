@@ -756,10 +756,12 @@ function bringToFront(name) {
   }
 }
 folder.addEventListener("click", (event) => {
-  const tab = event.target.closest(".folder-tab");
-  if (!tab) return;
-  bringToFront(tab.dataset.sheet);
-  if (tab.dataset.sheet === "graph") renderGraph();
+  // Its tab, or any part of a paper behind that shows, brings it forward.
+  const sheet = event.target.closest(".folder-tab")?.closest(".folder-sheet")
+    ?? event.target.closest(".folder-sheet:not(.is-front)");
+  if (!sheet) return;
+  bringToFront(sheet.dataset.sheet);
+  if (sheet.dataset.sheet === "graph") renderGraph();
 });
 bringToFront("rules");
 
@@ -822,12 +824,19 @@ function update() {
 
   // The page is painted with the book it describes. A rule that finds
   // nothing keeps the last paint, and the ledger says why.
-  if (values.ground) page.style.setProperty("--ground", values.ground);
-  if (values.ink) page.style.setProperty("--ink", values.ink);
+  // Trying it the other way round: the page in the mark's blue, and what
+  // the mark used to paint (rails, highlights, footer) in the page's paper.
+  const INVERTED = true;
+  const surface = INVERTED ? values.mark : values.ground;
+  const surfaceInk = INVERTED ? values["on-mark"] : values.ink;
+  const mark = INVERTED ? values.ground : values.mark;
+  const markInk = INVERTED ? values.ink : values["on-mark"];
+  if (surface) page.style.setProperty("--ground", surface);
+  if (surfaceInk) page.style.setProperty("--ink", surfaceInk);
   page.style.setProperty("--accent", values.accent ?? values.ink ?? "currentColor");
   page.style.setProperty("--rule", values.rule ?? "currentColor");
-  page.style.setProperty("--highlight", values.mark ?? "currentColor");
-  page.style.setProperty("--on-highlight", values["on-mark"] ?? values.ground ?? "Canvas");
+  page.style.setProperty("--highlight", mark ?? "currentColor");
+  page.style.setProperty("--on-highlight", markInk ?? "Canvas");
   applySizes(values);
   for (const key of ["paper-dark", "on-paper-dark", "paper-red", "on-paper-red", "paper-yellow", "on-paper-yellow", "paper-green", "on-paper-green"]) {
     if (values[key]) page.style.setProperty(`--${key}`, values[key]);

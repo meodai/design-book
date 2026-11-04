@@ -9,15 +9,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./docs.css" />
 </head>
 <body>
 
 <header class="top">
-  <a href="https://github.com/meodai/design-book" class="top-mark">Design Book</a>
+  <a href="./" class="top-mark">Design Book</a>
   <nav class="top-nav">
     <a href="./">Overview</a>
     <a href="https://github.com/meodai/design-book">GitHub</a>
@@ -53,7 +54,7 @@
     <svg viewBox="-200 -200 400 400" aria-hidden="true">
       <g class="hi-ring" id="hi-ring"></g>
     </svg>
-    <color-input class="hi-center" id="hi-center" value="#1d1c1c" initial-colorspace="hsl" no-alpha></color-input>
+    <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hsl" no-alpha></color-input>
     <div class="hi-pill">
       <select class="hi-fn" id="hi-fn" aria-label="Selector function">
         <option value="bestContrastWith">bestContrastWith</option>
@@ -90,7 +91,7 @@
     <div class="graph-controls">
       <label>
         <span>brand</span>
-        <color-input id="graph-brand" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="graph-brand" value="#de5331" initial-colorspace="hsl" no-alpha></color-input>
       </label>
       <button type="button" id="graph-invert">Flip ramp</button>
     </div>
@@ -112,7 +113,7 @@
         link as <code>var()</code>.
       </p>
       <pre class="code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>,
-  <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
+  <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
 
 ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>,
   <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>));
@@ -122,7 +123,7 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
 
     <figure class="ref-stage">
       <label class="ref-control">
-        <color-input id="ref-source" value="#2d60a5" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="ref-source" value="#3c61a0" initial-colorspace="hsl" no-alpha></color-input>
         <span>brand.primary</span>
       </label>
       <div class="extends-pane">
@@ -163,7 +164,7 @@ book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</spa
 
     <figure class="ref-stage">
       <label class="ref-control">
-        <color-input id="ref-danger" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="ref-danger" value="#de5331" initial-colorspace="hsl" no-alpha></color-input>
         <span>brand.error</span>
       </label>
       <div class="ref-panes" id="ref-panes"></div>
@@ -590,7 +591,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
     <figure class="readable-stage">
       <div class="readable-controls">
         <label class="readable-surface">
-          <color-input id="readable-surface" value="#fcf6ee" initial-colorspace="hsl" no-alpha></color-input>
+          <color-input id="readable-surface" value="#eee9dc" initial-colorspace="hsl" no-alpha></color-input>
           <span>ui.surface</span>
         </label>
         <div class="readable-ratios" id="readable-ratios" role="group" aria-label="readableContrast">
@@ -618,7 +619,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
         which transfers the lightness and chroma curves of established
         palettes onto any hue. Eleven stops, one call each, all reactive.
       </p>
-      <pre class="code ramp-code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
+      <pre class="code ramp-code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
 
 <span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>);
 <span class="c-fn">for</span> (<span class="c-fn">const</span> shade <span class="c-fn">of</span> [<span class="c-str">'50'</span>,<span class="c-str">'100'</span>,...,<span class="c-str">'950'</span>]) {
@@ -629,7 +630,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
 
     <div class="ramp-stage">
       <div class="ramp-seed">
-        <color-input id="ramp-seed-input" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="ramp-seed-input" value="#3c61a0" initial-colorspace="hsl" no-alpha></color-input>
         <span class="ramp-seed-lbl">brand.primary</span>
       </div>
       <div class="ramp-arrow" aria-hidden="true">→</div>
@@ -709,7 +710,7 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
     <div class="order-stage">
       <div class="order-head">
         <div class="order-seed">
-          <color-input id="order-seed-input" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+          <color-input id="order-seed-input" value="#de5331" initial-colorspace="hsl" no-alpha></color-input>
           <span class="order-seed-lbl">brand.primary</span>
         </div>
         <div class="order-modes" id="order-modes" role="group" aria-label="Sort criterion">
@@ -749,7 +750,7 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
         </p>
         <pre class="code"><code><span class="c-fn">const</span> system = <span class="c-fn">layer</span>(<span class="c-str">'store-system'</span>, (book) =&gt; {
   <span class="c-fn">const</span> brand = book.<span class="c-fn">addScope</span>(<span class="c-str">'brand'</span>);
-  brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#2d60a5'</span>));
+  brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
   <span class="c-dim">// … ink, paper …</span>
   <span class="c-fn">const</span> ui = book.<span class="c-fn">addScope</span>(<span class="c-str">'ui'</span>);
   ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>,  <span class="c-fn">ref</span>(<span class="c-str">'brand.highlight'</span>));
@@ -799,13 +800,13 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.ink</span>
-              <span class="ext-swatch" style="background:#1d1c1c"></span>
-              <span class="ext-val">store-system <span class="ext-resolved">→ #1d1c1c</span></span>
+              <span class="ext-swatch" style="background:#0d0a03"></span>
+              <span class="ext-val">store-system <span class="ext-resolved">→ #0d0a03</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">brand.paper</span>
-              <span class="ext-swatch" style="background:#fcf6ee"></span>
-              <span class="ext-val">store-system <span class="ext-resolved">→ #fcf6ee</span></span>
+              <span class="ext-swatch" style="background:#eee9dc"></span>
+              <span class="ext-val">store-system <span class="ext-resolved">→ #eee9dc</span></span>
             </div>
           </div>
         </div>
@@ -831,7 +832,7 @@ palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smoo
         <pre class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
 light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#f5f5f5'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#1a1a1a'</span>));
-light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#0066cc'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#ff8800'</span>));
 light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#888888'</span>));
 
@@ -862,8 +863,8 @@ dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span clas
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">primary</span>
-              <span class="ext-swatch" style="background:#0066cc"></span>
-              <span class="ext-val">inherit <span class="ext-resolved">→ #0066cc</span></span>
+              <span class="ext-swatch" style="background:#3c61a0"></span>
+              <span class="ext-val">inherit <span class="ext-resolved">→ #3c61a0</span></span>
             </div>
             <div class="ext-row ext-row--inherited">
               <span class="ext-key">accent</span>
@@ -937,7 +938,7 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
         <span>Blend two colors in any space.</span>
       </div>
       <span class="coda-icon" aria-hidden="true">
-        <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#2d60a5"/><circle cx="28" cy="12" r="9" fill="#88679a"/><circle cx="44" cy="12" r="9" fill="#c8391a"/></svg>
+        <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#3c61a0"/><circle cx="28" cy="12" r="9" fill="#88679a"/><circle cx="44" cy="12" r="9" fill="#de5331"/></svg>
       </span>
     </li>
     <li>
@@ -984,8 +985,8 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
             <path d="M 12 12 A 8 8 0 0 1 14.34 6.34" stroke="hsl(292 55% 60%)"/>
             <path d="M 14.34 6.34 A 8 8 0 0 1 20 4" stroke="hsl(337 70% 60%)"/>
           </g>
-          <circle cx="15.19" cy="18.39" r="3" fill="#2d60a5" stroke="#fcf6ee" stroke-width="0.8"/>
-          <circle cx="24.81" cy="5.61" r="3" fill="#a55b2d" stroke="#fcf6ee" stroke-width="0.8"/>
+          <circle cx="15.19" cy="18.39" r="3" fill="#3c61a0" stroke="#eee9dc" stroke-width="0.8"/>
+          <circle cx="24.81" cy="5.61" r="3" fill="#a55b2d" stroke="#eee9dc" stroke-width="0.8"/>
         </svg>
       </span>
     </li>
@@ -1040,9 +1041,9 @@ callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span c
 
     <div class="mix-stage">
       <div class="mix-row">
-        <color-input id="mix-a" value="#c8391a" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="mix-a" value="#de5331" initial-colorspace="hsl" no-alpha></color-input>
         <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
-        <color-input id="mix-b" value="#0066cc" initial-colorspace="hsl" no-alpha></color-input>
+        <color-input id="mix-b" value="#3c61a0" initial-colorspace="hsl" no-alpha></color-input>
       </div>
       <label class="mix-space">
         <span>interpolated in</span>
@@ -1211,6 +1212,8 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
   <span>AGPL-3.0</span>
 </footer>
 
+<script type="module" src="./docs-folders.js"></script>
 <script type="module" src="./script.js"></script>
+<script type="module" src="./docs-rails.js"></script>
 </body>
 </html>

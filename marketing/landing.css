@@ -364,10 +364,12 @@ pre {
 
 .claim {
   margin: 0;
-  max-width: 29em;
-  font-size: clamp(24px, 2.5vw, var(--size-title, 34px));
-  line-height: 1.5;
-  letter-spacing: -0.008em;
+  max-width: min(29em, 100%);
+  /* The docs title's weight and spacing, a size smaller. */
+  font-size: clamp(30px, 4vw, 54px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   text-wrap: pretty;
 }
 
@@ -523,19 +525,28 @@ pre {
 }
 
 .hero-foot {
-  margin-top: calc(var(--row) * 3.5);
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--row);
 }
 
+/* The install line sits in the bottom left corner of the window, flush
+   against the left rail. It is sticky, not fixed: at the end of the page
+   it comes to rest on top of the footer instead of covering it. */
 .install {
-  display: inline-flex;
+  position: sticky;
+  bottom: 0;
+  z-index: 11;
+  width: max-content;
+  display: flex;
   align-items: stretch;
-  --on-install: var(--on-paper-dark);
+  --on-install: var(--on-highlight);
   color: var(--on-install);
-  background: var(--paper-dark);
+  background: var(--highlight);
+  border: 0;
+  box-shadow: none;
   font-size: 14px;
 }
 
@@ -642,6 +653,12 @@ pre {
 
 .folder-sheet:not(.is-front) .folder-body {
   visibility: hidden;
+}
+
+/* A paper behind can be brought forward by its tab or by any part of it
+   that shows. */
+.folder-sheet:not(.is-front) {
+  cursor: pointer;
 }
 
 .folder-tab {
@@ -1227,8 +1244,8 @@ pre {
 
 /* ─── Imprint ────────────────────────────────────────────────────── */
 
-/* The footer is a strip of the dark paper across the whole page, from
-   one rail to the other. */
+/* The footer is a strip of the mark across the whole page, from one
+   rail to the other: with the rails, it frames the page in blue. */
 .imprint {
   margin: 0;
   padding: var(--row) var(--gutter) calc(var(--row) * 2);
@@ -1236,8 +1253,8 @@ pre {
   justify-content: center;
   gap: calc(var(--row) * 2);
   font-size: 15px;
-  color: var(--on-paper-dark);
-  background: var(--paper-dark);
+  color: var(--on-highlight);
+  background: var(--highlight);
 }
 
 .imprint-nav {

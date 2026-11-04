@@ -36,7 +36,7 @@ export function buildBook () {
 
   // — Seed: a single brand color that the whole palette is derived from. —
   const brand = book.addScope('brand');
-  brand.set('primary', color('#c8391a'));
+  brand.set('primary', color('#de5331'));
 
   // — Derived palette: a ramp + its complement. —
   book.addScope('values');

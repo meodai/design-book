@@ -114,11 +114,11 @@ function indexOfColor (values, hex) {
 
 // ── Shared palettes for plates ─────────────────────────────────────
 const PALETTE_BRAND = [
-  "#14110d", "#c8391a", "#d49623", "#4f6033",
-  "#1c3a9a", "#7a3c8e", "#dcd2b8", "#1d6b6a",
+  "#0d0a03", "#de5331", "#dab43d", "#479549",
+  "#3c61a0", "#7a3c8e", "#dcd2b8", "#1d6b6a",
 ];
 const PALETTE_CONTRAST_SURFACES = [
-  "#14110d", "#ece5d3", "#c8391a", "#1c3a9a", "#4f6033", "#d49623",
+  "#0d0a03", "#eee9dc", "#de5331", "#3c61a0", "#479549", "#dab43d",
 ];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -132,11 +132,11 @@ const PALETTE_CONTRAST_SURFACES = [
   if (!root || !ringEl || !fnSel || !centerEl) return;
 
   const PALETTE = [
-    "#c8391a", "#d49623", "#4f6033", "#1c3a9a",
-    "#7a3c8e", "#dcd2b8", "#1d6b6a", "#14110d",
+    "#de5331", "#dab43d", "#479549", "#3c61a0",
+    "#7a3c8e", "#dcd2b8", "#1d6b6a", "#0d0a03",
     "#e85b3e", "#3b6dd3", "#2f8a7a", "#a04a8e",
   ];
-  const INITIAL_CENTER = centerEl.getAttribute("value") || "#1d1c1c";
+  const INITIAL_CENTER = centerEl.getAttribute("value") || "#0d0a03";
   centerEl.value = INITIAL_CENTER;
   let CENTER = INITIAL_CENTER;
   const RADIUS = 150;
@@ -256,7 +256,7 @@ book.registerRenderer("tailwind", tailwindRenderer);
 
   // <color-input> sets its .value asynchronously after upgrade — seed
   // the property from the attribute so reads work on first paint.
-  const INITIAL_BRAND = brandIn.getAttribute("value") || "#c8391a";
+  const INITIAL_BRAND = brandIn.getAttribute("value") || "#de5331";
   brandIn.value = INITIAL_BRAND;
 
   let flipped = false;
@@ -372,7 +372,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
     });
     cssColors = poline.colorsCSS;
   } catch (e) {
-    strip.innerHTML = `<span style="background:#c8391a;grid-column:1/-1">poline error: ${e.message}</span>`;
+    strip.innerHTML = `<span style="background:#de5331;grid-column:1/-1">poline error: ${e.message}</span>`;
     return;
   }
 
@@ -492,8 +492,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 
 // — minContrastWith —
 (function demoMin () {
-  const surface = "#ece5d3";
-  const ramp = ["#ece5d3", "#d5cdb5", "#beb497", "#9c907a", "#766b5b", "#564f44", "#3a342c", "#14110d"];
+  const surface = "#eee9dc";
+  const ramp = ["#eee9dc", "#d5cdb5", "#beb497", "#9c907a", "#766b5b", "#564f44", "#3a342c", "#0d0a03"];
   function paint (id, ratio) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -567,7 +567,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");
   if (!stage) return;
-  const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
+  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#7a3c8e","#dcd2b8","#1d6b6a","#0d0a03"];
   const crown = pick(palette, (s) => mostVivid(s));
   const floor = pick(palette, (s) => leastVivid(s));
   // Sort by chroma so the highlighted tiles sit at opposite ends of the row.
@@ -585,8 +585,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const stage = document.getElementById("lightness-stage");
   const toggle = document.getElementById("lightness-readable");
   if (!stage || !toggle) return;
-  const palette = ["#c8391a","#d49623","#1c3a9a","#dcd2b8","#4f6033","#f3ead8","#7a3c8e","#14110d"];
-  const SURFACE = "#fcf6ee";
+  const palette = ["#de5331","#dab43d","#3c61a0","#dcd2b8","#479549","#f3ead8","#7a3c8e","#0d0a03"];
+  const SURFACE = "#eee9dc";
 
   function render () {
     const opts = toggle.checked ? { readableOn: color(SURFACE), readableContrast: 4.5 } : undefined;
@@ -597,7 +597,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
       const cls = [c === hi ? "is-lightest" : "", c === lo ? "is-darkest" : "",
                    toggle.checked && !readable ? "is-filtered" : ""].join(" ");
       const L = lch(c).l;
-      return `<div class="ltile ${cls}" style="background:${c};color:${L > 0.6 ? "#1d1c1c" : "#fcf6ee"}">
+      return `<div class="ltile ${cls}" style="background:${c};color:${L > 0.6 ? "#0d0a03" : "#eee9dc"}">
         <span class="lval">L ${L.toFixed(2)}</span><span>${c}</span></div>`;
     }).join("");
   }
@@ -613,7 +613,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   if (!stage || !seedEl || !shufEl) return;
 
   // Same palette as the vivid demo so the two read as a pair.
-  const palette = ["#c8391a","#d49623","#1c3a9a","#4f6033","#7a3c8e","#dcd2b8","#1d6b6a","#14110d"];
+  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#7a3c8e","#dcd2b8","#1d6b6a","#0d0a03"];
 
   function render () {
     const seed = seedEl.value || "0";
@@ -702,7 +702,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
     stage.innerHTML = GRAY.map(([k, v]) => {
       const cls = [k === anchor ? "is-anchor" : "", v === result && k !== anchor ? "is-pick" : ""].join(" ");
       const L = lch(v).l;
-      return `<button type="button" class="stile ${cls}" data-key="${k}" style="background:${v};color:${L > 0.6 ? "#1d1c1c" : "#fcf6ee"}"
+      return `<button type="button" class="stile ${cls}" data-key="${k}" style="background:${v};color:${L > 0.6 ? "#0d0a03" : "#eee9dc"}"
         aria-pressed="${k === anchor}"><span class="skey">${k}</span><span>${v}</span></button>`;
     }).join("");
   }
@@ -752,7 +752,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   // A real DesignBook — the scope genuinely sorts itself.
   const book = new DesignBook("order-demo");
   const seed = book.addScope("seed");
-  seed.set("primary", color(seedEl.getAttribute("value") || "#c8391a"));
+  seed.set("primary", color(seedEl.getAttribute("value") || "#de5331"));
   const palette = book.addScope("palette");
   for (const [name, L, C, H] of SPEC) {
     palette.set(name, relativeTo(ref("seed.primary"), "oklch", [L, C, H]));
@@ -840,8 +840,8 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const spaceS = document.getElementById("mix-space-sel");
   if (!aIn || !bIn || !strip || !spaceS) return;
 
-  const INITIAL_A = aIn.getAttribute("value") || "#c8391a";
-  const INITIAL_B = bIn.getAttribute("value") || "#0066cc";
+  const INITIAL_A = aIn.getAttribute("value") || "#de5331";
+  const INITIAL_B = bIn.getAttribute("value") || "#3c61a0";
   aIn.value = INITIAL_A;
   bIn.value = INITIAL_B;
 
@@ -887,7 +887,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   if (!seedInput || !barsEl) return;
 
   const SHADES = ["50","100","200","300","400","500","600","700","800","900","950"];
-  const INITIAL_SEED = seedInput.getAttribute("value") || "#0066cc";
+  const INITIAL_SEED = seedInput.getAttribute("value") || "#3c61a0";
 
   // The <color-input> custom element initialises its `.value` property
   // asynchronously after upgrade — read the `value` attribute as the
@@ -926,7 +926,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
       bar.style.background = stopHex;
       bar.querySelector(".hex").textContent = stopHex;
       const L = lch(stopHex)?.l ?? 0.5;
-      bar.style.color = L > 0.6 ? "#1a1a1a" : "#fcf6ee";
+      bar.style.color = L > 0.6 ? "#1a1a1a" : "#eee9dc";
     }
   }
 
@@ -994,15 +994,15 @@ wireTabs(document.querySelector(".extends-modes"));
   const panesEl  = document.getElementById("ref-panes");
   if (!sourceIn || !dangerIn || !rowsEl || !cssEl || !panesEl) return;
 
-  const SOURCE = sourceIn.getAttribute("value") || "#2d60a5";
-  const DANGER = dangerIn.getAttribute("value") || "#c8391a";
+  const SOURCE = sourceIn.getAttribute("value") || "#3c61a0";
+  const DANGER = dangerIn.getAttribute("value") || "#de5331";
 
   const book = new DesignBook("ref-demo");
   const brand = book.addScope("brand");
   brand.set("primary", color(SOURCE));
   brand.set("error",   color(DANGER));
-  brand.set("ink",     color("#1d1c1c"));
-  brand.set("paper",   color("#fcf6ee"));
+  brand.set("ink",     color("#0d0a03"));
+  brand.set("paper",   color("#eee9dc"));
 
   const ui = book.addScope("ui");
   ui.set("link",   ref("brand.primary"));
@@ -1131,8 +1131,8 @@ wireTabs(document.querySelector(".extends-modes"));
   const resultsEl = document.getElementById("readable-results");
   if (!surfaceIn || !ratiosEl || !poolEl || !resultsEl) return;
 
-  const BRAND = ["#c8391a", "#ff7a1a", "#d49623", "#f2c14e", "#3b6dd3", "#1c3a9a", "#2f8a7a", "#7a3c8e"];
-  const INITIAL = surfaceIn.getAttribute("value") || "#fcf6ee";
+  const BRAND = ["#de5331", "#ff7a1a", "#dab43d", "#f2c14e", "#3b6dd3", "#3c61a0", "#2f8a7a", "#7a3c8e"];
+  const INITIAL = surfaceIn.getAttribute("value") || "#eee9dc";
   surfaceIn.value = INITIAL;
   let ratio = 4.5;
 
@@ -1144,7 +1144,7 @@ wireTabs(document.querySelector(".extends-modes"));
        </div>`
     : `<div class="rd-result is-fail" style="background:${surface}">
          <span class="rd-call">${call}</span>
-         <span class="rd-sample" style="color:${contrast(surface, "#1d1c1c") > 4.5 ? "#1d1c1c" : "#fcf6ee"}">${failMsg}</span>
+         <span class="rd-sample" style="color:${contrast(surface, "#0d0a03") > 4.5 ? "#0d0a03" : "#eee9dc"}">${failMsg}</span>
        </div>`;
 
   function paint () {
@@ -1153,7 +1153,7 @@ wireTabs(document.querySelector(".extends-modes"));
     poolEl.style.background = surface;
     poolEl.innerHTML = BRAND.map((c) => {
       const r = contrast(surface, c);
-      return `<span class="rd-tile${r < ratio ? " is-out" : ""}" style="background:${c};color:${lch(c).l > 0.6 ? "#1d1c1c" : "#fcf6ee"}" title="${c} · ${r.toFixed(2)}:1">${r.toFixed(1)}</span>`;
+      return `<span class="rd-tile${r < ratio ? " is-out" : ""}" style="background:${c};color:${lch(c).l > 0.6 ? "#0d0a03" : "#eee9dc"}" title="${c} · ${r.toFixed(2)}:1">${r.toFixed(1)}</span>`;
     }).join("");
 
     const plain    = pick(BRAND, (s) => mostVivid(s));
@@ -1214,7 +1214,7 @@ wireTabs(document.querySelector(".extends-modes"));
 
     rows.innerHTML = names.map((name) => {
       const hex = b.resolve(`palette.${name}`);
-      const ink = (lch(hex)?.l ?? 0.5) > 0.62 ? "#1d1c1c" : "#fcf6ee";
+      const ink = (lch(hex)?.l ?? 0.5) > 0.62 ? "#0d0a03" : "#eee9dc";
       return `<div class="names-row" style="background:${hex};color:${ink}"><span>${name}</span><code>${hex}</code></div>`;
     }).join("");
 
