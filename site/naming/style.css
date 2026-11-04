@@ -1,83 +1,392 @@
-/* The naming playground. */
-    :root {
-      --sans: "Libertinus Sans", ui-sans-serif, system-ui, sans-serif;
-      --serif: "Libertinus Serif", ui-serif, Georgia, serif;
-      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      --surface: #fcf6ee;
-      --surface-2: #f6efe2;
-      --text: #1d1c1c;
-      --muted: rgba(0, 0, 0, .6);
-      --rule: rgba(0, 0, 0, .14);
-      --accent: #2d60a5;
-      --error: #a3241a;
-    }
-    * { box-sizing: border-box; border-radius: 0; }
-    body { margin: 0; background: var(--surface); color: var(--text); font: 17px/1.55 var(--sans); }
-    main { max-width: 74rem; margin: 0 auto; padding: 40px 24px 80px; }
-    h1 { font: 400 clamp(32px, 4vw, 48px)/1.1 var(--serif); letter-spacing: -.015em; margin: 0 0 .3em; }
-    h2 { font: 400 22px/1.2 var(--serif); margin: 0 0 10px; }
-    p.lead { color: var(--muted); max-width: 64ch; margin: 0 0 32px; }
-    code, .mono { font-family: var(--mono); font-size: 13px; }
-    [hidden] { display: none !important; }
-    .top { max-width: 74rem; margin: 0 auto; padding: 24px 24px 0; display: flex; justify-content: space-between; align-items: center; }
-    .top-mark { font: 20px var(--serif); color: var(--text); text-decoration: none; }
-    .top-nav { display: flex; gap: 22px; font-size: 15px; }
-    .top-nav a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
-    .top-nav a:hover { color: var(--accent); border-color: var(--accent); }
+/* The naming playground, in the site's style (after marketing/shared.css).
+   The page is the cream paper; the settings a ledger on it, one option a
+   row; the results a folder: the names on blue paper, the code and the
+   CSS on black printer paper. */
 
-    .layout { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 40px; align-items: start; }
-    @media (max-width: 880px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+:root {
+  --naming-gutter: clamp(20px, 6vw, 96px);
+  --pp: var(--paper);
+  --pp-text: var(--black);
+  scrollbar-color: var(--blue) var(--paper);
+}
 
-    .controls { display: grid; gap: 16px; padding: 20px; border: 1px solid var(--rule); background: var(--surface-2); position: sticky; top: 16px; }
-    .field { display: grid; gap: 6px; }
-    .field > .lbl { font: 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-    .hint { font: 11px/1.4 var(--mono); color: var(--muted); }
-    select, input[type="text"], input[type="number"], textarea {
-      font: 13px var(--mono); color: var(--text); background: #fff;
-      border: 1px solid #000; padding: 7px 8px; width: 100%;
-    }
-    textarea { min-height: 70px; resize: vertical; }
-    input[type="range"] { width: 100%; accent-color: var(--accent); }
-    .row { display: flex; gap: 8px; align-items: center; }
-    .row > * { flex: 1; min-width: 0; }
-    .row > b { flex: none; }
-    .seg { display: inline-flex; border: 1px solid #000; flex-wrap: wrap; justify-self: start; }
-    .seg button { font: 12px var(--mono); border: 0; background: #fff; padding: 6px 10px; cursor: pointer; }
-    .seg button + button { border-left: 1px solid #000; }
-    .seg button.is-active { background: var(--text); color: var(--surface); }
-    .seg button:disabled { color: rgba(0,0,0,.3); cursor: not-allowed; }
+body {
+  margin: 0;
+  color: var(--black);
+  background: var(--paper);
+  font: 17px/1.55 var(--font-text);
+}
 
-    .code { font: 13px/1.6 var(--mono); background: var(--text); color: #f0e9da; padding: 14px 16px; margin: 0 0 16px; overflow-x: auto; white-space: pre; }
-    .code .s { color: #e8b96d; } .code .f { color: #88aee0; } .code .k { color: #c5b3e0; }
-    .error { border: 1px solid var(--error); color: var(--error); background: #fff; padding: 12px 14px; font: 13px var(--mono); margin: 0 0 16px; }
-    .meta { font: 12px var(--mono); color: var(--muted); margin: 0 0 12px; }
+[hidden] {
+  display: none !important;
+}
 
-    .tiles { display: flex; flex-wrap: wrap; align-items: stretch; }
-    .tile { display: flex; flex-direction: column; justify-content: flex-end; min-width: 84px; padding: 10px; font: 12px var(--mono); position: relative; }
-    .tile .name { font: 18px/1.1 var(--serif); margin-bottom: 4px; word-break: break-all; }
-    .tile.is-base { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 1; }
-    .tile.is-base::before { content: "base"; position: absolute; top: 6px; left: 6px; font-size: 9px; padding: 1px 5px; background: var(--accent); color: #fff; }
-    .tile.is-new { outline: 2px dashed currentColor; outline-offset: -4px; }
-    .colors .tile { height: 120px; flex: 1 1 84px; }
-    .sizes { align-items: flex-end; gap: 8px; }
-    .sizes .tile { background: #fff; border: 1px solid #000; justify-content: flex-start; flex: none; }
-    .grow { display: flex; align-items: center; }
-    .grow button { width: 22px; height: 22px; font: 14px/1 var(--mono); border: 1px solid #000; background: #fff; cursor: pointer; margin: 0 -11px; position: relative; z-index: 2; padding: 0; }
-    .grow button:hover { background: var(--text); color: #fff; }
-    .sizes .grow button { margin: 0; }
+.naming *,
+.naming *::before,
+.naming *::after {
+  box-sizing: border-box;
+}
 
-    .out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 28px; }
-    @media (max-width: 880px) { .out { grid-template-columns: minmax(0, 1fr); } }
-    pre.css { margin: 0; font: 12px/1.6 var(--mono); background: #fff; border: 1px solid var(--rule); padding: 14px; overflow: auto; max-height: 320px; }
-    .stable p { font-size: 15px; color: var(--muted); margin: 0 0 10px; }
-    .stable ul { font: 13px var(--mono); padding-left: 18px; margin: 10px 0 0; }
-    .stable li { margin-bottom: 4px; }
-    .rerun { font: 12px var(--mono); border: 1px solid #000; background: #fff; padding: 7px 12px; cursor: pointer; }
-    .rerun:hover { background: var(--text); color: #fff; }
+code {
+  font: 0.8em var(--font-code);
+}
 
-    color-input { gap: 0; align-items: stretch; font: 12px/1 var(--mono); }
-    color-input::part(chip) { box-sizing: border-box; inline-size: 32px; block-size: 32px; border-radius: 0; border: 1px solid #000; border-right: 0; box-shadow: inset 0 0 0 1px #fff; }
-    color-input::part(trigger) { border-radius: 0; }
-    color-input::part(input) { box-sizing: border-box; block-size: 32px; inline-size: 10.5ch; padding: 0 8px; border: 1px solid #000; border-radius: 0; background: #fff; font: 12px/1 var(--mono); }
-    color-input::part(panel), color-input::part(area) { border-radius: 0; }
-  
+/* ─── Opening ─────────────────────────────────────────────────────── */
+.naming-hero {
+  padding: calc(var(--row) * 4) var(--naming-gutter) calc(var(--row) * 2);
+}
+
+.naming-hero h1 {
+  margin: 0 0 calc(var(--row) / 2);
+  font: 600 clamp(40px, 4.6vw, 68px) / 1.02 var(--font-text);
+  letter-spacing: -0.025em;
+}
+
+.naming-hero p {
+  max-width: 38em;
+  margin: 0;
+  font-size: clamp(17px, 1.4vw, 20px);
+  text-wrap: pretty;
+}
+
+/* ─── Settings beside the results ────────────────────────────────── */
+.naming {
+  display: grid;
+  grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
+  gap: calc(var(--row) * 2);
+  align-items: start;
+  padding: 0 var(--naming-gutter) calc(var(--row) * 4);
+}
+
+/* ─── Settings: a ledger, an option a row ─────────────────────────── */
+.settings {
+  position: sticky;
+  top: var(--row);
+  margin: var(--row) 0 0;
+}
+
+.settings-rows {
+  --ledger-cols: 8.5em minmax(0, 1fr);
+  font-size: 15px;
+}
+
+.settings .lbl {
+  color: color-mix(in srgb, var(--black) 70%, var(--paper));
+}
+
+.settings .ctl {
+  display: grid;
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.ctl-range,
+.ctl-pair {
+  display: flex !important;
+  align-items: center;
+  gap: 14px;
+}
+
+.ctl-range input[type="range"] {
+  flex: 1;
+}
+
+.ctl-range b {
+  min-width: 2ch;
+  font: 12px var(--font-code);
+  text-align: right;
+}
+
+.ctl-pair > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings .hint {
+  font: 11px / 18px var(--font-code);
+  padding-bottom: 5px;
+  color: color-mix(in srgb, var(--black) 62%, var(--paper));
+}
+
+.settings .switch {
+  margin: 4px 0;
+}
+
+.settings .switch button {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 3px 8px;
+}
+
+.settings .switch button:disabled {
+  color: color-mix(in srgb, var(--black) 35%, var(--paper));
+  cursor: not-allowed;
+}
+
+/* Fields: text written on the paper, underlined, like the color picker. */
+.settings :is(select, input[type="text"], input[type="number"], textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--row);
+  margin: 0;
+  padding: 0;
+  font: 12px / var(--row) var(--font-code);
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--black) 45%, var(--paper));
+  border-radius: 0;
+  outline: 0;
+}
+
+.settings :is(select, input, textarea):focus-visible {
+  border-bottom-color: var(--black);
+}
+
+.settings textarea {
+  resize: vertical;
+}
+
+.settings select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 18px;
+  background:
+    linear-gradient(45deg, transparent 50%, currentColor 50%) right 6px center / 5px 5px no-repeat,
+    linear-gradient(-45deg, transparent 50%, currentColor 50%) right 1px center / 5px 5px no-repeat;
+  cursor: pointer;
+}
+
+.settings ::placeholder {
+  color: color-mix(in srgb, var(--black) 45%, var(--paper));
+}
+
+/* ─── Results: a folder of three papers ───────────────────────────── */
+.folder-sheet--names {
+  --pp: var(--blue);
+  --pp-text: var(--on-black);
+  background: var(--pp);
+}
+
+.folder-sheet--code,
+.folder-sheet--css {
+  --pp: var(--black);
+  --pp-text: var(--on-black);
+  background: var(--pp);
+}
+
+.folder-sheet--names { --tab-left: 0px; }
+.folder-sheet--code { --tab-left: 130px; }
+.folder-sheet--css { --tab-left: 246px; }
+
+/* The front tab carries its dot (shared.css). */
+.folder-tab {
+  padding: 0 var(--row) 0 calc(var(--row) * 1.25);
+}
+
+.folder-sheet--names .folder-body {
+  padding: var(--row);
+}
+
+pre.code {
+  margin: 0;
+  padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
+  font: 12px / var(--row) var(--font-code);
+  color: var(--on-black);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+#css {
+  max-height: calc(var(--row) * 18);
+  overflow-y: auto;
+}
+
+.code .s { color: var(--yellow); }
+.code .f { color: color-mix(in srgb, var(--blue) 40%, var(--on-black)); }
+.code .k { color: color-mix(in srgb, var(--red) 55%, var(--on-black)); }
+
+.meta {
+  margin: 0 0 calc(var(--row) / 2);
+  font: 12px / var(--row) var(--font-code);
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--on-black) 70%, var(--blue));
+}
+
+.error {
+  margin: 0 0 var(--row);
+  padding: calc(var(--row) / 2) 14px;
+  font: 12px / 1.5 var(--font-code);
+  color: var(--black);
+  background: var(--red);
+}
+
+/* ─── The names ───────────────────────────────────────────────────── */
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 84px;
+  padding: 10px;
+  font: 11px / 1.4 var(--font-code);
+}
+
+.tile .name {
+  margin-bottom: 2px;
+  font: 600 16px / 1.15 var(--font-text);
+  word-break: break-all;
+}
+
+/* The base: marked in the paper's text color; a name inserted by
+   nameBetween: a dashed frame. */
+.tile.is-base {
+  box-shadow: inset 0 0 0 2px var(--on-black), inset 0 0 0 3px var(--blue);
+  z-index: 1;
+}
+
+.tile.is-base::before {
+  content: "base";
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 6px;
+  font: 10px / 18px var(--font-code);
+  color: var(--blue);
+  background: var(--on-black);
+}
+
+.tile.is-new {
+  outline: 1px dashed currentColor;
+  outline-offset: -5px;
+}
+
+.colors .tile {
+  flex: 1 1 84px;
+  height: calc(var(--row) * 4);
+}
+
+.sizes {
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.sizes .tile {
+  flex: none;
+  justify-content: flex-start;
+  color: var(--on-black);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-black) 60%, var(--blue));
+}
+
+/* + between two names: nameBetween. */
+.grow {
+  display: flex;
+  align-items: center;
+}
+
+.grow button {
+  position: relative;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  margin: 0 -11px;
+  padding: 0;
+  font: 14px / 1 var(--font-code);
+  color: var(--black);
+  background: var(--on-black);
+  border: 1px solid var(--black);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.grow button:hover {
+  color: var(--on-black);
+  background: var(--black);
+}
+
+.sizes .grow button {
+  margin: 0;
+}
+
+/* ─── Growing the scale ───────────────────────────────────────────── */
+.growing {
+  margin-top: calc(var(--row) * 2);
+}
+
+.growing h2 {
+  margin: 0 0 calc(var(--row) / 2);
+  font: 600 24px / var(--row) var(--font-text);
+  letter-spacing: -0.01em;
+}
+
+.growing p {
+  max-width: 40em;
+  margin: 0 0 var(--row);
+}
+
+.growing-rows {
+  --ledger-cols: minmax(0, 1fr);
+  font: 12px var(--font-code);
+}
+
+.growing-rows:not(:empty) {
+  margin-bottom: var(--row);
+  box-shadow: inset 0 1px 0 var(--lg-rule);
+}
+
+.rerun {
+  min-height: var(--row);
+  padding: 0 14px;
+  font: 12px var(--font-code);
+  color: var(--on-black);
+  background: var(--black);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.rerun:hover {
+  background: var(--blue);
+}
+
+/* ─── Narrow screens: settings above the results ─────────────────── */
+@media (max-width: 899px) {
+  .naming {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings {
+    position: static;
+  }
+}
+
+/* ─── Phones: closer tabs, a narrower label column ───────────────── */
+@media (max-width: 640px) {
+  .folder-sheet--code { --tab-left: 96px; }
+  .folder-sheet--css { --tab-left: 176px; }
+
+  .settings-rows {
+    --ledger-cols: 6.5em minmax(0, 1fr);
+    font-size: 14px;
+  }
+
+  .settings-rows > :not([data-ledger-skip]) {
+    grid-template-columns: var(--row) var(--ledger-cols);
+  }
+
+  .folder-sheet--names .folder-body {
+    padding: calc(var(--row) / 2);
+  }
+
+  .settings .switch button {
+    padding: 3px 5px;
+    font-size: 11px;
+  }
+}

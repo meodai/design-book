@@ -264,7 +264,7 @@ function draw () {
     t.className = `tile${it.isBase ? " is-base" : ""}${it.isNew ? " is-new" : ""}`;
     if (state.view === "colors") {
       t.style.background = it.hex;
-      t.style.color = (toOklch(it.hex)?.l ?? 0.5) > 0.62 ? "#1d1c1c" : "#fcf6ee";
+      t.style.color = (toOklch(it.hex)?.l ?? 0.5) > 0.62 ? "var(--black)" : "var(--on-black)";
       t.innerHTML = `<span class="name"></span><span>${it.hex}</span>`;
     } else {
       const size = 16 + it.size * 3;
@@ -278,7 +278,7 @@ function draw () {
 
   $("rerun").hidden = added === 0;
   $("rerun").textContent = `Re-run with ${state.items.length} names instead`;
-  $("grown").innerHTML = state.grown.map((l) => `<li>${esc(l)}</li>`).join("");
+  $("grown").innerHTML = state.grown.map((l) => `<div><span>${esc(l)}</span></div>`).join("");
 
   try {
     const book = new DesignBook("naming-demo");
@@ -312,6 +312,18 @@ function grow (i) {
   state.grown = state.grown.slice(0, 10);
   draw();
 }
+
+// The results folder: a tab, or any part of a paper behind that shows,
+// brings that paper forward.
+$("folder").addEventListener("click", (e) => {
+  const picked = e.target.closest(".folder-tab")?.closest(".folder-sheet") ?? e.target.closest(".folder-sheet:not(.is-front)");
+  if (!picked) return;
+  for (const sheet of $("folder").querySelectorAll(".folder-sheet")) {
+    const front = sheet === picked;
+    sheet.classList.toggle("is-front", front);
+    sheet.querySelector(".folder-tab").setAttribute("aria-pressed", String(front));
+  }
+});
 
 // Wiring
 $("rerun").addEventListener("click", () => {

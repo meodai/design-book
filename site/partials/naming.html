@@ -1,120 +1,156 @@
-<header class="top">
-  <a href="{{base}}" class="top-mark">Design Book</a>
-  <nav class="top-nav">
-    <a href="https://github.com/meodai/design-book">GitHub</a>
-    <a href="{{base}}editor/">Editor</a>
-    <a href="{{base}}article/">Article</a>
-  </nav>
-</header>
-<main>
-  <h1>Naming playground</h1>
-  <p class="lead">
+<section class="naming-hero">
+  <!--brand-->
+  <h1>Naming playground.</h1>
+  <p>
     Every naming scheme in Design Book, live: <code>nameValues</code>,
-    <code>scaleNames</code>, <code>nameBetween</code> and <code>namingScheme</code>.
-    Pick a scheme and a count; the swatches are a ramp from the seed color,
-    named and stored in a real DesignBook scope. Only the options that apply
-    to the scheme are shown.
+    <code>scaleNames</code>, <code>nameBetween</code> and
+    <code>namingScheme</code>. Pick a scheme and a count; the colors are a
+    ramp from the seed color, named and stored in a real Design Book scope.
+    Only the options that fit the scheme are shown.
   </p>
+</section>
 
-  <div class="layout">
-    <form class="controls" onsubmit="return false">
-      <label class="field"><span class="lbl">Scheme</span>
-        <select id="scheme"></select>
-        <span class="hint" id="scheme-hint"></span>
-      </label>
-      <label class="field"><span class="lbl">Count <b id="count-val"></b></span>
-        <input type="range" id="count" min="0" max="40" value="7" />
-      </label>
-
-      <div class="field"><span class="lbl">Strategy (anchor)</span>
-        <div class="seg" id="anchor">
-          <button type="button" data-v="default" class="is-active">default</button>
-          <button type="button" data-v="start">start</button>
-          <button type="button" data-v="base">base</button>
-          <button type="button" data-v="range">range</button>
-        </div>
-        <span class="hint" id="anchor-hint"></span>
+<div class="naming">
+  <form class="settings" onsubmit="return false">
+    <p class="settings-head" data-ledger-head>Settings</p>
+    <div class="settings-rows" data-ledger>
+      <div class="field">
+        <span class="lbl">scheme</span>
+        <span class="ctl">
+          <select id="scheme"></select>
+          <small class="hint" id="scheme-hint"></small>
+        </span>
       </div>
-
-      <div class="field" id="base-field"><span class="lbl">Base</span>
-        <div class="seg" id="base-mode">
-          <button type="button" data-mode="none" class="is-active">none</button>
-          <button type="button" data-mode="centre">base: n</button>
-          <button type="button" data-mode="pair">[n, name]</button>
-        </div>
-        <div class="row" id="base-controls">
-          <input type="range" id="base-index" min="0" max="6" value="2" />
-          <b class="mono" id="base-index-val">2</b>
-        </div>
-        <input type="text" id="base-name" placeholder="name" />
-        <span class="hint" id="base-hint"></span>
+      <div class="field">
+        <span class="lbl">count</span>
+        <span class="ctl ctl-range">
+          <input type="range" id="count" min="0" max="40" value="7" />
+          <b id="count-val"></b>
+        </span>
       </div>
-
-      <div class="field" id="range-field"><span class="lbl" id="range-lbl">from / to</span>
-        <div class="row">
+      <div class="field">
+        <span class="lbl">strategy</span>
+        <span class="ctl">
+          <span class="switch" id="anchor">
+            <button type="button" data-v="default" class="is-active">default</button>
+            <button type="button" data-v="start">start</button>
+            <button type="button" data-v="base">base</button>
+            <button type="button" data-v="range">range</button>
+          </span>
+          <small class="hint" id="anchor-hint"></small>
+        </span>
+      </div>
+      <div class="field" id="base-field">
+        <span class="lbl">base</span>
+        <span class="ctl">
+          <span class="switch" id="base-mode">
+            <button type="button" data-mode="none" class="is-active">none</button>
+            <button type="button" data-mode="centre">base: n</button>
+            <button type="button" data-mode="pair">[n, name]</button>
+          </span>
+          <span class="ctl-range" id="base-controls">
+            <input type="range" id="base-index" min="0" max="6" value="2" />
+            <b id="base-index-val">2</b>
+          </span>
+          <input type="text" id="base-name" placeholder="name" />
+          <small class="hint" id="base-hint"></small>
+        </span>
+      </div>
+      <div class="field" id="range-field">
+        <span class="lbl" id="range-lbl">from / to</span>
+        <span class="ctl ctl-pair">
           <input type="text" id="from" placeholder="from" />
           <input type="text" id="to" placeholder="to" />
-        </div>
+        </span>
       </div>
-      <label class="field" id="step-field"><span class="lbl">step</span>
-        <input type="number" id="step" placeholder="1" min="1" step="1" />
-      </label>
-      <div class="field" id="case-field"><span class="lbl">case</span>
-        <div class="seg" id="case">
-          <button type="button" data-v="lower" class="is-active">lower</button>
-          <button type="button" data-v="upper">upper</button>
-        </div>
+      <div class="field" id="step-field">
+        <span class="lbl">step</span>
+        <span class="ctl">
+          <input type="number" id="step" placeholder="1" min="1" step="1" />
+        </span>
       </div>
-      <div class="field" id="overflow-field"><span class="lbl">overflow (when the list runs out)</span>
-        <div class="seg" id="overflow">
-          <button type="button" data-v="throw" class="is-active">throw</button>
-          <button type="button" data-v="between">between</button>
-        </div>
+      <div class="field" id="case-field">
+        <span class="lbl">case</span>
+        <span class="ctl">
+          <span class="switch" id="case">
+            <button type="button" data-v="lower" class="is-active">lower</button>
+            <button type="button" data-v="upper">upper</button>
+          </span>
+        </span>
       </div>
-      <div class="field" id="custom-field"><span class="lbl">Your list (smallest first)</span>
-        <textarea id="custom">hint, faint, subtle, soft, mid, firm, bold, strong, intense</textarea>
-        <input type="text" id="custom-base" value="mid" placeholder="center name (optional)" />
+      <div class="field" id="overflow-field">
+        <span class="lbl">overflow</span>
+        <span class="ctl">
+          <span class="switch" id="overflow">
+            <button type="button" data-v="throw" class="is-active">throw</button>
+            <button type="button" data-v="between">between</button>
+          </span>
+          <small class="hint">when the list runs out of names</small>
+        </span>
       </div>
-      <div class="field"><span class="lbl">prefix / suffix</span>
-        <div class="row">
+      <div class="field" id="custom-field">
+        <span class="lbl">your list</span>
+        <span class="ctl">
+          <textarea id="custom" rows="3">hint, faint, subtle, soft, mid, firm, bold, strong, intense</textarea>
+          <input type="text" id="custom-base" value="mid" placeholder="center name (optional)" />
+          <small class="hint">smallest first</small>
+        </span>
+      </div>
+      <div class="field">
+        <span class="lbl">prefix / suffix</span>
+        <span class="ctl ctl-pair">
           <input type="text" id="prefix" placeholder="prefix" />
           <input type="text" id="suffix" placeholder="suffix" />
-        </div>
+        </span>
       </div>
-      <div class="field"><span class="lbl">Show as</span>
-        <div class="seg" id="view">
-          <button type="button" data-v="colors" class="is-active">colors</button>
-          <button type="button" data-v="sizes">sizes</button>
-        </div>
+      <div class="field">
+        <span class="lbl">show as</span>
+        <span class="ctl">
+          <span class="switch" id="view">
+            <button type="button" data-v="colors" class="is-active">colors</button>
+            <button type="button" data-v="sizes">sizes</button>
+          </span>
+        </span>
       </div>
-      <div class="field" id="seed-field"><span class="lbl">Ramp seed</span>
-        <color-input id="seed" value="#2d60a5" no-alpha></color-input>
+      <div class="field" id="seed-field">
+        <span class="lbl">ramp seed</span>
+        <span class="ctl">
+          <color-input id="seed" value="#2d60a5" no-alpha></color-input>
+        </span>
       </div>
-    </form>
+    </div>
+  </form>
 
-    <section>
-      <pre class="code" id="code"></pre>
-      <div class="error" id="error" hidden></div>
-      <p class="meta" id="meta"></p>
-      <div class="tiles colors" id="tiles"></div>
-
-      <div class="out">
-        <div>
-          <h2>In a real scope</h2>
-          <pre class="css" id="css"></pre>
-        </div>
-        <div class="stable">
-          <h2>Growing the scale</h2>
-          <p>
-            The best names always come from <b>re-running</b> the naming with
-            the new count. Insert with <b>+</b> (<code>nameBetween</code>) only
-            when existing names must stay stable — CSS, components or a
-            published token set already use them.
-          </p>
-          <button type="button" class="rerun" id="rerun" hidden></button>
-          <ul id="grown"></ul>
+  <div class="results">
+    <div class="folder" id="folder">
+      <div class="folder-sheet folder-sheet--css" data-sheet="css">
+        <button type="button" class="folder-tab" aria-pressed="false">CSS</button>
+        <div class="folder-body"><pre class="code holes-left" id="css"></pre></div>
+      </div>
+      <div class="folder-sheet folder-sheet--code" data-sheet="code">
+        <button type="button" class="folder-tab" aria-pressed="false">Code</button>
+        <div class="folder-body"><pre class="code holes-left" id="code"></pre></div>
+      </div>
+      <div class="folder-sheet folder-sheet--names is-front" data-sheet="names">
+        <button type="button" class="folder-tab" aria-pressed="true">Names</button>
+        <div class="folder-body">
+          <p class="meta" id="meta"></p>
+          <div class="error" id="error" hidden></div>
+          <div class="tiles colors" id="tiles"></div>
         </div>
       </div>
+    </div>
+
+    <section class="growing">
+      <h2>Growing the scale</h2>
+      <p>
+        The best names always come from running the naming again with the new
+        count. Insert with <b>+</b> (<code>nameBetween</code>) only when the
+        existing names have to stay: when CSS, components or a published token
+        set already use them.
+      </p>
+      <div class="growing-rows" id="grown" data-ledger></div>
+      <button type="button" class="rerun" id="rerun" hidden></button>
     </section>
   </div>
-</main>
+</div>

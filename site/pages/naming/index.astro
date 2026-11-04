@@ -1,18 +1,24 @@
 ---
 import Page from '../../layouts/Page.astro';
+import InstallBar from '../../components/InstallBar.astro';
+import Footer from '../../components/Footer.astro';
 import { partial } from '../../lib/partial';
 import markup from '../../partials/naming.html?raw';
+import '../../marketing/shared.css';
 import '../../naming/style.css';
 const [beforeBrand, afterBrand] = partial(markup);
 ---
 <Page
-  title="Naming Playground"
+  title="Design Book — naming playground"
   description="Try every Design Book naming scheme: scaleNames, nameValues, nameBetween and namingScheme."
-  fonts={['https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Libertinus+Serif&display=swap']}
+  fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
-
   <Fragment set:html={beforeBrand} />
+  <Fragment set:html={afterBrand} />
+  <InstallBar />
+  <Footer current="naming" />
   <script>
     import '../../naming/demo.js';
+    import '../../marketing/sliders.js';
   </script>
 </Page>
