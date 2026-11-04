@@ -30,7 +30,7 @@
   --ink: #22201c;
   --accent: #3f8f72;
   --rule: #777;
-  --highlight: #3c61a0; /* ui.mark, once the book has resolved */
+  --highlight: #172c4f; /* ui.mark, once the book has resolved */
   --on-highlight: #eee9dc; /* ui.on-mark */
 
   --hair: color-mix(in oklch, var(--ink) 70%, transparent);
@@ -1219,4 +1219,8 @@ pre {
   font-weight: 700;
   vertical-align: baseline;
   margin-right: 0.05em;
+}
+
+.hero .brand-mark {
+  margin: 0;
 }

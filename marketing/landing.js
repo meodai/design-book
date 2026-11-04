@@ -4,7 +4,7 @@
 // to that book; the page only reads back what it resolves to.
 
 import { converter, formatHex, parse, wcagContrast } from "culori";
-import { Poline } from "poline/picker"; // also defines <poline-picker>
+import { Poline, positionFunctions } from "poline/picker"; // also defines <poline-picker>
 import { generateColorRamp, colorUtils } from "rampensau";
 import "./sliders.js";
 import "./imprint.js";
@@ -59,6 +59,8 @@ const POLINES = Object.fromEntries(
         return [c.h ?? 0, c.s ?? 0, c.l];
       }),
       numPoints: 1,
+      // Evenly spaced between the anchors, not eased toward them.
+      positionFunction: positionFunctions.linearPosition,
     }),
   ]),
 );
@@ -204,7 +206,7 @@ function writeRules() {
   ui.set("accent", mostVivid(ref(state.pal1), { readableOn: ref("ui.ground"), readableContrast: 3 }));
   ui.set("rule", colorMix(ref("ui.ink"), ref("ui.ground"), { ratio: 0.6, colorSpace: "oklch" }));
   // The papers and the mark are anchors of the first palette, by position.
-  ui.set("mark", nth(ref(state.pal1), 8));
+  ui.set("mark", nth(ref(state.pal1), 9));
   ui.set("paper-dark", darkest(ref(state.pal1)));
   ui.set("paper-red", nth(ref(state.pal1), 4));
   ui.set("paper-yellow", nth(ref(state.pal1), 2));
@@ -276,7 +278,7 @@ function ruleSource(key) {
     case "rule":
       return `colorMix(ref('ui.ink'), ref('ui.ground'), { ratio: 0.6, colorSpace: 'oklch' })`;
     case "mark":
-      return `nth(ref('${state.pal1}'), 8)`;
+      return `nth(ref('${state.pal1}'), 9)`;
     case "on-mark":
       return `bestContrastWith(ref('ui.mark'), ref('marks'))`;
     case "paper-dark":
@@ -331,7 +333,7 @@ function ruleWords(key) {
     case "rule":
       return `ink, mixed 60% of the way towards ground.`;
     case "mark":
-      return `the blue anchor of ${state.pal1}, its ninth color.`;
+      return `the dark blue of ${state.pal1}, its tenth color, between the blue anchor and the darkest.`;
     case "on-mark":
       return `the step of those ramps that contrasts most with mark.`;
     case "paper-dark":

@@ -20,7 +20,7 @@
   --paper: #eee9dc;
   --black: #0d0a03;
   --on-black: #fffaed;
-  --blue: #3c61a0;
+  --blue: #172c4f; /* the dark blue: the landing's ui.mark */
   --red: #de5331;
   --yellow: #dab43d;
   --green: #479549;
@@ -874,4 +874,115 @@ color-input::part(controls) {
 .install .copy.copied:hover {
   color: var(--black);
   background: #479549;
+}
+
+/* Every item in the footer on one center line; the Elastiq mark is
+   nudged so its lettering, not its swoosh, sits on that line. */
+.imprint,
+.imprint-nav {
+  align-items: center;
+}
+
+.imprint > *,
+.imprint-nav a {
+  line-height: var(--row);
+}
+
+.elastiq-logo {
+  position: relative;
+  top: 0.18em;
+}
+
+/* The book over the name: the logo on a line of its own, the name under
+   it, both starting on the text column's edge. */
+.brand-mark {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: end;
+  row-gap: 0.45em;
+}
+
+.brand-mark .logo {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: start;
+  width: 1.6em;
+  height: 1.35em;
+  margin: 0;
+}
+
+.brand-mark > span {
+  grid-row: 2;
+}
+
+/* The mark stands the same distance from the top on every page. */
+.brand-mark {
+  top: 84px;
+  margin: 0;
+}
+
+/* Hovering a tab behind: a dot drops in from its top edge (the tab
+   clips it until then), instead of an underline. */
+.folder-tab {
+  overflow: hidden;
+}
+
+.folder-tab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translate(-50%, -100%);
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.folder-sheet:not(.is-front) .folder-tab:hover {
+  text-decoration: none;
+}
+
+.folder-sheet:not(.is-front) .folder-tab:hover::after,
+.folder-sheet:not(.is-front) .folder-tab:focus-visible::after {
+  transform: translate(-50%, 4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-tab::after {
+    transition: none;
+  }
+}
+
+/* The tab in front keeps its dot. */
+.folder-sheet.is-front > .folder-tab::after {
+  transform: translate(-50%, 4px);
+}
+
+/* A small dot, above the letters. */
+.folder-tab::after {
+  width: 4px;
+  height: 4px;
+}
+
+.folder-sheet:not(.is-front) .folder-tab:hover::after,
+.folder-sheet:not(.is-front) .folder-tab:focus-visible::after,
+.folder-sheet.is-front > .folder-tab::after {
+  transform: translate(-50%, 3px);
+}
+
+/* The dot sits in front of the label (in the tab's left padding),
+   sliding down from the top edge to the middle of the line. */
+.folder-tab::after {
+  left: calc(var(--row) / 2 - 2px);
+  transform: translateY(-100%);
+}
+
+.folder-sheet:not(.is-front) .folder-tab:hover::after,
+.folder-sheet:not(.is-front) .folder-tab:focus-visible::after,
+.folder-sheet.is-front > .folder-tab::after {
+  transform: translateY(calc(var(--row) / 2 - 2px));
 }
