@@ -1,18 +1,11 @@
 import {
   createFunctionToken,
-  isFieldKey,
-  isFunctionTokenValue,
   isReferenceValue,
   isRelativeKey,
   isScopeKey,
-  isScopeReference,
   normalizeNotKeys,
 } from '../../tokens';
-import type {
-  AnyTokenValue,
-  FunctionTokenValue,
-  ReferenceValue,
-} from '../../tokens';
+import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { poolKeys } from '../scope-members';
@@ -137,85 +130,7 @@ export function siblingImpl(
 }
 
 /**
- * The member `offset` steps away from `anchor` in its scope: `+1` is the next
- * one, `-1` the previous. Stops at the ends unless `{ wrap: true }`.
- *
- * The anchor's *key* is what matters (its position), not its value, so it is
- * stored in the options rather than as an argument the resolver would turn
- * into a value. The scope it walks is declared in `metadata.iteratedScopes`.
- */
-/** What `locateMember` needs from a book. */
-export interface MemberBook {
-  getScope(name: string): Scope | undefined;
-  getTokenByKey(key: string): AnyTokenValue | undefined;
-  resolve(key: string): string;
-}
-
-const scopePartOf = (key: string) => key.slice(0, key.indexOf('.'));
-
-/**
- * Where the color (or size) of `key` lives: the member of a scope that
- * `sibling` steps through. Follows the references inside the key's own scope
- * and then one hop out — `context.surface = ref('brand-scale.100')` lives at
- * `brand-scale.100`. A selector lives where its pick does: the member of its
- * pool with its value (for a `sibling`, of the scope it walks). A plain value
- * lives where it is. `undefined` when the value is computed and is no
- * member of any scope.
- */
-export function locateMember(book: MemberBook, key: string, seen: Set<string> = new Set()): { scope: string; key: string } | undefined {
-  const start = scopePartOf(key);
-  let current = key;
-  while (!seen.has(current)) {
-    seen.add(current);
-    if (scopePartOf(current) !== start) return { scope: scopePartOf(current), key: current };
-    const token = book.getTokenByKey(current);
-    if (!token) return undefined;
-    if (isReferenceValue(token)) {
-      if (isScopeKey(token.key) || isFieldKey(token.key)) return undefined;
-      current = token.key;
-      continue;
-    }
-    if (isFunctionTokenValue(token)) return pickedMember(book, current, token, seen);
-    return { scope: start, key: current };
-  }
-  return undefined;
-}
-
-/** The member a selector picked: the one in its pool with its value. */
-function pickedMember(
-  book: MemberBook,
-  key: string,
-  token: FunctionTokenValue,
-  seen: Set<string>,
-): { scope: string; key: string } | undefined {
-  const pools: string[] = [];
-  if (token.name === 'sibling' && typeof token.options?.from === 'string') {
-    const walked = locateMember(book, token.options.from, seen);
-    if (walked) pools.push(walked.scope);
-  } else {
-    for (const arg of token.args) if (isScopeReference(arg)) pools.push(arg.key);
-  }
-  if (pools.length === 0) return undefined;
-  let value: string;
-  try {
-    value = book.resolve(key).toLowerCase();
-  } catch {
-    return undefined;
-  }
-  for (const name of pools) {
-    const scope = book.getScope(name);
-    if (!scope) continue;
-    for (const member of poolKeys(scope)) {
-      try {
-        if (scope.resolve(member).toLowerCase() === value) return { scope: name, key: `${name}.${member}` };
-      } catch { /* not a candidate */ }
-    }
-  }
-  return undefined;
-}
-
-/**
- * Steps along the scale the anchor's color lives on (see `locateMember`):
+ * Steps along the scale the anchor's color lives on (see `locateMember` in `../members`):
  * `sibling(ref('gray.g100'), 1)` is the next member of `gray`, and
  * `sibling(ref('.surface'), 11)` — with `.surface` a `ref('brand-scale.100')` —
  * steps along `brand-scale`. The step count defaults to 1.
@@ -226,6 +141,10 @@ function pickedMember(
  * four steps toward the page, lighter on a light page, darker on a dark one.
  * It stops at the target; a negative count walks away from it. Both anchor
  * and target may be `inParent` / `inRoot` references.
+ *
+ * The anchor's *key* is what matters (its position), not its value, so it is
+ * stored in the options rather than as an argument the resolver would turn
+ * into a value. The scope it walks is declared in `metadata.iteratedScopes`.
  */
 export function sibling(
   anchor: ReferenceValue,

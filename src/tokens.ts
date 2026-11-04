@@ -1,4 +1,5 @@
 import { parse } from 'culori';
+import { scopeOf } from './keys';
 
 export interface TokenProcessor {
   name: string;
@@ -506,9 +507,7 @@ function notDependencies(fn: FunctionTokenValue): string[] {
   if (!Array.isArray(not) || not.length === 0) return [];
   const iterated = new Set(iteratedScopesOf(fn));
   return not.filter((n): n is string => {
-    if (typeof n !== 'string' || isRelativeKey(n)) return false;
-    const dot = n.indexOf('.');
-    return dot > 0 && !iterated.has(n.slice(0, dot));
+    return typeof n === 'string' && !isRelativeKey(n) && n.includes('.') && !iterated.has(scopeOf(n));
   });
 }
 

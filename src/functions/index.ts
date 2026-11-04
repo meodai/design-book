@@ -19,11 +19,11 @@ import { typographyImpl } from './non-color/typography';
 import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
-import { locateMember, siblingImpl, scopeOfKey } from './generic/sibling';
+import { siblingImpl, scopeOfKey } from './generic/sibling';
+import { excludedMembers, locateMember } from './members';
 import type { Scope } from '../scope';
 import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
-import { excludedMembers } from './not';
 import { splitReadableArgs } from './color/readable';
 
 export { bestContrastWith } from './color/best-contrast';
@@ -64,7 +64,7 @@ export function registerBuiltinFunctions(book: {
 	resolve(key: string): string;
 	getTokenByKey(key: string): AnyTokenValue | undefined;
 }): void {
-	// `not` names members wherever its keys are written; see ./not.
+	// `not` names members wherever its keys are written; see ./members.
 	const ex = (fn: string, scope: Scope, not: ReadonlyArray<unknown> | undefined) => excludedMembers(book, fn, scope, not ?? []);
 	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[]; direction?: Direction }) =>
 		bestContrastWithImpl(targetValue, scope, ex('bestContrastWith', scope, options?.not), options?.direction),

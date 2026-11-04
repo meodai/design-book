@@ -11,7 +11,7 @@ import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf,
 import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
-import { locateMember } from './functions/generic/sibling';
+import { locateMember } from './functions/members';
 import { FunctionError } from './errors';
 import { getTailwindRamps } from './data/tailwind-ramps';
 import { registerBuiltinRenderers } from './renderers/builtin';

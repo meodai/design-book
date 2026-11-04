@@ -3,7 +3,7 @@ import { DesignBook } from '../src/design-book';
 import { color, px, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { mostVivid } from '../src/functions/color/most-vivid';
-import { lightest } from '../src/functions/color/lightest-darkest';
+import { darkest, lightest } from '../src/functions/color/lightest-darkest';
 import { nth } from '../src/functions/generic/nth';
 import { largest } from '../src/functions/generic/extremes';
 import { sibling } from '../src/functions/generic/sibling';
@@ -103,6 +103,21 @@ describe('`not` names members wherever the key is written', () => {
     const ui = book.addScope('ui');
     ui.set('gap', largest(ref('space'), { not: [ref('base.max')] }));
     expect(book.resolve('ui.gap')).toBe('16px');
+  });
+
+  it('finds a selector\'s pick among the members it did not exclude', () => {
+    // a and c share a color; the selector left a out, so its pick is c.
+    const book = new DesignBook('picked');
+    const scale = book.addScope('scale');
+    scale.set('a', color('#111111'));
+    scale.set('b', color('#222222'));
+    scale.set('c', color('#111111'));
+    scale.set('d', color('#333333'));
+    const ui = book.addScope('ui');
+    ui.set('pick', darkest(ref('scale'), { not: [ref('scale.a')] }));
+    ui.set('next', sibling(ref('ui.pick'), 1));
+    expect(book.resolve('ui.pick')).toBe('#111111');
+    expect(book.resolve('ui.next')).toBe('#333333');
   });
 
   it('throws for an entry that names no member, instead of excluding nothing', () => {

@@ -22,6 +22,9 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Fixed
 
+- Finding which member a selector picked — for a `sibling` anchor or a
+  `not` entry — skips the members that selector excluded, so a pool with
+  two equal values no longer lands on the excluded one.
 - A `not` entry outside the pool that names no member used to exclude
   nothing without a word; it now throws. Keys of the pool itself behave as
   before, including ones that do not exist.

@@ -18,3 +18,10 @@ export function assertValidTokenKey(scopeName: string, name: string): void {
     `${scopeName}.${name}`,
   );
 }
+
+/** The scope part of a key: `gray` for `gray.g100` (and for `gray.title.fontSize`),
+ *  the key itself when it has no dot. Scope names cannot contain dots. */
+export function scopeOf(key: string): string {
+  const dot = key.indexOf('.');
+  return dot === -1 ? key : key.slice(0, dot);
+}
