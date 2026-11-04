@@ -1170,7 +1170,9 @@ section.first-screen {
   padding-bottom: var(--first-inset);
 }
 
-/* A line across the top of the footer, in its own colors. */
+/* Lines along the top and the right of the footer, in its own colors. */
 footer.imprint {
-  border-top: 1px solid color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
+  --imprint-line: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
+  border-top: 1px solid var(--imprint-line);
+  border-right: 1px solid var(--imprint-line);
 }
