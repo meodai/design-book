@@ -621,9 +621,6 @@ pre {
 .sheet-sizes { --tab-left: calc(var(--row) * 9.5); }
 .sheet-graph { --tab-left: calc(var(--row) * 14); }
 
-.folder-tab {
-  font-size: 15px;
-}
 
 /* ─── Graph ──────────────────────────────────────────────────────────
    The SVG renderer's output on the yellow paper (ui.paper-yellow): its

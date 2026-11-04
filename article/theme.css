@@ -427,8 +427,8 @@ body {
   padding: 0 var(--row);
   display: flex;
   align-items: center;
-  font-family: var(--font-article);
-  font-size: 13px;
+  font-family: var(--font-text);
+  font-size: 14px;
   font-variant-caps: normal;
   letter-spacing: 0;
   text-transform: none;
@@ -482,9 +482,6 @@ body {
   --active-outline: var(--blue);
 }
 
-.folder-tab {
-  font-size: 13px;
-}
 
 /* The specimen card is set in the page's own type; its colors, sizes
    and corners still come from the article's book. */
@@ -946,4 +943,22 @@ body {
 
 .article-hero .brand-mark {
   --brand-left: var(--article-gutter);
+}
+
+/* A demo's tab is the tab of its only sheet, so it is always in front
+   and carries the front tab's dot. */
+.demo-tab {
+  overflow: hidden;
+}
+
+.demo-tab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--row) / 2 - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateY(calc(var(--row) / 2 - 2px));
 }
