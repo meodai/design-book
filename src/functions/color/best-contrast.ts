@@ -14,6 +14,7 @@ import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLi
 import type { Direction } from '../kinds';
 import { collectScopeColors, contrastAgainst } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
+import { picked } from '../picks';
 import type { ReadableOnOptions } from './readable';
 
 export function bestContrastWithImpl(
@@ -39,6 +40,7 @@ export function bestContrastWithImpl(
   }
 
   let bestHex: string | null = null;
+  let bestKey = '';
   let bestRatio = -1;
 
   for (const candidate of filterReadable('bestContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
@@ -47,6 +49,7 @@ export function bestContrastWithImpl(
     if (ratio > bestRatio) {
       bestRatio = ratio;
       bestHex = candidate.hex;
+      bestKey = candidate.key;
     }
   }
 
@@ -57,7 +60,7 @@ export function bestContrastWithImpl(
     );
   }
 
-  return bestHex;
+  return picked(scope, bestKey, bestHex);
 }
 
 export function bestContrastWith(

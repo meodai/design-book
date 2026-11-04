@@ -15,6 +15,7 @@ import { filterReadable, readableOnParts } from '../color/readable';
 import type { ReadableOnOptions } from '../color/readable';
 import { DIRECTION_KIND, assertDirection, assertDirectionFits, describeKind, measureOf, measuredMembers } from '../kinds';
 import type { Direction, Measure } from '../kinds';
+import { picked } from '../picks';
 
 const toOklch = converter('oklch');
 
@@ -81,14 +82,14 @@ function closestMeasured(
   }
   const minGap = (side.minDistance ?? 0) + 1e-9;
 
-  let best: string | null = null;
+  let best: { key: string; value: string } | null = null;
   let bestDistance = Infinity;
   for (const member of members) {
     const gap = member.num - target.num;
     if (sign !== 0 && !(sign * gap > minGap && sign * gap <= limit)) continue;
     if (Math.abs(gap) < bestDistance) {
       bestDistance = Math.abs(gap);
-      best = member.value;
+      best = member;
     }
   }
   if (best === null) {
@@ -101,7 +102,7 @@ function closestMeasured(
       'closest',
     );
   }
-  return best;
+  return picked(scope, best.key, best.value);
 }
 
 function closestColorImpl(
@@ -147,7 +148,7 @@ function closestColorImpl(
     return gap > minGap && gap <= limit;
   };
 
-  let closestHex: string | null = null;
+  let closest: { key: string; hex: string } | null = null;
   let closestDistance = Infinity;
 
   const pool = filterReadable('closest', collectScopeColors(scope, not), readableOn, readableContrast);
@@ -159,11 +160,11 @@ function closestColorImpl(
     const distance = visibleDistance(targetParsed, candidate.parsed, backdrop);
     if (distance < closestDistance) {
       closestDistance = distance;
-      closestHex = candidate.hex;
+      closest = candidate;
     }
   }
 
-  if (!closestHex) {
+  if (!closest) {
     if (sign !== 0) {
       const where = side.upTo !== undefined
         ? `between ${targetValue} and ${side.upTo}`
@@ -176,7 +177,7 @@ function closestColorImpl(
     }
     throw new FunctionError('closest: no valid color candidates found in scope', 'closest');
   }
-  return closestHex;
+  return picked(scope, closest.key, closest.hex);
 }
 
 export interface ClosestOptions extends ReadableOnOptions {

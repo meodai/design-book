@@ -4,6 +4,7 @@ import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, Functi
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError, TokenError } from './errors';
+import { inFrame } from './functions/picks';
 import type { ComparableEntry, TokenOrderer } from './orderers';
 
 export type SortDirection = 'asc' | 'desc';
@@ -517,12 +518,16 @@ export class Scope {
    *  they're inlined as args — so they're invoked directly through the
    *  book's function registry rather than via `book.resolve`. */
   private resolveFunctionToken(fn: FunctionTokenValue): string {
-    const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveArg(arg));
-    const implementation = this.book.getFunction(fn.name);
-    if (!implementation) {
-      throw new Error(`Function "${fn.name}" is not registered`);
-    }
-    return implementation(...resolvedArgs, fn.options);
+    // Its own frame, so the member a selector picks is reported for this
+    // call and not for the call that is resolving it (./functions/picks).
+    return inFrame(() => {
+      const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveArg(arg));
+      const implementation = this.book.getFunction(fn.name);
+      if (!implementation) {
+        throw new Error(`Function "${fn.name}" is not registered`);
+      }
+      return implementation(...resolvedArgs, fn.options);
+    });
   }
 
   /** A function argument's value: refs and nested functions resolved, a

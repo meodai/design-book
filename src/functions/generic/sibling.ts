@@ -9,6 +9,7 @@ import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { poolKeys } from '../scope-members';
+import { picked } from '../picks';
 
 export interface SiblingOptions {
   /** Step in the direction of this token's color on the same scale, and
@@ -92,7 +93,7 @@ export function siblingImpl(
     if (target === -1) {
       throw new FunctionError(`sibling: "${toward}" is not in the pool of scope "${scope.name}"`, 'sibling');
     }
-    if (target === at) return valueAt(at)!;
+    if (target === at) return picked(scope, keys[at], valueAt(at)!);
     const towardDir = Math.sign(target - at);
     dir = offset >= 0 ? towardDir : -towardDir;
     if (offset >= 0) stopAt = target;
@@ -111,7 +112,7 @@ export function siblingImpl(
       i = (i + dir + keys.length) % keys.length;
       if (valueAt(i) !== null) steps--;
     }
-    return valueAt(i)!;
+    return picked(scope, keys[i], valueAt(i)!);
   }
 
   // Without wrap, stop at the last resolvable member in that direction —
@@ -126,7 +127,7 @@ export function siblingImpl(
       steps--;
     }
   }
-  return valueAt(last)!;
+  return picked(scope, keys[last], valueAt(last)!);
 }
 
 /**

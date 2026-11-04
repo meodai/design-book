@@ -32,6 +32,11 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Added
 
+- **Selectors report the member they picked.** A `sibling` anchor and a `not`
+  entry that name a selector now name exactly the member it chose, even when
+  another member has the same value. `picked(scope, key, value)` lets a
+  custom function report its pick the same way; one that does not is still
+  matched by value.
 - `bestContrastWith` and `minContrastWith` take `readableOn` /
   `readableContrast`: a second background the pick must also be readable on
   — a border on a page and on the band across it.
@@ -46,8 +51,6 @@ All notable changes to Design Book are recorded here. The format follows
 - A `not` entry outside the pool that names no member used to exclude
   nothing without a word; it now throws. Keys of the pool itself behave as
   before, including ones that do not exist.
-- The README described a selector anchor as stepping from "the member it
-  picked"; it is the first member of the pool with the same value.
 
 ## [0.17.0] - 2026-11-03
 

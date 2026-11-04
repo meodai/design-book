@@ -15,6 +15,7 @@ import type { Direction } from '../kinds';
 import { collectScopeColors, contrastAgainst } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
+import { picked } from '../picks';
 
 export interface MinContrastOptions extends ReadableOnOptions {
   /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
@@ -53,11 +54,12 @@ export function minContrastWithImpl(
     );
   }
 
-  const candidates: Array<{ hex: string; contrast: number }> = [];
+  const candidates: Array<{ key: string; hex: string; contrast: number }> = [];
 
   for (const candidate of filterReadable('minContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
     if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
     candidates.push({
+      key: candidate.key,
       hex: candidate.hex,
       contrast: contrastAgainst(targetColor, candidate.parsed),
     });
@@ -75,12 +77,12 @@ export function minContrastWithImpl(
   if (meetingThreshold.length > 0) {
     // Return the one with lowest contrast among those meeting the threshold
     meetingThreshold.sort((a, b) => a.contrast - b.contrast);
-    return meetingThreshold[0].hex;
+    return picked(scope, meetingThreshold[0].key, meetingThreshold[0].hex);
   }
 
   // Fallback: return highest contrast
   candidates.sort((a, b) => b.contrast - a.contrast);
-  return candidates[0].hex;
+  return picked(scope, candidates[0].key, candidates[0].hex);
 }
 
 export function minContrastWith(

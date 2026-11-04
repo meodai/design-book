@@ -3,6 +3,7 @@ import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { resolvePool } from './scope-members';
+import { picked } from './picks';
 
 /**
  * What a value is, for the functions that compare values across types
@@ -156,7 +157,7 @@ export function measuredContrast(
   const candidates = measuredMembers(scope, target.kind, target.unit, not)
     .filter((m) => m.num > 0)
     .filter((m) => direction === undefined || (direction === 'larger' ? m.num > target.num : m.num < target.num))
-    .map((m) => ({ value: m.value, ratio: Math.max(m.num, target.num) / Math.min(m.num, target.num) }));
+    .map((m) => ({ key: m.key, value: m.value, ratio: Math.max(m.num, target.num) / Math.min(m.num, target.num) }));
   if (candidates.length === 0) {
     throw new FunctionError(
       `${fn}: scope "${scope.name}" has no ${describeKind(target.kind, target.unit)}${direction ? ` ${direction} than ${targetValue}` : ''} to compare with ${targetValue}`,
@@ -165,7 +166,11 @@ export function measuredContrast(
   }
   if (mode.pick === 'min') {
     const meeting = candidates.filter((c) => c.ratio >= mode.minContrast - 1e-9);
-    if (meeting.length > 0) return meeting.reduce((a, b) => (b.ratio < a.ratio ? b : a)).value;
+    if (meeting.length > 0) {
+      const best = meeting.reduce((a, b) => (b.ratio < a.ratio ? b : a));
+      return picked(scope, best.key, best.value);
+    }
   }
-  return candidates.reduce((a, b) => (b.ratio > a.ratio ? b : a)).value;
+  const best = candidates.reduce((a, b) => (b.ratio > a.ratio ? b : a));
+  return picked(scope, best.key, best.value);
 }

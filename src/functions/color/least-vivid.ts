@@ -11,6 +11,7 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { collectScopeColors } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
+import { picked } from '../picks';
 import type { ReadableOnOptions } from './readable';
 
 const toOklch = converter('oklch');
@@ -31,6 +32,7 @@ export function leastVividImpl(
 ): string {
   const pool = filterReadable('leastVivid', collectScopeColors(scope, not), readableOn, readableContrast);
   let bestHex: string | null = null;
+  let bestKey = '';
   let bestChroma = Infinity;
 
   for (const candidate of pool) {
@@ -39,6 +41,7 @@ export function leastVividImpl(
     if (chroma < bestChroma) {
       bestChroma = chroma;
       bestHex = candidate.hex;
+      bestKey = candidate.key;
     }
   }
 
@@ -49,7 +52,7 @@ export function leastVividImpl(
     );
   }
 
-  return bestHex;
+  return picked(scope, bestKey, bestHex);
 }
 
 export interface LeastVividOptions extends ReadableOnOptions {

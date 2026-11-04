@@ -5,6 +5,7 @@ import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { measuredMembers, onlyMeasuredGroup } from '../kinds';
+import { picked } from '../picks';
 
 type Extreme = 'largest' | 'smallest';
 
@@ -21,7 +22,7 @@ function extremeImpl(name: Extreme, scope: Scope, not: string[], type?: 'size' |
   const sign = name === 'largest' ? 1 : -1;
   let best = members[0];
   for (const member of members) if (sign * (member.num - best.num) > 0) best = member;
-  return best.value;
+  return picked(scope, best.key, best.value);
 }
 
 export function largestImpl(scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }): string {

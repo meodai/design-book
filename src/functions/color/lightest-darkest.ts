@@ -11,6 +11,7 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { collectScopeColors } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
+import { picked } from '../picks';
 import type { ReadableOnOptions } from './readable';
 
 const toOklch = converter('oklch');
@@ -36,6 +37,7 @@ function extremeLightness(
   const pool = filterReadable(name, collectScopeColors(scope, not), readableOn, readableContrast);
   const sign = name === 'lightest' ? 1 : -1;
   let bestHex: string | null = null;
+  let bestKey = '';
   let bestScore = -Infinity;
 
   for (const candidate of pool) {
@@ -45,13 +47,14 @@ function extremeLightness(
     if (score > bestScore) {
       bestScore = score;
       bestHex = candidate.hex;
+      bestKey = candidate.key;
     }
   }
 
   if (!bestHex) {
     throw new FunctionError(`${name}: no valid color candidates found in scope`, name);
   }
-  return bestHex;
+  return picked(scope, bestKey, bestHex);
 }
 
 export function lightestImpl(

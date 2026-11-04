@@ -13,6 +13,7 @@ import type {
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { resolvePool } from '../scope-members';
+import { picked } from '../picks';
 
 export type RandomType = 'color' | 'dimension' | 'string';
 
@@ -75,9 +76,7 @@ export function randomImpl(
   seed: number | string,
   not: string[] = [],
 ): string {
-  const candidates = resolvePool(scope, not)
-    .map((m) => m.value)
-    .filter((value) => detectType(value) === type);
+  const candidates = resolvePool(scope, not).filter((m) => detectType(m.value) === type);
 
   if (candidates.length === 0) {
     throw new FunctionError(
@@ -88,7 +87,7 @@ export function randomImpl(
 
   const rng = mulberry32(seedToInt(seed));
   const index = Math.floor(rng() * candidates.length);
-  return candidates[index];
+  return picked(scope, candidates[index].key, candidates[index].value);
 }
 
 /**

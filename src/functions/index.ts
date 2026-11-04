@@ -54,6 +54,7 @@ export type { RandomOptions, RandomType } from './generic/random';
 export { nth } from './generic/nth';
 export type { NthOptions } from './generic/nth';
 export { sibling } from './generic/sibling';
+export { picked } from './picks';
 export type { SiblingOptions } from './generic/sibling';
 
 export function registerBuiltinFunctions(book: {

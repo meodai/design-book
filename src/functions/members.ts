@@ -4,6 +4,7 @@ import type { Scope } from '../scope';
 import { isFieldKey, isFunctionTokenValue, isReferenceValue, isScopeKey, isScopeReference } from '../tokens';
 import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 import { poolKeys } from './scope-members';
+import { capturePick } from './picks';
 
 /**
  * How a key names a member of a scope. `not` entries, a `sibling` anchor and
@@ -40,37 +41,39 @@ export function locateMember(book: MemberBook, key: string, seen: Set<string> = 
       current = token.key;
       continue;
     }
-    if (isFunctionTokenValue(token)) return pickedMember(book, current, token, seen);
+    if (isFunctionTokenValue(token)) return pickedMember(book, current, token);
     return { scope: start, key: current };
   }
   return undefined;
 }
 
-/** The member a selector picked: the one in its pool with its value. */
+/**
+ * The member a selector picked. Built-in selectors report it while they run
+ * (`picked` in `./picks`), so this resolves the token and reads the report —
+ * exact even when two members share a value. A function that reports
+ * nothing (a custom one registered with `registerFunction`) is matched by
+ * value: the first member of its pool, among those it did not exclude, whose
+ * resolved value is the same text.
+ */
 function pickedMember(
   book: MemberBook,
   key: string,
   token: FunctionTokenValue,
-  seen: Set<string>,
 ): { scope: string; key: string } | undefined {
-  const pools: string[] = [];
-  if (token.name === 'sibling' && typeof token.options?.from === 'string') {
-    const walked = locateMember(book, token.options.from, seen);
-    if (walked) pools.push(walked.scope);
-  } else {
-    for (const arg of token.args) if (isScopeReference(arg)) pools.push(arg.key);
-  }
-  if (pools.length === 0) return undefined;
-  let value: string;
+  let reported: string | undefined;
   try {
-    value = book.resolve(key).toLowerCase();
+    reported = capturePick(() => book.resolve(key));
   } catch {
     return undefined;
   }
+  if (reported !== undefined) return { scope: scopeOf(reported), key: reported };
+
+  const pools = token.args.filter(isScopeReference).map((arg) => arg.key);
+  if (pools.length === 0) return undefined;
+  const value = book.resolve(key).toLowerCase();
   for (const name of pools) {
     const scope = book.getScope(name);
     if (!scope) continue;
-    // The pick can only be a member the selector did not exclude.
     let not: string[];
     try {
       not = excludedMembers(book, token.name, scope, (token.options?.not ?? []) as unknown[]);

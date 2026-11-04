@@ -10,6 +10,7 @@ import { filterReadable, readableOnParts } from './readable';
 import type { ReadableOnOptions } from './readable';
 import { measuredGroups, measuredMembers, onlyMeasuredGroup } from '../kinds';
 import type { Kind } from '../kinds';
+import { picked } from '../picks';
 
 export function furthestFromImpl(
   scope: Scope,
@@ -29,16 +30,16 @@ export function furthestFromImpl(
     }
     const group = onlyMeasuredGroup('furthestFrom', scope, not, type);
     const members = measuredMembers(scope, group.kind, group.unit, not);
-    let furthest = members[0].value;
+    let furthest = members[0];
     let highest = -1;
     for (const a of members) {
       const avg = members.reduce((sum, b) => sum + Math.abs(a.num - b.num), 0) / Math.max(1, members.length - 1);
       if (avg > highest) {
         highest = avg;
-        furthest = a.value;
+        furthest = a;
       }
     }
-    return furthest;
+    return picked(scope, furthest.key, furthest.value);
   }
   // Distance is measured among the readable candidates only — the filter
   // narrows the pool before ranking, the same as `not`.
@@ -49,13 +50,13 @@ export function furthestFromImpl(
   }
 
   if (colors.length === 1) {
-    return colors[0].hex;
+    return picked(scope, colors[0].key, colors[0].hex);
   }
 
   // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
-  let furthestHex: string = colors[0].hex;
+  let furthest = colors[0];
   let highestAvgDistance = -1;
 
   for (let i = 0; i < colors.length; i++) {
@@ -67,11 +68,11 @@ export function furthestFromImpl(
     const avgDistance = totalDistance / (colors.length - 1);
     if (avgDistance > highestAvgDistance) {
       highestAvgDistance = avgDistance;
-      furthestHex = colors[i].hex;
+      furthest = colors[i];
     }
   }
 
-  return furthestHex;
+  return picked(scope, furthest.key, furthest.hex);
 }
 
 export function furthestFrom(

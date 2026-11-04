@@ -12,6 +12,7 @@ import type {
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { resolvePool } from '../scope-members';
+import { picked } from '../picks';
 
 export interface NthOptions {
   /** Keys to exclude from the candidate pool. */
@@ -25,7 +26,7 @@ export function nthImpl(
   index: number,
   not: string[] = [],
 ): string {
-  const candidates = resolvePool(scope, not).map((m) => m.value);
+  const candidates = resolvePool(scope, not);
 
   if (candidates.length === 0) {
     throw new FunctionError(
@@ -58,7 +59,7 @@ export function nthImpl(
     );
   }
 
-  return candidates[i];
+  return picked(scope, candidates[i].key, candidates[i].value);
 }
 
 /**

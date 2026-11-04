@@ -93,6 +93,7 @@ export {
   random,
   nth,
   sibling,
+  picked,
   registerBuiltinFunctions,
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';

@@ -216,13 +216,17 @@ all three places:
 | a member of the pool (`scale.300`) | that member |
 | the key an inherited member comes from (`base.b` for `kid.b`) | the inherited member |
 | a reference (`ui.surface = ref('scale.0')`) | the member the reference leads to, followed one scope at a time |
-| a selector (`ui.text = bestContrastWith(…, ref('scale'))`) | the member of its pool with the value it resolved to |
+| a selector (`ui.text = bestContrastWith(…, ref('scale'))`) | the member it picked |
 | the target of a member (`brand.ink`, with `scale.900 = ref('brand.ink')`) | that member — `not` only, since a `sibling` anchor needs one place to start |
 
-A selector is matched **by value**: the book does not record which key it
-picked, so the lookup takes the first member of the pool whose resolved value
-is the same text. In a pool where two members share a value, that is always
-the first of them. A computed value (`lighten(…)`) is on no scale.
+A selector names the member it picked **exactly**: every built-in selector
+reports the key it chose while it resolves, so two members with the same
+value are never confused — `sibling(ref('.text'), 1)` steps from the one
+`.text` picked, and `not: [ref('.text')]` leaves out that one and keeps its
+twin. A computed value (`lighten(…)`) is on no scale. A [custom
+function](#custom-functions) that picks a member can report it the same way;
+one that does not is matched by value (the first member with the same
+resolved value).
 
 ### Keeping only readable candidates with `readableOn`
 
@@ -342,9 +346,9 @@ Past either end it stops at the first or last member; pass
 **Where it steps.** A plain value steps in its own scope. A reference is
 followed to the scale its color comes from: with `ui.surface =
 ref('ramp.s100')`, `sibling(ref('ui.surface'), 1)` is `ramp.s200`. A
-selector steps from the member of its pool with the value it picked
-(`lightest(ref('ramp'))` → its lightest member), and a `sibling` of a
-`sibling` keeps walking the same scale. A computed color (`lighten(…)`) is
+selector steps from the member it picked (`lightest(ref('ramp'))` → its
+lightest member, even when another member has the same value), and a
+`sibling` of a `sibling` keeps walking the same scale. A computed color (`lighten(…)`) is
 on no scale and throws. The lookup is the one `not` uses — see [How a key
 names a member](#how-a-key-names-a-member).
 
@@ -558,10 +562,23 @@ ui.set('overlay', multiplyAlpha(ref('brand.primary'), { alpha: 0.5 }));
 book.resolve('ui.overlay'); // '#0066cc80'
 ```
 
-The same pattern handles scope-iterating analysers — pass the scope as an
-arg and populate `metadata.visualDependencies` via
-`extractVisualDependencies([scope])` so the dependency graph knows which
-keys the function reads from.
+The same pattern handles functions that pick from a scope — pass the scope
+as an argument (`ref('palette')`): the implementation receives the live
+`Scope`, and the book indexes it as the function's pool, so adding or
+changing a member re-resolves it. When the function returns one of the
+members, report which one with `picked(scope, key, value)`, so a `sibling`
+anchored on it and a `not` entry naming it know the exact member:
+
+```typescript
+import { picked, type Scope } from 'design-book';
+
+book.registerFunction('secondOf', (scope: Scope) => {
+  const key = scope.getAllKeys()[1];
+  return picked(scope, key, scope.resolve(key));
+});
+```
+
+Without `picked` it still works; the member is then found by its value.
 
 If you want your custom function to render as native CSS (e.g. as a
 `color-mix` expression instead of the resolved hex), register a function
