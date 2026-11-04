@@ -28,7 +28,7 @@ const [beforeBrand, afterBrand] = partial(markup);
     <meta slot="head" name="twitter:image" content="https://meodai.github.io/design-book/article/og.png">
   <Fragment set:html={beforeBrand} />
   <Fragment set:html={afterBrand} />
-  <InstallBar />
+  <InstallBar current="article" />
   <Footer current="article" />
   <script>
     import '../../../article/article.ts';

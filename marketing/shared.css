@@ -1058,3 +1058,30 @@ color-input::part(controls) {
   --logo-gap: 10px;
   padding-left: calc(var(--bar-text-left, calc(var(--row) + var(--logo-w) + var(--logo-gap))) - var(--logo-w) - var(--logo-gap));
 }
+
+/* The pages, in the bar before the install line. */
+.install-bar .bar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--row);
+  padding: 0 var(--row);
+  font: 15px var(--font-text);
+}
+
+.install-bar .bar-nav a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.install-bar .bar-nav a[aria-current="page"] {
+  text-decoration: none;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .install-bar .bar-nav {
+    display: none;
+  }
+}
