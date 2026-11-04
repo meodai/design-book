@@ -1011,3 +1011,10 @@ body {
     padding-left: calc(var(--row) * 2 + 14px);
   }
 }
+
+/* No one edits on a phone: the pointer to the editor goes too. */
+@media (max-width: 640px) {
+  .article-coda {
+    display: none;
+  }
+}
