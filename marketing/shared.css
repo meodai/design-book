@@ -1176,3 +1176,10 @@ footer.imprint {
   border-top: 1px solid var(--imprint-line);
   border-right: 1px solid var(--imprint-line);
 }
+
+/* The footer: links bottom left, license and Elastiq bottom right, the
+   links and the license on one baseline. */
+footer.imprint {
+  justify-content: space-between;
+  align-items: baseline;
+}

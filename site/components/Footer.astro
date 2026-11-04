@@ -1,8 +1,7 @@
 ---
-// One footer for every page: the name and version (it leads home), the
-// links that are not in the bottom bar (the bar has Tour, Article and
-// Editor), the license and Elastiq.
-import pkg from '../../package.json';
+// One footer for every page: the links that are not in the bottom bar
+// (the bar has the name, Tour, Article and Editor) on the left, the
+// license and Elastiq on the right.
 interface Props { current: 'overview' | 'tour' | 'article' | 'editor' | 'naming' }
 const { current } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -14,9 +13,6 @@ const links = [
 ];
 ---
 <footer class="imprint">
-  {current === 'overview'
-    ? <span>Design Book {pkg.version}</span>
-    : <a href={base}>Design Book {pkg.version}</a>}
   <nav class="imprint-nav" aria-label="Footer">
     {links.map(([id, label, href]) => (
       <a href={href} aria-current={id === current ? 'page' : undefined}>{label}</a>
