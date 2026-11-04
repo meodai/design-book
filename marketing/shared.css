@@ -1183,3 +1183,12 @@ footer.imprint {
   justify-content: space-between;
   align-items: baseline;
 }
+
+/* The footer's links start where the bar's name does. */
+footer.imprint {
+  padding-left: calc(var(--row) + 26px + 10px);
+}
+
+body:has(> .rail-left) footer.imprint {
+  padding-left: var(--rail);
+}
