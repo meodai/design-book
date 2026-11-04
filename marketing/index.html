@@ -249,7 +249,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   <article class="fn is-active" id="best-contrast" role="tabpanel" aria-labelledby="tab-best-contrast" tabindex="0">
     <header class="fn-head">
       <h3>bestContrastWith</h3>
-      <code class="sig">bestContrastWith( target, scope, { direction?, not? } )</code>
+      <code class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
       <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
     </header>
     <div class="fn-body">
@@ -302,7 +302,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   <article class="fn" id="furthest" role="tabpanel" aria-labelledby="tab-furthest" tabindex="0">
     <header class="fn-head">
       <h3>furthestFrom</h3>
-      <code class="sig">furthestFrom( scope, { readableOn?, minContrast?, not? } )</code>
+      <code class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
       <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
     </header>
     <div class="fn-body">
@@ -325,7 +325,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   <article class="fn" id="min-contrast" role="tabpanel" aria-labelledby="tab-min-contrast" tabindex="0">
     <header class="fn-head">
       <h3>minContrastWith</h3>
-      <code class="sig">minContrastWith( target, scope, { minContrast?, not? } )</code>
+      <code class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
       <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
     </header>
     <div class="fn-body">
@@ -414,7 +414,7 @@ hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <s
   <article class="fn" id="vivid" role="tabpanel" aria-labelledby="tab-vivid" tabindex="0">
     <header class="fn-head">
       <h3>mostVivid · leastVivid</h3>
-      <code class="sig">mostVivid|leastVivid( scope, { readableOn?, minContrast?, not? } )</code>
+      <code class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
       <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH chroma</li></ul>
     </header>
     <div class="fn-body">
@@ -435,7 +435,7 @@ ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span
   <article class="fn" id="lightness" role="tabpanel" aria-labelledby="tab-lightness" tabindex="0">
     <header class="fn-head">
       <h3>lightest · darkest</h3>
-      <code class="sig">lightest|darkest( scope, { readableOn?, minContrast?, not? } )</code>
+      <code class="sig">lightest|darkest( scope, { readableOn?, readableContrast?, not? } )</code>
       <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH lightness</li></ul>
     </header>
     <div class="fn-body">
@@ -572,7 +572,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
       <h2 id="readable-title"><em>Readable</em> is a filter, not a hope.</h2>
       <p>
         Every color selector apart from the two contrast ones takes
-        <code>readableOn</code> and <code>minContrast</code> (4.5 by
+        <code>readableOn</code> and <code>readableContrast</code> (4.5 by
         default). Members that don't reach the ratio against that
         backdrop leave the pool before ranking — so <code>mostVivid</code>
         returns the loudest color that still reads, <code>closest</code>
@@ -582,7 +582,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
       </p>
       <pre class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>, <span class="c-fn">mostVivid</span>(brand, {
   <span class="c-key">readableOn</span>:  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
-  <span class="c-key">minContrast</span>: <span class="c-num">4.5</span>,
+  <span class="c-key">readableContrast</span>: <span class="c-num">4.5</span>,
 }));</code></pre>
     </div>
 
@@ -592,7 +592,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
           <color-input id="readable-surface" value="#fcf6ee" initial-colorspace="hsl" no-alpha></color-input>
           <span>ui.surface</span>
         </label>
-        <div class="readable-ratios" id="readable-ratios" role="group" aria-label="minContrast">
+        <div class="readable-ratios" id="readable-ratios" role="group" aria-label="readableContrast">
           <button type="button" data-ratio="3">3</button>
           <button type="button" data-ratio="4.5" class="is-active">4.5</button>
           <button type="button" data-ratio="7">7</button>

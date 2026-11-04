@@ -15,7 +15,7 @@ export function furthestFromImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
   type?: Kind,
 ): string {
   // Colors unless asked otherwise or the pool has none: then the one group
@@ -42,7 +42,7 @@ export function furthestFromImpl(
   }
   // Distance is measured among the readable candidates only — the filter
   // narrows the pool before ranking, the same as `not`.
-  const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, minContrast);
+  const colors = filterReadable('furthestFrom', collectScopeColors(scope, not), readableOn, readableContrast);
 
   if (colors.length === 0) {
     throw new FunctionError('furthestFrom: no valid color candidates found in scope', 'furthestFrom');

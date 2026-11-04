@@ -179,7 +179,7 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | Hue rotation / per-channel tweak | `relativeTo(base, 'oklch', [null, null, '+180'])` |
 | `--transition: 200ms ease-out` | `timing(ref('motion.base'), 'ease-out')` |
 
-`readableOn` (with `minContrast`, default 4.5) filters any color selector's
+`readableOn` (with `readableContrast`, default 4.5) filters any color selector's
 pool to colors readable on a backdrop before ranking; if none qualify, it
 throws instead of returning an unreadable color. `not` excludes keys from
 any scope-iterating function.

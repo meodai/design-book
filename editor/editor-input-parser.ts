@@ -382,8 +382,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     if (args.length < 2) throw new Error('bestContrastWith requires 2 arguments');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return bestContrastWith(target, scope, options);
+    return bestContrastWith(target, scope, parseSelectorTail('bestContrastWith', args.slice(2), book));
   },
 
   // minContrastWith(target, scope, options?)
@@ -392,8 +391,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     if (args.length < 2) throw new Error('minContrastWith requires 2 arguments');
     const target = getTokenArg(parseArg(args[0], book));
     const scope = getScopeArg(parseArg(args[1], book));
-    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) : undefined;
-    return minContrastWith(target, scope, options);
+    return minContrastWith(target, scope, parseSelectorTail('minContrastWith', args.slice(2), book));
   },
 
   // colorMix(color1, color2, options?)
@@ -545,7 +543,7 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return darkest(scope, parseSelectorTail('darkest', args.slice(1), book));
   },
 
-  // mostVivid(scope, readableOn?, { not?, readableOn?, minContrast? }) — same
+  // mostVivid(scope, readableOn?, { not?, readableOn?, readableContrast? }) — same
   // tail as every color selector, see parseSelectorTail.
   mostVivid(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
@@ -757,7 +755,9 @@ function parseSelectorTail(
       options.not = parseNotList(valueStr, book);
     } else if (key === 'readableOn') {
       options.readableOn = getTokenArg(parseArg(valueStr, book));
-    } else if (key === 'minContrast') {
+    } else if (key === 'readableContrast') {
+      options.readableContrast = parseFloat(valueStr);
+    } else if (key === 'minContrast' && name === 'minContrastWith') {
       options.minContrast = parseFloat(valueStr);
     } else if (key === 'minDistance') {
       options.minDistance = parseFloat(valueStr);
@@ -772,7 +772,7 @@ function parseSelectorTail(
     } else if (key === 'against') {
       throw new Error(`${name}: \`against\` was renamed to \`readableOn\``);
     } else {
-      throw new Error(`${name}: unknown option \`${key}\` (expected not, readableOn, minContrast or description)`);
+      throw new Error(`${name}: unknown option \`${key}\` (expected not, readableOn, readableContrast${name === 'minContrastWith' ? ', minContrast' : ''} or description)`);
     }
   }
   return options;
@@ -797,6 +797,8 @@ type SelectorTailOptions = {
   toward?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;
   readableOn?: AnyTokenValue;
+  readableContrast?: number;
+  /** minContrastWith only: the contrast against the target. */
   minContrast?: number;
   description?: string;
 };

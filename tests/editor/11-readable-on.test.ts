@@ -2,12 +2,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   DesignBook, color, ref,
   closest, furthestFrom, mostVivid, leastVivid, lightest, darkest,
+  bestContrastWith, minContrastWith,
 } from '../../src/index';
 import { parseTokenInput } from '../../editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // `readableOn` is stored as a trailing positional argument, so the
-// serializer writes `mostVivid(pool, ref('ui.bg'), { minContrast: 4.5 })`.
+// serializer writes `mostVivid(pool, ref('ui.bg'), { readableContrast: 4.5 })`.
 // The parser must accept that form as well as the hand-written
 // `{ readableOn: ref('ui.bg') }` one.
 
@@ -29,12 +30,14 @@ describe('readableOn in the editor', () => {
   });
 
   const cases: Array<[string, () => any]> = [
-    ['mostVivid',    () => mostVivid(pool, { readableOn: ref('bg-10.white'), minContrast: 5, not: ['pool-10.gray'] })],
+    ['mostVivid',    () => mostVivid(pool, { readableOn: ref('bg-10.white'), readableContrast: 5, not: ['pool-10.gray'] })],
     ['leastVivid',   () => leastVivid(pool, { readableOn: ref('bg-10.white') })],
-    ['lightest',     () => lightest(pool, { readableOn: ref('bg-10.white'), minContrast: 7 })],
+    ['lightest',     () => lightest(pool, { readableOn: ref('bg-10.white'), readableContrast: 7 })],
     ['darkest',      () => darkest(pool, { readableOn: ref('bg-10.white') })],
     ['closest', () => closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white') })],
     ['furthestFrom', () => furthestFrom(pool, { readableOn: ref('bg-10.white') })],
+    ['bestContrastWith', () => bestContrastWith(color('#ffff00'), pool, { readableOn: ref('bg-10.white'), not: ['pool-10.gray'] })],
+    ['minContrastWith', () => minContrastWith(color('#ffff00'), pool, { minContrast: 1.5, readableOn: ref('bg-10.white'), readableContrast: 3 })],
   ];
 
   it.each(cases)('round-trips %s with readableOn', (name, make) => {
@@ -50,24 +53,24 @@ describe('readableOn in the editor', () => {
   it('displays readableOn inside the options object, the way it is typed', () => {
     const ui = book.addScope('ui-10-display');
     ui.set('accent', mostVivid(pool, { readableOn: ref('bg-10.white'), not: ['pool-10.gray'] }));
-    ui.set('match', closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), minContrast: 7 }));
+    ui.set('match', closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), readableContrast: 7 }));
 
     expect(getTokenDisplayValue(ui, 'accent')).toBe(
-      "mostVivid(ref('pool-10'), { readableOn: ref('bg-10.white'), not: [\"pool-10.gray\"], minContrast: 4.5 })",
+      "mostVivid(ref('pool-10'), { readableOn: ref('bg-10.white'), not: [\"pool-10.gray\"], readableContrast: 4.5 })",
     );
     expect(getTokenDisplayValue(ui, 'match')).toBe(
-      "closest(color('#ffff66'), ref('pool-10'), { readableOn: ref('bg-10.white'), minContrast: 7 })",
+      "closest(color('#ffff66'), ref('pool-10'), { readableOn: ref('bg-10.white'), readableContrast: 7 })",
     );
   });
 
   it('accepts readableOn written inside the options object', () => {
     const ui = book.addScope('ui-10-typed');
     const parsed = parseTokenInput(
-      "mostVivid(pool-10, { readableOn: ref('bg-10.white'), minContrast: 5, not: [ref('pool-10.gray')] })",
+      "mostVivid(pool-10, { readableOn: ref('bg-10.white'), readableContrast: 5, not: [ref('pool-10.gray')] })",
       book, ui,
     );
     expect(parsed).toEqual(
-      mostVivid(pool, { readableOn: ref('bg-10.white'), minContrast: 5, not: ['pool-10.gray'] }),
+      mostVivid(pool, { readableOn: ref('bg-10.white'), readableContrast: 5, not: ['pool-10.gray'] }),
     );
   });
 

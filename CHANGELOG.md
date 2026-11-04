@@ -8,6 +8,9 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Changed
 
+- **`readableOn`'s threshold is `readableContrast`** (was `minContrast`) on every
+  color selector, so `minContrast` only ever means `minContrastWith`'s
+  contrast against its target. No alias.
 - **`minContrastWith` takes `minContrast`, not `ratio`** — the name the color
   selectors' `readableOn` already uses for the same thing. `ratio` is gone;
   rename it in your calls.
@@ -23,6 +26,14 @@ All notable changes to Design Book are recorded here. The format follows
   candidate whose color equalled a `not` entry from another scope; that
   entry now follows the same rule as every other function — it names the
   members it leads to, or throws.
+
+### Added
+
+- `bestContrastWith` and `minContrastWith` take `readableOn` /
+  `readableContrast`: a second background the pick must also be readable on
+  — a border on a page and on the band across it.
+- The editor parses `bestContrastWith` / `minContrastWith` options with the
+  other selectors' parser, so `not: [ref(…)]` and `readableOn` work there.
 
 ### Fixed
 

@@ -66,12 +66,15 @@ export function registerBuiltinFunctions(book: {
 }): void {
 	// `not` names members wherever its keys are written; see ./members.
 	const ex = (fn: string, scope: Scope, not: ReadonlyArray<unknown> | undefined) => excludedMembers(book, fn, scope, not ?? []);
-	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, options?: { not?: string[]; direction?: Direction }) =>
-		bestContrastWithImpl(targetValue, scope, ex('bestContrastWith', scope, options?.not), options?.direction),
-	);
-	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, options?: { minContrast?: number; not?: string[]; direction?: Direction }) =>
-		minContrastWithImpl(targetValue, scope, options?.minContrast ?? 4.5, ex('minContrastWith', scope, options?.not), options?.direction),
-	);
+	// The contrast selectors: (target, pool, readableOn?, options).
+	book.registerFunction('bestContrastWith', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; direction?: Direction; readableContrast?: number }>(rest);
+		return bestContrastWithImpl(targetValue, scope, ex('bestContrastWith', scope, options.not), options.direction, readableOn, options.readableContrast);
+	});
+	book.registerFunction('minContrastWith', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ minContrast?: number; not?: string[]; direction?: Direction; readableContrast?: number }>(rest);
+		return minContrastWithImpl(targetValue, scope, options.minContrast ?? 4.5, ex('minContrastWith', scope, options.not), options.direction, readableOn, options.readableContrast);
+	});
 	book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
 	book.registerFunction('colorMix', (color1: string, color2: string, options?: { ratio?: number; colorSpace?: string }) =>
 		colorMixImpl(color1, color2, options?.ratio ?? 0.5, options?.colorSpace ?? 'lab'),
@@ -90,16 +93,16 @@ export function registerBuiltinFunctions(book: {
 		const marked = rest[rest.length - 1] as { toward?: unknown } | undefined;
 		const toward = marked?.toward === true ? rest.shift() as string : undefined;
 		const { readableOn, options } = splitReadableArgs<{
-			not?: string[]; minContrast?: number; direction?: Direction; minDistance?: number;
+			not?: string[]; readableContrast?: number; direction?: Direction; minDistance?: number;
 		}>(rest);
-		return closestImpl(targetValue, scope, ex('closest', scope, options.not), readableOn, options.minContrast, {
+		return closestImpl(targetValue, scope, ex('closest', scope, options.not), readableOn, options.readableContrast, {
 			direction: options.direction, toward, minDistance: options.minDistance,
 		});
 	});
 	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, { ...options, not: ex('largest', scope, options?.not) }));
 	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, { ...options, not: ex('smallest', scope, options?.not) }));
 	// The targetless pool selectors share one shape: (pool, readableOn?, options).
-	const poolSelectors: Array<[string, (scope: Scope, not: string[], readableOn: string | null, minContrast?: number, type?: Kind) => string]> = [
+	const poolSelectors: Array<[string, (scope: Scope, not: string[], readableOn: string | null, readableContrast?: number, type?: Kind) => string]> = [
 		['furthestFrom', furthestFromImpl],
 		['mostVivid', mostVividImpl],
 		['leastVivid', leastVividImpl],
@@ -108,8 +111,8 @@ export function registerBuiltinFunctions(book: {
 	];
 	for (const [name, impl] of poolSelectors) {
 		book.registerFunction(name, (scope: Scope, ...rest: unknown[]) => {
-			const { readableOn, options } = splitReadableArgs<{ not?: string[]; minContrast?: number; type?: Kind }>(rest);
-			return impl(scope, ex(name, scope, options.not), readableOn, options.minContrast, options.type);
+			const { readableOn, options } = splitReadableArgs<{ not?: string[]; readableContrast?: number; type?: Kind }>(rest);
+			return impl(scope, ex(name, scope, options.not), readableOn, options.readableContrast, options.type);
 		});
 	}
 

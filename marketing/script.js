@@ -589,7 +589,7 @@ document.querySelectorAll(".r-tab").forEach((btn) => {
   const SURFACE = "#fcf6ee";
 
   function render () {
-    const opts = toggle.checked ? { readableOn: color(SURFACE), minContrast: 4.5 } : undefined;
+    const opts = toggle.checked ? { readableOn: color(SURFACE), readableContrast: 4.5 } : undefined;
     const hi = pick(palette, (s) => lightest(s, opts));
     const lo = pick(palette, (s) => darkest(s, opts));
     stage.innerHTML = palette.map((c) => {
@@ -1157,10 +1157,10 @@ wireTabs(document.querySelector(".extends-modes"));
     }).join("");
 
     const plain    = pick(BRAND, (s) => mostVivid(s));
-    const readable = pick(BRAND, (s) => mostVivid(s, { readableOn: color(surface), minContrast: ratio }));
+    const readable = pick(BRAND, (s) => mostVivid(s, { readableOn: color(surface), readableContrast: ratio }));
     resultsEl.innerHTML =
       result("mostVivid(brand)", surface, plain) +
-      result(`mostVivid(brand, { readableOn, minContrast: ${ratio} })`, surface, readable,
+      result(`mostVivid(brand, { readableOn, readableContrast: ${ratio} })`, surface, readable,
              `throws — no member reaches ${ratio}:1`);
   }
 

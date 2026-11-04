@@ -27,9 +27,9 @@ export function mostVividImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
 ): string {
-  const pool = filterReadable('mostVivid', collectScopeColors(scope, not), readableOn, minContrast);
+  const pool = filterReadable('mostVivid', collectScopeColors(scope, not), readableOn, readableContrast);
   let bestHex: string | null = null;
   let bestChroma = -Infinity;
 

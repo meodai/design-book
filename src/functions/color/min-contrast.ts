@@ -13,8 +13,10 @@ import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
 import type { Direction } from '../kinds';
 import { collectScopeColors, contrastAgainst } from './scope-colors';
+import { filterReadable, readableOnParts } from './readable';
+import type { ReadableOnOptions } from './readable';
 
-export interface MinContrastOptions {
+export interface MinContrastOptions extends ReadableOnOptions {
   /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
    *  between two sizes or font sizes for sizes and text styles (1.25 is a
    *  major third). The same name as on the color selectors' `readableOn`. */
@@ -34,8 +36,13 @@ export function minContrastWithImpl(
   minContrast: number,
   not: string[] = [],
   direction?: Direction,
+  readableOn: string | null = null,
+  readableContrast?: number,
 ): string {
   const measure = measureOf(targetValue);
+  if (measure && readableOn !== null) {
+    throw new FunctionError('minContrastWith: `readableOn` is for colors; the target is a size or a text style', 'minContrastWith');
+  }
   if (measure) return measuredContrast('minContrastWith', targetValue, measure, scope, not, direction, { pick: 'min', minContrast });
   assertDirectionFits('minContrastWith', direction, 'color');
   const targetColor = parse(targetValue);
@@ -48,7 +55,7 @@ export function minContrastWithImpl(
 
   const candidates: Array<{ hex: string; contrast: number }> = [];
 
-  for (const candidate of collectScopeColors(scope, not)) {
+  for (const candidate of filterReadable('minContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
     if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
     candidates.push({
       hex: candidate.hex,
@@ -83,20 +90,21 @@ export function minContrastWith(
 ): FunctionTokenValue {
   const scope = poolArg('minContrastWith', pool);
   valueArg('minContrastWith', targetValue);
-  const { minContrast = 4.5, not, description, direction, ...rest } = options ?? {};
+  const { minContrast = 4.5, not, description, direction, readableOn, readableContrast, ...rest } = options ?? {};
   assertDirection('minContrastWith', direction);
   const notKeys = normalizeNotKeys(not);
+  const readable = readableOnParts('minContrastWith', { readableOn, readableContrast });
 
   return createFunctionToken(
     'minContrastWith',
-    [targetValue, scope],
+    [targetValue, scope, ...readable.args],
     {
       description,
       ...rest,
-      options: { minContrast, not: notKeys, ...(direction ? { direction } : {}) },
+      options: { minContrast, not: notKeys, ...(direction ? { direction } : {}), ...readable.options },
       metadata: {
-        dependencies: extractDependencies([targetValue]),
-        visualDependencies: extractVisualDependencies([targetValue, scope]),
+        dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
+        visualDependencies: extractVisualDependencies([targetValue, scope, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

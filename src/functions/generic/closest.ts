@@ -39,7 +39,7 @@ export function closestImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
   side: ClosestDirection = {},
 ): string {
   const measure = measureOf(targetValue);
@@ -48,7 +48,7 @@ export function closestImpl(
   if (side.minDistance !== undefined && side.minDistance >= 1) {
     throw new FunctionError(`closest: \`minDistance\` for colors is a lightness gap between 0 and 1, got ${side.minDistance}`, 'closest');
   }
-  return closestColorImpl(targetValue, scope, not, readableOn, minContrast, side);
+  return closestColorImpl(targetValue, scope, not, readableOn, readableContrast, side);
 }
 
 /** Sizes and text styles: by value, in the target's unit. */
@@ -109,7 +109,7 @@ function closestColorImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
   side: ClosestDirection = {},
 ): string {
   const targetRaw = parse(targetValue);
@@ -150,7 +150,7 @@ function closestColorImpl(
   let closestHex: string | null = null;
   let closestDistance = Infinity;
 
-  const pool = filterReadable('closest', collectScopeColors(scope, not), readableOn, minContrast);
+  const pool = filterReadable('closest', collectScopeColors(scope, not), readableOn, readableContrast);
   // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = readableOn === null ? null : parse(readableOn) ?? null;

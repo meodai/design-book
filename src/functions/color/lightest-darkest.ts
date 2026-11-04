@@ -31,9 +31,9 @@ function extremeLightness(
   scope: Scope,
   not: string[],
   readableOn: string | null,
-  minContrast: number | undefined,
+  readableContrast: number | undefined,
 ): string {
-  const pool = filterReadable(name, collectScopeColors(scope, not), readableOn, minContrast);
+  const pool = filterReadable(name, collectScopeColors(scope, not), readableOn, readableContrast);
   const sign = name === 'lightest' ? 1 : -1;
   let bestHex: string | null = null;
   let bestScore = -Infinity;
@@ -58,18 +58,18 @@ export function lightestImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
 ): string {
-  return extremeLightness('lightest', scope, not, readableOn, minContrast);
+  return extremeLightness('lightest', scope, not, readableOn, readableContrast);
 }
 
 export function darkestImpl(
   scope: Scope,
   not: string[] = [],
   readableOn: string | null = null,
-  minContrast?: number,
+  readableContrast?: number,
 ): string {
-  return extremeLightness('darkest', scope, not, readableOn, minContrast);
+  return extremeLightness('darkest', scope, not, readableOn, readableContrast);
 }
 
 export interface LightnessSelectorOptions extends ReadableOnOptions {

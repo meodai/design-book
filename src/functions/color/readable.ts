@@ -8,7 +8,7 @@ import type { ScopeColor } from './scope-colors';
 /**
  * Readability filter shared by the color selectors. Like `not`, it narrows
  * the candidate pool before the selector ranks anything: every candidate
- * that does not reach `minContrast` against `readableOn` is dropped. The
+ * that does not reach `readableContrast` against `readableOn` is dropped. The
  * selector's own rule (chroma, lightness, distance, …) then picks from what
  * is left.
  *
@@ -20,7 +20,7 @@ export interface ReadableOnOptions {
   /** Backdrop every candidate must stay readable on. */
   readableOn?: TokenValue | ReferenceValue | FunctionTokenValue;
   /** WCAG ratio a candidate must reach against `readableOn`. Defaults to 4.5. */
-  minContrast?: number;
+  readableContrast?: number;
 }
 
 export const DEFAULT_MIN_CONTRAST = 4.5;
@@ -32,36 +32,36 @@ export const DEFAULT_MIN_CONTRAST = 4.5;
 export function readableOnParts(
   name: string,
   options?: ReadableOnOptions & Record<string, unknown>,
-): { args: FunctionArg[]; dependencies: string[]; options: { minContrast?: number } } {
+): { args: FunctionArg[]; dependencies: string[]; options: { readableContrast?: number } } {
   if (options && 'against' in options) {
     throw new FunctionError(`${name}: \`against\` was renamed to \`readableOn\``, name);
   }
 
   const on = options?.readableOn;
-  const min = options?.minContrast;
+  const min = options?.readableContrast;
   if (!on) {
     if (min !== undefined) {
-      throw new FunctionError(`${name}: \`minContrast\` needs \`readableOn\` to measure against`, name);
+      throw new FunctionError(`${name}: \`readableContrast\` needs \`readableOn\` to measure against`, name);
     }
     return { args: [], dependencies: [], options: {} };
   }
 
   const ratio = min ?? DEFAULT_MIN_CONTRAST;
   if (typeof ratio !== 'number' || !(ratio > 0)) {
-    throw new FunctionError(`${name}: \`minContrast\` must be a positive number, got ${String(min)}`, name);
+    throw new FunctionError(`${name}: \`readableContrast\` must be a positive number, got ${String(min)}`, name);
   }
-  return { args: [on], dependencies: extractDependencies([on]), options: { minContrast: ratio } };
+  return { args: [on], dependencies: extractDependencies([on]), options: { readableContrast: ratio } };
 }
 
 /**
  * Position of the `readableOn` backdrop in a selector token's `args`, or -1
  * when it has none. `readableOnParts` appends the backdrop as the last
- * argument and stores `minContrast` exactly when it does, so the option is
+ * argument and stores `readableContrast` exactly when it does, so the option is
  * the token's own record of the backdrop — serializers use this instead of
  * keeping a table of each selector's fixed arity.
  */
 export function readableOnArgIndex(fn: Pick<FunctionTokenValue, 'args' | 'options'>): number {
-  if (fn.options?.minContrast === undefined || fn.args.length === 0) return -1;
+  if (fn.options?.readableContrast === undefined || fn.args.length === 0) return -1;
   return fn.args.length - 1;
 }
 
@@ -69,7 +69,7 @@ export function readableOnArgIndex(fn: Pick<FunctionTokenValue, 'args' | 'option
  * Registry side: splits the resolved arguments that follow a selector's
  * fixed ones into the optional backdrop and the options object.
  */
-export function splitReadableArgs<O extends { minContrast?: number }>(
+export function splitReadableArgs<O extends { readableContrast?: number }>(
   rest: unknown[],
 ): { readableOn: string | null; options: O } {
   const [first, second] = rest;
@@ -78,7 +78,7 @@ export function splitReadableArgs<O extends { minContrast?: number }>(
 }
 
 /**
- * Implementation side: drops the candidates that do not reach `minContrast`
+ * Implementation side: drops the candidates that do not reach `readableContrast`
  * against `readableOn`. Translucent candidates are judged composited over the
  * backdrop. An empty pool passes through so each selector keeps its own
  * empty-scope behaviour; a pool that empties *because of* the filter throws,
@@ -89,7 +89,7 @@ export function filterReadable(
   name: string,
   pool: ScopeColor[],
   readableOn: string | null,
-  minContrast: number = DEFAULT_MIN_CONTRAST,
+  readableContrast: number = DEFAULT_MIN_CONTRAST,
 ): ScopeColor[] {
   if (readableOn === null) return pool;
 
@@ -98,10 +98,10 @@ export function filterReadable(
     throw new FunctionError(`${name}: cannot parse \`readableOn\` color "${readableOn}"`, name);
   }
 
-  const readable = pool.filter((c) => contrastAgainst(backdrop, c.parsed) >= minContrast);
+  const readable = pool.filter((c) => contrastAgainst(backdrop, c.parsed) >= readableContrast);
   if (pool.length > 0 && readable.length === 0) {
     throw new FunctionError(
-      `${name}: no candidate reaches ${minContrast}:1 against ${readableOn}`,
+      `${name}: no candidate reaches ${readableContrast}:1 against ${readableOn}`,
       name,
     );
   }

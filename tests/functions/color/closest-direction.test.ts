@@ -103,7 +103,7 @@ describe('closest toward', () => {
   it('combines with readableOn', () => {
     const { book, ui } = palette();
     ui.set('bg', color('#ffffff'));
-    ui.set('pick', closest(ref('p.navy'), ref('p'), { direction: 'lighter', readableOn: ref('ui.bg'), minContrast: 4.5 }));
+    ui.set('pick', closest(ref('p.navy'), ref('p'), { direction: 'lighter', readableOn: ref('ui.bg'), readableContrast: 4.5 }));
     expect(book.resolve('ui.pick')).toBe('#2d60a5');
   });
 });
@@ -121,7 +121,7 @@ describe('closest direction in the editor', () => {
     for (const typed of [
       "closest(ref('p.blue'), ref('p'), { direction: \"lighter\" })",
       "closest(ref('p.blue'), ref('p'), { toward: ref('ui.page'), minDistance: 0.02 })",
-      "closest(ref('p.navy'), ref('p'), { toward: ref('ui.page'), readableOn: ref('ui.bg'), minContrast: 4.5 })",
+      "closest(ref('p.navy'), ref('p'), { toward: ref('ui.page'), readableOn: ref('ui.bg'), readableContrast: 4.5 })",
     ]) {
       ui.set('probe', parseTokenInput(typed, book, ui));
       const printed = getTokenDisplayValue(ui, 'probe');

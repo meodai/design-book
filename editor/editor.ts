@@ -97,7 +97,7 @@ function bootDesignSystem() {
   // lightest / darkest rank a scope by OKLCH lightness.
   ui.set('paper', lightest(ref('gray')));                     // → g100
   ui.set('ink', darkest(ref('gray')));                        // → g900
-  // readableOn drops members that don't reach minContrast (default 4.5)
+  // readableOn drops members that don't reach readableContrast (default 4.5)
   // against a backdrop before ranking: the lightest grey that still reads
   // on the page — the softest usable text color.
   ui.set('text-soft', lightest(ref('gray'), { readableOn: ref('semantic.background') }));  // → g500

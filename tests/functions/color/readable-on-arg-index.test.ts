@@ -31,7 +31,7 @@ describe('readableOnArgIndex', () => {
 
   it.each(selectors)('%s: points at the backdrop argument', (_name, make) => {
     const backdrop = ref('ui.bg');
-    const token = make({ readableOn: backdrop, minContrast: 7 });
+    const token = make({ readableOn: backdrop, readableContrast: 7 });
     const index = readableOnArgIndex(token);
     expect(index).toBeGreaterThan(0);
     expect(token.args[index]).toBe(backdrop);

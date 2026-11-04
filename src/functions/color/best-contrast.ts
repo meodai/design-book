@@ -13,9 +13,21 @@ import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
 import type { Direction } from '../kinds';
 import { collectScopeColors, contrastAgainst } from './scope-colors';
+import { filterReadable, readableOnParts } from './readable';
+import type { ReadableOnOptions } from './readable';
 
-export function bestContrastWithImpl(targetValue: string, scope: Scope, not: string[] = [], direction?: Direction): string {
+export function bestContrastWithImpl(
+  targetValue: string,
+  scope: Scope,
+  not: string[] = [],
+  direction?: Direction,
+  readableOn: string | null = null,
+  readableContrast?: number,
+): string {
   const measure = measureOf(targetValue);
+  if (measure && readableOn !== null) {
+    throw new FunctionError('bestContrastWith: `readableOn` is for colors; the target is a size or a text style', 'bestContrastWith');
+  }
   if (measure) return measuredContrast('bestContrastWith', targetValue, measure, scope, not, direction, { pick: 'best' });
   assertDirectionFits('bestContrastWith', direction, 'color');
   const targetColor = parse(targetValue);
@@ -29,7 +41,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, not: str
   let bestHex: string | null = null;
   let bestRatio = -1;
 
-  for (const candidate of collectScopeColors(scope, not)) {
+  for (const candidate of filterReadable('bestContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
     if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
     const ratio = contrastAgainst(targetColor, candidate.parsed);
     if (ratio > bestRatio) {
@@ -51,7 +63,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, not: str
 export function bestContrastWith(
   targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
   pool: PoolArg,
-  options?: {
+  options?: ReadableOnOptions & {
     /** Only candidates on that side of the target: 'lighter' / 'darker' for
      *  colors, 'larger' / 'smaller' for sizes and text styles. */
     direction?: Direction;
@@ -64,15 +76,16 @@ export function bestContrastWith(
   const scope = poolArg('bestContrastWith', pool);
   valueArg('bestContrastWith', targetValue);
   assertDirection('bestContrastWith', options?.direction);
+  const readable = readableOnParts('bestContrastWith', options);
   return createFunctionToken(
     'bestContrastWith',
-    [targetValue, scope],
+    [targetValue, scope, ...readable.args],
     {
       description: options?.description,
-      options: { not: normalizeNotKeys(options?.not), ...(options?.direction ? { direction: options.direction } : {}) },
+      options: { not: normalizeNotKeys(options?.not), ...(options?.direction ? { direction: options.direction } : {}), ...readable.options },
       metadata: {
-        dependencies: extractDependencies([targetValue]),
-        visualDependencies: extractVisualDependencies([targetValue, scope]),
+        dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
+        visualDependencies: extractVisualDependencies([targetValue, scope, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

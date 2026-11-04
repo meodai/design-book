@@ -226,16 +226,17 @@ the first of them. A computed value (`lighten(…)`) is on no scale.
 
 ### Keeping only readable candidates with `readableOn`
 
-The color selectors `mostVivid`, `leastVivid`, `lightest`, `darkest`,
-`closest` and `furthestFrom` also take `readableOn` — a backdrop color —
-and `minContrast` (default 4.5). Like `not`, it narrows the pool before the
-selector ranks anything: candidates below the WCAG ratio against the backdrop
-are dropped, so the vivid pick is the most vivid *readable* color.
+Every color selector — `mostVivid`, `leastVivid`, `lightest`, `darkest`,
+`closest`, `furthestFrom`, `bestContrastWith` and `minContrastWith` — also
+takes `readableOn`, a backdrop color, and `readableContrast` (default 4.5).
+Like `not`, it narrows the pool before the selector ranks anything:
+candidates below that WCAG ratio against the backdrop are dropped, so the
+vivid pick is the most vivid *readable* color.
 
 ```typescript
 ui.set('accent', mostVivid(ref('palette'), {
   readableOn: ref('ui.surface'),
-  minContrast: 4.5,
+  readableContrast: 4.5,
   not: [ref('palette.error')],
 }));
 ```
@@ -243,8 +244,27 @@ ui.set('accent', mostVivid(ref('palette'), {
 The backdrop is a real dependency — change `ui.surface` and the pick follows.
 Translucent candidates are judged composited over it. If no candidate reaches
 the ratio the selector throws instead of falling back, so it never hands back
-a color you asked to be readable that is not. `bestContrastWith` and
-`minContrastWith` already pick by contrast and do not take it.
+a color you asked to be readable that is not.
+
+**Readable on more than one background.** `bestContrastWith` and
+`minContrastWith` already measure contrast against their target, so
+`readableOn` is a *second* background the pick must also hold up on. That
+is the case of a color that sits on a page and on a band or card across it:
+
+```typescript
+// a border: the faintest member that reaches 3:1 on the page,
+// among those that also reach 3:1 on the tinted band it crosses
+ui.set('border', minContrastWith(ref('.page'), ref('ramp'), {
+  minContrast: 3,                // against the target, the page
+  readableOn: ref('.band'),
+  readableContrast: 3,           // against the second background
+}));
+```
+
+The two thresholds are separate on purpose: `minContrast` is what
+`minContrastWith` aims for on its target, `readableContrast` is the floor on
+the backdrop. Sizes and text styles have no `readableOn`: a size target with
+one throws.
 
 ### Color transforms
 
