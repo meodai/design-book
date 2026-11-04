@@ -5,6 +5,7 @@
 
 import { converter, formatHex, parse, wcagContrast } from "culori";
 import { Poline } from "poline/picker"; // also defines <poline-picker>
+import { generateColorRamp, colorUtils } from "rampensau";
 import { highlight } from "sugar-high";
 import {
   DesignBook,
@@ -60,11 +61,51 @@ const POLINES = Object.fromEntries(
   ]),
 );
 
-/** Write a Poline's colors into its scope, named alpha, beta, …; drop
+// Where a palette's colors come from. The rules never care: they read
+// whatever the scope holds.
+//   poline  — a Poline line through the six anchors (turn the wheel)
+//   hand    — eleven colors picked one by one (each swatch is a picker)
+//   ramp    — a RampenSau hue ramp from light to dark (move its start hue)
+const SOURCES = ["poline", "hand", "ramp"];
+const SOURCE_WORDS = {
+  poline: "drawn with Poline",
+  hand: "picked by hand",
+  ramp: "generated as a ramp with RampenSau",
+};
+let source = "poline";
+
+const polineHexes = (name) => POLINES[name].colorsCSS.map((css) => formatHex(parse(css)));
+
+/** The hand-picked palettes start as Poline drew them, then are the
+ *  reader's to change. */
+const HAND = Object.fromEntries(Object.keys(SEEDS).map((name) => [name, polineHexes(name)]));
+
+/** RampenSau: one turn round the hue circle, from paper-light to ink-dark,
+ *  starting at the hue of the palette's second anchor. */
+const RAMP_START = Object.fromEntries(
+  Object.entries(SEEDS).map(([name, seeds]) => [name, Math.round(hsl(seeds[1]).h ?? 0)]),
+);
+function rampHexes(name) {
+  return generateColorRamp({
+    total: 11,
+    hStart: RAMP_START[name],
+    hCycles: 1,
+    sRange: [0.35, 0.75],
+    lRange: [0.92, 0.06],
+  }).map((c) => formatHex(parse(colorUtils.colorToCSS(c, "hsl"))));
+}
+
+function paletteHexes(name) {
+  if (source === "hand") return HAND[name];
+  if (source === "ramp") return rampHexes(name);
+  return polineHexes(name);
+}
+
+/** Write a palette's colors into its scope, named alpha, beta, …; drop
  *  members left over from a longer palette. */
 function fillPalette(name) {
   const scope = book.getScope(name);
-  const hexes = POLINES[name].colorsCSS.map((css) => formatHex(parse(css)));
+  const hexes = paletteHexes(name);
   const names = scaleNames(hexes.length, "greek");
   names.forEach((key, i) => scope.set(key, color(hexes[i])));
   for (const key of scope.ownKeys()) if (!names.includes(key)) scope.delete(key);
@@ -478,7 +519,7 @@ function buildLedger() {
     if (member >= 0) {
       tr.querySelector(".rule").innerHTML = `<span class="chosen">${
         sheet === "sizes" ? `Curve, step ${member + 1} of ${members.length}`
-        : `Poline, color ${member + 1} of ${members.length}`}</span>`;
+        : `${{ poline: "Poline", hand: "By hand", ramp: "RampenSau" }[source]}, color ${member + 1} of ${members.length}`}</span>`;
     }
     const body = ({ ui: ledgerBody, sizes: sizesBody, palette: paletteBody })[sheet];
     if (sheet === "ui" && RULE_GROUPS[token]) {
@@ -518,9 +559,9 @@ function fillLedger() {
         ? `<span class="size-bar" style="width:${value}"></span><code>${value}</code>`
         : `<span class="swatch" style="background:${value}"></span><code>${value}</code>`;
     if (lastValues.size && lastValues.get(key) !== next.get(key) && !reduceMotion.matches) {
-      tr.classList.remove("changed");
-      void tr.offsetWidth;
       tr.classList.add("changed");
+      clearTimeout(tr.flash);
+      tr.flash = setTimeout(() => tr.classList.remove("changed"), 180);
     }
   }
   lastValues = next;
@@ -603,7 +644,7 @@ function syncPicker() {
   if (pickerPalette === state.pal1) return;
   pickerPalette = state.pal1;
   picker.setPoline(POLINES[pickerPalette]);
-  document.getElementById("poline-name").textContent = pickerPalette;
+  renderSource();
   paintSpots();
 }
 
@@ -745,6 +786,69 @@ function renderGraph() {
   }, 200);
 }
 
+// ─── Palette source: Poline, by hand, or RampenSau ───────────────────
+const HINTS = {
+  poline: (name) => `Turn the wheel to rotate <b>${name}</b>.`,
+  hand: (name) => `Select a swatch to pick another color for <b>${name}</b>.`,
+  ramp: (name) => `Move the start hue to generate <b>${name}</b> again.`,
+};
+const sourcePill = document.getElementById("source-pill");
+const handSwatches = document.getElementById("hand-swatches");
+const rampStrip = document.getElementById("ramp-strip");
+const rampHue = document.getElementById("ramp-hue");
+
+/** Show the view and controls of the current source for the palette the
+ *  sentence's first rule reads. */
+function renderSource() {
+  const name = pickerPalette || state.pal1;
+  for (const view of document.querySelectorAll(".source-view")) view.hidden = view.dataset.view !== source;
+  for (const button of document.querySelectorAll(".source-switch button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.source === source));
+  }
+  sourcePill.textContent = SOURCE_WORDS[source];
+  document.getElementById("source-hint").innerHTML = HINTS[source](name);
+  if (source === "hand") {
+    handSwatches.innerHTML = HAND[name].map((hex, i) =>
+      `<label class="hand-swatch" style="background:${hex}" title="${name} color ${i + 1}: ${hex}">` +
+      `<input type="color" value="${hex}" data-index="${i}" aria-label="${name} color ${i + 1}" /></label>`).join("");
+  }
+  if (source === "ramp") {
+    rampHue.value = RAMP_START[name];
+    rampStrip.innerHTML = rampHexes(name).map((hex) => `<i style="background:${hex}" title="${hex}"></i>`).join("");
+  }
+  if (source === "poline") paintSpots();
+}
+
+function setSource(next) {
+  source = next;
+  for (const name of Object.keys(SEEDS)) fillPalette(name);
+  ledgerLayout = ""; // the Source column names the new source
+  renderSource();
+  update();
+}
+
+sourcePill.addEventListener("click", () => setSource(SOURCES[(SOURCES.indexOf(source) + 1) % SOURCES.length]));
+for (const button of document.querySelectorAll(".source-switch button")) {
+  button.addEventListener("click", () => setSource(button.dataset.source));
+}
+
+handSwatches.addEventListener("input", (event) => {
+  const input = event.target.closest("input[type=color]");
+  if (!input) return;
+  const name = pickerPalette;
+  HAND[name][Number(input.dataset.index)] = input.value;
+  input.parentElement.style.background = input.value;
+  fillPalette(name);
+  update();
+});
+
+rampHue.addEventListener("input", () => {
+  RAMP_START[pickerPalette] = Number(rampHue.value);
+  fillPalette(pickerPalette);
+  rampStrip.innerHTML = rampHexes(pickerPalette).map((hex) => `<i style="background:${hex}" title="${hex}"></i>`).join("");
+  update();
+});
+
 // ─── Folder: two papers, one in front ─────────────────────────────────
 const folder = document.getElementById("folder");
 function bringToFront(name) {
@@ -844,7 +948,8 @@ function update() {
 
   for (const key of ["ground", "ink"]) {
     const out = claim.querySelector(`[data-out="${key}"]`);
-    out.querySelector(".hex").textContent = values[key] ?? "nothing";
+    // The sentence shows the hex without its '#', like a reading.
+    out.querySelector(".hex").textContent = values[key]?.replace(/^#/, "") ?? "nothing";
     out.querySelector(".chip").style.background = values[key] ?? "transparent";
     out.classList.toggle("missing", !values[key]);
   }

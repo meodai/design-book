@@ -30,9 +30,9 @@
 <!-- ─── Hero: the claim as a live sentence ─────────────────────────── -->
 <section class="hero" id="hero">
   <h1 class="claim" id="claim">
-    <span class="out" data-out="ground"><i class="chip"></i><span class="hex">#eee9dc</span></span>
+    <span class="out" data-out="ground"><i class="chip"></i><span class="hex">eee9dc</span></span>
     and
-    <span class="out" data-out="ink"><i class="chip"></i><span class="hex">#22201c</span></span>
+    <span class="out" data-out="ink"><i class="chip"></i><span class="hex">0d0a03</span></span>
     become
     <span class="call"><button class="pill fn" data-slot="fn1" type="button">lightest</button><span class="paren">(</span><button class="pill pool" data-slot="pal1" type="button">ledger</button><span class="paren">)</span></span>
     and
@@ -45,7 +45,7 @@
     <svg class="logo" viewBox="0 0 32 27" aria-hidden="true">
       <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23 Z" />
       <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23 Z" />
-      <path d="M1.9 5 H0.75 V22 C6.5 20.75 12 21.75 16 25.75 C20 21.75 25.5 20.75 31.25 22 V5 H30.1 M16 23 V25.75" />
+      <path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" />
     </svg>
   </p>
 
@@ -58,11 +58,11 @@
     <p>
       Rules never choose your palette, so they never narrow your taste.
       Pick colors by eye, take them from a brand book, or generate them:
-      here each palette is drawn with
-      <a href="https://meodai.github.io/poline/">Poline</a>. The book only
-      decides which of those colors is ground, ink or accent. Drag a point
-      and Poline redraws the palette, and every rule that reads it is
-      worked out again.
+      here each palette is
+      <button class="pill source-pill" type="button" id="source-pill">drawn with Poline</button>.
+      The book only decides which of those colors is ground, ink or
+      accent. Change the palette, by any of these means, and every rule
+      that reads it is worked out again.
     </p>
   </div>
 
@@ -73,8 +73,24 @@
       <button class="folder-tab" type="button" data-sheet="palette" aria-pressed="false">Palette</button>
       <div class="folder-body palette-body">
         <figure class="poline-panel">
-          <poline-picker id="poline-picker" tabindex="0" aria-label="Color wheel: drag around it, or use the arrow keys, to turn the palette"></poline-picker>
-          <figcaption>Turn the wheel to rotate <b id="poline-name">ledger</b>.</figcaption>
+          <div class="source-view" data-view="poline">
+            <poline-picker id="poline-picker" tabindex="0" aria-label="Color wheel: drag around it, or use the arrow keys, to turn the palette"></poline-picker>
+          </div>
+          <div class="source-view" data-view="hand" hidden>
+            <div class="hand-swatches" id="hand-swatches"></div>
+          </div>
+          <div class="source-view" data-view="ramp" hidden>
+            <div class="ramp-strip" id="ramp-strip"></div>
+            <label class="ramp-hue">Start hue <input type="range" id="ramp-hue" min="0" max="359" step="1" /></label>
+          </div>
+          <figcaption>
+            <span class="source-switch" role="group" aria-label="Where the palette comes from">
+              <button type="button" data-source="poline" aria-pressed="true">Poline</button>
+              <button type="button" data-source="hand" aria-pressed="false">By hand</button>
+              <button type="button" data-source="ramp" aria-pressed="false">RampenSau</button>
+            </span>
+            <span id="source-hint"></span>
+          </figcaption>
         </figure>
         <table class="ledger" id="palette-table">
           <colgroup>

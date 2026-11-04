@@ -352,12 +352,27 @@ pre {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  /* The claim sits in the bottom left of the first screen, the name and
+     its logo in the top right. */
+  justify-content: flex-end;
+  position: relative;
   max-width: var(--measure);
   margin: 0 auto calc(var(--row) * 2);
-  padding: calc(var(--row) * 3) var(--gutter);
-  text-align: center;
+  padding: calc(var(--row) * 3) var(--gutter) calc(var(--row) * 3);
+  text-align: left;
+}
+
+.hero .brand {
+  position: absolute;
+  top: calc(var(--row) * 1.5);
+  right: var(--gutter);
+  margin: 0;
+  text-align: right;
+}
+
+.hero .brand .logo {
+  margin-left: auto;
 }
 
 /* The claim */
@@ -396,37 +411,31 @@ pre {
 /* A whole call, lightest(ledger), is one mark and never breaks. The
    function name is part of the mark; the palette inside it is a second
    choice, so it is underlined. */
+/* Choices are underlined, in the sentence's own color. Pointing at one
+   lays the book's highlight behind it: the whole call for a function or
+   a palette, the phrase itself for the readers and the source. */
 .call {
-  --mark: var(--highlight);
   white-space: nowrap;
   /* The whole sentence is set in the title font, code included. */
   font-family: inherit;
+  /* The padding gives the highlight room; the margin takes the left of
+     it back, so lines that start with a call stay flush left. */
   padding: 0 0.22em;
-  color: var(--on-highlight);
-  background: var(--mark);
-  transition: background-color 0.2s ease;
+  margin: 0 0 0 -0.22em;
+  color: inherit;
+  background: transparent;
 }
 
-.call:has(.pill.fn:hover),
-.call:has(.pill.fn:focus-visible) {
-  --mark: color-mix(in oklch, var(--highlight) 80%, var(--ink));
+.call:has(.pill:hover),
+.call:has(.pill:focus-visible) {
+  color: var(--on-highlight);
+  background: var(--highlight);
 }
 
 .call .pill {
   padding: 0;
+  margin: 0;
   background: none;
-}
-
-.call .pill.pool {
-  text-decoration: underline;
-  text-decoration-color: currentColor;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
-}
-
-.call .pill.pool:hover,
-.call .pill.pool:focus-visible {
-  text-decoration-thickness: 2px;
 }
 
 .paren,
@@ -434,26 +443,26 @@ pre {
   opacity: 0.75;
 }
 
-/* Choices are marked in the book's highlight, solid, with the text in
-   paper color, like a block of ink on the page. */
 .pill {
-  --mark: var(--highlight);
   display: inline-block;
-  margin: 0;
+  margin: 0 -0.32em;
   padding: 0 0.32em;
   font: inherit;
-  color: var(--on-highlight);
-  background: var(--mark);
+  color: inherit;
+  background: transparent;
   border: 0;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
 }
 
-/* The readers are words, not code: set in the sentence's own serif, and
-   allowed to wrap, with the mark continuing on the next line. */
+/* The readers are words, not code: allowed to wrap, with the highlight
+   continuing on the next line. */
 .pill.words {
   display: inline;
   padding: 0.02em 0.28em;
+  margin: 0 -0.28em;
   text-align: inherit;
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
@@ -461,12 +470,14 @@ pre {
 
 .pill:hover,
 .pill:focus-visible {
-  --mark: color-mix(in oklch, var(--highlight) 80%, var(--ink));
+  color: var(--on-highlight);
+  background: var(--highlight);
   outline: none;
 }
 
-.pill:focus-visible {
-  box-shadow: 0 0 0 1px var(--ink);
+.call .pill:hover,
+.call .pill:focus-visible {
+  background: none;
 }
 
 .pill.rolled {
@@ -516,7 +527,7 @@ pre {
   display: block;
   width: 2.2em;
   height: 1.86em;
-  margin: 0.35em auto 0;
+  margin: 0.35em 0 0;
   fill: none;
   stroke: currentColor;
   stroke-width: 1px;
@@ -532,14 +543,15 @@ pre {
   gap: var(--row);
 }
 
-/* The install line sits in the bottom left corner of the window, flush
-   against the left rail. It is sticky, not fixed: at the end of the page
+/* The install line sits in the bottom right corner of the window, flush
+   against the right rail. It is sticky, not fixed: at the end of the page
    it comes to rest on top of the footer instead of covering it. */
 .install {
   position: sticky;
   bottom: 0;
   z-index: 11;
   width: max-content;
+  margin-left: auto; /* the bottom right corner, against the right rail */
   display: flex;
   align-items: stretch;
   --on-install: var(--on-highlight);
@@ -651,8 +663,10 @@ pre {
   overflow-x: auto;
 }
 
+/* A paper behind keeps what is written on it in view where it sticks
+   out; it is only read, not used, until it is brought forward. */
 .folder-sheet:not(.is-front) .folder-body {
-  visibility: hidden;
+  pointer-events: none;
 }
 
 /* A paper behind can be brought forward by its tab or by any part of it
@@ -723,6 +737,94 @@ pre {
   font-family: var(--mono);
   font-size: var(--size-small, 11px);
   opacity: 0.7;
+}
+
+/* ─── Palette sources: Poline, by hand, RampenSau ───────────────── */
+.source-view[hidden] {
+  display: none;
+}
+
+/* By hand: the eleven colors as squares, each one a color picker. */
+.hand-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.hand-swatch {
+  position: relative;
+  aspect-ratio: 1;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--pp-text) 30%, transparent);
+}
+
+.hand-swatch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* RampenSau: the ramp as one strip, and its start hue. */
+.ramp-strip {
+  display: flex;
+  height: calc(var(--row) * 5);
+}
+
+.ramp-strip i {
+  flex: 1;
+}
+
+.ramp-hue {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: calc(var(--row) / 2);
+  font-family: var(--mono);
+  font-size: var(--size-small, 11px);
+}
+
+.ramp-hue input {
+  flex: 1;
+  accent-color: var(--pp-text);
+}
+
+/* Which source: three small buttons, the chosen one inverted. */
+.source-switch {
+  display: flex;
+  margin-bottom: calc(var(--row) / 2);
+}
+
+/* Full width, no gaps: the three share their borders. */
+.source-switch button {
+  flex: 1;
+  padding: 3px 8px;
+  font: inherit;
+  color: var(--pp-text);
+  background: transparent;
+  border: 1px solid color-mix(in oklch, var(--pp-text) 40%, transparent);
+  cursor: pointer;
+}
+
+.source-switch button + button {
+  margin-left: -1px;
+}
+
+.source-switch button[aria-pressed="true"] {
+  color: var(--pp);
+  background: var(--pp-text);
+  border-color: var(--pp-text);
+}
+
+.poline-panel figcaption span#source-hint {
+  display: block;
+}
+
+/* In the section text, the source reads as a choice in the sentence. */
+.source-pill {
+  padding: 0 0.25em;
 }
 
 /* ─── Curve editor (Sizes) ─────────────────────────────────────────── */
@@ -980,14 +1082,11 @@ pre {
   font-size: 13px;
 }
 
-.ledger tr.changed td {
-  animation: inked 1.2s ease-out;
-}
-
-@keyframes inked {
-  from {
-    background: color-mix(in oklch, var(--red) 18%, transparent);
-  }
+/* A row whose value just changed flashes its number: the cell turns to
+   the paper's text color for a moment, hard, with no fade. */
+.ledger tr.changed td.no {
+  color: var(--pp);
+  background: var(--pp-text);
 }
 
 /* ─── Sheets: three readings, stacked like loose ledger paper ────── */
