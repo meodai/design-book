@@ -1130,3 +1130,18 @@ body:has(> .rail-left) footer.imprint {
   position: relative;
   z-index: 11;
 }
+
+/* The name right after the book, at the bar's very left: no inset. */
+.install-bar .bar-brand {
+  padding-left: var(--row);
+  gap: 10px;
+}
+
+body:has(> .rail-left) .install-bar .bar-brand {
+  padding-left: 0;
+  gap: 0;
+}
+
+body:has(> .rail-left) .install-bar .bar-brand > span {
+  margin-left: 0;
+}

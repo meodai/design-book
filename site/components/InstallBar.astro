@@ -28,20 +28,6 @@ const links = [
 </div>
 
 <script>
-  // The name starts on the page's text column, like the headline above;
-  // the book hangs left of it. The column moves with the window, so the
-  // bar measures it.
-  const bar = document.querySelector<HTMLElement>('.install-bar');
-  const column = document.querySelector<HTMLElement>('main h1, .claim, h1');
-  function alignBrand() {
-    if (!bar || !column) return;
-    const edge = column.getBoundingClientRect().left - bar.getBoundingClientRect().left;
-    bar.style.setProperty('--bar-text-left', `${Math.max(0, edge)}px`);
-  }
-  alignBrand();
-  addEventListener('resize', alignBrand);
-  addEventListener('load', alignBrand);
-
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-install-copy]')) {
     button.addEventListener('click', async () => {
       try {
