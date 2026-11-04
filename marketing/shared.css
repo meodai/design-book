@@ -1271,3 +1271,23 @@ body:has(> .rail-left) footer.imprint {
 .imprint-made a {
   color: var(--imprint-ink, var(--on-black));
 }
+
+/* Its line runs the footer's full width, with room above it. */
+footer.imprint {
+  position: relative;
+}
+
+.imprint-made {
+  margin-top: var(--row);
+  padding-top: var(--row);
+  border-top: 0;
+}
+
+.imprint-made::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-top: calc(var(--row) * -1);
+  border-top: 1px dashed var(--imprint-line);
+}
