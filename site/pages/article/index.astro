@@ -1,6 +1,5 @@
 ---
 import Page from '../../layouts/Page.astro';
-import BrandMark from '../../components/BrandMark.astro';
 import InstallBar from '../../components/InstallBar.astro';
 import Footer from '../../components/Footer.astro';
 import { partial } from '../../lib/partial';
@@ -28,7 +27,6 @@ const [beforeBrand, afterBrand] = partial(markup);
     <meta slot="head" name="twitter:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens.">
     <meta slot="head" name="twitter:image" content="https://meodai.github.io/design-book/article/og.png">
   <Fragment set:html={beforeBrand} />
-  <BrandMark />
   <Fragment set:html={afterBrand} />
   <InstallBar />
   <Footer current="article" />

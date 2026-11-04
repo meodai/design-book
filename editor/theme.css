@@ -37,7 +37,7 @@ body {
 /* ─── Opening: the top line, a title, what the editor does ────────── */
 .editor-hero {
   position: relative;
-  padding: calc(84px + var(--row) * 3) var(--editor-gutter) calc(var(--row) * 2);
+  padding: calc(var(--row) * 4) var(--editor-gutter) calc(var(--row) * 2);
 }
 
 .editor-hero .brand-mark {

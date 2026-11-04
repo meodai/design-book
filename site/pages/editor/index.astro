@@ -1,6 +1,5 @@
 ---
 import Page from '../../layouts/Page.astro';
-import BrandMark from '../../components/BrandMark.astro';
 import InstallBar from '../../components/InstallBar.astro';
 import Footer from '../../components/Footer.astro';
 import { partial } from '../../lib/partial';
@@ -27,7 +26,6 @@ const [beforeBrand, afterBrand] = partial(markup);
   <meta slot="head" name="twitter:description" content="Interactive editor for Design Book: tokens with relationships, derived values, and live CSS / JSON / W3 output.">
   <meta slot="head" name="twitter:image" content="https://meodai.github.io/design-book/editor/og.png">
   <Fragment set:html={beforeBrand} />
-  <BrandMark />
   <Fragment set:html={afterBrand} />
   <InstallBar />
   <Footer current="editor" />

@@ -18,7 +18,7 @@ Run a single test file: `npx vitest run tests/graph.test.ts`
 
 The site is one Astro project (`astro.config.mjs`, sources in `site/`):
 `site/pages/` (index, tour, article, editor, naming; the docs are the README, linked from the footer), `site/layouts/Page.astro`,
-shared components in `site/components/` (BrandMark, Footer, InstallBar, Logo).
+shared components in `site/components/` (Footer, InstallBar: the bottom bar with the name and the install line, Logo).
 Page markup sits in `site/partials/*.html` (raw HTML: its code samples are
 full of braces) with `{{base}}` for the site root and `<!--brand-->` where the
 top line goes. The pages import the scripts and stylesheets that stay in

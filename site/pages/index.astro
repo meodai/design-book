@@ -1,6 +1,5 @@
 ---
 import Page from '../layouts/Page.astro';
-import BrandMark from '../components/BrandMark.astro';
 import InstallBar from '../components/InstallBar.astro';
 import Footer from '../components/Footer.astro';
 import { partial } from '../lib/partial';
@@ -16,9 +15,8 @@ const [beforeBrand, afterBrand] = partial(markup);
 >
 
   <Fragment set:html={beforeBrand} />
-  <BrandMark link={false} class="brand" />
   <Fragment set:html={afterBrand} />
-  <InstallBar />
+  <InstallBar home />
   <Footer current="overview" />
   <script>
     import '../../marketing/landing.js';

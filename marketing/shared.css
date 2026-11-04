@@ -1019,3 +1019,34 @@ color-input::part(controls) {
 .brand-mark .logo {
   margin-left: auto;
 }
+
+/* ─── The bottom bar: the name on the left, the install line right ───
+   A full bar across the page, stuck to the bottom of the window; at the
+   end of the page it comes to rest on the footer. It replaces the mark
+   that sat at the top of every page. */
+.install-bar {
+  width: auto;
+  margin-left: 0;
+}
+
+.install-bar .bar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  padding: 0 var(--row);
+  font: 600 16px / calc(var(--row) * 1.5) var(--font-text);
+  letter-spacing: -0.01em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.install-bar .bar-brand .logo {
+  width: 26px;
+  height: 22px;
+}
+
+.install-bar code {
+  border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
+  padding-left: var(--row);
+}
