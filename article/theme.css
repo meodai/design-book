@@ -1018,3 +1018,23 @@ body {
     display: none;
   }
 }
+
+/* Room for the demo's tab above it, whatever order the stylesheets
+   load in ([data-ledger] resets the margin with the same weight). */
+.article-content :is(.pair-demo, .extend-demo, .scale-demo, .poline-demo, .bezier-demo) {
+  margin-top: calc(var(--row) * 2.5);
+}
+
+/* The rules between sections run from rail to rail, over the sticky
+   example; the page clips them, the rails cover their ends. */
+.article-content section + section::before,
+.layout::before {
+  left: -100vw;
+  width: 300vw;
+  z-index: 1;
+}
+
+html,
+body {
+  overflow-x: clip;
+}
