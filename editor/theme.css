@@ -548,3 +548,10 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--lg-ink) transparent;
 }
+
+/* The numbers stay put when a line scrolls sideways: give them the
+   page's paper so the code slides under them, not through them. */
+.scope-editor .cm-editor .cm-gutters {
+  background: var(--pp) !important;
+  z-index: 2;
+}
