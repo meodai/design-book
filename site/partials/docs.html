@@ -1,30 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Design Book — Rules behind a design system</title>
-  <meta name="description" content="A reactive engine for the decisions inside a design system. Express rules, not values; render the result to any target." />
-
-  <link rel="icon" type="image/svg+xml" href="./logo.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="stylesheet" href="./style.css" />
-  <link rel="stylesheet" href="./shared.css" />
-  <link rel="stylesheet" href="./docs.css" />
-</head>
-<body>
-
 <section class="hero">
-  <a class="brand-mark" href="./"><span>Design</span><svg class="logo" viewBox="0 0 32 27" aria-hidden="true">
-    <path d="M16 6.5 C12.5 2.5 7.5 1.5 3.5 2.75 V19.25 C7.5 18 12.5 19 16 23" />
-    <path d="M16 6.5 C19.5 2.5 24.5 1.5 28.5 2.75 V19.25 C24.5 18 19.5 19 16 23" />
-    <path d="M2 5 V21.29 C7.45 19.59 11.81 20.49 16 25.28 C20.19 20.49 24.55 19.59 30 21.29 V5" />
-  </svg><span>Book</span></a>
+  <!--brand-->
   <div class="hero-text">
     <h1>The rules behind a design system, not the values.</h1>
     <p class="deck">
@@ -651,7 +626,7 @@ ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</s
       </p>
       <pre class="code" id="names-code"></pre>
       <p class="names-more">
-        <a href="naming/">Try every scheme in the naming playground →</a>
+        <a href="{{base}}naming/">Try every scheme in the naming playground →</a>
       </p>
     </div>
 
@@ -1195,13 +1170,3 @@ ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span clas
 <section class="outro">
   <h2>Express the rules. Let the system resolve them.</h2>
 </section>
-
-<footer class="imprint" data-base="./" data-current="docs"></footer>
-
-<script type="module" src="./docs-folders.js"></script>
-<script type="module" src="./script.js"></script>
-<script type="module" src="./docs-rails.js"></script>
-<script type="module" src="./sliders.js"></script>
-<script type="module" src="./imprint.js"></script>
-</body>
-</html>

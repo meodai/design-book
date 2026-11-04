@@ -5,14 +5,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev          # Start editor (Vite dev server with network access)
+npm run dev          # The website (Astro): landing, docs, article, editor, naming
+npm run build:site   # Build the website to site-dist/ (BASE_PATH sets the base)
 npm test             # Run all tests (vitest)
 npm run test:watch   # Run tests in watch mode
-npm run build        # Build library to dist/
-npm run build:editor # Build editor to editor-dist/
+npm run build        # Build library to dist/ (plain Vite)
 ```
 
 Run a single test file: `npx vitest run tests/graph.test.ts`
+
+## Website
+
+The site is one Astro project (`astro.config.mjs`, sources in `site/`):
+`site/pages/` (index, docs, article, editor, naming), `site/layouts/Page.astro`,
+shared components in `site/components/` (BrandMark, Footer, InstallBar, Logo).
+Page markup sits in `site/partials/*.html` (raw HTML: its code samples are
+full of braces) with `{{base}}` for the site root and `<!--brand-->` where the
+top line goes. The pages import the scripts and stylesheets that stay in
+`marketing/`, `article/`, `editor/` and `naming/`. `package.json` lists those
+folders under `sideEffects`, or the bundler drops their side-effect imports.
 
 ## Project Overview
 

@@ -1221,3 +1221,9 @@ pre {
 .hero .brand-mark {
   margin: 0;
 }
+
+/* The install bar on the landing takes the page's mark and its text. */
+.install-bar {
+  --install-bg: var(--highlight);
+  --install-ink: var(--on-highlight);
+}

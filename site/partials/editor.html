@@ -1,38 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Design Book Editor</title>
-  <meta name="description" content="Interactive editor for Design Book — a reactive TypeScript design system framework. Define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or W3 Design Tokens.">
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Design Book">
-  <meta property="og:title" content="Design Book Editor">
-  <meta property="og:description" content="Interactive editor for Design Book: define tokens with relationships, compute derived values automatically, and render to CSS, JSON, or W3 Design Tokens.">
-  <meta property="og:url" content="https://meodai.github.io/design-book/editor/">
-  <meta property="og:image" content="https://meodai.github.io/design-book/editor/og.png">
-  <meta property="og:image:alt" content="Design Book — a reactive TypeScript design system framework.">
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Design Book Editor">
-  <meta name="twitter:description" content="Interactive editor for Design Book: tokens with relationships, derived values, and live CSS / JSON / W3 output.">
-  <meta name="twitter:image" content="https://meodai.github.io/design-book/editor/og.png">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Libertinus+Sans:ital,wght@0,400;0,700&family=Libertinus+Serif:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <header class="top">
+<header class="top">
     <a href="https://github.com/meodai/design-book" class="top-mark">Design Book</a>
     <nav class="top-nav">
       <a href="https://github.com/meodai/design-book">GitHub</a>
-      <a href="./" aria-current="page">Editor</a>
-      <a href="../article/">Article</a>
+      <a href="{{base}}editor/" aria-current="page">Editor</a>
+      <a href="{{base}}article/">Article</a>
     </nav>
   </header>
 
@@ -45,7 +16,7 @@
       change instantly.
     </p>
     <p class="intro__links">
-      <a href="../article/">Read the article →</a>
+      <a href="{{base}}article/">Read the article →</a>
       <a href="https://github.com/meodai/design-book" target="_blank" rel="noopener">GitHub</a>
     </p>
   </header>
@@ -95,7 +66,3 @@
       <p class="login-footnote">Don't have an account? <a href="#">Sign up</a></p>
     </form>
   </template>
-
-  <script type="module" src="editor.ts"></script>
-</body>
-</html>

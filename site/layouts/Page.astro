@@ -1,0 +1,30 @@
+---
+// Every page's document: head, fonts, favicon, and the body it is given.
+interface Props {
+  title: string;
+  description?: string;
+  /** Google Fonts stylesheet URLs this page uses. */
+  fonts?: string[];
+  /** Attributes for <body> (e.g. data-sections for the rails). */
+  bodyAttrs?: Record<string, string>;
+}
+const { title, description, fonts = [], bodyAttrs = {} } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <slot name="head" />
+    <link rel="icon" type="image/svg+xml" href={`${base}logo.svg`} />
+    {fonts.length > 0 && <link rel="preconnect" href="https://fonts.googleapis.com" />}
+    {fonts.length > 0 && <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />}
+    {fonts.map((href) => <link rel="stylesheet" href={href} />)}
+  </head>
+  <body {...bodyAttrs}>
+    <slot />
+  </body>
+</html>

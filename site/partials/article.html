@@ -1,41 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Procedural Tokens — encoding design decisions</title>
-  <meta name="description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens that re-decide themselves when their inputs change.">
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="article">
-  <meta property="og:site_name" content="Design Book">
-  <meta property="og:title" content="Procedural Tokens — encoding design decisions">
-  <meta property="og:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens that re-decide themselves when their inputs change.">
-  <meta property="og:url" content="https://meodai.github.io/design-book/article/">
-  <meta property="og:image" content="https://meodai.github.io/design-book/article/og.png">
-  <meta property="og:image:alt" content="Procedural Tokens — encoding design decisions. A Design Book demo.">
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Procedural Tokens — encoding design decisions">
-  <meta name="twitter:description" content="Most design tokens hold a value. The interesting ones hold a rule. A live walk from static refs to procedural tokens.">
-  <meta name="twitter:image" content="https://meodai.github.io/design-book/article/og.png">
-
-  <link rel="icon" type="image/svg+xml" href="./logo.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body data-sections=".article-content > section">
-  <header class="top">
-    <a href="../" class="top-mark">Design Book</a>
-    <nav class="top-nav">
-      <a href="https://github.com/meodai/design-book">GitHub</a>
-      <a href="../editor/">Editor</a>
-      <a href="./" aria-current="page">Article</a>
-    </nav>
-  </header>
+<section class="article-hero">
+    <!--brand-->
+    <header class="article-header">
+        <h1>Procedural Tokens — encoding design decisions</h1>
+        <p class="lede">
+          Most token systems already separate values from semantics. The
+          interesting part is the connection between them. Usually it is a
+          fixed link: one token points at another and stops there. I am
+          interested in making that connection work more like a spreadsheet
+          cell. It can stay static, choose one value from a set, or apply a
+          small formula. That is not just a technical convenience. It is a
+          way to bake flexibility into the system early enough that changing
+          the basics can produce new outcomes instead of a repair job. In
+          that sense, procedural tokens are closer to design programs than
+          static collections:
+          systems with internal logic that keep generating outcomes.
+        </p>
+      </header>
+  </section>
 
   <div class="layout">
     <aside class="example-panel" aria-label="Live example components">
@@ -70,22 +51,6 @@
     </aside>
 
     <article class="article-content">
-      <header class="article-header">
-        <h1>Procedural Tokens — encoding design decisions</h1>
-        <p class="lede">
-          Most token systems already separate values from semantics. The
-          interesting part is the connection between them. Usually it is a
-          fixed link: one token points at another and stops there. I am
-          interested in making that connection work more like a spreadsheet
-          cell. It can stay static, choose one value from a set, or apply a
-          small formula. That is not just a technical convenience. It is a
-          way to bake flexibility into the system early enough that changing
-          the basics can produce new outcomes instead of a repair job. In
-          that sense, procedural tokens are closer to design programs than
-          static collections:
-          systems with internal logic that keep generating outcomes.
-        </p>
-      </header>
 
       <section>
         <h2>1. Static links are the baseline</h2>
@@ -560,9 +525,9 @@
         </p>
       </section>
 
-      <footer class="article-footer">
+      <footer class="article-coda">
         <p>
-          Try the same tokens in the <a href="../editor/">interactive editor</a> —
+          Try the same tokens in the <a href="{{base}}editor/">interactive editor</a> —
           the editor exposes the same Design Book graph, with every scope,
           every ref, and every function token editable inline.
         </p>
@@ -571,7 +536,3 @@
   </div>
 
   <div id="popover-root"></div>
-
-  <script type="module" src="article.ts"></script>
-</body>
-</html>

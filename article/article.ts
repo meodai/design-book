@@ -24,14 +24,11 @@ import { parse, wcagContrast } from 'culori';
 import { Poline, positionFunctions } from 'poline';
 import 'poline/picker';
 import 'hdr-color-input';
-import './style.css';
-import '../marketing/shared.css';
-// The landing page's style on top, and its rails mapping the sections.
-import './theme.css';
+// The page (site/pages/article) imports the stylesheets; these dress the
+// article's demos and map its sections on the rails.
 import './dress.js';
 import '../marketing/docs-rails.js';
 import '../marketing/sliders.js';
-import '../marketing/imprint.js';
 
 // ---------------------------------------------------------------------------
 // 1. Token setup

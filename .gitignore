@@ -6,3 +6,7 @@ live-test-dist/
 naming-dist/
 .claude/
 .superpowers/
+site-dist/
+marketing-dist/
+article-dist/
+.astro/

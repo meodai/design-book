@@ -6,37 +6,14 @@ import dts from 'vite-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-// Each dev server pre-bundles its own dependencies: with one shared
-// node_modules/.vite, running the editor and the marketing page side by side
-// re-optimizes the cache under the other one (504 Outdated Optimize Dep).
+// The library build (and the live-test page). The website is an Astro
+// site: astro.config.mjs. Each mode pre-bundles its own dependencies.
 export default defineConfig((env) => ({
   cacheDir: resolve(__dirname, 'node_modules/.vite', env.mode),
   ...config(env),
 }));
 
 function config({ mode }: ConfigEnv): UserConfig {
-  if (mode === 'editor') {
-    return {
-      root: 'editor',
-      base: process.env.BASE_PATH ?? '/',
-      server: { host: true },
-      build: {
-        outDir: '../editor-dist',
-      },
-    };
-  }
-
-  if (mode === 'article') {
-    return {
-      root: 'article',
-      base: process.env.BASE_PATH ?? '/',
-      server: { host: true },
-      build: {
-        outDir: '../article-dist',
-      },
-    };
-  }
-
   if (mode === 'live-test') {
     return {
       root: 'live-test',
@@ -44,35 +21,6 @@ function config({ mode }: ConfigEnv): UserConfig {
       server: { host: true },
       build: {
         outDir: '../live-test-dist',
-      },
-    };
-  }
-
-  if (mode === 'naming') {
-    return {
-      root: 'naming',
-      base: process.env.BASE_PATH ?? '/',
-      server: { host: true },
-      build: {
-        outDir: '../naming-dist',
-      },
-    };
-  }
-
-  if (mode === 'marketing') {
-    return {
-      root: 'marketing',
-      base: process.env.BASE_PATH ?? '/',
-      server: { host: true },
-      build: {
-        outDir: '../marketing-dist',
-        // The landing page and the full feature tour are two pages.
-        rollupOptions: {
-          input: {
-            index: resolve(__dirname, 'marketing/index.html'),
-            docs: resolve(__dirname, 'marketing/docs.html'),
-          },
-        },
       },
     };
   }

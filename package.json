@@ -19,7 +19,13 @@
     "dist",
     "skills"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./marketing/**",
+    "./article/**",
+    "./editor/**",
+    "./naming/**",
+    "./site/**"
+  ],
   "keywords": [
     "design-tokens",
     "design-system",
@@ -42,18 +48,12 @@
     "url": "https://github.com/meodai/design-book/issues"
   },
   "scripts": {
-    "dev": "vite --mode editor --host",
+    "dev": "astro dev",
     "build": "vite build",
-    "build:editor": "vite build --mode editor",
-    "dev:article": "vite --mode article --host",
-    "build:article": "vite build --mode article --emptyOutDir",
-    "dev:marketing": "vite --mode marketing --host",
-    "build:marketing": "vite build --mode marketing --emptyOutDir",
-    "dev:naming": "vite --mode naming --host",
-    "build:naming": "vite build --mode naming --emptyOutDir",
+    "build:site": "astro build",
+    "preview:site": "astro preview",
     "dev:live-test": "vite --mode live-test --host",
     "build:live-test": "vite build --mode live-test --emptyOutDir",
-    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm test && npm run build"
@@ -72,6 +72,7 @@
     "@codemirror/view": "^6.40.0",
     "@lezer/highlight": "^1.2.3",
     "@types/culori": "^4.0.1",
+    "astro": "^7.4.5",
     "codemirror": "^6.0.2",
     "hdr-color-input": "^0.4.2",
     "poline": "^0.13.1",

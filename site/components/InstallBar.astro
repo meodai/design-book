@@ -1,0 +1,26 @@
+---
+// The install line: stuck to the bottom right of the window, it comes to
+// rest on top of the footer. Copy turns green for a moment once copied.
+---
+<div class="install-bar">
+  <code><span class="prompt">$</span> npm i design-book</code>
+  <button class="copy" type="button" data-install-copy>Copy</button>
+</div>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-install-copy]')) {
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText('npm i design-book');
+        button.textContent = 'Copied';
+        button.classList.add('copied');
+      } catch {
+        button.textContent = 'Select it';
+      }
+      setTimeout(() => {
+        button.textContent = 'Copy';
+        button.classList.remove('copied');
+      }, 1400);
+    });
+  }
+</script>

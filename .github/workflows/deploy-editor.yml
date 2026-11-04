@@ -20,42 +20,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
 
-      # Marketing → site/ (root)
-      - run: npm run build:marketing
+      # The whole site (landing, docs, article, editor, naming) is one
+      # Astro build.
+      - run: npm run build:site
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
 
-      # Editor → site/editor/
-      - run: npm run build:editor
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/editor/
-
-      # Naming playground → site/naming/
-      - run: npm run build:naming
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/naming/
-
-      # Article → site/article/
-      - run: npm run build:article
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}/article/
-
-      # Combine all builds into one upload directory.
-      - name: Assemble site
-        run: |
-          mkdir -p site
-          cp -r marketing-dist/. site/
-          cp -r editor-dist site/editor
-          cp -r article-dist site/article
-          cp -r naming-dist site/naming
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: site-dist
 
   deploy:
     needs: build
