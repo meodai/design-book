@@ -1080,6 +1080,9 @@ pre {
   left: calc(50% - 50cqw);
   width: 100cqw;
   background: var(--ground);
+  /* the rails are the same paper: a line where the band meets each */
+  border-inline: 1px solid var(--hair);
+  box-sizing: border-box;
 }
 
 .start-grid {
