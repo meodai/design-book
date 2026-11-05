@@ -342,17 +342,49 @@ ui.set('accent', furthestFrom(
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>As subtle as possible</em> while still readable.</p>
-          <p class="fn-detail">The lowest contrast that still reaches a ratio. For colors that is WCAG (4.5 by default): hairlines, captions and dim labels that pass the next audit without anyone checking them by hand. For sizes and text styles it is the ratio between two values: the smallest heading that still reads as bigger than the body.</p>
+          <p class="fn-detail">The lowest contrast that still reaches a ratio. For colors that is WCAG (4.5 by default): hairlines, captions and dim labels that pass the next audit without anyone checking them by hand. It works the other way too: a hairline, a divider or a ruled background at a ratio around 1.2 stays faint on any surface but never disappears. For sizes and text styles it is the ratio between two values: the smallest heading that still reads as bigger than the body.</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>ui.set('caption', minContrastWith(
-  ref('ui.surface'),
-  neutral,
-  { ratio: 4.5 },
-))</Code></Sheet>
-          <Sheet name="result" label="Result" front>
+          <Sheet name="code" label="Code"><Code is:raw>// text that just passes AA
+ui.set('caption', minContrastWith(
+  ref('ui.surface'), neutral,
+  { minContrast: 4.5 },
+));
+
+// a line that is faint, but always there
+ui.set('hairline', minContrastWith(
+  ref('ui.surface'), neutral,
+  { minContrast: 1.2 },
+));
+
+// the smallest heading that still reads as bigger
+ui.set('heading', minContrastWith(
+  ref('type.body'), ref('type'),
+  { minContrast: 1.25, direction: 'larger' },
+));</Code></Sheet>
+          <Sheet name="result" label="Sizes" class="min-sizes">
+            <figure class="demo">
+              <div class="ms-stage">
+                <div class="ms-scale" id="ms-scale" aria-hidden="true"></div>
+                <div class="ms-sample">
+                  <p class="ms-heading" id="ms-heading">Field notes</p>
+                  <p class="ms-body">Twelve walks along the river, with maps. The body is 16px.</p>
+                </div>
+              </div>
+              <p class="ms-readout" id="ms-readout"></p>
+              <div class="stub ms-stub">
+                <span>minContrast</span>
+                <Slider id="ms-ratio" min="1.05" max="3" step="0.05" value="1.25" aria-label="minContrast" />
+              </div>
+            </figure>
+          </Sheet>
+          <Sheet name="result" label="Colors" front>
             <figure class="demo">
               <div class="min-stage">
+                <div class="min-card">
+                  <div class="min-label">ratio 1.2 · hairline</div>
+                  <div class="min-sample min-sample--lines" id="min-sample-12"><span class="min-text"></span></div>
+                </div>
                 <div class="min-card">
                   <div class="min-label">ratio 3 · AA large</div>
                   <div class="min-sample" id="min-sample-3"><span class="min-text"></span></div>

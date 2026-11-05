@@ -1466,11 +1466,25 @@ pre.code.holes-left,
   margin-right: auto;
 }
 
-/* minContrastWith: three answers side by side across the sheet, the
-   ratio as a head over each, a line between them. */
+/* minContrastWith: four answers, two by two across the sheet, the ratio
+   as a head over each, lines between them. */
 .folder-sheet--result .folder-body .min-stage {
   margin-inline: calc(var(--row) * -1);
   gap: 0;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* the hairline: ruled lines in the pick, one per row */
+.folder-sheet--result .min-sample--lines {
+  align-items: end;
+  padding-bottom: calc(var(--row) / 4);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    var(--line) calc(var(--row) - 1px) var(--row)
+  ) !important;
+  background-size: 100% calc(100% - var(--row));
+  background-repeat: no-repeat;
 }
 
 .folder-sheet--result .min-card {
@@ -1478,8 +1492,12 @@ pre.code.holes-left,
   border: 0;
 }
 
-.folder-sheet--result .min-card + .min-card {
+.folder-sheet--result .min-card:nth-child(even) {
   box-shadow: inset 1px 0 0 var(--strip-line);
+}
+
+.folder-sheet--result .min-card:nth-child(n + 3) {
+  border-top: 1px solid var(--strip-line);
 }
 
 .folder-sheet--result .min-label {
@@ -2236,5 +2254,94 @@ main.sections {
   display: inline-flex;
   align-items: center;
   gap: calc(var(--row) / 3);
+}
+
+/* minContrastWith, sizes: a second result between the colors and the code
+   (tabs in reading order), on the green paper. The scale as a row of
+   sizes, the body's marked, the pick inverted; a heading at the pick over
+   a paragraph at the body's size. */
+.min-sizes,
+.min-sizes .demo {
+  --pp: var(--green);
+  --pp-text: var(--black);
+}
+
+.min-sizes {
+  --tab-left: calc(var(--row) * 4);
+}
+
+.folder:has(> .min-sizes) > .folder-sheet--code {
+  --tab-left: calc(var(--row) * 8.5);
+}
+
+@media (max-width: 640px) {
+  .min-sizes {
+    --tab-left: 80px;
+  }
+
+  .folder:has(> .min-sizes) > .folder-sheet--code {
+    --tab-left: 176px;
+  }
+}
+
+.ms-scale {
+  display: flex;
+  justify-content: space-between;
+  font: 11px/var(--row) var(--font-code);
+  border-bottom: 1px solid var(--pp-text);
+}
+
+.ms-scale span {
+  padding: 0 4px;
+}
+
+.ms-scale .is-body {
+  text-decoration: underline;
+}
+
+.ms-scale .is-pick {
+  color: var(--pp);
+  background: var(--pp-text);
+}
+
+.ms-sample {
+  height: calc(var(--row) * 4);
+  padding-top: calc(var(--row) / 2);
+  overflow: hidden;
+}
+
+.ms-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  line-height: 1.1;
+}
+
+.ms-heading.is-none {
+  opacity: 0.3;
+  text-decoration: line-through;
+}
+
+.ms-body {
+  margin: calc(var(--row) / 3) 0 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.ms-readout {
+  margin: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.ms-stub {
+  font: 11px/var(--row) var(--font-code);
+}
+
+.ms-stub > input[type="range"] {
+  flex: 1 1 auto;
+}
+
+.min-aa {
+  font-size: 2rem;
+  line-height: 1.1;
 }
 

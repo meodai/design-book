@@ -640,12 +640,53 @@ function paintRenderers () {
       out.textContent = "no member reaches it";
       return;
     }
+    if (el.classList.contains("min-sample--lines")) {
+      // decoration: ruled lines in the pick, the reading under them in the body's ink
+      el.style.setProperty("--line", text);
+      out.style.color = "#564f44";
+      out.innerHTML = `<span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em">${text} · ${contrast(surface, text).toFixed(2)}:1</span>`;
+      return;
+    }
     out.style.color = text;
     out.innerHTML =
-      `Aa — Body, caption, label.<br>
+      `<span class="min-aa">Aa</span><br>
        <span style="font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.04em;opacity:.75">${text} · ${contrast(surface, text).toFixed(1)}:1</span>`;
   }
-  paint("min-sample-3", 3); paint("min-sample-45", 4.5); paint("min-sample-7", 7);
+  paint("min-sample-12", 1.2); paint("min-sample-3", 3); paint("min-sample-45", 4.5); paint("min-sample-7", 7);
+})();
+
+// — minContrastWith, sizes: the smallest heading that still stands a ratio
+//   above the body text —
+(function demoMinSizes () {
+  const scaleEl = document.getElementById("ms-scale");
+  const heading = document.getElementById("ms-heading");
+  const readout = document.getElementById("ms-readout");
+  const slider = document.getElementById("ms-ratio");
+  if (!scaleEl || !heading || !readout || !slider) return;
+
+  const SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48];
+  const book = new DesignBook("min-sizes");
+  const type = book.addScope("type");
+  for (const n of SIZES) type.set(`s${n}`, px(n));
+  type.set("body", ref("type.s16"));
+  const ui = book.addScope("ui");
+
+  function paint () {
+    const ratio = Number(slider.value);
+    ui.set("heading", minContrastWith(ref("type.body"), ref("type"), { minContrast: ratio, direction: "larger" }));
+    let pick = null;
+    try { pick = book.resolve("ui.heading"); } catch { /* nothing that large */ }
+    const n = pick ? parseFloat(pick) : null;
+    scaleEl.innerHTML = SIZES.map((s) =>
+      `<span class="${s === n ? "is-pick" : ""}${s === 16 ? " is-body" : ""}">${s}</span>`).join("");
+    heading.style.fontSize = pick ?? "16px";
+    heading.classList.toggle("is-none", !pick);
+    readout.innerHTML = pick
+      ? `16px × ${ratio.toFixed(2)} → <b>${pick}</b> · ${(n / 16).toFixed(2)}:1`
+      : `16px × ${ratio.toFixed(2)} → nothing in the scale is that large`;
+  }
+  slider.addEventListener("input", paint);
+  paint();
 })();
 
 // — nextLarger / nextSmaller —
