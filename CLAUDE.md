@@ -29,6 +29,11 @@ pages share), `site/article/`, `site/editor/` and `site/naming/`.
 A section that sets text beside a demo carries the class `split` (shared.css):
 two columns from 900px (5 : 7; `split--wide-start` for 7 : 5), one gutter
 for all of them (`--split-gap`), stacked below.
+Section titles (landing, tour, article) are claim-sized (`--title-size`) and
+sit on their section's rule, the page's color behind them (`--title-ground`);
+what follows them is inset 2.2rem, as in the article (shared.css). The tour's
+sub-sections (`.feature-sub` blocks, `.fn` heads) do the same a size down
+(`--sub-title-size`).
 `package.json` lists `./site/**` under `sideEffects`, or the bundler drops
 their side-effect imports.
 

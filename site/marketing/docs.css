@@ -1671,12 +1671,18 @@ body {
 .renderers,
 .extend,
 .coda {
-  padding-top: var(--section-space);
+  padding-top: var(--title-gap);
   padding-bottom: var(--section-space);
 }
 
+/* Under a title on the rule, less: the title already stands in it. */
+body {
+  --title-gap: calc(var(--row) * 4);
+}
+
 .sections-head {
-  padding-top: var(--section-space);
+  position: relative;
+  padding-top: var(--title-gap);
 }
 
 .fn,
@@ -1693,4 +1699,34 @@ body {
 .feature-sub {
   margin-top: var(--sub-space);
   padding-top: var(--sub-space);
+}
+
+/* ── Titles on the rule: twice the space above it ─────────────────
+   A section's rule (and the title on it) gets its own space above on top
+   of the section before's bottom padding; so does a merged block's and a
+   function's. */
+body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
+           .extends-feature, .coda, .renderers, .extend),
+.sections-head {
+  margin-top: var(--section-space);
+}
+
+.feature-sub {
+  margin-top: calc(var(--sub-space) * 2);
+}
+
+.fn-panels > .fn + .fn {
+  margin-top: var(--sub-space);
+}
+
+/* The function list ends on a function's bottom space; the section after
+   it gets the rest, so its rule has the same space above as any other. */
+main.sections {
+  padding-bottom: calc(var(--section-space) - var(--sub-space));
+}
+
+/* On a phone the Code tab sits just after Result's: clear of it whichever
+   paper is in front (the one behind shifts half a row right). */
+@media (max-width: 640px) {
+  .folder-sheet--code { --tab-left: 80px; }
 }

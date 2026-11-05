@@ -163,12 +163,11 @@ body {
 }
 
 /* ═══ Sections: rules from rail to rail ═════════════════════════════ */
-/* As much space above a section's rule as under it: three rows each
-   side, the heading under it without a margin of its own. */
+/* Six rows above a section's rule, where its title sits. */
 .article-content section {
   position: relative;
   border-top: 0;
-  margin-top: calc(var(--row) * 3);
+  margin-top: calc(var(--row) * 6);
   padding-top: calc(var(--row) * 3);
 }
 
@@ -179,6 +178,18 @@ body {
 
 .article-content section > h2:first-child {
   margin-top: 0;
+}
+
+/* A ruled section's title sits on its rule (shared.css), so the
+   section has no top padding; the space is under the title. */
+.article-content section + section {
+  display: flow-root; /* or the title's negative margin collapses
+                         into the section's and moves the rule too */
+  padding-top: 0;
+}
+
+.article-content section + section > h2:first-child {
+  margin-bottom: calc(var(--row) * 2);
 }
 
 /* The rules run past both rails: the page clips them and the rails

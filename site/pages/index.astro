@@ -60,7 +60,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <!-- Two papers in a folder, one behind the other. Each has a tab on its
          top edge; selecting a tab brings that paper to the front. -->
-    <Folder id="folder">
+    <Folder id="folder" class="folder--inset">
       <Sheet name="palette" label="Palette" as="article" class="sheet-palette holes-both" bodyClass="palette-body">
           <figure class="poline-panel">
             <div class="source-view" data-view="poline">
@@ -189,7 +189,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <h2 id="principles-title">What it is built on</h2>
     </div>
 
-    <dl class="principles">
+    <dl class="principles ruled-list">
       <div>
         <dt>You bring the colors</dt>
         <dd>Rules pick and mix the colors you give them; they don't make up their own. Make the primitives however you like, with a generator, a brand book or by eye, and write a plain value wherever a rule isn't what you mean.</dd>
@@ -241,7 +241,7 @@ ui.set('ground', darkest(ref('ledger')));
 ui.set('ink',    bestContrastWith(ref('ui.ground'), ref('ledger')));
 
 book.render('css-variables');</pre>
-      <ul class="start-links">
+      <ul class="start-links ruled-list">
         <li><a href={`${base}tour/`}>Tour</a><span>Every function and renderer, with live examples</span></li>
         <li><a href={`${base}editor/`}>Editor</a><span>Write a book in the browser and watch it resolve</span></li>
         <li><a href={`${base}article/`}>Article</a><span>The longer argument for rules over values</span></li>

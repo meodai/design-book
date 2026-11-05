@@ -772,6 +772,23 @@ footer.imprint .imprint-made a {
   font: italic 800 30px var(--font-text);
 }
 
+/* The link round it carries the height; the drawing fills it. */
+.logo-link {
+  display: block;
+  width: fit-content;
+  height: 30px;
+  color: inherit;
+}
+
+.logo-link > .logo {
+  height: 100%;
+}
+
+.logo-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
 /* ─── Jumps: the rail's section numbers glide to their section ──── */
 html {
   scroll-behavior: smooth;
@@ -967,6 +984,130 @@ color-input::part(controls) {
 
 .rail .rail-scale {
   bottom: calc(var(--row) * 7.5);
+}
+
+/* ─── Titles on the rule ────────────────────────────────────────────
+   A section's title is as large as the landing's claim and its first
+   line sits on the rule above its section, centered on it (half its
+   1.2 line up), the page's color behind it (--title-ground) cutting
+   the rule. Where the title heads the ruled box (landing, article) it
+   stays in flow and the box has no top padding; on the tour it sits in
+   a column, so it is taken out of flow (left auto: its own place
+   across) and the section's space below the rule goes to the text. */
+:root {
+  --title-size: clamp(30px, 4vw, 54px);
+}
+
+.section-head > h2,
+.sections-head > h2,
+body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
+           .extends-feature, .coda, .renderers, .extend) h2,
+.article-content section + section > h2:first-child {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  max-width: 100%;
+  margin: -0.6em 0 0 -0.3em;
+  padding: 0 0.3em;
+  background: var(--title-ground, var(--paper));
+  font-size: var(--title-size);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.sections-head > h2,
+body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
+           .extends-feature, .coda, .renderers, .extend) h2 {
+  position: absolute;
+  top: 0;
+}
+
+/* Sub-sections on the tour, the same way a step down: a merged block
+   (.feature-sub, ruled at its top) and a function (.fn, ruled from the
+   second on). A block's title sits in a column, so it leaves the flow
+   like a section's; a function's whole head (name, signature, kinds)
+   stays in flow on the rule, the function has no top padding. */
+:root {
+  --sub-title-size: clamp(26px, 3vw, 40px);
+}
+
+.feature-sub {
+  position: relative;
+}
+
+.feature-sub > div > h3:first-child,
+.fn-panels > .fn + .fn > .fn-head {
+  z-index: 1;
+  width: fit-content;
+  max-width: 100%;
+  margin: calc(var(--sub-title-size) * -0.6) 0 0 -0.3em;
+  padding: 0 0.3em;
+  background: var(--title-ground, var(--paper));
+}
+
+.feature-sub > div > h3:first-child {
+  position: absolute;
+  top: -1px; /* on the block's border */
+}
+
+.feature-sub > div > h3:first-child,
+.fn-head > h3 {
+  font-size: var(--sub-title-size);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.fn-panels > .fn + .fn {
+  display: flow-root; /* keep the head's negative margin inside */
+  padding-top: 0;
+}
+
+.fn-panels > .fn + .fn > .fn-head {
+  position: relative;
+  margin-bottom: calc(var(--row) * 2);
+  padding: 0 calc(var(--sub-title-size) * 0.3);
+  margin-left: calc(var(--sub-title-size) * -0.3);
+}
+
+/* What follows a title is inset, as in the article (--inset): the
+   paragraphs, lists and controls under a section's or a block's title,
+   and a function's pitch. A merged block under a section's text keeps
+   its place. Phones use the whole width. */
+:root {
+  --inset: 2.2rem;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --inset: 0px;
+  }
+}
+
+:is(.section-head, .sections-head, .graph-text, .ref-feature-text,
+    .readable-feature-text, .ramp-feature-text, .extends-head, .coda,
+    .renderers-head, .extend-head) > h2 ~ :not(.feature-sub),
+.feature-sub > div > h3:first-child ~ *,
+.fn-pitch {
+  margin-left: var(--inset);
+}
+
+/* A folder as wide as its section (<Folder class="folder--inset">): its
+   tabs start at the inset, under the text above. A tab behind does not
+   move across with its paper, so the first one stays on that line
+   whichever paper is in front. */
+.folder--inset .folder-tab {
+  left: calc(var(--inset) + var(--tab-left, 0px));
+  transition: translate 0.25s ease;
+}
+
+.folder--inset .folder-sheet:not(.is-front) > .folder-tab {
+  translate: calc(var(--row) / -2) 0;
+}
+
+.article-content section:first-of-type > h2:first-child {
+  font-size: var(--title-size);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 /* ─── Split: text beside a demo ─────────────────────────────────────

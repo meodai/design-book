@@ -2150,7 +2150,6 @@ h1, h2, h3 {
   padding-top: clamp(40px, 5vw, 60px);
   border-top: 1px solid var(--hair);
 }
-.feature-sub :is(h2, h3) { font-size: clamp(24px, 2.6vw, 32px); }
 
 /* ── ref(): sources and relative refs ───────────────────────────── */
 .ref-feature {
@@ -2170,7 +2169,6 @@ h1, h2, h3 {
   margin: 0 0 0.5em;
 }
 .ref-feature-text :is(h2, h3) em { color: var(--accent); font-style: italic; }
-.ref-feature-body.feature-sub .ref-feature-text h3 { font-size: clamp(24px, 2.6vw, 32px); }
 .ref-feature-text > p {
   font-size: 17px;
   line-height: 1.6;

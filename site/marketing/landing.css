@@ -546,18 +546,19 @@ pre {
 
 .section {
   max-width: var(--measure);
-  /* as much space above the next section's rule as under it (its head's
-     three rows) */
-  margin: 0 auto calc(var(--row) * 3);
+  /* the space above the next section's rule, where its title sits */
+  margin: 0 auto calc(var(--row) * 6);
   padding: 0 var(--gutter);
 }
 
 .section-head {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  /* the intro under its title, not beside it */
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--row) * 2);
   align-items: start;
-  padding-top: calc(var(--row) * 3);
+  /* the title sits on the rule at its top (shared.css) */
+  padding-top: 0;
   position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
@@ -576,10 +577,8 @@ pre {
 }
 
 .section-head h2 {
-  margin: 0;
-  font-size: var(--size-heading, 36px);
-  line-height: max(calc(var(--row) * 1.5), 1.1em);
-  letter-spacing: -0.01em;
+  /* on the rule (shared.css), the page's ground cutting it */
+  --title-ground: var(--ground);
   text-wrap: balance;
 }
 
@@ -1028,7 +1027,12 @@ pre {
 
 .principles {
   margin: 0;
-  border-top: 3px double var(--hair);
+}
+
+/* A list ruled between its items only (.ruled-list): no line above the
+   first, the title's rule is above it, and none under the last. */
+.ruled-list > * + * {
+  border-top: 1px solid var(--green-rule);
 }
 
 .principles > div {
@@ -1036,7 +1040,6 @@ pre {
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: calc(var(--row) * 2);
   padding: calc(var(--row) / 2) 0;
-  border-bottom: 1px solid var(--green-rule);
 }
 
 .principles dt {
@@ -1081,12 +1084,10 @@ pre {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 3px double var(--hair);
 }
 
 .start-links li {
   padding: calc(var(--row) / 2) 0;
-  border-bottom: 1px solid var(--green-rule);
 }
 
 .start-links a {
@@ -1566,18 +1567,19 @@ pre {
 
 .section {
   max-width: var(--measure);
-  /* as much space above the next section's rule as under it (its head's
-     three rows) */
-  margin: 0 auto calc(var(--row) * 3);
+  /* the space above the next section's rule, where its title sits */
+  margin: 0 auto calc(var(--row) * 6);
   padding: 0 var(--gutter);
 }
 
 .section-head {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  /* the intro under its title, not beside it */
+  grid-template-columns: minmax(0, 1fr);
   gap: calc(var(--row) * 2);
   align-items: start;
-  padding-top: calc(var(--row) * 3);
+  /* the title sits on the rule at its top (shared.css) */
+  padding-top: 0;
   position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
@@ -1596,10 +1598,8 @@ pre {
 }
 
 .section-head h2 {
-  margin: 0;
-  font-size: var(--size-heading, 36px);
-  line-height: max(calc(var(--row) * 1.5), 1.1em);
-  letter-spacing: -0.01em;
+  /* on the rule (shared.css), the page's ground cutting it */
+  --title-ground: var(--ground);
   text-wrap: balance;
 }
 
@@ -2048,7 +2048,12 @@ pre {
 
 .principles {
   margin: 0;
-  border-top: 3px double var(--hair);
+}
+
+/* A list ruled between its items only (.ruled-list): no line above the
+   first, the title's rule is above it, and none under the last. */
+.ruled-list > * + * {
+  border-top: 1px solid var(--green-rule);
 }
 
 .principles > div {
@@ -2056,7 +2061,6 @@ pre {
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: calc(var(--row) * 2);
   padding: calc(var(--row) / 2) 0;
-  border-bottom: 1px solid var(--green-rule);
 }
 
 .principles dt {
@@ -2101,12 +2105,10 @@ pre {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 3px double var(--hair);
 }
 
 .start-links li {
   padding: calc(var(--row) / 2) 0;
-  border-bottom: 1px solid var(--green-rule);
 }
 
 .start-links a {
