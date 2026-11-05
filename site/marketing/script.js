@@ -213,9 +213,11 @@ const PALETTE_CONTRAST_SURFACES = [
     SELECTORS.forEach(([name], i) => {
       const a0 = i * seg + 0.02, a1 = (i + 1) * seg - 0.02;
       const lower = Math.cos((a0 + a1) / 2) < 0;
-      out += `<path id="hc-l${i}" d="${arc(lower ? LABEL + 3 : LABEL - 3, a0, a1)}"/>`;
+      out += `<path id="hc-l${i}" d="${arc(lower ? LABEL + 1.5 : LABEL - 4.5, a0, a1)}"/>`;
     });
     out += "</defs>";
+    // the labels' band, always the paper
+    out += `<path class="hc-label-band" fill-rule="evenodd" d="M${OUTER} 0A${OUTER} ${OUTER} 0 1 0 ${-OUTER} 0A${OUTER} ${OUTER} 0 1 0 ${OUTER} 0ZM${RIM} 0A${RIM} ${RIM} 0 1 1 ${-RIM} 0A${RIM} ${RIM} 0 1 1 ${RIM} 0Z"/>`;
     let marks = "";
     // the cells
     SELECTORS.forEach((_, i) => {
@@ -226,11 +228,9 @@ const PALETTE_CONTRAST_SURFACES = [
           // the pick: the whole cell in its color, outlined, a diamond in
           // its middle (so a pick the color of the paper still shows)
           out += `<path class="hc-pick" d="${sector(r0, r1, a0, a1, GAP_PICK)}" fill="${c}"/>`;
-          // a long diamond along the radius, its tips pointing at the hub
-          const am = (a0 + a1) / 2, rm = (r0 + r1) / 2, L = 6, W = 4.5; // a little longer than wide, its tips at the hub
-          const P = (r, a) => pt(r, a).replace(" ", ",");
-          const side = W / rm; // the half-width, as an angle at that radius
-          marks += `<path class="hc-mark" d="M${P(rm - L, am)} L${P(rm, am + side)} L${P(rm + L, am)} L${P(rm, am - side)}Z"/>`;
+          // a circle in the middle of the cell, a paper ring round its black one
+          const [cx, cy] = pt((r0 + r1) / 2, (a0 + a1) / 2).split(" ").map(Number);
+          marks += `<circle class="hc-mark-halo" cx="${cx}" cy="${cy}" r="4.5"/><circle class="hc-mark" cx="${cx}" cy="${cy}" r="4.5"/>`;
         } else {
           // not picked: a slim band, a quarter of the ring, its color still there
           const mid = (r0 + r1) / 2, h = ringW / 8;
@@ -268,6 +268,27 @@ const PALETTE_CONTRAST_SURFACES = [
       const a = (k / 24) * 2 * Math.PI;
       out += `<path class="hc-rule hc-thin" d="M${pt(HUB - 8, a)} L${pt(HUB - 2, a)}"/>`;
     }
+    // ticks between the turning pie and the next ring: north, east, south
+    // and west stop 2 short of the ring, the diagonals halfway, the
+    // others are short
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * 2 * Math.PI;
+      const end = k % 6 === 0 ? HUB - 13 : k % 3 === 0 ? PIE_R + 9 : PIE_R + 5;
+      // only the long ones touch the pie; the rest stand 2 off it
+      const start = k % 6 === 0 ? PIE_R : PIE_R + 2;
+      out += `<path class="hc-rule hc-thin" d="M${pt(start, a)} L${pt(end, a)}"/>`;
+    }
+    // the rings' key on the axis straight down: a diamond per ring with
+    // its color's initial
+    const KEY = ["R", "Y", "G", "B", "W", "B"];
+    PALETTE.forEach((_, m) => {
+      const r = HUB + (m + 0.5) * ringW;
+      const [x, y] = pt(r, Math.PI).split(" ").map(Number);
+      // a diamond with its points cut off: flat on the left and right, a
+      // little at the top and bottom
+      marks += `<path class="hc-key" d="M${x - 1} ${y - 6} L${x + 1} ${y - 6} L${x + 4} ${y - 3} L${x + 4} ${y + 3} L${x + 1} ${y + 6} L${x - 1} ${y + 6} L${x - 4} ${y + 3} L${x - 4} ${y - 3}Z"/>`;
+      marks += `<text class="hc-key-label" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central">${KEY[m]}</text>`;
+    });
     // the picks' diamonds last, on top of every rule
     cells.innerHTML = out + marks;
     lastPicks = picks;
@@ -320,13 +341,17 @@ const PALETTE_CONTRAST_SURFACES = [
     clip.style.height = `${end - h.top}px`;
     glow.style.left = `${hub.left + hub.width / 2 - h.left}px`;
     glow.style.top = `${hub.top + hub.height / 2 - h.top}px`;
-    glow.style.setProperty("--hole", `${(hub.width * 164) / 400}px`);
+    // the wedges start at the chart's outer edge: its label band stays
+    // the page behind it
+    glow.style.setProperty("--hole", `${(hub.width * 192) / 400}px`);
   };
   placeGlow();
   new ResizeObserver(placeGlow).observe(hero);
   if (document.fonts) document.fonts.ready.then(placeGlow);
   links.innerHTML = SELECTORS.map(([name], i) =>
-    `<a href="#${ANCHOR[name]}" aria-label="${name}"><path class="hc-hit" d="${sector(HUB, OUTER, i * seg, (i + 1) * seg)}"/></a>`).join("");
+    // the rings wash on hover; the label's band is part of the link but
+    // keeps the page behind it
+    `<a href="#${ANCHOR[name]}" aria-label="${name}"><path class="hc-hit" d="${sector(HUB, RIM, i * seg, (i + 1) * seg)}"/><path class="hc-hit hc-hit-label" d="${sector(RIM, OUTER, i * seg, (i + 1) * seg)}"/></a>`).join("");
   [...links.children].forEach((a, i) => {
     const on = () => { hovered = i; paintWedges(); };
     const off = () => { if (hovered === i) { hovered = -1; paintWedges(); } };

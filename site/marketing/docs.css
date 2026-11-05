@@ -3202,7 +3202,7 @@ main.sections {
 
 .hc .hc-pick {
   stroke: var(--text, var(--black));
-  stroke-width: 1.6;
+  stroke-width: 0.8;
 }
 
 .hc .hc-mark {
@@ -3244,7 +3244,7 @@ main.sections {
   transition: fill 0.15s;
 }
 
-.hc a:is(:hover, :focus-visible) .hc-hit {
+.hc a:is(:hover, :focus-visible) .hc-hit:not(.hc-hit-label) {
   fill: color-mix(in srgb, var(--text, var(--black)) 10%, transparent);
 }
 
@@ -3372,8 +3372,8 @@ main.sections {
   translate: -50% -50%;
   pointer-events: none;
   background: conic-gradient(var(--glow));
-  /* from the inner rim (164 of the chart's 400 units), so the labels'
-     band is in it too, to the page's edges */
+  /* from the chart's outer edge (192 of its 400 units; --hole, set by
+     script), so the labels' band stays the page, to the page's edges */
   mask-image: radial-gradient(circle, transparent 0 var(--hole, 180px), black calc(var(--hole, 180px) + 1px));
   /* the tints are in the gradient's colors */
 }
@@ -3382,5 +3382,32 @@ main.sections {
    section, drawn after, lies over it with its title's hatching. */
 .hero.hero--centered {
   isolation: isolate;
+}
+
+.hc .hc-label-band {
+  fill: var(--paper);
+}
+
+/* The rings' key on the axis straight down: a diamond per ring, its
+   color's initial in it. */
+.hc .hc-key {
+  fill: var(--paper);
+  stroke: var(--text, var(--black));
+  stroke-width: 0.8;
+}
+
+.hc .hc-key-label {
+  font-family: var(--font-code);
+  font-size: 7px;
+  font-weight: 700;
+  fill: var(--text, var(--black));
+}
+
+/* the pick's diamond: a paper outline round its black one */
+.hc .hc-mark-halo {
+  fill: none;
+  stroke: var(--paper);
+  stroke-width: 2.6;
+  stroke-linejoin: miter;
 }
 
