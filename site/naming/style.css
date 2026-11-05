@@ -169,10 +169,15 @@ code {
   background: var(--pp);
 }
 
-.folder-sheet--code,
-.folder-sheet--css {
+.folder-sheet--code {
   --pp: var(--black);
   --pp-text: var(--on-black);
+  background: var(--pp);
+}
+
+.folder-sheet--css {
+  --pp: var(--red);
+  --pp-text: var(--black);
   background: var(--pp);
 }
 
@@ -193,7 +198,7 @@ pre.code {
   margin: 0;
   padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
   font: 12px / var(--row) var(--font-code);
-  color: var(--on-black);
+  color: var(--pp-text);
   white-space: pre;
   overflow-x: auto;
 }
@@ -206,6 +211,11 @@ pre.code {
 .code .s { color: var(--yellow); }
 .code .f { color: color-mix(in srgb, var(--blue) 40%, var(--on-black)); }
 .code .k { color: color-mix(in srgb, var(--red) 55%, var(--on-black)); }
+
+/* On the red sheet the highlights are shades of its black ink. */
+.folder-sheet--css .code .s,
+.folder-sheet--css .code .f,
+.folder-sheet--css .code .k { color: color-mix(in srgb, var(--black) 72%, var(--red)); }
 
 .meta {
   margin: 0 0 calc(var(--row) / 2);
