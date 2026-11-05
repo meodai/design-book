@@ -161,13 +161,13 @@ const PALETTE_CONTRAST_SURFACES = [
     return dot;
   });
 
-  // Every option runs the real selector over the ring. `furthestFrom` and
-  // the vivid/lightness ones ignore the centre — they rank the ring itself.
+  // Every option runs the real selector over the ring. The vivid/lightness
+  // ones ignore the centre — they rank the ring itself.
   const selectors = {
     bestContrastWith: (s) => bestContrastWith(color(CENTER), s),
     minContrastWith:  (s) => minContrastWith(color(CENTER), s, { minContrast: 3 }),
     closest:     (s) => closest(color(CENTER), s),
-    furthestFrom:     (s) => furthestFrom(s),
+    furthestFrom:     (s) => furthestFrom(color(CENTER), s),
     mostVivid:        (s) => mostVivid(s),
     leastVivid:       (s) => leastVivid(s),
     lightest:         (s) => lightest(s),
@@ -450,11 +450,13 @@ function paintRenderers () {
 //  Existing function plate demos (unchanged behaviour)
 // ══════════════════════════════════════════════════════════════════════
 
-// — bestContrastWith —
+// — bestContrastWith: two inks you pick, the one that reads best per surface —
 (function demoContrast () {
   const row = document.getElementById("demo-contrast");
-  const pal = document.getElementById("demo-contrast-palette");
-  if (!row) return;
+  const inA = document.getElementById("contrast-ink-a");
+  const inB = document.getElementById("contrast-ink-b");
+  if (!row || !inA || !inB) return;
+  for (const input of [inA, inB]) input.value = input.getAttribute("value");
 
   const wcagBadge = (ratio) => {
     if (ratio >= 7)   return { label: "AAA",  cls: "is-aaa"  };
@@ -462,84 +464,164 @@ function paintRenderers () {
     if (ratio >= 3)   return { label: "AA·LG", cls: "is-aalg" };
     return                  { label: "fails", cls: "is-fail" };
   };
-  row.innerHTML = PALETTE_CONTRAST_SURFACES.map((surface) => {
-    const text = pick(PALETTE_BRAND, (s) => bestContrastWith(color(surface), s));
-    const ratio = contrast(surface, text);
-    const badge = wcagBadge(ratio);
-    return `
-      <div class="contrast-tile" style="background:${surface};color:${text}">
-        <span class="ctop">surface ${surface}</span>
-        <span class="cbig">Aa</span>
-        <span class="cbadge ${badge.cls}">${badge.label}</span>
-        <span class="cbottom">${text} · ${ratio.toFixed(1)}:1</span>
-      </div>`;
-  }).join("");
-
-  pal.innerHTML = PALETTE_BRAND.map((c) => `<span style="background:${c}" title="${c}"></span>`).join("");
-})();
-
-// — closest with picker —
-(function demoClosest () {
-  const swatchHost = document.getElementById("closest-target-swatch");
-  const stage = document.getElementById("closest-ranked");
-  if (!swatchHost || !stage) return;
-
-  const picker = document.createElement("color-input");
-  picker.setAttribute("initial-colorspace", "hex");
-  picker.setAttribute("value", "#7f4dc4");
-  picker.setAttribute("no-alpha", "");
-  picker.className = "closest-picker";
-  swatchHost.replaceWith(picker);
-  picker.id = "closest-target-swatch";
-
-  function render (target) {
-    // The winner is the library's answer; the rest are ordered by the same
-    // OKLab distance so the ranking reads left to right.
-    const winner = pick(PALETTE_BRAND, (s) => closest(color(target), s));
-    const ranked = PALETTE_BRAND
-      .map((c) => ({ color: c, d: deltaE(target, c) }))
-      .sort((a, b) => (a.color === winner ? -1 : b.color === winner ? 1 : a.d - b.d))
-      .slice(0, 7);
-    stage.innerHTML = ranked.map((r, i) => `
-      <div class="rank${r.color === winner ? " winner" : ""}" style="background:${r.color}" title="ΔE ${r.d.toFixed(3)}">
-        <span class="num">${i + 1}</span><span>${r.color}</span>
-      </div>`).join("");
-  }
-  picker.addEventListener("change", () => { if (picker.value) render(picker.value); });
-  render(picker.getAttribute("value"));
-})();
-
-// — furthestFrom: the odd one out; click to exclude —
-(function demoFurthest () {
-  const stage = document.getElementById("furthest-stage");
-  const readout = document.getElementById("furthest-readout");
-  if (!stage) return;
-  const palette = PALETTE_BRAND.slice(0, 7);
-  const excluded = new Set();
-
-  function render () {
-    const pool = palette.filter((c) => !excluded.has(c));
-    const far = pool.length ? pick(pool, (s) => furthestFrom(s)) : null;
-    stage.innerHTML = palette.map((c) => {
-      const cls = [];
-      if (excluded.has(c)) cls.push("excluded");
-      if (c === far)       cls.push("furthest");
-      return `<button type="button" class="swatch-fr ${cls.join(" ")}" data-c="${c}" style="background:${c}"
-        aria-pressed="${excluded.has(c)}" aria-label="${excluded.has(c) ? "Include" : "Exclude"} ${c}">
-        <span class="hex">${c}</span></button>`;
+  function paint () {
+    const inks = { a: inA.value || inA.getAttribute("value"), b: inB.value || inB.getAttribute("value") };
+    if (!parse(inks.a) || !parse(inks.b)) return; // mid-typing: keep the last result
+    row.innerHTML = PALETTE_CONTRAST_SURFACES.map((surface) => {
+      const text = pick(Object.values(inks), (s) => bestContrastWith(color(surface), s));
+      const name = text.toLowerCase() === String(inks.a).toLowerCase() ? "a" : "b";
+      const ratio = contrast(surface, text);
+      const badge = wcagBadge(ratio);
+      return `
+        <div class="contrast-tile" style="background:${surface};color:${text}">
+          <span class="ctop">surface ${surface}</span>
+          <span class="cbig">Aa</span>
+          <span class="cbadge ${badge.cls}">${badge.label}</span>
+          <span class="cbottom">ink.${name} · ${ratio.toFixed(1)}:1</span>
+        </div>`;
     }).join("");
-    const notList = [...excluded].map((c) => `<b>${c}</b>`).join(" ") || "—";
-    readout.innerHTML = `<span>odd one out <b>${far ?? "none"}</b></span><span>not ${notList}</span>`;
   }
-  stage.addEventListener("click", (e) => {
-    const el = e.target.closest(".swatch-fr");
-    if (!el) return;
-    const c = el.dataset.c;
-    if (excluded.has(c)) excluded.delete(c);
-    else if (excluded.size < palette.length - 1) excluded.add(c);
-    render();
-  });
-  render();
+  for (const input of [inA, inB]) {
+    input.addEventListener("input", paint);
+    input.addEventListener("change", paint);
+  }
+  paint();
+})();
+
+// — closest: a free value on a slider, snapped to the scale's nearest step —
+(function demoClosest () {
+  const rulerEl = document.getElementById("closest-ruler");
+  const readoutEl = document.getElementById("closest-readout");
+  const slider = document.getElementById("closest-value");
+  if (!rulerEl || !readoutEl || !slider) return;
+
+  const STEPS = { xs: 4, s: 8, m: 12, l: 16, xl: 24, "2xl": 32, "3xl": 48 };
+  const book = new DesignBook("closest-demo");
+  const space = book.addScope("space");
+  for (const [key, n] of Object.entries(STEPS)) space.set(key, px(n));
+  const ui = book.addScope("ui");
+  ui.set("raw", px(Number(slider.value)));
+  ui.set("gap", closest(ref("ui.raw"), ref("space")));
+
+  const min = Number(slider.min);
+  const max = Number(slider.max);
+  // where the slider puts its handle for a value: the same place on the ruler
+  const THUMB = 13;
+  const at = (v) => THUMB / 2 + ((v - min) / (max - min)) * (rulerEl.clientWidth - THUMB);
+
+  function paint () {
+    const v = Number(slider.value);
+    ui.set("raw", px(v));
+    const gap = book.resolve("ui.gap");
+    const key = Object.keys(STEPS).find((k) => `${STEPS[k]}px` === gap);
+    rulerEl.innerHTML =
+      Object.entries(STEPS).map(([k, n]) => `
+        <span class="cr-mark${k === key ? " is-pick" : ""}" style="left:${at(n)}px"><b>${k}</b><i>${n}</i></span>`).join("") +
+      `<span class="cr-free" style="left:${at(v)}px"></span>`;
+    readoutEl.innerHTML = `<b>${v}px</b> → <span class="c-fn">closest</span> → <b>space.${key}</b> · ${gap}`;
+  }
+  slider.addEventListener("input", paint);
+  new ResizeObserver(paint).observe(rulerEl);
+  paint();
+})();
+
+// — closest, colors: our palette with a shade above and under each color,
+//   and a picked color landing on the nearest of them —
+(function demoClosestColor () {
+  const gridEl = document.getElementById("closest-swatches");
+  const readoutEl = document.getElementById("closest-color-readout");
+  const picker = document.getElementById("closest-color");
+  if (!gridEl || !readoutEl || !picker) return;
+  picker.value = picker.getAttribute("value");
+
+  const BASE = { red: "#de5331", yellow: "#dab43d", green: "#479549", blue: "#3c61a0" };
+  const toOk = converter("oklch");
+  const shade = (hex, dl) => {
+    const c = toOk(hex);
+    return formatHex({ ...c, l: Math.min(0.97, Math.max(0.12, c.l + dl)) });
+  };
+  // rows top to bottom: lighter, the color, darker
+  const ROWS = [["light", 0.14], ["", 0], ["dark", -0.14]];
+  const book = new DesignBook("closest-colors");
+  const palette = book.addScope("palette");
+  const cells = [];
+  for (const [suffix, dl] of ROWS) {
+    for (const [name, hex] of Object.entries(BASE)) {
+      const key = suffix ? `${name}-${suffix}` : name;
+      const value = dl ? shade(hex, dl) : hex;
+      palette.set(key, color(value));
+      cells.push({ key, value });
+    }
+  }
+  const ui = book.addScope("ui");
+  ui.set("pick", color(picker.value));
+  ui.set("accent", closest(ref("ui.pick"), ref("palette")));
+
+  function paint () {
+    const value = picker.value || picker.getAttribute("value");
+    if (!parse(value)) return;
+    ui.set("pick", color(value));
+    const accent = book.resolve("ui.accent");
+    const key = cells.find((c) => c.value.toLowerCase() === accent.toLowerCase())?.key;
+    gridEl.innerHTML = cells.map((c) => `
+      <span class="cs-cell${c.key === key ? " is-pick" : ""}" style="background:${c.value}"></span>`).join("");
+    readoutEl.innerHTML = `<b>${formatHex(parse(value))}</b> → <span class="c-fn">closest</span> → <b>palette.${key}</b> · ${accent}`;
+  }
+  picker.addEventListener("input", paint);
+  picker.addEventListener("change", paint);
+  paint();
+})();
+
+// — furthestFrom: the palette laid out by its OKLab distance from a target;
+//   the pick is the one at the far end —
+(function demoFurthest () {
+  const ruler = document.getElementById("ffr-ruler");
+  const readout = document.getElementById("ffr-readout");
+  const picker = document.getElementById("ffr-target");
+  if (!ruler || !readout || !picker) return;
+  picker.value = picker.getAttribute("value");
+
+  const NAMES = ["ink", "red", "yellow", "green", "blue", "paper"];
+  const book = new DesignBook("furthest-demo");
+  const palette = book.addScope("palette");
+  PALETTE_BRAND.forEach((c, i) => palette.set(NAMES[i], color(c)));
+  const ui = book.addScope("ui");
+  ui.set("surface", color(picker.value));
+  ui.set("accent", furthestFrom(ref("ui.surface"), ref("palette")));
+
+  const SIZE = 18;
+  const PAD = 12;
+  const at = (d) => PAD + d * (ruler.clientWidth - 2 * PAD);
+
+  function paint () {
+    const target = picker.value || picker.getAttribute("value");
+    if (!parse(target)) return;
+    ui.set("surface", color(formatHex(parse(target))));
+    const pick = book.resolve("ui.accent");
+
+    // nearest first; a swatch that would overlap the one before stacks above it
+    const members = NAMES.map((name, i) => ({ name, c: PALETTE_BRAND[i], d: deltaE(target, PALETTE_BRAND[i]) }))
+      .sort((x, y) => x.d - y.d);
+    const lanes = [];
+    for (const m of members) {
+      m.x = at(Math.min(1, m.d));
+      let lane = 0;
+      while (lanes[lane] !== undefined && m.x - lanes[lane] < SIZE + 2) lane++;
+      lanes[lane] = m.x;
+      m.lane = lane;
+    }
+    const picked = members.find((m) => m.c.toLowerCase() === pick.toLowerCase());
+    ruler.innerHTML =
+      [0, 0.25, 0.5, 0.75, 1].map((t) => `<span class="ffr-tick" style="left:${at(t)}px">${t}</span>`).join("") +
+      `<span class="ffr-target" style="left:${at(0)}px;background:${target}"></span>` +
+      members.map((m) => `<span class="ffr-swatch${m === picked ? " is-pick" : ""}"
+        style="left:${m.x}px;bottom:calc(var(--row) + ${m.lane * (SIZE + 4)}px);background:${m.c}" title="palette.${m.name} · ${m.d.toFixed(2)}"></span>`).join("");
+    readout.innerHTML = `<span class="c-fn">furthestFrom</span>(target, palette) → <b>palette.${picked.name}</b> · ${picked.d.toFixed(2)} away`;
+  }
+  picker.addEventListener("input", paint);
+  picker.addEventListener("change", paint);
+  new ResizeObserver(paint).observe(ruler);
+  paint();
 })();
 
 // — minContrastWith —

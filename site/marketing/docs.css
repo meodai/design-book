@@ -2046,3 +2046,195 @@ main.sections {
   letter-spacing: -0.02em;
 }
 
+/* bestContrastWith: the two inks, each picker with its name, one at each
+   end of the stub; the second mirrored (name, hex, swatch). */
+.folder-sheet--result .folder-body > * > .contrast-inks {
+  justify-content: space-between;
+}
+
+.contrast-inks > label {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--row) / 3);
+}
+
+.contrast-inks > label:last-child,
+.contrast-inks > label:last-child color-input {
+  flex-direction: row-reverse;
+}
+
+/* closest: the scale as a ruler, its steps labelled by name and size; a
+   dashed pin where the free value is, the step it snaps to on paper. The
+   slider under it has the ruler's width, so the pin sits over its handle. */
+.closest-ruler {
+  position: relative;
+  height: calc(var(--row) * 2);
+  border-bottom: 1px solid var(--pp-text);
+  font: 11px/var(--row) var(--font-code);
+}
+
+.cr-mark {
+  position: absolute;
+  bottom: 0;
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+}
+
+.cr-mark b {
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.cr-mark i {
+  position: relative;
+  font-style: normal;
+  padding: 0 4px;
+}
+
+.cr-mark i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1px;
+  height: 6px;
+  background: currentColor;
+}
+
+.cr-mark.is-pick i {
+  color: var(--pp);
+  background: var(--pp-text);
+}
+
+.cr-mark.is-pick b {
+  opacity: 1;
+}
+
+.cr-free {
+  position: absolute;
+  bottom: 0;
+  height: calc(var(--row) * 2);
+  border-left: 1px dashed color-mix(in srgb, var(--pp-text) 60%, transparent);
+}
+
+.closest-readout {
+  margin: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.closest-free > input[type="range"] {
+  flex: 1 1 100%;
+}
+
+/* closest, colors: a second result, the palette as a grid (each
+   color with its lighter shade above and its darker under it), the
+   nearest one marked. */
+.closest-colors,
+.closest-colors .demo {
+  /* a paper of its own, apart from the blue of the sizes */
+  --pp: var(--red);
+  --pp-text: var(--black);
+}
+
+/* tabs in reading order: Sizes, Colors, then Code last */
+.closest-colors {
+  --tab-left: calc(var(--row) * 4);
+}
+
+.folder:has(> .closest-colors) > .folder-sheet--code {
+  --tab-left: calc(var(--row) * 8.5);
+}
+
+@media (max-width: 640px) {
+  .closest-colors {
+    --tab-left: 80px;
+  }
+
+  .folder:has(> .closest-colors) > .folder-sheet--code {
+    --tab-left: 176px;
+  }
+}
+
+.closest-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: calc(var(--row) * 2);
+}
+
+.cs-cell {
+  display: flex;
+  align-items: end;
+  padding: 0 6px;
+  font: 11px/var(--row) var(--font-code);
+}
+
+.cs-cell.is-pick {
+  outline: 2px solid var(--pp-text);
+  outline-offset: -2px;
+}
+
+.closest-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--row) / 3);
+}
+
+/* furthestFrom: the palette on a ruler of OKLab distance from the target
+   (the target at 0); the pick, at the far end, outlined. */
+.ffr-ruler {
+  position: relative;
+  height: calc(var(--row) * 4);
+  border-bottom: 1px solid var(--pp-text);
+  font: 11px/var(--row) var(--font-code);
+}
+
+.ffr-tick {
+  position: absolute;
+  bottom: 0;
+  translate: -50% 0;
+  opacity: 0.6;
+}
+
+.ffr-tick::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1px;
+  height: 6px;
+  background: currentColor;
+}
+
+.ffr-target,
+.ffr-swatch {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  translate: -50% 0;
+  border: 1px solid var(--pp-text);
+}
+
+.ffr-target {
+  bottom: calc(var(--row) * 3);
+  rotate: 45deg;
+  width: 12px;
+  height: 12px;
+}
+
+.ffr-swatch.is-pick {
+  outline: 2px solid var(--pp-text);
+  outline-offset: 2px;
+}
+
+.ffr-readout {
+  margin: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.ffr-stub > label {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--row) / 3);
+}
+

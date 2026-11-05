@@ -225,18 +225,25 @@ ui.set('text', mostVivid(ref('ink'), {
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
-          <p class="fn-claim"><em>Change the brand color</em> and every contrast is checked again.</p>
+          <p class="fn-claim"><em>Change either ink</em> and every contrast is checked again.</p>
           <p class="fn-detail">The member with the highest contrast against a target: the WCAG ratio for colors, the ratio between two values for sizes and text styles, so a heading can be the style that stands out most from the body. The check is part of the rule, so you don't redo it after every redesign.</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>ui.set('label', bestContrastWith(
-  ref('ui.surface'),
-  brand,
+          <Sheet name="code" label="Code"><Code is:raw>const ink = book.addScope('ink');
+ink.set('a', color('#172c4f'));
+ink.set('b', color('#f3d36b'));
+
+// on every surface: whichever ink reads best
+ui.set('label', bestContrastWith(
+  ref('ui.surface'), ref('ink'),
 ))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
               <div class="contrast-row" id="demo-contrast"></div>
-              <div class="contrast-palette" id="demo-contrast-palette" aria-label="Palette in use"></div>
+              <div class="stub contrast-inks">
+                <label><color-input id="contrast-ink-a" value="#172c4f" initial-colorspace="hex" no-alpha=""></color-input><span>ink.a</span></label>
+                <label><color-input id="contrast-ink-b" value="#f3d36b" initial-colorspace="hex" no-alpha=""></color-input><span>ink.b</span></label>
+              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -256,21 +263,37 @@ ui.set('text', mostVivid(ref('ink'), {
           <p class="fn-detail">Pick a color by eye, take a size from a mockup, pull a brand color out of a partner's logo: <code>closest</code> snaps it to the nearest value your design system actually has, so the freedom never leaks a one-off into the system. Colors are compared by distance in OKLab, so colors that look alike are treated alike; sizes and text styles by value, so the 13px from the mockup lands on your 12px.</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>brand.set('logo', closest(
-  color('#7f4dc4'),
-  palette,
-))</Code></Sheet>
-          <Sheet name="result" label="Result" front>
+          <Sheet name="code" label="Code"><Code is:raw>const space = book.addScope('space');
+space.set('xs', px(4));   space.set('s', px(8));
+space.set('m', px(12));   space.set('l', px(16));
+space.set('xl', px(24));  space.set('2xl', px(32));
+space.set('3xl', px(48));
+
+// any value: a guess, a mockup, a slider
+ui.set('gap', closest(px(13), ref('space')));
+
+// any color: picked by eye, out of a logo
+ui.set('accent', closest(color('#7f4dc4'), ref('palette')));</Code></Sheet>
+          <Sheet name="result" label="Colors" class="closest-colors">
             <figure class="demo">
-              <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
-              <div class="closest-stage">
-                <div class="closest-ranked" id="closest-ranked"></div>
-              </div>
+              <div class="closest-swatches" id="closest-swatches" aria-hidden="true"></div>
+              <p class="closest-readout" id="closest-color-readout"></p>
               <div class="stub">
-                <label class="closest-target">
-                  <span class="swatch" id="closest-target-swatch"></span>
-                  <span>target</span>
+                <label class="closest-pick">
+                  <color-input id="closest-color" value="#7f4dc4" initial-colorspace="hex" no-alpha=""></color-input>
+                  <span>any color</span>
                 </label>
+              </div>
+            </figure>
+          </Sheet>
+          <Sheet name="result" label="Sizes" front>
+            <figure class="demo">
+              <div class="closest-stage">
+                <div class="closest-ruler" id="closest-ruler" aria-hidden="true"></div>
+                <p class="closest-readout" id="closest-readout"></p>
+              </div>
+              <div class="stub closest-free">
+                <Slider id="closest-value" min="0" max="56" step="1" value="13" aria-label="Any value, in px" />
               </div>
             </figure>
           </Sheet>
@@ -282,23 +305,27 @@ ui.set('text', mostVivid(ref('ink'), {
     <article class="fn" id="furthest">
       <header class="fn-head">
         <h3 class="rule-title">furthestFrom</h3>
-        <code is:raw class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
+        <code is:raw class="sig">furthestFrom( target, scope, { maxDistance?, readableOn?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLab distance</li><li class="kind-size"><b>size</b> value</li><li class="kind-text"><b>text style</b> font size</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
-          <p class="fn-claim"><em>The odd one out</em> in a scope.</p>
-          <p class="fn-detail">The member furthest from all the others: by average OKLab distance for colors, the one swatch nothing else gets mistaken for, by value for sizes and text styles. Exclude members with <code>not</code> and the pick moves to the next one.</p>
+          <p class="fn-claim"><em>Furthest from</em> what is already there.</p>
+          <p class="fn-detail">The mirror of <code>closest</code>: the member that looks least like the target. An accent that stands apart from the surface, a display size far from the body text. Colors by OKLab distance, sizes and text styles by value. <code>maxDistance</code> keeps it in reach: the furthest member that is no further than that.</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>ui.set('highlight', furthestFrom(brand, {
-  not: [ref('brand.ink')],
-}))</Code></Sheet>
+          <Sheet name="code" label="Code"><Code is:raw>// the palette color that looks least like the target
+ui.set('accent', furthestFrom(
+  ref('ui.surface'),
+  ref('palette'),
+))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>Click a swatch to exclude it · the odd one out re-picks.</figcaption>
-              <div class="furthest-stage" id="furthest-stage"></div>
-              <div class="furthest-readout" id="furthest-readout"></div>
+              <div class="ffr-ruler" id="ffr-ruler" aria-hidden="true"></div>
+              <p class="ffr-readout" id="ffr-readout"></p>
+              <div class="stub ffr-stub">
+                <label><color-input id="ffr-target" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input><span>target</span></label>
+              </div>
             </figure>
           </Sheet>
         </Folder>
