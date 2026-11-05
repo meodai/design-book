@@ -1,13 +1,12 @@
 ---
 import Page from '../layouts/Page.astro';
 import InstallBar from '../components/InstallBar.astro';
+import Slider from '../components/Slider.astro';
 import Footer from '../components/Footer.astro';
-import { partial } from '../lib/partial';
-import markup from '../partials/tour.html?raw';
 import '../marketing/style.css';
 import '../marketing/shared.css';
 import '../marketing/docs.css';
-const [beforeBrand, afterBrand] = partial(markup);
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
 <Page
   title="Tour · Design Book"
@@ -15,8 +14,1133 @@ const [beforeBrand, afterBrand] = partial(markup);
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
 
-  <Fragment set:html={beforeBrand} />
-  <Fragment set:html={afterBrand} />
+  <section class="hero first-screen">
+    <div class="hero-text">
+      <h1>A tour of Design Book</h1>
+      <p class="deck">Most design systems store answers: a hex picked here, a spacing
+        chosen there. I kept wanting to store <em>how the answer was picked</em>
+        instead: the highest-contrast text on a surface, the next bigger gap in
+        a scale, the most vivid color that <em>still passes WCAG</em>. Change an
+        input and every token that depends on it is worked out again, contrast
+        included. It grew out of earlier experiments like
+        <a href="https://github.com/meodai/paletter" target="_blank" rel="noopener">paletter</a>
+        and <a href="https://meodai.github.io/color-router/" target="_blank" rel="noopener">Color Router</a>.</p>
+
+      <p class="install-note">TypeScript · ESM · three dependencies
+        (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>,
+        <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
+        <a href="https://github.com/darosh/colorsort-js" target="_blank" rel="noopener">colorsort-js</a>).</p>
+    </div>
+    <div class="hero-illustration" id="hero-illustration">
+      <svg viewBox="-200 -200 400 400" aria-hidden="true">
+        <g class="hi-ring" id="hi-ring"></g>
+      </svg>
+      <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hsl" no-alpha=""></color-input>
+      <div class="hi-pill">
+        <select class="hi-fn" id="hi-fn" aria-label="Selector function">
+          <option value="bestContrastWith">bestContrastWith</option>
+          <option value="minContrastWith">minContrastWith</option>
+          <option value="closest">closest</option>
+          <option value="furthestFrom">furthestFrom</option>
+          <option value="mostVivid">mostVivid</option>
+          <option value="leastVivid">leastVivid</option>
+          <option value="lightest">lightest</option>
+          <option value="darkest">darkest</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── The graph: hero visual ────────────────────────────────────── -->
+  <section class="graph" aria-labelledby="graph-title">
+    <div class="graph-text">
+      <h2 id="graph-title">Every token knows what it depends on.</h2>
+      <p>Each token is a node and each reference an edge. The library tracks
+        references, computed values and selectors that read a whole scope, so
+        when an input changes it recomputes exactly what depends on it, either
+        right away or all at once with <code>flush()</code> in batch mode. A
+        change that would create a cycle is refused, and
+        <code>watch(key, fn)</code> calls you back when a value changes.</p>
+      <p>The diagram on the right is the graph of the book behind this page,
+        drawn by the built-in <code>SVGRenderer</code>. Play with the controls
+        and watch it redraw.</p>
+      <div class="graph-controls">
+        <label>
+          <span>brand</span>
+          <color-input id="graph-brand" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+        </label>
+        <button type="button" id="graph-invert">Flip ramp</button>
+      </div>
+    </div>
+    <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
+  </section>
+
+  <!-- ─── ref(): point at a source instead of copying it ───────────── -->
+  <section class="ref-feature" aria-labelledby="ref-title">
+    <div class="ref-feature-body">
+      <div class="ref-feature-text">
+        <h2 id="ref-title">References instead of copies.</h2>
+        <p>A hex code pasted in two places is two decisions, and sooner or
+          later they drift apart. <code>ref()</code> stores where a value comes
+          from, the key and not the value, so changing the source changes
+          everything that points at it. Refs can chain, cross scopes and read a
+          single field of a type style, and in CSS the link stays a
+          <code>var()</code>.</p>
+        <pre is:raw class="code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>,
+  <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>,
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>));
+ui.<span class="c-fn">set</span>(<span class="c-str">'focus'</span>, <span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>));
+ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>));</code></pre>
+      </div>
+
+      <figure class="ref-stage">
+        <label class="ref-control">
+          <color-input id="ref-source" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
+          <span>brand.primary</span>
+        </label>
+        <div class="extends-pane">
+          <div class="extends-pane-head">
+            <span class="extends-pane-name">ui</span>
+            <span class="extends-pane-meta">reads <code>brand</code></span>
+          </div>
+          <div class="extends-rows extends-rows--keys" id="ref-rows"></div>
+        </div>
+        <pre is:raw class="code ref-css" id="ref-css" aria-label="CSS output"></pre>
+        <figcaption>Change the source. Every ref follows, and the CSS keeps the chain.</figcaption>
+      </figure>
+    </div>
+
+    <div class="ref-feature-body feature-sub">
+      <div class="ref-feature-text">
+        <h3 id="ref-relative-title">Relative refs.</h3>
+        <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
+          that key in whichever scope reads the token. A variant extends its
+          base and overrides one value; every inherited token that reads it
+          relatively picks up the variant's value. Base and variant end up side
+          by side, as <code>--button-hover</code> and
+          <code>--button-danger-hover</code>.</p>
+        <pre is:raw class="code"><code><span class="c-fn">const</span> btn = book.<span class="c-fn">addScope</span>(<span class="c-str">'button'</span>);
+btn.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>, <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>));
+btn.<span class="c-fn">set</span>(<span class="c-str">'fg'</span>, <span class="c-fn">bestContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'.bg'</span>), brand));
+btn.<span class="c-fn">set</span>(<span class="c-str">'hover'</span>, <span class="c-fn">darken</span>(<span class="c-fn">ref</span>(<span class="c-str">'.bg'</span>),
+  { <span class="c-key">amount</span>: <span class="c-num">0.15</span> }));
+
+<span class="c-dim">// one root; fg and hover follow</span>
+book.<span class="c-fn">addScope</span>(<span class="c-str">'button-danger'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'button'</span>,
+}).<span class="c-fn">set</span>(<span class="c-str">'bg'</span>, <span class="c-fn">ref</span>(<span class="c-str">'brand.error'</span>));</code></pre>
+      </div>
+
+      <figure class="ref-stage">
+        <label class="ref-control">
+          <color-input id="ref-danger" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+          <span>brand.error</span>
+        </label>
+        <div class="ref-panes" id="ref-panes"></div>
+        <figcaption>One override. The dimmed rows are inherited, and still follow it.</figcaption>
+      </figure>
+    </div>
+
+    <div class="ref-feature-body feature-sub">
+      <div class="ref-feature-text">
+        <h3 id="ref-parent-title">Reading one level up.</h3>
+        <p><code>inParent(ref('.interaction'))</code> is the interaction color
+          the scope would have inherited, so a scope can override a value in
+          terms of the one it replaces. Here a hover state is one step from its
+          parent's interaction color toward its parent's background: lighter on
+          a light page, darker on a dark one, with the same rule.
+          <code>inRoot</code> reads the top of the chain instead.</p>
+        <pre is:raw class="code"><code><span class="c-fn">const</span> base = book.<span class="c-fn">addScope</span>(<span class="c-str">'base'</span>);
+base.<span class="c-fn">set</span>(<span class="c-str">'background'</span>, <span class="c-fn">ref</span>(<span class="c-str">'blue.50'</span>));
+base.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <span class="c-fn">ref</span>(<span class="c-str">'blue.600'</span>));
+
+<span class="c-fn">const</span> hover = book.<span class="c-fn">addScope</span>(<span class="c-str">'base-hover'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'base'</span>,
+});
+hover.<span class="c-fn">set</span>(<span class="c-str">'interaction'</span>, <span class="c-fn">sibling</span>(
+  <span class="c-fn">inParent</span>(<span class="c-fn">ref</span>(<span class="c-str">'.interaction'</span>)),
+  { <span class="c-key">toward</span>: <span class="c-fn">inParent</span>(<span class="c-fn">ref</span>(<span class="c-str">'.background'</span>)) },
+));</code></pre>
+      </div>
+
+      <figure class="ref-stage">
+        <div class="ref-modes" id="ref-parent-modes" role="group" aria-label="base.background">
+          <button type="button" data-background="blue.50" class="is-active"><code>base.background</code> blue.50</button>
+          <button type="button" data-background="blue.900"><code>base.background</code> blue.900</button>
+        </div>
+        <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
+        <div class="ref-buttons" id="ref-buttons"></div>
+        <figcaption>One rule. The hover steps toward whatever the parent's page is.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
+  <main class="sections">
+
+    <header class="sections-head">
+      <h2>Kinds of decision</h2>
+      <p>Thirteen built-in selectors. Each one takes a scope of candidates
+        and returns the member that fits its rule, and picks again whenever a
+        member changes, is added or is removed.</p>
+    </header>
+
+    <nav class="fn-index" aria-label="Selectors">
+      <div class="fn-index-group">
+        <p class="fn-index-head" data-ledger-head>Compare</p>
+        <ul data-ledger>
+          <li><a href="#closest">closest</a></li>
+          <li><a href="#next-step">nextLarger · nextSmaller</a></li>
+          <li><a href="#furthest">furthestFrom</a></li>
+          <li><a href="#lightness">lightest · darkest</a></li>
+        </ul>
+      </div>
+      <div class="fn-index-group">
+        <p class="fn-index-head" data-ledger-head>Contrast</p>
+        <ul data-ledger>
+          <li><a href="#best-contrast">bestContrastWith</a></li>
+          <li><a href="#min-contrast">minContrastWith</a></li>
+        </ul>
+      </div>
+      <div class="fn-index-group">
+        <p class="fn-index-head" data-ledger-head>Color only</p>
+        <ul data-ledger>
+          <li><a href="#vivid">mostVivid · leastVivid</a></li>
+        </ul>
+      </div>
+      <div class="fn-index-group">
+        <p class="fn-index-head" data-ledger-head>Position</p>
+        <ul data-ledger>
+          <li><a href="#nth">nth</a></li>
+          <li><a href="#sibling">sibling</a></li>
+          <li><a href="#random">random</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="fn-panels">
+
+    <!-- bestContrastWith -->
+    <article class="fn" id="best-contrast">
+      <header class="fn-head">
+        <h3>bestContrastWith</h3>
+        <code is:raw class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Change the brand color</em> and every contrast is checked again.</p>
+          <p class="fn-detail">The member of a palette with the highest WCAG contrast against a background. The check is part of the rule, so you don't redo it after every redesign.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>One palette · six surfaces · text auto-picked.</figcaption>
+          <div class="contrast-row" id="demo-contrast"></div>
+          <div class="contrast-palette" id="demo-contrast-palette" aria-label="Palette in use"></div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'label'</span>, <span class="c-fn">bestContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  brand,
+))</code></pre>
+      </div>
+    </article>
+
+    <!-- closest -->
+    <article class="fn" id="closest">
+      <header class="fn-head">
+        <h3>closest</h3>
+        <code is:raw class="sig">closest( target, scope, { direction?, upTo?, minDistance?, readableOn?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Colors from outside</em> snap to the nearest one you own.</p>
+          <p class="fn-detail">Finds the nearest member by distance in OKLab, so colors that look alike are treated alike. Handy when colors come from outside the system: imported logos, user uploads, a partner's brand kit.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
+          <div class="closest-stage">
+            <div class="closest-target">
+              <span class="swatch" id="closest-target-swatch"></span>
+            </div>
+            <div class="closest-arrow" aria-hidden="true">→</div>
+            <div class="closest-ranked" id="closest-ranked"></div>
+          </div>
+        </figure>
+        <pre is:raw class="code"><code>brand.set(<span class="c-str">'logo'</span>, <span class="c-fn">closest</span>(
+  <span class="c-fn">color</span>(<span class="c-str">'#7f4dc4'</span>),
+  palette,
+))</code></pre>
+      </div>
+    </article>
+
+    <!-- furthestFrom -->
+    <article class="fn" id="furthest">
+      <header class="fn-head">
+        <h3>furthestFrom</h3>
+        <code is:raw class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>The odd one out</em> in a palette.</p>
+          <p class="fn-detail">The member with the largest average OKLab distance to all the others: the one swatch nothing else gets mistaken for. Exclude members with <code>not</code> and the pick moves to the next one.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>Click a swatch to exclude it · the odd one out re-picks.</figcaption>
+          <div class="furthest-stage" id="furthest-stage"></div>
+          <div class="furthest-readout" id="furthest-readout"></div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'highlight'</span>, <span class="c-fn">furthestFrom</span>(brand, {
+  <span class="c-key">not</span>: [<span class="c-fn">ref</span>(<span class="c-str">'brand.ink'</span>)],
+}))</code></pre>
+      </div>
+    </article>
+
+    <!-- minContrastWith -->
+    <article class="fn" id="min-contrast">
+      <header class="fn-head">
+        <h3>minContrastWith</h3>
+        <code is:raw class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>As subtle as possible</em> while still readable.</p>
+          <p class="fn-detail">The lowest contrast that still reaches a ratio (4.5 by default). Good for hairlines, captions and dim labels, which then pass the next contrast audit without anyone checking them by hand.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>Same surface and palette, three ratios, three answers.</figcaption>
+          <div class="min-stage">
+            <div class="min-card">
+              <div class="min-label">ratio 3 · AA large</div>
+              <div class="min-sample" id="min-sample-3"><span class="min-text"></span></div>
+            </div>
+            <div class="min-card">
+              <div class="min-label">ratio 4.5 · AA</div>
+              <div class="min-sample" id="min-sample-45"><span class="min-text"></span></div>
+            </div>
+            <div class="min-card">
+              <div class="min-label">ratio 7 · AAA</div>
+              <div class="min-sample" id="min-sample-7"><span class="min-text"></span></div>
+            </div>
+          </div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'caption'</span>, <span class="c-fn">minContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  neutral,
+  { <span class="c-key">ratio</span>: <span class="c-num">4.5</span> },
+))</code></pre>
+      </div>
+    </article>
+
+    <!-- nextLarger / nextSmaller -->
+    <article class="fn" id="next-step">
+      <header class="fn-head">
+        <h3>nextLarger · nextSmaller</h3>
+        <code is:raw class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } ) = closest( …, { direction } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Spacing that knows its own scale.</em></p>
+          <p class="fn-detail">Steps to the next member up or down, in px, rem, ms or whatever unit the scale uses. Add a step to the scale and every gap, padding and duration that referred to it moves along.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
+          <div class="step-stage">
+            <div class="step-scale" id="step-scale" aria-label="Spacing scale"></div>
+            <div class="step-controls">
+              <label>
+                <span class="step-lbl">target</span>
+                <Slider id="step-target" min="0" max="6" step="1" value="3" />
+                <span class="step-val" id="step-target-val">12px</span>
+              </label>
+              <label>
+                <span class="step-lbl">minDistance</span>
+                <Slider id="step-min" min="0" max="20" step="1" value="0" />
+                <span class="step-val" id="step-min-val">0px</span>
+              </label>
+            </div>
+            <div class="step-readout">
+              <div class="step-cell">
+                <span class="step-key">nextSmaller</span>
+                <span class="step-result" id="step-smaller">—</span>
+              </div>
+              <div class="step-cell">
+                <span class="step-key">target</span>
+                <span class="step-result" id="step-target-out">12px</span>
+              </div>
+              <div class="step-cell">
+                <span class="step-key">nextLarger</span>
+                <span class="step-result" id="step-larger">—</span>
+              </div>
+            </div>
+          </div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'gap'</span>, <span class="c-fn">nextLarger</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'space.m'</span>),
+  space,
+  { <span class="c-key">minDistance</span>: <span class="c-num">6</span> },
+))</code></pre>
+      </div>
+    </article>
+
+    <!-- mostVivid / leastVivid -->
+    <article class="fn" id="vivid">
+      <header class="fn-head">
+        <h3>mostVivid · leastVivid</h3>
+        <code is:raw class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH chroma</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Your accent is probably already in your palette.</em></p>
+          <p class="fn-detail">The two ends of the chroma axis. <code>mostVivid</code> finds the loudest member, usually the accent. <code>leastVivid</code> finds the most neutral one among your brand colors. Both can be limited to colors that read on a given surface.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>The same palette sorted by chroma, with both ends marked.</figcaption>
+          <div class="vivid-stage" id="vivid-stage"></div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'accent'</span>,  <span class="c-fn">mostVivid</span>(brand))
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">leastVivid</span>(brand))</code></pre>
+      </div>
+    </article>
+
+    <!-- lightest / darkest -->
+    <article class="fn" id="lightness">
+      <header class="fn-head">
+        <h3>lightest · darkest</h3>
+        <code is:raw class="sig">lightest|darkest( scope, { readableOn?, readableContrast?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH lightness</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>The ends of the scale,</em> wherever they end up.</p>
+          <p class="fn-detail">The members with the highest and lowest OKLCH lightness. Make your surface <code>lightest</code> and your ink <code>darkest</code>, and they still land on the right colors after the palette is generated again. Add <code>readableOn</code> to only consider members that read on that surface.</p>
+        </div>
+        <figure class="demo">
+          <figcaption class="lightness-caption">
+            <label class="lightness-toggle">
+              <input type="checkbox" id="lightness-readable" />
+              readableOn the page surface (4.5:1)
+            </label>
+          </figcaption>
+          <div class="lightness-stage" id="lightness-stage"></div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">lightest</span>(brand))
+ui.set(<span class="c-str">'ink'</span>,     <span class="c-fn">darkest</span>(brand))
+
+<span class="c-dim">// the lightest member that still reads on the page</span>
+ui.set(<span class="c-str">'soft-ink'</span>, <span class="c-fn">lightest</span>(brand, {
+  <span class="c-key">readableOn</span>: <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+}))</code></pre>
+      </div>
+    </article>
+
+    <!-- random -->
+    <article class="fn" id="random">
+      <header class="fn-head">
+        <h3>random</h3>
+        <code is:raw class="sig">random( scope, { type, seed?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> filtered by type</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Random,</em> but it stays put.</p>
+          <p class="fn-detail">Picks a member of a scope at random. Each token keeps its own seed, so the value stays the same across re-resolves and machines until you reshuffle on purpose: per release, per user or per environment. <code>type</code> limits the pool to colors, dimensions or strings.</p>
+        </div>
+        <figure class="demo">
+          <figcaption class="random-caption">
+            <label class="random-seed-lbl">
+              seed
+              <input id="random-seed" class="random-seed-input" type="text" value="spring-2026" spellcheck="false">
+            </label>
+            <button id="random-shuffle" class="random-shuffle" type="button">shuffle</button>
+          </figcaption>
+          <div class="random-stage" id="random-stage"></div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'accent'</span>,
+  <span class="c-fn">random</span>(brand, { <span class="c-key">type</span>: <span class="c-str">'color'</span> }))
+
+ui.set(<span class="c-str">'promo-bg'</span>, <span class="c-fn">random</span>(brand, {
+  <span class="c-key">type</span>: <span class="c-str">'color'</span>,
+  <span class="c-key">seed</span>: <span class="c-str">'spring-2026'</span>,
+}))</code></pre>
+      </div>
+    </article>
+
+    <!-- nth -->
+    <article class="fn" id="nth">
+      <header class="fn-head">
+        <h3>nth</h3>
+        <code is:raw class="sig">nth( scope, index, { not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> by position</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>Pick by position</em> instead of by name.</p>
+          <p class="fn-detail">When a ramp or scale generates your palette, the order carries the meaning: lightest first, darkest last. <code>nth</code> reads that order directly. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
+        </div>
+        <figure class="demo">
+          <figcaption class="nth-caption">
+            <label class="nth-index-lbl">
+              index
+              <input id="nth-index" class="nth-index-input" type="text" value="0.5" spellcheck="false">
+            </label>
+          </figcaption>
+          <div class="nth-stage" id="nth-stage"></div>
+          <div class="nth-presets" id="nth-presets">
+            <button type="button" data-value="0">0</button>
+            <button type="button" data-value="0.25">0.25</button>
+            <button type="button" data-value="0.5" class="is-active">0.5</button>
+            <button type="button" data-value="0.75">0.75</button>
+            <button type="button" data-value="-1">-1</button>
+          </div>
+        </figure>
+        <pre is:raw class="code"><code><span class="c-dim">// ramp generated lightest → darkest</span>
+ui.set(<span class="c-str">'surface'</span>, <span class="c-fn">nth</span>(ramp, <span class="c-num">0</span>))    <span class="c-dim">// lightest</span>
+ui.set(<span class="c-str">'text'</span>,    <span class="c-fn">nth</span>(ramp, <span class="c-num">-1</span>))   <span class="c-dim">// darkest</span>
+ui.set(<span class="c-str">'muted'</span>,   <span class="c-fn">nth</span>(ramp, <span class="c-num">0.5</span>)) <span class="c-dim">// midtone</span>
+ui.set(<span class="c-str">'subtle'</span>,  <span class="c-fn">nth</span>(ramp, <span class="c-num">0.1</span>)) <span class="c-dim">// off-white</span></code></pre>
+      </div>
+    </article>
+
+    <!-- sibling -->
+    <article class="fn" id="sibling">
+      <header class="fn-head">
+        <h3>sibling</h3>
+        <code is:raw class="sig">sibling( ref, offset, { wrap?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> along the scale it comes from</li></ul>
+      </header>
+      <div class="fn-body">
+        <div class="fn-pitch">
+          <p class="fn-claim"><em>One step lighter than whatever the surface is.</em></p>
+          <p class="fn-detail">Steps through the scope a token lives in, relative to that token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. Steps stop at the ends, or go round with <code>wrap</code>.</p>
+        </div>
+        <figure class="demo">
+          <figcaption>Click a tile to move the anchor · pick an offset.</figcaption>
+          <div class="sibling-stage" id="sibling-stage"></div>
+          <div class="sibling-controls">
+            <div class="sibling-offsets" id="sibling-offsets" role="group" aria-label="Offset">
+              <button type="button" data-offset="-2">−2</button>
+              <button type="button" data-offset="-1">−1</button>
+              <button type="button" data-offset="1" class="is-active">+1</button>
+              <button type="button" data-offset="2">+2</button>
+            </div>
+            <label class="sibling-wrap"><input type="checkbox" id="sibling-wrap" /> wrap</label>
+          </div>
+        </figure>
+        <pre is:raw class="code"><code>ui.set(<span class="c-str">'surface'</span>,       <span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>))
+ui.set(<span class="c-str">'surface-hover'</span>, <span class="c-fn">sibling</span>(<span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>), <span class="c-num">1</span>))
+ui.set(<span class="c-str">'surface-press'</span>, <span class="c-fn">sibling</span>(<span class="c-fn">ref</span>(<span class="c-str">'gray.g100'</span>), <span class="c-num">2</span>))</code></pre>
+      </div>
+    </article>
+
+    </div>
+  </main>
+
+
+  <!-- ─── readableOn: contrast as a filter ─────────────────────────── -->
+  <section class="readable-feature" aria-labelledby="readable-title">
+    <div class="readable-feature-body">
+      <div class="readable-feature-text">
+        <h2 id="readable-title">Only readable colors.</h2>
+        <p>Every color selector except the two contrast ones takes
+          <code>readableOn</code> and <code>readableContrast</code> (4.5 by
+          default). Members that don't reach the ratio against that backdrop
+          are dropped before ranking, so <code>mostVivid</code> returns the
+          loudest color that still reads and <code>closest</code> the nearest
+          readable one. If nothing passes, the token throws an error instead of
+          quietly returning an unreadable color. The backdrop is a reference,
+          so switching themes runs the filter again.</p>
+        <pre is:raw class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>, <span class="c-fn">mostVivid</span>(brand, {
+  <span class="c-key">readableOn</span>:  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>),
+  <span class="c-key">readableContrast</span>: <span class="c-num">4.5</span>,
+}));</code></pre>
+      </div>
+
+      <figure class="readable-stage">
+        <div class="readable-controls">
+          <label class="readable-surface">
+            <color-input id="readable-surface" value="#eee9dc" initial-colorspace="hsl" no-alpha=""></color-input>
+            <span>ui.surface</span>
+          </label>
+          <div class="readable-ratios" id="readable-ratios" role="group" aria-label="readableContrast">
+            <button type="button" data-ratio="3">3</button>
+            <button type="button" data-ratio="4.5" class="is-active">4.5</button>
+            <button type="button" data-ratio="7">7</button>
+          </div>
+        </div>
+        <div class="readable-pool" id="readable-pool"></div>
+        <div class="readable-results" id="readable-results" aria-live="polite"></div>
+        <figcaption>Faded members fail the ratio and never reach the ranking.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─── ramp: single color → full tonal scale ────────────────────── -->
+  <section class="ramp-feature" aria-labelledby="ramp-title">
+    <div class="ramp-feature-body">
+      <div class="ramp-feature-text">
+        <h2 id="ramp-title">A full scale from one color.</h2>
+        <p>Pick a brand color and <code>ramp()</code> returns the matching stop
+          of a Tailwind-style tonal scale. It uses
+          <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
+          which transfers the lightness and chroma curves of established
+          palettes onto any hue. Eleven stops, one call each, and they all
+          update when the brand color changes.</p>
+        <pre is:raw class="code ramp-code"><code>brand.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
+
+<span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>);
+<span class="c-fn">for</span> (<span class="c-fn">const</span> shade <span class="c-fn">of</span> [<span class="c-str">'50'</span>,<span class="c-str">'100'</span>,...,<span class="c-str">'950'</span>]) {
+  palette.<span class="c-fn">set</span>(shade,
+    <span class="c-fn">ramp</span>(<span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>), { <span class="c-key">shade</span> }));
+}</code></pre>
+      </div>
+
+      <div class="ramp-stage">
+        <div class="ramp-seed">
+          <color-input id="ramp-seed-input" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
+          <span class="ramp-seed-lbl">brand.primary</span>
+        </div>
+        <div class="ramp-arrow" aria-hidden="true">→</div>
+        <div class="ramp-bars" id="ramp-bars"></div>
+      </div>
+    </div>
+
+    <div class="names-feature-body feature-sub">
+      <div class="names-feature-text">
+        <h3 id="names-title">Naming the steps.</h3>
+        <p>Generated colors still need keys. <code>scaleNames()</code> takes
+          them from a naming convention (<code>50 … 950</code>, t-shirt sizes,
+          an intensity ladder, 100 objects by size) and fits it to however many
+          steps you have, keeping the ends and the center in place. If the count
+          changes, run it again and every step gets a new, evenly spread name.</p>
+        <pre is:raw class="code" id="names-code"></pre>
+        <p class="names-more">
+          <a href={`${base}naming/`}>Try every scheme in the naming playground →</a>
+        </p>
+      </div>
+
+      <div class="names-stage">
+        <div class="names-head">
+          <div class="names-seed">
+            <color-input id="names-seed-input" value="#dab43d" initial-colorspace="hsl" no-alpha=""></color-input>
+          </div>
+          <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
+            <button type="button" data-scheme="intensity" class="is-active">intensity</button>
+            <button type="button" data-scheme="hundreds">hundreds</button>
+            <button type="button" data-scheme="tshirt">tshirt</button>
+            <button type="button" data-scheme="tones">tones</button>
+            <button type="button" data-scheme="objects">objects</button>
+            <button type="button" data-scheme="things">things</button>
+          </div>
+        </div>
+        <label class="names-count">
+          <span>steps</span>
+          <Slider id="names-count" min="3" max="9" value="9" />
+          <b id="names-count-val">9</b>
+        </label>
+        <div class="names-rows" id="names-rows" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="order-feature-body feature-sub">
+      <div class="order-feature-text">
+        <h3 id="order-title">Sorted scopes.</h3>
+        <p>Give a scope an <code>order</code> and it stays sorted by
+          <code>value</code>, <code>name</code> or <code>type</code>, or a
+          combination of them. Colors are sorted through
+          <a href="https://github.com/darosh/colorsort-js" target="_blank" rel="noopener">colorsort-js</a>
+          for a perceptually smooth sequence, dimensions by size. Every renderer
+          and every positional selector (<code>nth</code>, <code>nextLarger</code>)
+          reads the same order, and the scope re-sorts as soon as a value
+          changes. Child scopes inherit their parent's order unless they set
+          their own.</p>
+        <pre is:raw class="code"><code><span class="c-fn">const</span> palette = book.<span class="c-fn">addScope</span>(<span class="c-str">'palette'</span>, {
+  <span class="c-key">order</span>: [{ <span class="c-key">by</span>: <span class="c-str">'value'</span> }],  <span class="c-dim">// perceptual</span>
+});
+
+<span class="c-dim">// insert in any order, it stays sorted</span>
+<span class="c-fn">const</span> p = <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>);
+palette.<span class="c-fn">set</span>(<span class="c-str">'teal'</span>,
+  <span class="c-fn">relativeTo</span>(p, <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+190'</span>]));
+palette.<span class="c-fn">set</span>(<span class="c-str">'coral'</span>,
+  <span class="c-fn">relativeTo</span>(p, <span class="c-str">'oklch'</span>, [<span class="c-num">.7</span>, <span class="c-num">.14</span>, <span class="c-str">'+20'</span>]));
+
+palette.<span class="c-fn">getAllKeys</span>();  <span class="c-dim">// one smooth order</span></code></pre>
+      </div>
+
+      <div class="order-stage">
+        <div class="order-head">
+          <div class="order-seed">
+            <color-input id="order-seed-input" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+            <span class="order-seed-lbl">brand.primary</span>
+          </div>
+          <div class="order-modes" id="order-modes" role="group" aria-label="Sort criterion">
+            <button type="button" data-mode="insertion">insertion</button>
+            <button type="button" data-mode="value-asc" class="is-active">value</button>
+            <button type="button" data-mode="value-desc">value ↺</button>
+            <button type="button" data-mode="name">name</button>
+          </div>
+        </div>
+        <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
+        <figcaption class="order-caption">Eight colors, inserted in random order. Pick a rule and the scope sorts itself again; change the seed for new colors.</figcaption>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Inheritance: layers across books, extends inside one ───────── -->
+  <section class="extends-feature" aria-labelledby="extends-title">
+    <div class="extends-head">
+      <h2 id="extends-title">Inherit, and override what changes.</h2>
+      <div class="extends-modes" role="tablist" aria-label="Ways to inherit">
+        <button type="button" role="tab" id="tab-theme-layers" aria-controls="theme-layers" aria-selected="false" tabindex="-1">layers</button>
+        <button type="button" role="tab" id="tab-theme-extends" aria-controls="theme-extends" aria-selected="true" tabindex="0" class="is-active">scope extends</button>
+      </div>
+    </div>
+
+    <div class="extends-panels">
+      <div class="extends-feature-body" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
+        <div class="extends-feature-text">
+          <p><strong>Across a whole system.</strong> Every shop in a chain shares
+            the brand, but the old-town store has its own accent. Write the
+            shop's system once as a layer; each store is another layer that only
+            holds what's different about it, here a single color. Composing a
+            book from the stack puts the override into the same graph as
+            everything else, so every ref, mix and selector built on that color
+            is recomputed.</p>
+          <pre is:raw class="code"><code><span class="c-fn">const</span> system = <span class="c-fn">layer</span>(<span class="c-str">'store-system'</span>, (book) =&gt; {
+  <span class="c-fn">const</span> brand = book.<span class="c-fn">addScope</span>(<span class="c-str">'brand'</span>);
+  brand.<span class="c-fn">set</span>(<span class="c-str">'highlight'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
+  <span class="c-dim">// … ink, paper …</span>
+  <span class="c-fn">const</span> ui = book.<span class="c-fn">addScope</span>(<span class="c-str">'ui'</span>);
+  ui.<span class="c-fn">set</span>(<span class="c-str">'link'</span>,  <span class="c-fn">ref</span>(<span class="c-str">'brand.highlight'</span>));
+  ui.<span class="c-fn">set</span>(<span class="c-str">'hover'</span>, <span class="c-fn">darken</span>(<span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>),
+    { <span class="c-key">amount</span>: <span class="c-num">0.2</span> }));
+  ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(<span class="c-fn">ref</span>(<span class="c-str">'ui.link'</span>),
+    <span class="c-fn">ref</span>(<span class="c-str">'brand.paper'</span>), { <span class="c-key">ratio</span>: <span class="c-num">0.85</span> }));
+});
+
+<span class="c-dim">// a store is only what sets it apart</span>
+<span class="c-fn">const</span> oldTown = <span class="c-fn">layer</span>(<span class="c-str">'old-town'</span>, {
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) },
+});
+<span class="c-fn">const</span> harbour = <span class="c-fn">layer</span>(<span class="c-str">'harbour'</span>, {
+  <span class="c-key">brand</span>: { <span class="c-key">highlight</span>: <span class="c-fn">color</span>(<span class="c-str">'#479549'</span>) },
+});
+
+<span class="c-fn">composeBook</span>(<span class="c-str">'old-town'</span>, [system, oldTown]);</code></pre>
+        </div>
+
+        <figure class="extends-stage">
+          <div class="extends-pane">
+            <div class="extends-pane-head">
+              <span class="extends-pane-name">old-town</span>
+              <span class="extends-pane-meta">on <code>store-system</code></span>
+            </div>
+            <div class="extends-rows extends-rows--keys">
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">brand.highlight</span>
+                <span class="ext-swatch" style="background:#de5331"></span>
+                <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) <span class="ext-layer">old-town</span></span>
+              </div>
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">ui.link</span>
+                <span class="ext-swatch" style="background:#de5331"></span>
+                <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #de5331</span></span>
+              </div>
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">ui.hover</span>
+                <span class="ext-swatch" style="background:#a53b22"></span>
+                <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a53b22</span></span>
+              </div>
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">ui.tint</span>
+                <span class="ext-swatch" style="background:#f0d4c1"></span>
+                <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #f0d4c1</span></span>
+              </div>
+              <div class="ext-row ext-row--inherited">
+                <span class="ext-key">brand.ink</span>
+                <span class="ext-swatch" style="background:#0d0a03"></span>
+                <span class="ext-val">store-system <span class="ext-resolved">→ #0d0a03</span></span>
+              </div>
+              <div class="ext-row ext-row--inherited">
+                <span class="ext-key">brand.paper</span>
+                <span class="ext-swatch" style="background:#eee9dc"></span>
+                <span class="ext-val">store-system <span class="ext-resolved">→ #eee9dc</span></span>
+              </div>
+            </div>
+          </div>
+          <figcaption>One override. Everything derived from it follows; the rest stays dim.</figcaption>
+        </figure>
+      </div>
+
+      <div class="extends-feature-body is-active" id="theme-extends" role="tabpanel" aria-labelledby="tab-theme-extends" tabindex="0">
+        <div class="extends-feature-text">
+          <p><strong>Inside one book.</strong> When two variants live side by
+            side, one scope can extend another. Every token carries over unless
+            you redefine it, and the graph keeps track: change a token in the
+            parent and everything that inherits it is recomputed. The editor dims
+            inherited rows, so only the changes stand out. A full reference keeps
+            pointing at the key it names; a <a href="#ref-relative-title">relative
+            one</a> reads from the inheriting scope, and
+            <a href="#ref-parent-title"><code>inParent</code></a> reads the value
+            a scope overrides. Once a theme has to change root values across the
+            whole system, use layers instead.</p>
+          <pre is:raw class="code"><code><span class="c-fn">const</span> light = book.<span class="c-fn">addScope</span>(<span class="c-str">'light'</span>);
+light.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,      <span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'text'</span>,    <span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'primary'</span>, <span class="c-fn">color</span>(<span class="c-str">'#3c61a0'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'accent'</span>,  <span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>));
+light.<span class="c-fn">set</span>(<span class="c-str">'muted'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#908b7f'</span>));
+
+<span class="c-dim">// dark inherits all five, overrides two</span>
+<span class="c-fn">const</span> dark = book.<span class="c-fn">addScope</span>(<span class="c-str">'dark'</span>, {
+  <span class="c-key">extends</span>: <span class="c-str">'light'</span>,
+});
+dark.<span class="c-fn">set</span>(<span class="c-str">'bg'</span>,   <span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>));
+dark.<span class="c-fn">set</span>(<span class="c-str">'text'</span>, <span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>));</code></pre>
+        </div>
+
+        <figure class="extends-stage">
+          <div class="extends-pane">
+            <div class="extends-pane-head">
+              <span class="extends-pane-name">dark</span>
+              <span class="extends-pane-meta">extends <code>light</code></span>
+            </div>
+            <div class="extends-rows">
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">bg</span>
+                <span class="ext-swatch" style="background:#0d0a03"></span>
+                <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#0d0a03'</span>)</span>
+              </div>
+              <div class="ext-row ext-row--override">
+                <span class="ext-key">text</span>
+                <span class="ext-swatch" style="background:#fffaed"></span>
+                <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#fffaed'</span>)</span>
+              </div>
+              <div class="ext-row ext-row--inherited">
+                <span class="ext-key">primary</span>
+                <span class="ext-swatch" style="background:#3c61a0"></span>
+                <span class="ext-val">inherit <span class="ext-resolved">→ #3c61a0</span></span>
+              </div>
+              <div class="ext-row ext-row--inherited">
+                <span class="ext-key">accent</span>
+                <span class="ext-swatch" style="background:#de5331"></span>
+                <span class="ext-val">inherit <span class="ext-resolved">→ #de5331</span></span>
+              </div>
+              <div class="ext-row ext-row--inherited">
+                <span class="ext-key">muted</span>
+                <span class="ext-swatch" style="background:#908b7f"></span>
+                <span class="ext-val">inherit <span class="ext-resolved">→ #908b7f</span></span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="typo-feature-body feature-sub">
+      <div class="typo-feature-text">
+        <h3 id="typo-title">Type styles as one token.</h3>
+        <p>A type style is a set of properties: family, size, weight,
+          line-height, tracking. <code>typography()</code> makes it one token,
+          the W3 <code>typography</code> composite, so it sits in a scope like
+          everything else. Its fields are tracked in the graph like any rule: a
+          <code>ref()</code> carries the whole style,
+          <code>ref('type.heading.fontSize')</code> reads one field. Renderers
+          write a variable per field plus a CSS class for the browser, and a
+          <code>$type: 'typography'</code> token for W3 Design Tokens.</p>
+        <pre is:raw class="code"><code>type.<span class="c-fn">set</span>(<span class="c-str">'heading'</span>, <span class="c-fn">typography</span>({
+  <span class="c-key">fontFamily</span>:    <span class="c-fn">ref</span>(<span class="c-str">'fonts.serif'</span>),
+  <span class="c-key">fontSize</span>:      <span class="c-fn">rem</span>(<span class="c-num">2.5</span>),
+  <span class="c-key">fontWeight</span>:    <span class="c-str">'700'</span>,
+  <span class="c-key">lineHeight</span>:    <span class="c-num">1</span>,
+  <span class="c-key">letterSpacing</span>: <span class="c-str">'-0.02em'</span>,
+}));
+
+<span class="c-dim">// a variant reads the rest from its base, live</span>
+type.<span class="c-fn">set</span>(<span class="c-str">'hero'</span>, <span class="c-fn">variant</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'type.heading'</span>),
+  { <span class="c-key">fontSize</span>: <span class="c-fn">rem</span>(<span class="c-num">4</span>) },
+));
+
+<span class="c-dim">// one field, anywhere</span>
+callout.<span class="c-fn">set</span>(<span class="c-str">'size'</span>, <span class="c-fn">ref</span>(<span class="c-str">'type.heading.fontSize'</span>));</code></pre>
+      </div>
+
+      <figure class="typo-stage">
+        <div class="typo-sample typo-sample--heading">Type styles travel whole.</div>
+        <div class="typo-sample typo-sample--hero">Variants follow.</div>
+        <figcaption>One scope. Two tokens. The variant reads the rest from its base.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ─── Value transforms ──────────────────────────────────────────── -->
+  <section class="coda">
+    <h2>Value transforms.</h2>
+    <p>Eight operations that take an input and apply a formula, for the
+      small decisions like a hover shade, a step in a scale or a timing curve,
+      without leaving the graph.</p>
+    <ul class="coda-list">
+      <li>
+        <div class="coda-text">
+          <b>colorMix</b>
+          <span>Blend two colors in any space.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#3c61a0"/><circle cx="28" cy="12" r="9" fill="#9f5e6a"/><circle cx="44" cy="12" r="9" fill="#de5331"/></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>lighten</b>
+          <span>Mix toward white in OKLCH.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#192d4e"/><circle cx="28" cy="12" r="9" fill="#9aaed1"/></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>darken</b>
+          <span>Mix toward black in OKLCH.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#9aaed1"/><circle cx="28" cy="12" r="9" fill="#192d4e"/></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>shade</b>
+          <span>A visible step: darker on light, lighter on dark.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 24" width="48" height="24"><circle cx="12" cy="12" r="8" fill="#f0e8d8"/><circle cx="12" cy="12" r="10" fill="none" stroke="#cbb89a" stroke-width="1.2"/><circle cx="36" cy="12" r="8" fill="#2d3033"/><circle cx="36" cy="12" r="10" fill="none" stroke="#5a6065" stroke-width="1.2"/></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>relativeTo</b>
+          <span>Modify a color per channel.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 24" width="40" height="24">
+            <g fill="none" stroke-width="2.2">
+              <path d="M 20 4 A 8 8 0 0 1 25.66 6.34" stroke="hsl(22 70% 58%)"/>
+              <path d="M 25.66 6.34 A 8 8 0 0 1 28 12" stroke="hsl(67 70% 52%)"/>
+              <path d="M 28 12 A 8 8 0 0 1 25.66 17.66" stroke="hsl(112 60% 48%)"/>
+              <path d="M 25.66 17.66 A 8 8 0 0 1 20 20" stroke="hsl(157 55% 50%)"/>
+              <path d="M 20 20 A 8 8 0 0 1 14.34 17.66" stroke="hsl(202 65% 55%)"/>
+              <path d="M 14.34 17.66 A 8 8 0 0 1 12 12" stroke="hsl(247 60% 60%)"/>
+              <path d="M 12 12 A 8 8 0 0 1 14.34 6.34" stroke="hsl(292 55% 60%)"/>
+              <path d="M 14.34 6.34 A 8 8 0 0 1 20 4" stroke="hsl(337 70% 60%)"/>
+            </g>
+            <circle cx="15.19" cy="18.39" r="3" fill="#3c61a0" stroke="#eee9dc" stroke-width="0.8"/>
+            <circle cx="24.81" cy="5.61" r="3" fill="#a55b2d" stroke="#eee9dc" stroke-width="0.8"/>
+          </svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>spacingScale</b>
+          <span>A base size times a multiplier.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 56 24" width="56" height="24" fill="currentColor"><rect x="0" y="10" width="4" height="4"/><rect x="6" y="9" width="6" height="6"/><rect x="14" y="8" width="8" height="8"/><rect x="24" y="6" width="12" height="12"/><rect x="38" y="4" width="16" height="16"/></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>typographyScale</b>
+          <span>A base size times ratio<sup>step</sup>.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 60 24" width="60" height="24" fill="currentColor"><text x="2" y="20" font-size="22" font-family="Libertinus Serif, serif">A</text><text x="22" y="20" font-size="14" font-family="Libertinus Serif, serif">A</text><text x="40" y="20" font-size="9" font-family="Libertinus Serif, serif">A</text></svg>
+        </span>
+      </li>
+      <li>
+        <div class="coda-text">
+          <b>timing</b>
+          <span>Duration, easing and delay as one value.</span>
+        </div>
+        <span class="coda-icon" aria-hidden="true">
+          <svg viewBox="0 0 40 24" width="40" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M 3 20 C 8 20, 14 6, 37 4"/></svg>
+        </span>
+      </li>
+    </ul>
+
+    <div class="mix-feature-body feature-sub">
+      <div class="mix-feature-text">
+        <h3 id="mix-title">Mixing two colors.</h3>
+        <p><code>colorMix()</code> interpolates between two colors, and the color
+          space decides the path: <code>rgb</code> goes straight through the
+          cube, <code>lab</code> and <code>oklab</code> follow perceptual lines,
+          <code>lch</code>, <code>oklch</code> and <code>hsl</code> rotate around
+          the hue. Same two colors, very different middles. Any
+          <code>color-mix()</code> space works, and the CSS renderer writes the
+          matching <code>color-mix()</code>.</p>
+        <pre is:raw class="code"><code>ui.<span class="c-fn">set</span>(<span class="c-str">'tint'</span>, <span class="c-fn">colorMix</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.primary'</span>),
+  <span class="c-fn">ref</span>(<span class="c-str">'brand.surface'</span>),
+  { <span class="c-key">ratio</span>: <span class="c-num">0.5</span>, <span class="c-key">colorSpace</span>: <span class="c-str">'oklch'</span> }
+));</code></pre>
+      </div>
+
+      <div class="mix-stage">
+        <div class="mix-row">
+          <color-input id="mix-a" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+          <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
+          <color-input id="mix-b" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
+        </div>
+        <label class="mix-space">
+          <span>interpolated in</span>
+          <select id="mix-space-sel">
+            <option value="oklch">oklch</option>
+            <option value="oklab">oklab</option>
+            <option value="lch">lch</option>
+            <option value="lab" selected>lab</option>
+            <option value="hsl">hsl</option>
+            <option value="hwb">hwb</option>
+            <option value="srgb">srgb</option>
+            <option value="srgb-linear">srgb-linear</option>
+            <option value="display-p3">display-p3</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── One source, many outputs ─────────────────────────────────── -->
+  <section class="renderers">
+    <header class="renderers-head">
+      <h2>Many outputs from one book.</h2>
+      <p>The same book renders to CSS variables, JSON and the
+        <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
+        format out of the box. A custom renderer is one call,
+        <code>book.registerRenderer(name, fn)</code>, and about twenty lines of
+        TypeScript turn the graph into a Tailwind config, Swift extensions,
+        SwiftUI, Kotlin or whatever JSON dialect you need.</p>
+    </header>
+
+    <div class="renderer-tabs" role="tablist">
+      <button class="r-tab is-active" data-target="r-css"      type="button" title="CSS variables">CSS</button>
+      <button class="r-tab"           data-target="r-json"     type="button">JSON</button>
+      <button class="r-tab"           data-target="r-w3"       type="button" title="W3 Design Tokens">W3</button>
+      <button class="r-tab"           data-target="r-tailwind" type="button" title="Tailwind, a custom renderer">Tailwind</button>
+    </div>
+
+    <div class="renderer-panes">
+      <pre is:raw class="r-pane is-active" id="r-css"></pre>
+      <pre is:raw class="r-pane"           id="r-json"></pre>
+      <pre is:raw class="r-pane"           id="r-w3"></pre>
+      <pre is:raw class="r-pane"           id="r-tailwind"></pre>
+    </div>
+
+    <details class="renderer-source">
+      <summary>The custom Tailwind renderer in full</summary>
+  <pre is:raw class="code"><code><span class="c-dim">// A renderer is a function from `book` to a string. That's the whole API.</span>
+<span class="c-fn">function</span> <span class="c-key">tailwindRenderer</span>(book) {
+  <span class="c-fn">const</span> colors = {}, spacing = {};
+  <span class="c-fn">const</span> isColor     = (s) =&gt; <span class="c-fn">parse</span>(s) != <span class="c-num">null</span>;
+  <span class="c-fn">const</span> isDimension = (s) =&gt; <span class="c-str">/^-?\d+(\.\d+)?[a-z%]+$/i</span>.<span class="c-fn">test</span>(s);
+
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> scope <span class="c-fn">of</span> book.<span class="c-fn">getAllScopes</span>()) {
+    <span class="c-fn">for</span> (<span class="c-fn">const</span> k <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+      <span class="c-fn">const</span> v = scope.<span class="c-fn">resolve</span>(k);
+      <span class="c-fn">const</span> key = <span class="c-str">`${</span>scope.name<span class="c-str">}-${</span>k<span class="c-str">}`</span>;
+      <span class="c-fn">if</span> (<span class="c-fn">isColor</span>(v))     colors[key]  = v;
+      <span class="c-fn">else if</span> (<span class="c-fn">isDimension</span>(v)) spacing[key] = v;
+    }
+  }
+  <span class="c-fn">return</span> <span class="c-str">`module.exports = { theme: { extend: ${</span><span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ colors, spacing }, <span class="c-num">null</span>, <span class="c-num">2</span>)<span class="c-str">} } }`</span>;
+}
+
+<span class="c-dim">// Register it under any name; it works like the built-ins.</span>
+book.<span class="c-fn">registerRenderer</span>(<span class="c-str">'tailwind'</span>, tailwindRenderer);
+<span class="c-fn">const</span> config = book.<span class="c-fn">render</span>(<span class="c-str">'tailwind'</span>);</code></pre>
+    </details>
+  </section>
+
+
+  <!-- ─── Bring your own everything ─────────────────────────────────── -->
+  <section class="extend">
+    <header class="extend-head">
+      <h2>Your own rules and libraries.</h2>
+      <p>The built-in selectors are a starting set. You can register any
+        function that takes the token's resolved arguments (scopes arrive as
+        scopes) and its options, and returns a value. Tokens that call it work
+        like the built-ins: dependencies are tracked, cycles refused, values
+        recomputed.</p>
+    </header>
+
+    <div class="extend-grid">
+      <article class="extend-card">
+        <h3>A custom function</h3>
+        <p>Here I register a new selector, <code>warmest</code>, that picks the
+          member leaning hardest towards orange: its chroma times how close its
+          hue is to 50°. It runs on this page against the palette above.</p>
+        <pre is:raw class="code"><code><span class="c-dim">// Resolved args come first, the token's options last.</span>
+book.<span class="c-fn">registerFunction</span>(<span class="c-str">'warmest'</span>, (scope) =&gt; {
+  <span class="c-fn">let</span> best = <span class="c-num">null</span>, bestScore = -<span class="c-num">Infinity</span>;
+  <span class="c-fn">for</span> (<span class="c-fn">const</span> key <span class="c-fn">of</span> scope.<span class="c-fn">getAllKeys</span>()) {
+    <span class="c-fn">const</span> hex = scope.<span class="c-fn">resolve</span>(key);
+    <span class="c-fn">const</span> { c = <span class="c-num">0</span>, h = <span class="c-num">0</span> } = <span class="c-fn">oklch</span>(hex);
+    <span class="c-fn">const</span> score = c * Math.<span class="c-fn">cos</span>((h - <span class="c-num">50</span>) * Math.PI / <span class="c-num">180</span>);
+    <span class="c-fn">if</span> (score &gt; bestScore) { bestScore = score; best = hex; }
+  }
+  <span class="c-fn">return</span> best;
+});
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'warm'</span>, <span class="c-fn">createFunctionToken</span>(<span class="c-str">'warmest'</span>, [values]));</code></pre>
+        <p class="extend-result" id="extend-fn-result">
+          <span class="extend-result-label">ui.warm = warmest( values )</span>
+          <span class="extend-result-swatch" id="extend-fn-swatch"></span>
+          <code id="extend-fn-hex">—</code>
+        </p>
+      </article>
+
+      <article class="extend-card">
+        <h3>Integration with a library</h3>
+        <p>
+          <a href="https://meodai.github.io/poline/" target="_blank" rel="noopener">Poline</a>
+          generates a ramp between anchor colors. Put it straight into a scope
+          and the selectors work on it like on any other palette.
+        </p>
+        <pre is:raw class="code"><code><span class="c-dim">// anchors as [hue, saturation, lightness], s and l in 0–1</span>
+<span class="c-fn">const</span> poline = <span class="c-fn">new</span> <span class="c-key">Poline</span>({
+  anchorColors: [[<span class="c-num">20</span>, <span class="c-num">.3</span>, <span class="c-num">.08</span>], [<span class="c-num">12</span>, <span class="c-num">.85</span>, <span class="c-num">.45</span>], [<span class="c-num">42</span>, <span class="c-num">.4</span>, <span class="c-num">.92</span>]],
+  numPoints: <span class="c-num">7</span>,
+});
+<span class="c-fn">const</span> ramp = book.<span class="c-fn">addScope</span>(<span class="c-str">'ramp'</span>);
+poline.<span class="c-fn">colorsCSS</span>.<span class="c-fn">forEach</span>((c, i) => ramp.<span class="c-fn">set</span>(<span class="c-str">`s${</span>i<span class="c-str">}`</span>, <span class="c-fn">color</span>(c)));
+
+ui.<span class="c-fn">set</span>(<span class="c-str">'border'</span>, <span class="c-fn">minContrastWith</span>(
+  <span class="c-fn">ref</span>(<span class="c-str">'ui.surface'</span>), ramp, { <span class="c-key">minContrast</span>: <span class="c-num">3</span> },
+));</code></pre>
+        <div class="extend-result poline" id="extend-poline-result">
+          <div class="poline-strip" id="extend-poline-strip"></div>
+          <p class="extend-result-line">
+            <span is:raw class="extend-result-label">minContrastWith( ui.surface, ramp, { minContrast: 3 } ) → </span>
+            <span class="extend-result-swatch" id="extend-poline-swatch"></span>
+            <code id="extend-poline-hex">—</code>
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+
+  <!-- ─── Outro ─────────────────────────────────────────────────────── -->
+  <section class="outro">
+    <h2>Try it on your own palette.</h2>
+  </section>
   <InstallBar current="tour" />
   <Footer current="tour" />
   <script>
@@ -24,6 +1148,5 @@ const [beforeBrand, afterBrand] = partial(markup);
     import '../marketing/docs-folders.js';
     import '../marketing/script.js';
     import '../marketing/docs-rails.js';
-    import '../components/slider/slider.js';
   </script>
 </Page>

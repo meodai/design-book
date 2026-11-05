@@ -2,12 +2,10 @@
 import Page from '../../layouts/Page.astro';
 import InstallBar from '../../components/InstallBar.astro';
 import Footer from '../../components/Footer.astro';
-import { partial } from '../../lib/partial';
-import markup from '../../partials/article.html?raw';
 import '../../article/style.css';
 import '../../marketing/shared.css';
 import '../../article/theme.css';
-const [beforeBrand, afterBrand] = partial(markup);
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
 <Page
   title="Procedural tokens: encoding design decisions · Design Book"
@@ -16,8 +14,425 @@ const [beforeBrand, afterBrand] = partial(markup);
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
   bodyAttrs={{ 'data-sections': '.article-content > section' }}
 >
-  <Fragment set:html={beforeBrand} />
-  <Fragment set:html={afterBrand} />
+  <section class="article-hero first-screen">
+      <header class="article-header">
+          <h1>Procedural Tokens — encoding design decisions</h1>
+          <p class="lede">
+            Most token systems already separate values from semantics. The
+            interesting part is the connection between them. Usually it is a
+            fixed link: one token points at another and stops there. I am
+            interested in making that connection work more like a spreadsheet
+            cell. It can stay static, choose one value from a set, or apply a
+            small formula. That is not just a technical convenience. It is a
+            way to bake flexibility into the system early enough that changing
+            the basics can produce new outcomes instead of a repair job. In
+            that sense, procedural tokens are closer to design programs than
+            static collections:
+            systems with internal logic that keep generating outcomes.
+          </p>
+        </header>
+    </section>
+
+    <div class="layout">
+      <aside class="example-panel" aria-label="Live example components">
+        <p class="example-label">Live example</p>
+        <div class="example-frame">
+          <h3 class="example-title">Quarterly revenue</h3>
+          <p class="example-body">
+            Revenue grew 12% over Q3, led by enterprise deals.
+            <a href="#" class="example-link">See the full report</a>.
+          </p>
+          <div class="example-separator" aria-hidden="true"></div>
+          <div class="example-chart" role="img" aria-label="Bar chart, seven steps of the ramp">
+            <span class="example-chart-bar" style="--h: 30px;  background: var(--ramp-100);"></span>
+            <span class="example-chart-bar" style="--h: 48px;  background: var(--ramp-200);"></span>
+            <span class="example-chart-bar" style="--h: 68px;  background: var(--ramp-300);"></span>
+            <span class="example-chart-bar" style="--h: 88px;  background: var(--ramp-400);"></span>
+            <span class="example-chart-bar" style="--h: 100px; background: var(--ramp-500);"></span>
+            <span class="example-chart-bar" style="--h: 78px;  background: var(--ramp-700);"></span>
+            <span class="example-chart-bar" style="--h: 55px;  background: var(--ramp-900);"></span>
+          </div>
+          <div class="example-actions">
+            <button class="example-button" type="button">View dashboard</button>
+          </div>
+        </div>
+
+        <figure class="dep-graph-figure" aria-label="Live dependency graph of every token">
+          <figcaption class="dep-graph-figure__caption">Token graph</figcaption>
+          <div id="dep-graph" class="dep-graph"></div>
+        </figure>
+
+        <button id="reset" class="reset-btn" type="button">Reset all tokens</button>
+      </aside>
+
+      <article class="article-content">
+
+        <section>
+          <h2>1. Static links are the baseline</h2>
+          <p>
+            Most token systems already have the familiar split: raw values in
+            one place, semantic names in another. A small pool of source
+            values like <code>values.gray800</code>,
+            <code>values.gray50</code>, and <code>values.blue500</code> is
+            enough.
+          </p>
+          <p>
+            Those inputs become useful once semantic tokens give them a job:
+          </p>
+          <ul class="token-list">
+            <li>
+              <code>color.brand</code> =
+              <button class="token-chip" data-token="color.brand" type="button"></button>
+              <span class="aside">— points at <code>values.gray800</code></span>
+            </li>
+            <li>
+              <code>color.surface</code> =
+              <button class="token-chip" data-token="color.surface" type="button"></button>
+              <span class="aside">— points at <code>values.gray50</code></span>
+            </li>
+            <li>
+              <code>color.onSurface</code> =
+              <button class="token-chip" data-token="color.onSurface" type="button"></button>
+              <span class="aside">— paired with <code>color.surface</code>; the text color that goes on it</span>
+            </li>
+          </ul>
+          <p>
+            Static links are good. They are direct, inspectable, and
+            predictable. I do not want to replace them. I want to stop using
+            them for relationships they are too simple to express. A pair like
+            <code>surface</code> / <code>onSurface</code> already hints at the
+            limit: two pinned choices are standing in for one design decision.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. Some links are really formulas</h2>
+          <p>
+            Some semantic tokens are not really aliases. They are tiny
+            policies. <code>color.buttonText</code> is a good example. Writing
+            <code>ref('values.white')</code> stores an answer, but not the
+            reasoning behind it: white against what, chosen for what purpose,
+            valid for how long?
+          </p>
+          <p>
+            That is where the spreadsheet analogy helps. A token can behave
+            like a cell with a fixed link, or like a cell with a simple
+            formula. The fixed link remains the default. The point is simply
+            to allow formulas when the relationship is the thing you actually
+            care about.
+          </p>
+          <p>
+            The button label already works like that. The brittle version
+            would be <code>color.buttonText = ref('values.white')</code>. The
+            stronger version stores the rule instead of the answer:
+          </p>
+          <p class="rule-line">
+            <code>color.buttonText</code> =
+            <code>bestContrastWith(</code><button class="token-chip" data-token="color.brand" data-display="key" type="button"></button><code>, ramp)</code>
+          </p>
+          <p>Re-point the brand color and the label is picked again. The token keeps the logic that produced the outcome, so you can read why it is white.</p>
+        </section>
+
+        <section>
+          <h2>3. Choose one of a set</h2>
+          <p>
+            One kind of dynamic connection looks at a pool of candidates and
+            picks one. It is useful whenever the decision is comparative: the
+            most readable foreground, or the faintest line that still clears
+            a threshold.
+          </p>
+
+          <h3 data-rewire="onSurface">The most readable foreground</h3>
+          <p>
+            <code>color.onSurface</code> starts as a plain ref to
+            <code>values.gray900</code>. That works for a light surface, and
+            fails the moment the surface stops being light.
+          </p>
+          <p class="rule-line">
+            <code>color.onSurface</code> =
+            <code>bestContrastWith(color.surface, values)</code>
+          </p>
+          <p>Edit <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button> and the foreground is picked again. The pair <code>surface</code> / <code>onSurface</code> becomes one relationship the system can maintain, where before it was two separate pinned choices.</p>
+          <div class="pair-demo" aria-label="Paired surface and on-surface treatment demo">
+            <p class="pair-demo__title">Paired treatment</p>
+            <p class="pair-demo__rule">
+              <code is:raw>surfaceTreatment.default = { surface, onSurface }</code>
+            </p>
+            <div class="pair-demo__rows">
+              <p class="pair-demo__row">
+                <span class="pair-demo__label"><code>surface</code></span>
+                <button class="token-chip" data-token="color.surface" data-quick-color type="button"></button>
+              </p>
+              <p class="pair-demo__row">
+                <span class="pair-demo__label"><code>onSurface</code></span>
+                <button class="token-chip" data-token="color.onSurface" type="button"></button>
+              </p>
+            </div>
+            <p class="pair-demo__note">These are one named decision: edit the surface and the readable foreground is picked again, so the pair stays coherent.</p>
+          </div>
+
+          <h3>The faintest line that still works</h3>
+          <p>The same pattern can also pick the weakest option that still satisfies a condition.</p>
+          <p class="rule-line">
+            <code>color.line</code> =
+            <code>minContrastWith(</code><button
+              class="token-chip"
+              data-token="color.surface"
+              data-display="key"
+              type="button"
+            ></button><code is:raw>, ramp, { minContrast:&nbsp;</code><button
+              class="token-chip"
+              data-fn-option="color.line.minContrast"
+              data-min="1"
+              data-max="7"
+              data-step="0.1"
+              type="button"
+            ></button><code is:raw> })</code>
+          </p>
+          <p>Where <code>bestContrastWith</code> picks the <em>highest</em> contrast available, <code>minContrastWith</code> picks the <em>lowest</em> step that still clears the threshold. Instead of "use this grey", the token says "pick the weakest boundary that still reads as a boundary".</p>
+
+          <h3>One step up, one step down</h3>
+          <p>The same "pick from a set" pattern works on dimensional scopes like spacing, type and motion. Given a scale and a starting member, <code>nextLarger</code> and <code>nextSmaller</code> return the adjacent step. The unit can be anything (<code>px</code>, <code>rem</code>, <code>ms</code>); members in a different unit from the starting one are skipped.</p>
+          <p class="rule-line">
+            <code>space.emphasis</code> =
+            <code>nextLarger(space.m, space)</code>
+          </p>
+          <p>Add a sixth spacing step and <code>space.emphasis</code> may move to it without any code change. Pass <code is:raw>{ minDistance: 6 }</code> to skip neighbours that are too close, for scales with fine-grained steps where the derived token should still be a noticeable jump.</p>
+        </section>
+
+        <section>
+          <h2>4. Extend a decision</h2>
+          <p>
+            A treatment rarely exists once. The card that holds the report
+            needs an inverted version for a callout: the same decisions, made
+            on a dark ground. Copying the scope copies every rule with it, and
+            the two copies start to drift the first time one of them is
+            fixed. Extending it keeps one set of rules and lets the variant
+            say only what is different.
+          </p>
+          <div class="rule-line rule-line--block">
+            <span class="rule-line__row"><code>card.surface</code> = <button class="token-chip" data-token="card.surface" type="button"></button></span>
+            <span class="rule-line__row"><code>card.onSurface</code> = <code>bestContrastWith(<span data-surface-ref>ref('.surface')</span>, values)</code></span>
+            <span class="rule-line__row"><code>card.line</code> = <code>minContrastWith(<span data-surface-ref>ref('.surface')</span>, ramp)</code></span>
+            <span class="rule-line__gap" aria-hidden="true"></span>
+            <span class="rule-line__row"><code>card-inverted</code> <span class="rule-line__dim">extends</span> <code>card</code></span>
+            <span class="rule-line__row"><code>card-inverted.surface</code> = <button class="token-chip" data-token="card-inverted.surface" type="button"></button></span>
+          </div>
+          <p>
+            The inverted card writes one line. Everything else it inherits,
+            and the interesting question is what those inherited rules read.
+          </p>
+
+          <h3>Absolute or relative</h3>
+          <p>
+            A reference that names its key in full, <code>ref('card.surface')</code>,
+            points at that key wherever the rule ends up. Inherited by the
+            inverted card, <code>onSurface</code> keeps measuring the light
+            surface of the original, and the callout gets dark text on a dark
+            ground. Leave the scope off, <code>ref('.surface')</code>, and the
+            reference reads <code>surface</code> in whichever scope reads the
+            rule. The inverted card's inherited rules re-decide against its own
+            surface.
+          </p>
+          <div class="extend-demo" aria-label="A card and its inverted variant">
+            <div class="extend-demo__modes" role="group" aria-label="How the inherited rules read surface">
+              <button type="button" data-surface-mode="absolute"><code>ref('card.surface')</code></button>
+              <button type="button" data-surface-mode="relative" class="is-active"><code>ref('.surface')</code></button>
+            </div>
+            <div class="extend-demo__cards">
+              <div class="extend-demo__card" data-card="card">
+                <p class="extend-demo__name">card</p>
+                <p class="extend-demo__text">Revenue grew 12% over Q3.</p>
+              </div>
+              <div class="extend-demo__card" data-card="card-inverted">
+                <p class="extend-demo__name">card-inverted <span>extends card</span></p>
+                <p class="extend-demo__text">Revenue grew 12% over Q3.</p>
+              </div>
+            </div>
+            <p class="extend-demo__note" id="extend-demo-note"></p>
+          </div>
+          <p>
+            Both are useful, and the choice is made per reference. An absolute
+            reference pins a decision to one source: <em>the brand color,
+            whatever card this is</em>. A relative one makes the decision part
+            of the treatment: <em>readable on my own surface</em>. One variant
+            can do both, following its own surface while still pointing at
+            the one brand color everyone shares.
+          </p>
+          <p>
+            This is the inside-one-system version of a theme: variants that
+            live side by side, a card and its callout, a button and its
+            destructive twin. A theme that changes the roots everywhere at
+            once, a dark mode or a second brand, is the same idea one level
+            up, and it does not need a second copy of the rules either.
+          </p>
+        </section>
+
+        <section>
+          <h2>5. Do something to a value</h2>
+          <p>
+            The second kind of dynamic connection does not choose from a set.
+            It takes an input and applies a small operation to it. This is
+            where utility or transform tokens become useful: scale, mix,
+            darken, lighten, offset.
+          </p>
+
+          <h3>Scale from a base</h3>
+          <p>Every gap inside the example panel (title to paragraph, paragraph to chart, chart to button) is a multiple of <button class="token-chip" data-token="space.base" data-min="8" data-max="32" data-step="1" type="button" ></button>. Pull the base and the whole rhythm scales together via <code>spacingScale</code>.</p>
+          <div class="scale-demo" aria-label="Editable spacing scale demo">
+            <p class="scale-demo__title">Edit the scale here</p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.base</code></span>
+              <button
+                class="token-chip"
+                data-token="space.base"
+                data-min="8"
+                data-max="32"
+                data-step="1"
+                type="button"
+              ></button>
+            </p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.xs</code></span>
+              <code is:raw>spacingScale(base, { multiplier:</code>
+              <button class="token-chip" data-fn-option="space.xs.multiplier" data-display-decimals="1" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+              <code is:raw>})</code>
+              <span class="scale-demo__equals">=</span>
+              <button class="token-chip" data-token="space.xs" type="button"></button>
+            </p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.s</code></span>
+              <code is:raw>spacingScale(base, { multiplier:</code>
+              <button class="token-chip" data-fn-option="space.s.multiplier" data-display-decimals="1" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+              <code is:raw>})</code>
+              <span class="scale-demo__equals">=</span>
+              <button class="token-chip" data-token="space.s" type="button"></button>
+            </p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.m</code></span>
+              <code is:raw>spacingScale(base, { multiplier:</code>
+              <button class="token-chip" data-fn-option="space.m.multiplier" data-display-decimals="1" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+              <code is:raw>})</code>
+              <span class="scale-demo__equals">=</span>
+              <button class="token-chip" data-token="space.m" type="button"></button>
+            </p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.l</code></span>
+              <code is:raw>spacingScale(base, { multiplier:</code>
+              <button class="token-chip" data-fn-option="space.l.multiplier" data-display-decimals="1" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+              <code is:raw>})</code>
+              <span class="scale-demo__equals">=</span>
+              <button class="token-chip" data-token="space.l" type="button"></button>
+            </p>
+            <p class="scale-demo__row">
+              <span class="scale-demo__label"><code>space.xl</code></span>
+              <code is:raw>spacingScale(base, { multiplier:</code>
+              <button class="token-chip" data-fn-option="space.xl.multiplier" data-display-decimals="1" data-min="0.25" data-max="4" data-step="0.05" type="button"></button>
+              <code is:raw>})</code>
+              <span class="scale-demo__equals">=</span>
+              <button class="token-chip" data-token="space.xl" type="button"></button>
+            </p>
+          </div>
+
+          <h3>Shift a value</h3>
+          <p>The simplest version of this kind of rule takes one input and nudges it. The link's hover state in the example panel is one of those: a darker shade of <code>color.interaction</code>, computed on the fly instead of stored.</p>
+          <p class="rule-line">
+            <code>color.linkHover</code> =
+            <code>darken(color.interaction,&nbsp;</code><button
+              class="token-chip"
+              data-fn-option="color.linkHover.amount"
+              data-min="0"
+              data-max="0.5"
+              data-step="0.01"
+              type="button"
+            ></button><code>)</code>
+          </p>
+          <p>
+            Move the amount. Every link that uses the hover token shifts at
+            once because there is only ever one decision to re-evaluate.
+          </p>
+
+          <h3>Blend two inputs</h3>
+          <p>
+            The seven bars in the chart are not seven hand-picked colors.
+            They are seven steps of a ramp generated between two inputs:
+          </p>
+          <p class="rule-line">
+            <code>ramp.sN</code> =
+            <code>colorMix(shade(</code><button
+              class="token-chip"
+              data-token="color.surface"
+              data-display="key"
+              type="button"
+            ></button><code>, 10%),&nbsp;</code><button
+              class="token-chip"
+              data-token="color.interaction"
+              data-display="key"
+              type="button"
+            ></button><code>, ratio)</code>
+          </p>
+          <p>Drag either endpoint and the bars change together, because the connection stores the formula. A hover shade or a pressed state works the same way with a different scale.</p>
+        </section>
+
+        <section>
+          <h2>6. Truly procedural design</h2>
+          <p>For a long time, tokenising everything felt like the end of creative freedom to me. Every choice was locked in, and every relationship was buried in a dependency graph nobody wanted to climb. Once the system was set up, exploring happened somewhere else: in Figma, in a script, in ad-hoc decisions made outside the system and patched in later.</p>
+          <p>With procedural tokens the exploring can happen inside the system. Every value token in this article, every grey and every accent, is a point on a single color line. Drag any anchor and the whole system shifts together: the values move, the refs that point at them follow, the ramp is interpolated again and the contrast rules pick again.</p>
+          <div class="poline-demo" aria-label="Palette generator driving every value token">
+            <p class="poline-demo__caption">Each dot on the wheel is an anchor; the line between them is the palette. Every <code>values.*</code> token is sampled somewhere on that line, even the ones named for greys.</p>
+            <poline-picker id="poline" interactive=""></poline-picker>
+            <label class="poline-demo__toggle">
+              <input type="checkbox" id="poline-invert">
+              <span>Invert lightness</span>
+            </label>
+          </div>
+
+          <p>The names <code>values.gray800</code>, <code>values.red500</code> stay where they were, but their colors change. I like that: a token system you can explore and not only maintain. The structure keeps it coherent, and the inputs stay free to play with.</p>
+
+          <div class="bezier-demo" aria-label="Bezier curve editor for the spacing scale">
+            <p class="bezier-demo__caption">Each <code>space.*</code> token reads its multiplier from this curve. Drag the two handles to reshape the scale; the gap, the padding and the spacing between the chart bars in the panel all follow.</p>
+            <svg id="bezier-svg" class="bezier-svg" viewBox="0 0 200 150" role="img" aria-label="Cubic bezier curve controlling the spacing scale">
+              <!-- rendered by article.ts -->
+            </svg>
+          </div>
+        </section>
+
+        <section>
+          <h2>7. Better links</h2>
+          <p>
+            This is not an argument against static refs. Most links should
+            stay static, because static is clear. The point is simply to stop
+            forcing every relationship to pretend it is an alias.
+          </p>
+          <p>
+            When a connection is really a choice or a transformation, the
+            token should be allowed to say so. That makes systems safer to
+            change: change the brand color, the surface, the base spacing,
+            or the threshold, and the dependent choices can be recalculated
+            instead of fossilizing old assumptions.
+          </p>
+          <p>
+            Too often the workflow goes the other way around: generate a ramp,
+            freeze it into tokens, then build the design around that frozen
+            result. It works until dark mode arrives, or a second theme, or a
+            broader brand shift. Then all the flexibility that should have
+            been inside the system has to be retrofitted after the fact.
+            When the relationships live inside the system, a dark theme is
+            only the handful of roots that change, a dark surface and a light
+            ink, and everything derived from them follows.
+          </p>
+          <p>Once a token system can encode relationships and not only results, it becomes a way to find things. It keeps more complexity coherent than anyone wants to track by hand, and it turns up combinations I would not have picked manually.</p>
+          <p>That is the part I find exciting. Change the surface, shift the interaction color, alter the spacing base, and the system answers back. Sometimes the answer is simply robust, sometimes it is surprising. That is what I mean by emergence: the practical result of encoding relationships instead of pinning every outcome in advance.</p>
+          <p>So what I want are better links: static when that is enough, a formula when it is needed. Color and spacing make the pattern easy to see, but the same logic applies anywhere the relationship matters more than the stored result: type treatments, motion rules, icon choices, grouped decisions like a surface/on-surface pair. A text style is already one of those: size, weight and line height travel as one token, and a variant that changes only the weight keeps following the rest. At that point a token system is less a catalogue of frozen answers and more a design spreadsheet, or at its best a small design program, one where flexibility is part of the design from the start.</p>
+        </section>
+
+        <footer class="article-coda">
+          <p>Try the same tokens in the <a href={`${base}editor/`}>interactive editor</a>. It shows the same Design Book graph, with every scope, ref and function token editable inline.</p>
+        </footer>
+      </article>
+    </div>
+
+    <div id="popover-root"></div>
   <InstallBar current="article" />
   <Footer current="article" />
   <script>

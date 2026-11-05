@@ -1,0 +1,13 @@
+---
+// The slider: a native range input drawn as a ruler on its row's rule,
+// with a diamond handle (slider/slider.css). Every attribute is passed
+// to the <input>. Sliders made by script elsewhere (the article's
+// popovers) get the same look by importing slider/slider.js.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = Omit<HTMLAttributes<'input'>, 'type'>;
+---
+<input type="range" {...Astro.props} />
+<script>
+  import './slider/slider.js';
+</script>

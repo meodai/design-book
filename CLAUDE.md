@@ -18,10 +18,12 @@ Run a single test file: `npx vitest run tests/graph.test.ts`
 
 The site is one Astro project (`astro.config.mjs`, sources in `site/`):
 `site/pages/` (index, tour, article, editor, naming; the docs are the README, linked from the footer), `site/layouts/Page.astro`,
-shared components in `site/components/` (Footer, InstallBar: the bottom bar with the name and the install line, Logo, and `slider/`: the range-input ruler, `slider.css` + `slider.js`, imported once per page; it styles every native `<input type="range">`, its track is the row's bottom rule and its ticks rise from it).
-Page markup sits in `site/partials/*.html` (raw HTML: its code samples are
-full of braces) with `{{base}}` for the site root and `<!--brand-->` where the
-top line goes. Each page's scripts and stylesheets sit in a folder of their
+shared components in `site/components/` (Footer, InstallBar: the bottom bar with the name and the install line, Logo, and `Slider.astro`: a range input drawn as a ruler on its row's rule with a diamond handle; its look and tick script are `slider/slider.css` + `slider/slider.js`, which also style range inputs made by script, so the article imports `slider.js` directly).
+Each page's markup is in its `.astro` file. Code samples are full of braces, so
+every `<pre>`, and every `<code>` with a brace in it, carries `is:raw`; links to
+other pages are `` href={`${base}tour/`} `` with `base` from `import.meta.env.BASE_URL`;
+a bare attribute on a custom element is written `no-alpha=""` (Astro would print `="true"`).
+Each page's scripts and stylesheets sit in a folder of their
 own: `site/marketing/` (landing and tour, plus `shared.css`, the style all
 pages share), `site/article/`, `site/editor/` and `site/naming/`.
 `package.json` lists `./site/**` under `sideEffects`, or the bundler drops
