@@ -313,18 +313,6 @@ function grow (i) {
   draw();
 }
 
-// The results folder: a tab, or any part of a paper behind that shows,
-// brings that paper forward.
-$("folder").addEventListener("click", (e) => {
-  const picked = e.target.closest(".folder-tab")?.closest(".folder-sheet") ?? e.target.closest(".folder-sheet:not(.is-front)");
-  if (!picked) return;
-  for (const sheet of $("folder").querySelectorAll(".folder-sheet")) {
-    const front = sheet === picked;
-    sheet.classList.toggle("is-front", front);
-    sheet.querySelector(".folder-tab").setAttribute("aria-pressed", String(front));
-  }
-});
-
 // Wiring
 $("rerun").addEventListener("click", () => {
   $("count").max = Math.max(Number($("count").max), state.items.length);

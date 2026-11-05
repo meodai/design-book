@@ -1,6 +1,8 @@
 ---
 import Page from '../../layouts/Page.astro';
 import InstallBar from '../../components/InstallBar.astro';
+import Folder from '../../components/Folder.astro';
+import Sheet from '../../components/Sheet.astro';
 import Slider from '../../components/Slider.astro';
 import Footer from '../../components/Footer.astro';
 import '../../marketing/shared.css';
@@ -134,24 +136,15 @@ import '../../naming/style.css';
     </form>
 
     <div class="results">
-      <div class="folder" id="folder">
-        <div class="folder-sheet folder-sheet--css" data-sheet="css">
-          <button type="button" class="folder-tab" aria-pressed="false">CSS</button>
-          <div class="folder-body"><pre is:raw class="code holes-left" id="css"></pre></div>
-        </div>
-        <div class="folder-sheet folder-sheet--code" data-sheet="code">
-          <button type="button" class="folder-tab" aria-pressed="false">Code</button>
-          <div class="folder-body"><pre is:raw class="code holes-left" id="code"></pre></div>
-        </div>
-        <div class="folder-sheet folder-sheet--names is-front" data-sheet="names">
-          <button type="button" class="folder-tab" aria-pressed="true">Names</button>
-          <div class="folder-body">
+      <Folder id="folder">
+        <Sheet name="css" label="CSS"><pre is:raw class="code holes-left" id="css"></pre></Sheet>
+        <Sheet name="code" label="Code"><pre is:raw class="code holes-left" id="code"></pre></Sheet>
+        <Sheet name="names" label="Names" front>
             <p class="meta" id="meta"></p>
             <div class="error" id="error" hidden></div>
             <div class="tiles colors" id="tiles"></div>
-          </div>
-        </div>
-      </div>
+          </Sheet>
+      </Folder>
 
       <section class="growing">
         <h2>Growing the scale</h2>

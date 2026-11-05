@@ -332,15 +332,6 @@ function paintRenderers () {
   catch (e) { tw.textContent  = `// ${e.message}`; }
 }
 
-// Tabs
-document.querySelectorAll(".r-tab").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".r-tab").forEach((b) => b.classList.remove("is-active"));
-    document.querySelectorAll(".r-pane").forEach((p) => p.classList.remove("is-active"));
-    btn.classList.add("is-active");
-    document.getElementById(btn.dataset.target)?.classList.add("is-active");
-  });
-});
 
 // ══════════════════════════════════════════════════════════════════════
 //  EXTEND — custom function + poline integration

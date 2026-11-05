@@ -2094,36 +2094,6 @@ h1, h2, h3 {
 }
 .coda-icon svg { display: block; }
 
-/* ── Outro ──────────────────────────────────────────────────────── */
-.outro {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: clamp(60px, 8vw, 100px) var(--gutter);
-  border-top: 1px solid var(--rule);
-}
-.outro h2 {
-  font-size: clamp(32px, 4.5vw, 56px);
-  line-height: 1.1;
-  max-width: 20ch;
-  margin-bottom: 0.7em;
-}
-.outro-links {
-  list-style: none;
-  padding: 0;
-  margin: 24px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px 28px;
-  font-size: 15px;
-}
-.outro-links a {
-  color: var(--text);
-  text-decoration: none;
-  border-bottom: 1px solid var(--rule);
-  padding-bottom: 2px;
-}
-.outro-links a:hover { color: var(--accent); border-color: var(--accent); }
-
 /* ── Foot ───────────────────────────────────────────────────────── */
 .foot {
   max-width: var(--max);

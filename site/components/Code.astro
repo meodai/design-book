@@ -1,0 +1,18 @@
+---
+// A code sample, highlighted at build time (highlight.ts). Write the code
+// as is between the tags, with is:raw so its braces stay text:
+//
+//   <Code is:raw>
+//     ui.set('ink', bestContrastWith(ref('ui.surface'), palette));
+//   </Code>
+//
+// Other attributes (id, class, aria-*) go on the <pre>, which always has
+// the class "code".
+import type { HTMLAttributes } from 'astro/types';
+import { codeFromSlot, highlight } from './highlight';
+
+type Props = HTMLAttributes<'pre'>;
+const { class: className, ...rest } = Astro.props;
+const code = codeFromSlot(await Astro.slots.render('default'));
+---
+<pre class:list={['code', className]} {...rest}><code set:html={highlight(code)} /></pre>

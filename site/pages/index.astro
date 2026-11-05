@@ -1,6 +1,8 @@
 ---
 import Page from '../layouts/Page.astro';
 import InstallBar from '../components/InstallBar.astro';
+import Folder from '../components/Folder.astro';
+import Sheet from '../components/Sheet.astro';
 import Slider from '../components/Slider.astro';
 import Footer from '../components/Footer.astro';
 import '../marketing/shared.css';
@@ -56,10 +58,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
     <!-- Two papers in a folder, one behind the other. Each has a tab on its
          top edge; selecting a tab brings that paper to the front. -->
-    <div class="folder" id="folder">
-      <article class="folder-sheet sheet-palette holes-both" data-sheet="palette">
-        <button class="folder-tab" type="button" data-sheet="palette" aria-pressed="false">Palette</button>
-        <div class="folder-body palette-body">
+    <Folder id="folder">
+      <Sheet name="palette" label="Palette" as="article" class="sheet-palette holes-both" bodyClass="palette-body">
           <figure class="poline-panel">
             <div class="source-view" data-view="poline">
               <poline-picker id="poline-picker" tabindex="0" aria-label="Color wheel: drag around it, or use the arrow keys, to turn the palette"></poline-picker>
@@ -95,12 +95,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             </colgroup>
             <tr><td class="no"></td><td></td><td></td><td></td></tr>
           </table>
-        </div>
-      </article>
+        </Sheet>
 
-      <article class="folder-sheet sheet-sizes" data-sheet="sizes">
-        <button class="folder-tab" type="button" data-sheet="sizes" aria-pressed="false">Sizes</button>
-        <div class="folder-body palette-body">
+      <Sheet name="sizes" label="Sizes" as="article" class="sheet-sizes" bodyClass="palette-body">
           <figure class="curve-panel">
             <svg id="curve" viewBox="-6 -6 112 112" role="img" aria-label="Curve that spreads the sizes from smallest to largest">
               <rect class="curve-frame" x="0" y="0" width="100" height="100" />
@@ -129,20 +126,14 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             </colgroup>
             <tr><td class="no"></td><td></td><td></td><td></td></tr>
           </table>
-        </div>
-      </article>
+        </Sheet>
 
-      <article class="folder-sheet sheet-graph" data-sheet="graph">
-        <button class="folder-tab" type="button" data-sheet="graph" aria-pressed="false">Graph</button>
-        <div class="folder-body graph-body">
+      <Sheet name="graph" label="Graph" as="article" class="sheet-graph" bodyClass="graph-body">
           <div class="graph" id="graph" role="img" aria-label="Every scope of the book as a table, with a line for each reference between tokens"></div>
           <p class="graph-note">Rendered with <code is:raw>book.render('svg', { interactive: true })</code>. Point at a token to follow its references.</p>
-        </div>
-      </article>
+        </Sheet>
 
-      <article class="folder-sheet sheet-rules is-front" data-sheet="rules">
-        <button class="folder-tab" type="button" data-sheet="rules" aria-pressed="true">Rules</button>
-        <div class="folder-body">
+      <Sheet name="rules" label="Rules" as="article" class="sheet-rules" front>
           <table class="ledger" id="ledger">
             <colgroup>
               <col class="c-no" /><col class="c-key" /><col class="c-rule" /><col class="c-val" />
@@ -152,9 +143,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             </thead>
             <tbody id="ledger-body"></tbody>
           </table>
-        </div>
-      </article>
-    </div>
+        </Sheet>
+    </Folder>
   </section>
 
   <!-- ─── Three readers ───────────────────────────────────────────────── -->

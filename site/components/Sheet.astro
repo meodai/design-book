@@ -1,0 +1,23 @@
+---
+// A paper in a <Folder>: a tab with its label on the top edge, the slot as
+// its body. `name` is its data-sheet and its folder-sheet--<name> class;
+// `front` puts it in front (it should also come last in the folder).
+import type { HTMLTag } from 'astro/types';
+
+interface Props {
+  label: string;
+  name?: string;
+  front?: boolean;
+  as?: HTMLTag;
+  class?: string;
+  bodyClass?: string;
+}
+const { label, name, front = false, as: Tag = 'div', class: className, bodyClass } = Astro.props;
+---
+<Tag
+  class:list={['folder-sheet', name && `folder-sheet--${name}`, className, { 'is-front': front }]}
+  data-sheet={name}
+>
+  <button type="button" class="folder-tab" aria-pressed={front ? 'true' : 'false'}>{label}</button>
+  <div class:list={['folder-body', bodyClass]}><slot /></div>
+</Tag>

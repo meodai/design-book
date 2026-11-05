@@ -1,0 +1,13 @@
+---
+// Papers in a folder: put <Sheet>s in it, the one in front last (it is
+// drawn on top). tabRow sets the tabs side by side instead of where the
+// page's CSS puts them (--tab-left). The switching is folder/folder.js.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'div'> & { tabRow?: boolean };
+const { class: className, tabRow, ...rest } = Astro.props;
+---
+<div class:list={['folder', className]} data-tab-row={tabRow ? '' : undefined} {...rest}><slot /></div>
+<script>
+  import './folder/folder.js';
+</script>

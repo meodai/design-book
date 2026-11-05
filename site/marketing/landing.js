@@ -861,25 +861,10 @@ rampHue.addEventListener("input", () => {
   update();
 });
 
-// ─── Folder: two papers, one in front ─────────────────────────────────
-const folder = document.getElementById("folder");
-function bringToFront(name) {
-  for (const sheet of folder.querySelectorAll(".folder-sheet")) {
-    const front = sheet.dataset.sheet === name;
-    sheet.classList.toggle("is-front", front);
-    sheet.querySelector(".folder-tab").setAttribute("aria-pressed", String(front));
-    sheet.querySelector(".folder-body").inert = !front;
-  }
-}
-folder.addEventListener("click", (event) => {
-  // Its tab, or any part of a paper behind that shows, brings it forward.
-  const sheet = event.target.closest(".folder-tab")?.closest(".folder-sheet")
-    ?? event.target.closest(".folder-sheet:not(.is-front)");
-  if (!sheet) return;
-  bringToFront(sheet.dataset.sheet);
-  if (sheet.dataset.sheet === "graph") renderGraph();
+// ─── Folder: the graph is drawn when its paper comes forward ─────────
+document.getElementById("folder").addEventListener("sheetchange", (event) => {
+  if (event.detail.name === "graph") renderGraph();
 });
-bringToFront("rules");
 
 // ─── Readings ────────────────────────────────────────────────────────
 function fillReadings(values) {
