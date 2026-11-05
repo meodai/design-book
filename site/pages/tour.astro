@@ -164,78 +164,6 @@ book.addScope('button-danger', {
       </Folder>
     </div>
 
-    <div class="ref-feature-body split feature-sub">
-      <h3 class="rule-title" id="ref-parent-title">Up the scope tree: inherited.</h3>
-      <div class="ref-feature-text">
-        <p>A token sits in two trees. Its <em>scope</em> may extend another
-          scope, and its <em>value</em> may refer to another token. Design Book
-          never climbs either on its own; two words climb them on purpose.</p>
-        <p><code>inherited</code> climbs the scope tree. A scope that overrides
-          <code>interaction</code> cannot read <code>ref('.interaction')</code>
-          to work out the new value: that is the token it is defining, and the
-          book refuses the cycle. <code>inherited(ref('.interaction'))</code>
-          reads the one it replaces, the value it would have inherited;
-          <code>inherited(ref, 2)</code> two scopes up, <code>inherited(ref,
-          'root')</code> the top. Here a variant's hover is its parent's
-          interaction color, two steps lighter along the blue ramp.</p>
-      </div>
-
-      <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>const base = book.addScope('base');
-base.set('background', ref('blue.50'));
-base.set('interaction', ref('blue.600'));
-
-const hover = book.addScope('base-hover', {
-  extends: 'base',
-});
-// two steps lighter than the one it replaces
-hover.set('interaction', sibling(
-  inherited(ref('.interaction')), ref('blue'), -2,
-));</Code></Sheet>
-        <Sheet name="result" label="Result" front>
-          <figure class="ref-stage">
-            <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
-            <div class="ref-buttons" id="ref-buttons"></div>
-          </figure>
-        </Sheet>
-      </Folder>
-    </div>
-
-    <div class="ref-feature-body split feature-sub">
-      <h3 class="rule-title" id="ref-source-title">Back to the value: source.</h3>
-      <div class="ref-feature-text">
-        <p><code>source</code> climbs the other tree, the references.
-          <code>card.interaction = ref('blue.600')</code>, so
-          <code>source(ref('.interaction'))</code> is <code>blue.600</code>,
-          the token it refers to; <code>source(ref, 'root')</code> follows
-          the references to the token where the value is written.</p>
-        <p>It is how you move relative to a value in the scale it was
-          generated in: a step lighter, a size up, without looking up the next
-          shade and typing it in. When you know the scale, name it:
-          <code>sibling(ref('.interaction'), ref('blue'), -2)</code>. When a
-          rule is shared by themes whose colors come from different ramps, let
-          it go back to wherever the value comes from: one rule, a blue button
-          and a green one.</p>
-      </div>
-
-      <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>const button = book.addScope('button');
-button.set('interaction', ref('blue.500'));
-// two steps lighter, in whichever ramp
-// the interaction color comes from
-button.set('hover', sibling(
-  source(ref('.interaction'), 'root'), -2,
-));
-
-book.addScope('button-green', { extends: 'button' })
-  .set('interaction', ref('green.500'));</Code></Sheet>
-        <Sheet name="result" label="Result" front>
-          <figure class="ref-stage">
-            <div class="ref-buttons ref-themes" id="ref-themes"></div>
-          </figure>
-        </Sheet>
-      </Folder>
-    </div>
   </section>
 
   <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
@@ -966,6 +894,79 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
           </Sheet>
         </Folder>
       </div>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-parent-title">Up the scope tree: inherited.</h3>
+      <div class="ref-feature-text">
+        <p>A token sits in two trees. Its <em>scope</em> may extend another
+          scope, and its <em>value</em> may refer to another token. Design Book
+          never climbs either on its own; two words climb them on purpose.</p>
+        <p><code>inherited</code> climbs the scope tree. A scope that overrides
+          <code>interaction</code> cannot read <code>ref('.interaction')</code>
+          to work out the new value: that is the token it is defining, and the
+          book refuses the cycle. <code>inherited(ref('.interaction'))</code>
+          reads the one it replaces, the value it would have inherited;
+          <code>inherited(ref, 2)</code> two scopes up, <code>inherited(ref,
+          'root')</code> the top. Here a variant's hover is its parent's
+          interaction color, two steps lighter along the blue ramp.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const base = book.addScope('base');
+base.set('background', ref('blue.50'));
+base.set('interaction', ref('blue.600'));
+
+const hover = book.addScope('base-hover', {
+  extends: 'base',
+});
+// two steps lighter than the one it replaces
+hover.set('interaction', sibling(
+  inherited(ref('.interaction')), ref('blue'), -2,
+));</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="ref-stage">
+            <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
+            <div class="ref-buttons" id="ref-buttons"></div>
+          </figure>
+        </Sheet>
+      </Folder>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-source-title">Back to the value: source.</h3>
+      <div class="ref-feature-text">
+        <p><code>source</code> climbs the other tree, the references.
+          <code>card.interaction = ref('blue.600')</code>, so
+          <code>source(ref('.interaction'))</code> is <code>blue.600</code>,
+          the token it refers to; <code>source(ref, 'root')</code> follows
+          the references to the token where the value is written.</p>
+        <p>It is how you move relative to a value in the scale it was
+          generated in: a step lighter, a size up, without looking up the next
+          shade and typing it in. When you know the scale, name it:
+          <code>sibling(ref('.interaction'), ref('blue'), -2)</code>. When a
+          rule is shared by themes whose colors come from different ramps, let
+          it go back to wherever the value comes from: one rule, a blue button
+          and a green one.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const button = book.addScope('button');
+button.set('interaction', ref('blue.500'));
+// two steps lighter, in whichever ramp
+// the interaction color comes from
+button.set('hover', sibling(
+  source(ref('.interaction'), 'root'), -2,
+));
+
+book.addScope('button-green', { extends: 'button' })
+  .set('interaction', ref('green.500'));</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="ref-stage">
+            <div class="ref-buttons ref-themes" id="ref-themes"></div>
+          </figure>
+        </Sheet>
+      </Folder>
     </div>
 
     <div class="typo-feature-body split feature-sub">
