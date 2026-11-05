@@ -420,17 +420,14 @@ p em {
    writes them into --card-*): ui.surface, its text as loading bars in
    ui.text and ui.subtle, padded by ui.gap, its button ui.accent /
    ui.onAccent and
-   ui.hover when pointed at, with the tables' hatched, outlined shadow.
-   Narrow, it lies on the blueprint under the drawing; wider, it floats
-   off the blueprint's corner. */
+   ui.hover when pointed at, with the tables' hatched, outlined shadow. */
 .graph-card {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--card-breath, 8px);
-  width: min(100%, calc(var(--row) * 9));
-  margin: var(--row) calc(var(--row) / 2) calc(var(--row) / 2) auto;
+  width: min(70%, calc(var(--row) * 9));
   padding: var(--card-gap, 16px);
   color: var(--card-text, var(--black));
   background: var(--card-surface, var(--paper));
@@ -488,18 +485,23 @@ p em {
   background: var(--card-hover, var(--black));
 }
 
-/* From 900px it floats: off the blueprint's bottom right corner, half
-   outside the paper (which lets it show), so the paper keeps its size. */
-@media (min-width: 900px) {
-  .graph-viz {
-    overflow: visible;
-  }
+/* It floats off the blueprint's bottom right corner, partly outside the
+   paper (which lets it show), so the paper keeps its size; on a phone
+   less far to the right, to stay on the screen. */
+.graph-viz {
+  overflow: visible;
+}
 
+.graph-card {
+  position: absolute;
+  right: calc(var(--row) * -0.5);
+  bottom: calc(var(--row) * -2.5);
+  margin: 0;
+}
+
+@media (min-width: 900px) {
   .graph-card {
-    position: absolute;
     right: calc(var(--row) * -1);
-    bottom: calc(var(--row) * -2.5);
-    margin: 0;
   }
 }
 

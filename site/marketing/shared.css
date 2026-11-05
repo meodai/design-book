@@ -1034,6 +1034,13 @@ color-input::part(controls) {
   }
 }
 
+/* The lines run past the page on purpose; the body clips them (the
+   root alone does not stop a phone from panning sideways). */
+html,
+body {
+  overflow-x: clip;
+}
+
 .rule-title {
   position: relative;
   isolation: isolate;
