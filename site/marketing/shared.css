@@ -579,7 +579,7 @@ body:has(> .rail-left) .install-bar .bar-brand {
   font: 15px var(--font-text);
 }
 
-/* Home, left, after the mark; the other pages on the right. */
+/* Front Desk (the home page), left, after the mark; the other pages on the right. */
 .install-bar .bar-home {
   margin-right: auto;
   padding-left: 10px;
