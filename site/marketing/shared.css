@@ -607,6 +607,8 @@ body:has(> .rail-left) .install-bar .bar-brand {
   background: transparent;
   border: 0;
   border-left: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
+  /* and one where it meets the rail */
+  border-right: 1px solid color-mix(in srgb, var(--install-ink, var(--on-black)) 45%, var(--install-bg, var(--blue)));
   cursor: pointer;
 }
 

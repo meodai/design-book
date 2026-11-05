@@ -55,6 +55,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <section class="graph split" aria-labelledby="graph-title">
     <h2 class="rule-title" id="graph-title">A web of decisions, not a list of values.</h2>
     <div class="graph-text">
+      <p>A book keeps its tokens in <em>scopes</em>, named groups like
+        <code>brand</code> or <code>ui</code>; <code>brand.primary</code> is the
+        token <code>primary</code> in <code>brand</code>.</p>
       <p>Each token is a node and each reference an edge. The library tracks
         references, computed values and selectors that read a whole scope, so
         when an input changes it recomputes exactly what depends on it, either
@@ -94,9 +97,8 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
           properties. A hex code pasted in two places is two decisions, and
           sooner or later they drift apart; <code>ref()</code> stores where a
           value comes from, the key and not the value, so changing the source
-          changes everything that points at it. Refs chain, cross scopes and
-          read a single field of a type style, and in CSS the link stays a
-          <code>var()</code>.</p>
+          changes everything that points at it. Refs chain and cross scopes,
+          and in CSS the link stays a <code>var()</code>.</p>
         <p>It is the foundation, not the point. A reference can only say
           <em>use that one</em>; everything after this section is about the
           tokens that decide which one.</p>
@@ -120,50 +122,6 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
         </Sheet>
       </Folder>
     </div>
-
-    <div class="ref-feature-body split feature-sub">
-      <h3 class="rule-title" id="ref-relative-title">Relative refs.</h3>
-      <div class="ref-feature-text">
-        <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
-          that key in whichever scope reads the token, much like
-          <code>this</code> in a method, or a CSS <code>var()</code> that is
-          looked up on the element using it.</p>
-        <p>That is what makes <a href="#extends-title">extending scopes</a>
-          cheap. A variant overrides one value, and every inherited token that
-          reads it relatively follows; nothing you already wrote has to be
-          written again. Base and variant end up side by side, as
-          <code>--button-hover</code> and <code>--button-danger-hover</code>.</p>
-        <p>It also makes a scope speak about itself. A button's text can be
-          <code>bestContrastWith(ref('.bg'), brand)</code>: the best contrast
-          to its own background, whichever button it ends up in.</p>
-      </div>
-
-      <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>const btn = book.addScope('button');
-btn.set('bg', ref('brand.primary'));
-btn.set('fg', bestContrastWith(
-  ref('.bg'), brand));
-btn.set('hover', darken(ref('.bg'),
-  { amount: 0.15 }));
-
-// one root; fg and hover follow
-book.addScope('button-danger', {
-  extends: 'button',
-}).set('bg', ref('brand.error'));</Code></Sheet>
-        <Sheet name="result" label="Result" front>
-          <figure class="ref-stage">
-            <div class="ref-panes" id="ref-panes"></div>
-            <div class="stub">
-              <label class="ref-control">
-                <color-input id="ref-danger" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
-                <span>brand.error</span>
-              </label>
-            </div>
-          </figure>
-        </Sheet>
-      </Folder>
-    </div>
-
   </section>
 
   <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
@@ -540,7 +498,7 @@ ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>One step lighter than whatever the surface is.</em></p>
-          <p class="fn-detail">Steps through a scale, relative to a token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. The scale is the token's own scope, or the one you name (<code>ref('blue')</code>), or wherever <a href="#ref-source-title"><code>source</code></a> leads; it is never guessed. Steps stop at the ends, or go round with <code>wrap</code>; with <code>toward</code> a step goes in the direction of another member, so a hover steps toward the page, lighter on a light one and darker on a dark one.</p>
+          <p class="fn-detail">Steps through a scale, relative to a token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. The scale is the token's own scope, or the one you name (<code>ref('blue')</code>), or wherever <a href="#ref-source-title"><code>source</code></a> leads (more on that further down); it is never guessed. Steps stop at the ends, or go round with <code>wrap</code>; with <code>toward</code> a step goes in the direction of another member, so a hover steps toward the page, lighter on a light one and darker on a dark one.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('surface',       ref('gray.g100'))
@@ -754,7 +712,7 @@ palette.getAllKeys();  // one smooth order</Code></Sheet>
             shop's system once as a layer; each store is another layer that only
             holds what's different about it, here a single color. Composing a
             book from the stack puts the override into the same graph as
-            everything else, so every ref, mix and selector built on that color
+            everything else, so every ref and selector built on that color
             is recomputed.</p>
         </div>
 
@@ -894,6 +852,49 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
           </Sheet>
         </Folder>
       </div>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-relative-title">Relative refs.</h3>
+      <div class="ref-feature-text">
+        <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
+          that key in whichever scope reads the token, much like
+          <code>this</code> in a method, or a CSS <code>var()</code> that is
+          looked up on the element using it.</p>
+        <p>That is what makes extending scopes
+          cheap. A variant overrides one value, and every inherited token that
+          reads it relatively follows; nothing you already wrote has to be
+          written again. Base and variant end up side by side, as
+          <code>--button-hover</code> and <code>--button-danger-hover</code>.</p>
+        <p>It also makes a scope speak about itself. A button's text can be
+          <code>bestContrastWith(ref('.bg'), brand)</code>: the best contrast
+          to its own background, whichever button it ends up in.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const btn = book.addScope('button');
+btn.set('bg', ref('brand.primary'));
+btn.set('fg', bestContrastWith(
+  ref('.bg'), brand));
+btn.set('hover', darken(ref('.bg'),
+  { amount: 0.15 }));
+
+// one root; fg and hover follow
+book.addScope('button-danger', {
+  extends: 'button',
+}).set('bg', ref('brand.error'));</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="ref-stage">
+            <div class="ref-panes" id="ref-panes"></div>
+            <div class="stub">
+              <label class="ref-control">
+                <color-input id="ref-danger" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
+                <span>brand.error</span>
+              </label>
+            </div>
+          </figure>
+        </Sheet>
+      </Folder>
     </div>
 
     <div class="ref-feature-body split feature-sub">

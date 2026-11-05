@@ -618,7 +618,8 @@ pre {
 }
 
 .graph-note {
-  margin: var(--row) 0 0;
+  /* indented like the text under a title */
+  margin: var(--row) 0 0 var(--inset);
   font-family: var(--mono);
   font-size: var(--size-small, 11px);
   opacity: 0.7;
@@ -1037,6 +1038,45 @@ pre {
 }
 
 /* ─── Start ──────────────────────────────────────────────────────── */
+
+/* The last section is inverted from its title's line down: a band in the
+   rails' color (--highlight, the mark) from rail to rail, its text in
+   theirs (--on-highlight). The page's two colors are read at the root
+   (--page, --page-ink) and swapped here; the lines drawn from the ink are
+   worked out again on the band. */
+:root {
+  --page: var(--ground);
+  --page-ink: var(--ink);
+}
+
+.section.start {
+  /* the rails' color, so the band and the borders are one paper */
+  --ground: var(--highlight);
+  --ink: var(--on-highlight);
+  --hair: color-mix(in oklch, var(--on-highlight) 70%, transparent);
+  position: relative;
+  color: var(--ink);
+  padding-bottom: calc(var(--row) * 4);
+  margin-bottom: 0;
+}
+
+/* The band starts on the title's line: its hatching stays on the page
+   above, in the page's own color. */
+.section.start .rule-title {
+  --rule-color: color-mix(in oklch, var(--page-ink) 70%, transparent);
+}
+
+/* The band itself, from rail to rail (the rails cover its ends). */
+.section.start::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50cqw);
+  width: 100cqw;
+  background: var(--ground);
+}
 
 .start-grid {
   display: grid;
@@ -1624,7 +1664,8 @@ pre {
 }
 
 .graph-note {
-  margin: var(--row) 0 0;
+  /* indented like the text under a title */
+  margin: var(--row) 0 0 var(--inset);
   font-family: var(--mono);
   font-size: var(--size-small, 11px);
   opacity: 0.7;
@@ -2294,10 +2335,13 @@ pre {
   margin-right: 0.05em;
 }
 
-/* The install bar on the landing takes the page's mark and its text. */
+/* The install bar on the landing takes the page's mark and its text, with
+   a line on top, so it stays apart from the band of the same paper that
+   scrolls under it. */
 .install-bar {
   --install-bg: var(--highlight);
   --install-ink: var(--on-highlight);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--on-highlight) 70%, transparent);
 }
 
 /* The first screen (see .first-screen in shared.css). */
