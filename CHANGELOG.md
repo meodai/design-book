@@ -6,6 +6,8 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-05
+
 ### Added
 
 - **Ramp sets for `ramp()`**: `book.registerRamps(name, set, { default? })`
@@ -221,6 +223,8 @@ All notable changes to Design Book are recorded here. The format follows
   read live.
 
 ## [Unreleased]
+
+## [0.21.0] - 2026-11-05
 
 ### Changed
 
