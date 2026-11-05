@@ -2821,6 +2821,8 @@ main.sections {
 
 .coda-grid .coda-icon svg {
   display: block;
+  width: auto;
+  height: var(--row); /* the symbols fill their row */
 }
 
 .coda-grid .coda-text {
