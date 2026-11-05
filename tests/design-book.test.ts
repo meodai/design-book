@@ -403,17 +403,22 @@ describe('DesignBook ramp options', () => {
   });
 
   it('uses user-supplied colorRamps when provided', () => {
-    // Build a synthetic single-ramp named 'mono'. If the engine actually uses our
+    // Build a synthetic two-ramp set, 'mono' holding the red. If the engine actually uses our
     // custom ramps (not the default Tailwind set), dittotones will report 'mono'
     // as the matched source — that's the observable proof.
     const { converter, parse } = require('culori');
     const toOklch = converter('oklch');
     const white = toOklch(parse('#ffffff'));
     const black = toOklch(parse('#000000'));
+    const red = toOklch(parse('#ff0000'));
     const customRamps = new Map([
       ['mono', {
         '50': white, '100': white, '200': white, '300': white, '400': white,
-        '500': white, '600': black, '700': black, '800': black, '900': black, '950': black,
+        '500': red, '600': black, '700': black, '800': black, '900': black, '950': black,
+      }],
+      ['other', {
+        '50': white, '100': white, '200': white, '300': white, '400': white,
+        '500': toOklch(parse('#0000ff')), '600': black, '700': black, '800': black, '900': black, '950': black,
       }],
     ]);
     const book = new DesignBook('test', { colorRamps: customRamps as any });

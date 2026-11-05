@@ -39,12 +39,14 @@ export type { ExtremeOptions } from './generic/extremes';
 export { furthestFrom } from './generic/furthest-from';
 export type { FurthestFromOptions } from './generic/furthest-from';
 export { mostVivid } from './color/most-vivid';
+export type { LightnessRange } from './color/lightness-range';
 export { leastVivid } from './color/least-vivid';
 export { lightest, darkest } from './color/lightest-darkest';
 export type { LightnessSelectorOptions } from './color/lightest-darkest';
 export type { ReadableOnOptions } from './color/readable';
 export { shade } from './color/shade';
-export { ramp, rampStops } from './color/ramp';
+export { ramp, rampStops, rampSet } from './color/ramp';
+export type { RampSet, RampSetSource } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
 export { typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
@@ -105,12 +107,17 @@ export function registerBuiltinFunctions(book: {
 		const { readableOn, options } = splitReadableArgs<{ not?: string[]; readableContrast?: number; maxDistance?: number }>(rest);
 		return furthestFromImpl(targetValue, scope, ex('furthestFrom', scope, options.not), readableOn, options.readableContrast, options.maxDistance);
 	});
+	// mostVivid / leastVivid: (pool, readableOn?, options), options with a lightness band.
+	for (const [name, impl] of [['mostVivid', mostVividImpl], ['leastVivid', leastVividImpl]] as const) {
+		book.registerFunction(name, (scope: Scope, ...rest: unknown[]) => {
+			const { readableOn, options } = splitReadableArgs<{ not?: string[]; readableContrast?: number; lightness?: [number, number] }>(rest);
+			return impl(scope, ex(name, scope, options.not), readableOn, options.readableContrast, options.lightness);
+		});
+	}
 	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, { ...options, not: ex('largest', scope, options?.not) }));
 	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, { ...options, not: ex('smallest', scope, options?.not) }));
 	// The targetless pool selectors share one shape: (pool, readableOn?, options).
 	const poolSelectors: Array<[string, (scope: Scope, not: string[], readableOn: string | null, readableContrast?: number, type?: Kind) => string]> = [
-		['mostVivid', mostVividImpl],
-		['leastVivid', leastVividImpl],
 		['lightest', lightestImpl],
 		['darkest', darkestImpl],
 	];

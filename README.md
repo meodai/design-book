@@ -160,7 +160,7 @@ mostVivid(ref('scope'))                            // Highest OKLCH chroma
 leastVivid(ref('scope'))                           // Lowest OKLCH chroma — the muted counterpart
 ```
 
-`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Sizes have no chroma, so these only look at colors.
+`mostVivid` uses OKLCH chroma rather than HSL saturation so a pale pink and a vivid mid-red don't score the same. Sizes have no chroma, so these only look at colors. Near black and white no color carries much chroma, so both take `lightness: [min, max]` (OKLCH L, 0–1) to compare only the members in that band: `mostVivid(ref('palette'), { lightness: [0.4, 0.8] })` is the loudest mid tone. Nothing in the band throws.
 
 ### Excluding candidates with `not`
 
@@ -301,6 +301,49 @@ while `lighten`/`darken`/`colorMix` compute the mixed alpha the way the
 browser does.
 
 Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
+
+### A whole scale from one color: `ramp`
+
+```typescript
+ramp(seed, { shade: '500', from?: 'radix' })      // one shade of the scale
+rampStops(seed, { prefix: 'brand-', from? })     // every shade, as tokens
+```
+
+`ramp` copies the perceptual shape of a set of **master ramps** onto your
+seed ([dittotones](https://www.npmjs.com/package/dittotones)): it finds
+where the seed sits among the masters and builds the scale they would have
+built around it. The default masters are Tailwind v3. Register others by
+name, at construction or any time later, and pick them with `from`:
+
+```typescript
+import { tailwindRamps } from 'dittotones/ramps/tailwind'; // also radix, flexoki, shoelace, …
+import { rampSet } from 'design-book';
+
+book.registerRamps('tailwind', tailwindRamps);
+
+// your own masters, in any CSS colors (every ramp with the same shades)
+book.registerRamps('house', rampSet({
+  clay: { 100: '#f3e3d8', 500: '#b0603a', 900: '#3a1d10' },
+  moss: { 100: '#e3ecd6', 500: '#5e7d3a', 900: '#1f2a12' },
+}), { default: true });
+
+// or scopes of the book itself, one scope a ramp, its keys the shades,
+// read live: change a master and every ramp copying it follows
+book.registerRamps('masters', [ref('clay'), ref('moss')]);
+```
+
+**The more palettes, the better.** dittotones places your seed between the
+masters nearest to it and blends their curves, so a set needs at least two
+ramps, and every hue it covers makes the copy closer: a seed near one of
+your masters gets that master's shape, a seed far from all of them gets a
+blend of loosely related ones. Every ramp in a set has the same length, with
+the same shades in the same order; that order is the scale.
+
+The token stores only the set's name, so it stays plain data.
+`new DesignBook(name, { colorRamps })` takes one set or named sets (the
+first the default); `book.rampSetNames` lists them. An unknown set or a
+shade the set does not have throws, naming what there is; registering a
+name again replaces the set and announces the `ramp` tokens that read it.
 
 ### Index selection (require a scope to search)
 

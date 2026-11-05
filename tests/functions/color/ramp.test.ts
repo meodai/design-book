@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DittoTones } from 'dittotones';
 import { RampEngine } from '../../../src/functions/color/ramp';
-import { getTailwindRamps } from '../../../src/data/tailwind-ramps';
+import { tailwindV3Ramps } from 'dittotones/ramps/tailwind-v3';
+const getTailwindRamps = () => tailwindV3Ramps;
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
 import { ramp } from '../../../src/functions/color/ramp';

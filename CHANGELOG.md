@@ -4,6 +4,27 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Ramp sets for `ramp()`**: `book.registerRamps(name, set, { default? })`
+  adds master ramps at any time — a framework's from dittotones
+  (`dittotones/ramps/radix`, …), your own built with `rampSet()` from any CSS
+  colors, or scopes of the book read live (change a master and the ramps
+  copying it follow). `ramp(seed, { shade, from })` and `rampStops` pick a
+  set by name; `book.rampSetNames` lists them. `colorRamps` takes one set or
+  named sets.
+
+### Changed
+
+- dittotones 0.13; the built-in Tailwind v3 masters come from
+  `dittotones/ramps/tailwind-v3` (same values) instead of a copy.
+
+- **`lightness: [min, max]`** on `mostVivid` and `leastVivid`: only the
+  members whose OKLCH lightness lies in that band are compared, since near
+  black and white no color carries much chroma. Nothing in the band throws.
+
 ## [0.20.0] - 2026-11-05
 
 ### Changed

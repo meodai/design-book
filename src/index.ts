@@ -17,6 +17,7 @@ export type {
 export { Scope } from './scope';
 export type { ScopeOrder, SortCriterion, SortDirection, ScopeMetadata } from './scope';
 export type { ComparableEntry, TokenOrderer } from './orderers';
+export type { RampSet, RampSetSource, FurthestFromOptions, LightnessRange } from './functions';
 
 // Tokens
 export {
@@ -87,7 +88,7 @@ export {
   closest, furthestFrom, mostVivid, leastVivid,
   lightest, darkest,
   largest, smallest,
-  ramp, rampStops,
+  ramp, rampStops, rampSet,
   spacingScale, typographyScale, timing,
   typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
   nextLarger, nextSmaller, nextLighter, nextDarker,

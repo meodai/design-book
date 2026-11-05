@@ -7,13 +7,14 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf, isFieldKey, tokenKeyOf } from './tokens';
+import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf, isFieldKey, isScopeReference, tokenKeyOf } from './tokens';
 import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
-import { RampEngine, rampImpl } from './functions/color/ramp';
+import { RampEngine, rampImpl, rampSet } from './functions/color/ramp';
+import type { RampSet, RampSetSource } from './functions/color/ramp';
+import { tailwindV3Ramps } from 'dittotones/ramps/tailwind-v3';
 import { followSource } from './functions/members';
 import { FunctionError } from './errors';
-import { getTailwindRamps } from './data/tailwind-ramps';
 import { registerBuiltinRenderers } from './renderers/builtin';
 
 /** A renderer is any function from a book (and optional options) to a
@@ -24,8 +25,10 @@ export type RendererFn = (book: DesignBook, options?: unknown) => string;
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
   description?: string;
-  /** Reference ramps for the dittotones engine. Defaults to bundled Tailwind. */
-  colorRamps?: Map<string, Ramp>;
+  /** Master ramps for `ramp()`: one set (registered as `default`) or named
+   *  sets, the first the default. Without it, Tailwind v3 (`tailwind-v3`).
+   *  More can be added later with `book.registerRamps(name, set)`. */
+  colorRamps?: RampSetSource | Record<string, RampSetSource>;
   /** Pass-through to dittotones. Default: true. */
   preserveHueOffsets?: boolean;
   /** Pass-through to dittotones. Default: true. */
@@ -187,9 +190,15 @@ export class DesignBook {
    *  without scanning every scope. */
   private _scopesBySelector: Map<string, Set<string>> = new Map();
 
-  private _rampEngine?: RampEngine;
+  /** Master ramp sets by name: a fixed set, or the names of scopes whose
+   *  tokens are the masters (one scope a ramp, its keys the shades), read
+   *  live. Engines are made on first use; a scope set's engine is rebuilt
+   *  when its colors change (`fingerprint`). */
+  private _rampSets: Map<string, RampSet | { scopes: string[] }> = new Map();
+  private _rampEngines: Map<string, { engine: RampEngine; fingerprint: string }> = new Map();
+  private _buildingRampSets = new Set<string>();
+  private _defaultRampSet = 'tailwind-v3';
   private _rampOptions: {
-    colorRamps?: Map<string, Ramp>;
     preserveHueOffsets?: boolean;
     gamutMap?: boolean;
   };
@@ -199,22 +208,27 @@ export class DesignBook {
     this.description = options?.description;
     this._mode = options?.mode ?? 'auto';
     this._rampOptions = {
-      colorRamps: options?.colorRamps,
       preserveHueOffsets: options?.preserveHueOffsets,
       gamutMap: options?.gamutMap,
     };
+    this._rampSets.set('tailwind-v3', tailwindV3Ramps);
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
     this.referenceResolver = new ReferenceResolver(this);
     registerBuiltinFunctions(this);
     registerBuiltinOrderers(this);
-    this.registerFunction('ramp', (seedValue: string, options?: { shade: string }) => {
+    this.registerFunction('ramp', (seedValue: string, options?: { shade: string; from?: string }) => {
       if (!options?.shade) {
         throw new FunctionError('ramp: missing required "shade" option', 'ramp');
       }
-      return rampImpl(seedValue, options.shade, this.getRampEngine());
+      return rampImpl(seedValue, options.shade, this.getRampEngine(options.from));
     });
     registerBuiltinRenderers(this);
+    const ramps = options?.colorRamps;
+    if (ramps) {
+      const named = isRampSetSource(ramps) ? { default: ramps } : (ramps as Record<string, RampSetSource>);
+      Object.entries(named).forEach(([name, set], i) => this.registerRamps(name, set, { default: i === 0 }));
+    }
   }
 
   // --- Mode ---
@@ -572,15 +586,137 @@ export class DesignBook {
     return this.renderers.get(name);
   }
 
-  getRampEngine(): RampEngine {
-    if (!this._rampEngine) {
-      this._rampEngine = new RampEngine({
-        ramps: this._rampOptions.colorRamps ?? getTailwindRamps(),
-        preserveHueOffsets: this._rampOptions.preserveHueOffsets,
-        gamutMap: this._rampOptions.gamutMap,
-      });
+  /**
+   * Adds a set of master ramps for `ramp()` to copy, under a name its
+   * tokens refer to (`ramp(seed, { shade, from: name })`): a framework's
+   * from dittotones, or your own built with `rampSet()`. Can be called any
+   * time; registering a name again replaces the set, and the `ramp` tokens
+   * reading it are announced as changed. `{ default: true }` makes it the
+   * set a `ramp` without `from` copies.
+   */
+  registerRamps(
+    name: string,
+    set: RampSetSource | ReadonlyArray<Scope | ReferenceValue | string>,
+    options?: { default?: boolean },
+  ): this {
+    if (typeof name !== 'string' || name.length === 0) {
+      throw new FunctionError('registerRamps: a ramp set needs a name', 'ramp');
     }
-    return this._rampEngine;
+    if (Array.isArray(set)) {
+      // Scopes as masters: kept by name, read when a ramp resolves.
+      const scopes = set.map((s) => {
+        const scopeName = typeof s === 'string' ? s
+          : s instanceof Scope ? s.name
+          : isScopeReference(s) ? s.key
+          : null;
+        if (!scopeName || scopeName.includes('.')) {
+          throw new FunctionError(`registerRamps: "${name}" takes scopes (a Scope, ref('scope') or its name), got ${JSON.stringify(s)}`, 'ramp');
+        }
+        return scopeName;
+      });
+      if (scopes.length < 2) throw new FunctionError(`registerRamps: "${name}" needs at least two scopes (one ramp each), got ${scopes.length}`, 'ramp');
+      this._rampSets.set(name, { scopes });
+    } else {
+      this._rampSets.set(name, rampSet(set as RampSetSource));
+    }
+    this._rampEngines.delete(name);
+    const wasDefault = this._defaultRampSet;
+    if (options?.default) this._defaultRampSet = name;
+    this._announceRampSet(name, wasDefault);
+    return this;
+  }
+
+  /** The names of the registered ramp sets, the default first. */
+  get rampSetNames(): string[] {
+    return [this._defaultRampSet, ...[...this._rampSets.keys()].filter((n) => n !== this._defaultRampSet)];
+  }
+
+  /** The dittotones engine for a ramp set: the default one without a name. */
+  getRampEngine(from?: string): RampEngine {
+    const name = from ?? this._defaultRampSet;
+    const source = this._rampSets.get(name);
+    if (!source) {
+      throw new FunctionError(`ramp: no ramp set "${name}"; registered: ${this.rampSetNames.join(', ')}`, 'ramp');
+    }
+    let set: RampSet;
+    let fingerprint = '';
+    if (source instanceof Map) {
+      set = source;
+    } else {
+      const hexes = this._masterRamps(name, source.scopes);
+      fingerprint = JSON.stringify(hexes);
+      const cached = this._rampEngines.get(name);
+      if (cached && cached.fingerprint === fingerprint) return cached.engine;
+      set = rampSet(hexes);
+    }
+    const cached = this._rampEngines.get(name);
+    if (cached && cached.fingerprint === fingerprint) return cached.engine;
+    const engine = new RampEngine({
+      ramps: set,
+      preserveHueOffsets: this._rampOptions.preserveHueOffsets,
+      gamutMap: this._rampOptions.gamutMap,
+    });
+    this._rampEngines.set(name, { engine, fingerprint });
+    return engine;
+  }
+
+  /** The masters a scope set holds right now: scope → key → resolved color. */
+  private _masterRamps(name: string, scopes: string[]): Record<string, Record<string, string>> {
+    if (this._buildingRampSets.has(name)) {
+      throw new FunctionError(`ramp: the ramp set "${name}" reads itself (a master is a ramp() of its own set)`, 'ramp');
+    }
+    this._buildingRampSets.add(name);
+    try {
+      const out: Record<string, Record<string, string>> = {};
+      for (const scopeName of scopes) {
+        const scope = this.getScope(scopeName);
+        if (!scope) throw new FunctionError(`ramp: the ramp set "${name}" names the scope "${scopeName}", which does not exist`, 'ramp');
+        const ramp: Record<string, string> = {};
+        for (const key of scope.getAllKeys()) ramp[key] = String(scope.resolve(key));
+        out[scopeName] = ramp;
+      }
+      return out;
+    } finally {
+      this._buildingRampSets.delete(name);
+    }
+  }
+
+  /** The `ramp` tokens that copy a set whose masters include `node`'s scope. */
+  private _rampsReadingMastersOf(node: string): string[] {
+    const scopeName = node.slice(0, node.indexOf('.'));
+    const sets: string[] = [];
+    for (const [name, source] of this._rampSets) {
+      if (!(source instanceof Map) && source.scopes.includes(scopeName)) sets.push(name);
+    }
+    if (sets.length === 0) return [];
+    return this._rampTokensReading((from) => sets.includes((from as string | undefined) ?? this._defaultRampSet));
+  }
+
+  /** Every `ramp` token whose `from` passes the test. */
+  private _rampTokensReading(test: (from: unknown) => boolean): string[] {
+    const keys: string[] = [];
+    for (const scope of this.scopeManager.getAllScopes()) {
+      for (const key of scope.ownKeys()) {
+        const token = scope.getRaw(key) as FunctionTokenValue | undefined;
+        if (token?.type === 'function' && token.name === 'ramp' && test(token.options?.from)) {
+          keys.push(`${scope.name}.${key}`);
+        }
+      }
+    }
+    return keys;
+  }
+
+  /** The `ramp` tokens that read a set (or, when the default moved, the
+   *  ones without `from`) and what follows from them, as one change. */
+  private _announceRampSet(name: string, previousDefault: string): void {
+    const keys = this._rampTokensReading((from) => (from ?? this._defaultRampSet) === name
+      || (from === undefined && previousDefault !== this._defaultRampSet));
+    if (keys.length === 0) return;
+    const changed = new Set(keys);
+    for (const key of keys) for (const dep of this._collectDependents(key)) changed.add(dep);
+    const changedKeys = [...changed];
+    const scopes = new Set(changedKeys.map((k) => k.slice(0, k.indexOf('.'))));
+    this.emit('change', { changedKeys, scopes: Array.from(scopes) });
   }
 
   // --- Events ---
@@ -1367,6 +1503,15 @@ export class DesignBook {
 
     while (pending.length > 0) {
       const node = pending.shift()!;
+      // A ramp copying master scopes changes when a master does, though it
+      // has no graph edge to them (like a selector's pool).
+      for (const rampKey of this._rampsReadingMastersOf(node)) {
+        if (seen.has(rampKey)) continue;
+        seen.add(rampKey);
+        dependents.push(rampKey);
+        pending.push(rampKey);
+        walk(rampKey);
+      }
       for (const selector of this._selectorsIterating(node)) {
         if (seen.has(selector)) continue;
         seen.add(selector);
@@ -1640,3 +1785,13 @@ export class DesignBook {
     this.emit('change', { changedKeys, scopes: Array.from(scopes) });
   }
 }
+
+/** One set of ramps (a Map, or a record of shade records) rather than named sets. */
+function isRampSetSource(value: unknown): value is RampSetSource {
+  if (value instanceof Map) return true;
+  const first = Object.values(value as object)[0];
+  if (!first || typeof first !== 'object' || first instanceof Map) return false;
+  const inner = Object.values(first as object)[0];
+  return typeof inner === 'string' || (typeof inner === 'object' && inner !== null && 'mode' in (inner as object));
+}
+

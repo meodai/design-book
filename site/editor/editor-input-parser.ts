@@ -771,6 +771,9 @@ function parseSelectorTail(
       options.minContrast = parseFloat(valueStr);
     } else if (key === 'minDistance') {
       options.minDistance = parseFloat(valueStr);
+    } else if (key === 'lightness' && (name === 'mostVivid' || name === 'leastVivid')) {
+      const parts = valueStr.trim().replace(/^\[|\]$/g, '').split(',').map((x) => parseFloat(x));
+      options.lightness = parts as [number, number];
     } else if (key === 'maxDistance' && name === 'furthestFrom') {
       options.maxDistance = parseFloat(valueStr);
     } else if (key === 'type') {
@@ -807,6 +810,8 @@ type SelectorTailOptions = {
   minDistance?: number;
   /** furthestFrom only: how far the pick may be. */
   maxDistance?: number;
+  /** mostVivid / leastVivid only: an OKLCH lightness band. */
+  lightness?: [number, number];
   direction?: 'lighter' | 'darker' | 'larger' | 'smaller';
   upTo?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;

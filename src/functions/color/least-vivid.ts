@@ -13,6 +13,8 @@ import { collectScopeColors } from './scope-colors';
 import { filterReadable, readableOnParts } from './readable';
 import { picked } from '../picks';
 import type { ReadableOnOptions } from './readable';
+import { filterLightness, lightnessOption } from './lightness-range';
+import type { LightnessRange } from './lightness-range';
 
 const toOklch = converter('oklch');
 
@@ -29,8 +31,11 @@ export function leastVividImpl(
   not: string[] = [],
   readableOn: string | null = null,
   readableContrast?: number,
+  lightness?: LightnessRange,
 ): string {
-  const pool = filterReadable('leastVivid', collectScopeColors(scope, not), readableOn, readableContrast);
+  const pool = filterLightness('leastVivid',
+    filterReadable('leastVivid', collectScopeColors(scope, not), readableOn, readableContrast),
+    lightness, scope.name);
   let bestHex: string | null = null;
   let bestKey = '';
   let bestChroma = Infinity;
@@ -59,6 +64,10 @@ export interface LeastVividOptions extends ReadableOnOptions {
   /** Keys to exclude from the candidate pool. Pass `ref('scope.token')`
    *  or a literal `'scope.token'` string. */
   not?: ReadonlyArray<string | ReferenceValue>;
+  /** Only members whose OKLCH lightness lies in `[min, max]` (0 to 1):
+   *  near black and white no color carries much chroma, so compare the
+   *  colors of the band you mean. */
+  lightness?: LightnessRange;
   description?: string;
   [key: string]: unknown;
 }
@@ -66,10 +75,11 @@ export interface LeastVividOptions extends ReadableOnOptions {
 export function leastVivid(pool: PoolArg, options?: LeastVividOptions): FunctionTokenValue {
   const scope = poolArg('leastVivid', pool);
   const readable = readableOnParts('leastVivid', options);
+  const lightness = lightnessOption('leastVivid', options?.lightness);
 
   return createFunctionToken('leastVivid', [scope, ...readable.args], {
     description: options?.description,
-    options: { not: normalizeNotKeys(options?.not), ...readable.options },
+    options: { not: normalizeNotKeys(options?.not), ...(lightness ? { lightness } : {}), ...readable.options },
     metadata: {
       dependencies: readable.dependencies,
       visualDependencies: extractVisualDependencies([scope, ...readable.args]),
