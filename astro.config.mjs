@@ -8,6 +8,9 @@ export default defineConfig({
   outDir: './site-dist',
   base: process.env.BASE_PATH ?? '/',
   build: { format: 'directory' },
+  // Keep the markup's whitespace as written: compressing it drops the
+  // space between a line of text and an inline element after a line break.
+  compressHTML: false,
   devToolbar: { enabled: false },
   server: { host: true, port: 5188 },
   vite: {
