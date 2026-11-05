@@ -192,6 +192,7 @@ body > section {
 .typo-stage,
 .vivid-stage,
 .fn .demo,
+.extend-card .demo,
 .extend-result,
 .graph-viz,
 .graph-controls {
@@ -243,9 +244,8 @@ body > section {
 }
 
 .mix-stage,
-.lightness-stage,
-.random-stage,
-.extend-card:nth-child(1) .extend-result {
+.extend-card:nth-child(1) .extend-result,
+.extend-card:nth-child(1) .demo {
   --pp: var(--green);
   --pp-text: var(--black);
 }
@@ -333,9 +333,9 @@ p em {
 
 .folder-sheet--result:has(.readable-stage, .order-stage),
 .extend-card:nth-child(2) .folder-sheet--result { --pp: var(--red); --pp-text: var(--black); }
-.folder-sheet--result:has(.ramp-stage, .min-stage, .nth-stage) { --pp: var(--blue); --pp-text: var(--on-black); }
+.folder-sheet--result:has(.ramp-stage, .min-stage, .nth-stage, .lightness-stage, .random-stage) { --pp: var(--blue); --pp-text: var(--on-black); }
 .folder-sheet--result:has(.names-stage, .typo-stage, .furthest-stage) { --pp: var(--yellow); --pp-text: var(--black); }
-.folder-sheet--result:has(.mix-stage, .lightness-stage, .random-stage),
+.folder-sheet--result:has(.mix-stage),
 .extend-card:nth-child(1) .folder-sheet--result { --pp: var(--green); --pp-text: var(--black); }
 
 .folder-body > * {
@@ -515,7 +515,12 @@ p em {
   margin-top: var(--row);
 }
 
-.graph-controls button {
+.graph-controls button,
+.folder-sheet--result .stub > button.stub-button,
+.folder-sheet--result .stub select.stub-select {
+  font: 12px/1 var(--font-code);
+  border-radius: 0;
+  cursor: pointer;
   min-height: var(--row);
   padding: 3px 12px;
   color: var(--black);
@@ -524,7 +529,8 @@ p em {
 }
 
 /* Pointed at, it flips: the paper's own color, outlined. */
-.graph-controls button:hover {
+.graph-controls button:hover,
+.folder-sheet--result .stub > button.stub-button:hover {
   color: var(--pp-text);
   background: transparent;
   border-color: var(--pp-text);
@@ -1291,9 +1297,10 @@ pre.code.holes-left,
   outline-offset: -2px;
 }
 
-/* Stacked rows: a line above every row but the first. */
-.folder-sheet--result :is(.ramp-bars, .names-rows) > * + * {
-  box-shadow: inset 0 1px 0 var(--strip-line);
+/* Stacked rows: a line under every row but the last, on its last pixel,
+   where the paper draws its own rule, so the lines meet the grid. */
+.folder-sheet--result :is(.ramp-bars, .names-rows) > :not(:last-child) {
+  box-shadow: inset 0 -1px 0 var(--strip-line);
 }
 
 /* Side by side: a line left of every member but the first. */
@@ -1527,6 +1534,13 @@ pre.code.holes-left,
   outline-offset: -2px;
 }
 
+/* the same swatches as the vivid, lightest and random demos: as tall,
+   no text (the key and hex on hover) */
+.folder-sheet--result .sibling-stage > button.stile {
+  height: calc(var(--row) * 4);
+  padding: 0;
+}
+
 /* colorMix: the path between the two ends as an edge-to-edge strip (the
    ends are pickers on its stub). */
 .folder-sheet--result .mix-row {
@@ -1536,8 +1550,10 @@ pre.code.holes-left,
 .folder-sheet--result .folder-body .mix-strip {
   grid-column: 1 / -1;
   grid-row: 1;
-  height: calc(var(--row) * 2);
-  margin-inline: calc(var(--row) * -1);
+  /* the same swatches as the selector demos above: four rows tall,
+     inset, a row of paper under them */
+  height: calc(var(--row) * 4);
+  margin: 0 0 var(--row);
   gap: 0;
 }
 
@@ -2343,5 +2359,650 @@ main.sections {
 .min-aa {
   font-size: 2rem;
   line-height: 1.1;
+}
+
+/* nextLarger / nextSmaller: the three answers on one row in the code
+   face, like the other readouts (key dim, value bold). */
+.folder-sheet--result .step-cell {
+  height: var(--row);
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: calc(var(--row) / 3);
+  padding: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.folder-sheet--result .step-key {
+  font: inherit;
+  letter-spacing: 0;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.folder-sheet--result .step-result {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+}
+
+.folder-sheet--result .step-cell.error .step-result {
+  font: inherit;
+  font-style: normal;
+  opacity: 0.7;
+}
+
+/* mostVivid / leastVivid: the six members across the sheet, a row of
+   paper under the labels before the stub. */
+.folder-sheet--result .vivid-stage {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.folder-sheet--result .folder-body .demo > .vivid-stage {
+  margin-bottom: var(--row);
+}
+
+/* A range with two handles: two sliders on one ruler, the second drawing
+   only its handle; only the handles take the pointer, so either can be
+   dragged; the band between them a thick line on the rule. */
+.range2 {
+  position: relative;
+  height: var(--row);
+  min-width: 0;
+}
+
+.range2 > input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.range2 > input[type="range"] + input[type="range"],
+.range2 > input[type="range"] + input[type="range"]:is(:active, :focus-visible) {
+  background: none;
+}
+
+/* No wave here: its paper cover would hide the band and move as a block
+   with the first handle. The first slider keeps its plain ruler. */
+.range2 > input[type="range"]:first-of-type:is(:active, :focus-visible) {
+  background:
+    linear-gradient(currentColor, currentColor) left var(--in) bottom 0 / 1px var(--lo-h) no-repeat,
+    linear-gradient(currentColor, currentColor) right var(--in) bottom 0 / 1px var(--hi-h) no-repeat,
+    var(--ticks-img) left var(--in) bottom 0 / var(--ruler) 7px no-repeat,
+    linear-gradient(var(--track-ink), var(--track-ink)) left var(--in) bottom 0 / var(--ruler) 1px no-repeat;
+}
+
+.range2 > input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+
+.range2 > input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+}
+
+.range2-band {
+  position: absolute;
+  z-index: 1;
+  bottom: 0;
+  height: 3px;
+  background: currentColor;
+  pointer-events: none;
+}
+
+/* mostVivid: the lightness range and the new palette on one stub,
+   members outside the band faded. */
+.vivid-stub {
+  flex-wrap: wrap;
+  font: 11px/var(--row) var(--font-code);
+}
+
+.vivid-stub .range2 {
+  flex: 1 1 8rem;
+}
+
+.vivid-val {
+  min-width: 9ch;
+}
+
+.folder-sheet--result .vtile.is-out {
+  opacity: 0.2;
+}
+
+/* lightest / darkest: set like the vivid demo, six members across the
+   sheet, no numbers, a row under the labels, faded when filtered out. */
+.folder-sheet--result .lightness-stage {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.folder-sheet--result .folder-body .demo > .lightness-stage {
+  margin-bottom: var(--row);
+}
+
+.folder-sheet--result .ltile.is-out {
+  opacity: 0.2;
+}
+
+.lightness-stub {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+/* random: set like the vivid demo; the seed a box of paper like the
+   color inputs' hex field. */
+.folder-sheet--result .random-stage {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.folder-sheet--result .folder-body .demo > .random-stage {
+  margin-bottom: var(--row);
+}
+
+.random-stub {
+  flex-wrap: wrap;
+  font: 11px/var(--row) var(--font-code);
+}
+
+.random-stub .random-seed-lbl {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.folder-sheet--result .random-stub .random-seed-input {
+  height: var(--row);
+  padding: 0 calc(var(--row) / 2);
+  font: 12px/var(--row) var(--font-code);
+  color: var(--black);
+  background: var(--paper);
+  border: 0;
+  outline: 0;
+}
+
+.folder-sheet--result .random-stub .random-seed-input:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--black);
+}
+
+/* nth: the index as a slider on the stub, the call it makes read out
+   above it. */
+.nth-readout {
+  margin: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.nth-stub {
+  font: 11px/var(--row) var(--font-code);
+}
+
+.nth-stub > input[type="range"] {
+  flex: 1 1 auto;
+}
+
+/* nth: the scale as a ledger, the picked row inverted. */
+.folder-sheet--result .folder-body .demo > .nth-table {
+  /* edge to edge, like the other tables on a sheet */
+  margin: 0 calc(var(--row) * -1) var(--row);
+  width: calc(100% + var(--row) * 2);
+  max-width: none;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.nth-table tr.is-pick td {
+  color: var(--pp);
+  background: var(--pp-text);
+}
+
+/* nth, modes: a second result between the table and the code. The ramp
+   in its written order with each role under its position, a card painted
+   from the roles, the mode switch on the stub. */
+.nth-modes,
+.nth-modes .demo {
+  /* a paper of its own, apart from the blue of the table */
+  --pp: var(--yellow);
+  --pp-text: var(--black);
+}
+
+.nth-modes {
+  --tab-left: calc(var(--row) * 4);
+}
+
+.folder:has(> .nth-modes) > .folder-sheet--code {
+  --tab-left: calc(var(--row) * 8.5);
+}
+
+@media (max-width: 640px) {
+  .nth-modes {
+    --tab-left: 80px;
+  }
+
+  .folder:has(> .nth-modes) > .folder-sheet--code {
+    --tab-left: 176px;
+  }
+}
+
+.folder-sheet--result .folder-body .demo > .nm-ramp {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin: 0 calc(var(--row) * -1) var(--row);
+}
+
+.nm-ramp > span {
+  position: relative;
+  height: var(--row);
+}
+
+.nm-ramp b {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  font: 400 10px/var(--row) var(--font-code);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.folder-sheet--result .folder-body .demo > .nm-card {
+  box-sizing: border-box;
+  height: calc(var(--row) * 3);
+  margin: 0;
+  padding: calc(var(--row) / 2) var(--row);
+  background: var(--nm-bg);
+  color: var(--nm-text);
+  border: 1px solid var(--nm-border);
+}
+
+.nm-card p {
+  margin: 0;
+  line-height: var(--row);
+}
+
+.nm-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.nm-body {
+  font-size: 0.9rem;
+}
+
+.nm-muted {
+  font: 11px/var(--row) var(--font-code);
+  color: var(--nm-muted);
+}
+
+.nm-switch {
+  flex: 0 0 auto;
+}
+
+/* sibling: the sizes as a ledger (anchor and sibling rows marked), the
+   color tiles a second result on a paper of its own. */
+.sibling-colors,
+.sibling-colors .demo {
+  --pp: var(--green);
+  --pp-text: var(--black);
+}
+
+.sibling-colors {
+  --tab-left: calc(var(--row) * 4);
+}
+
+.folder:has(> .sibling-colors) > .folder-sheet--code {
+  --tab-left: calc(var(--row) * 8.5);
+}
+
+@media (max-width: 640px) {
+  .sibling-colors {
+    --tab-left: 80px;
+  }
+
+  .folder:has(> .sibling-colors) > .folder-sheet--code {
+    --tab-left: 176px;
+  }
+}
+
+.folder-sheet--result .folder-body .demo > .sib-table {
+  margin: 0 calc(var(--row) * -1) var(--row);
+  width: calc(100% + var(--row) * 2);
+  max-width: none;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.sib-table tbody tr {
+  cursor: pointer;
+}
+
+.sib-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--pp-text) 12%, var(--pp));
+}
+
+.sib-table tr:is(.is-anchor, .is-pick) td {
+  color: var(--pp);
+  background: var(--pp-text);
+}
+
+.sib-table tr.is-anchor td {
+  background: color-mix(in srgb, var(--pp-text) 60%, var(--pp));
+}
+
+.sib-table tr:focus-visible {
+  outline: 2px solid var(--pp-text);
+  outline-offset: -2px;
+}
+
+/* Only readable colors: the pool as tall as the other demos' swatches;
+   each result a row for its call, then two rows of the pick written on
+   the surface, its value and ratio at the right. */
+.readable-stage .readable-pool {
+  height: auto;
+  grid-auto-rows: calc(var(--row) * 4);
+  grid-template-rows: none;
+}
+
+.readable-stage .readable-pool > .rd-tile {
+  height: calc(var(--row) * 4);
+}
+
+.rdx {
+  margin: var(--row) 0;
+}
+
+.rdx-row + .rdx-row {
+  margin-top: var(--row);
+}
+
+.rdx-call {
+  display: block;
+  height: var(--row);
+  overflow: hidden;
+  padding: 0;
+  font: 12px/var(--row) var(--font-code);
+  color: inherit;
+  background: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rdx-sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--row);
+  height: calc(var(--row) * 2);
+  padding: 0 var(--row);
+}
+
+.rdx-text {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.rdx-meta {
+  font: 11px/var(--row) var(--font-code);
+  white-space: nowrap;
+}
+
+/* A pick looks the same on every paper: the light outline and the light
+   label under it, as on the blue sheets. */
+.folder-sheet--result :is(
+  .vtile.crown, .vtile.floor, .ltile.is-lightest, .ltile.is-darkest,
+  .stile.is-anchor, .stile.is-pick, .rtile.picked, .ntile.picked
+) {
+  outline: 2px solid var(--on-black);
+  outline-offset: -2px;
+}
+
+/* A choice on a stub: the button's paper box, with a drawn arrow. */
+.folder-sheet--result .stub select.stub-select {
+  appearance: none;
+  margin-left: auto;
+  padding-right: calc(var(--row) + 4px);
+  background:
+    linear-gradient(45deg, transparent 50%, var(--black) 50%) right 14px center / 5px 5px no-repeat,
+    linear-gradient(-45deg, transparent 50%, var(--black) 50%) right 9px center / 5px 5px no-repeat,
+    var(--paper);
+}
+
+/* Sorted scopes: the scope as a ledger, edge to edge, its rows sliding
+   into each order. */
+.folder-sheet--result .folder-body .order-stage > .order-table {
+  margin: 0 calc(var(--row) * -1) var(--row);
+  width: calc(100% + var(--row) * 2);
+  max-width: none;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.order-table tr {
+  position: relative;
+}
+
+/* Value transforms: a grid of the eight, four across (two on a phone),
+   hairlines between the cells; each cell five rows: its icon, its name
+   in the code face, what it does. */
+.coda-grid {
+  --cell-line: color-mix(in srgb, currentColor 22%, transparent);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: var(--row) 0 0 var(--inset);
+  padding: 0;
+  list-style: none;
+  /* the outer top and left lines, drawn without taking height */
+  box-shadow: inset 1px 1px 0 var(--cell-line);
+}
+
+.coda-grid li {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  height: calc(var(--row) * 5);
+  padding: calc(var(--row) / 2) calc(var(--row) / 2);
+  box-shadow: inset -1px -1px 0 var(--cell-line);
+}
+
+.coda-grid .coda-icon {
+  display: flex;
+  align-items: center;
+  height: var(--row);
+}
+
+.coda-grid .coda-icon svg {
+  display: block;
+}
+
+.coda-grid .coda-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.coda-grid .coda-text b {
+  font: 600 12px/var(--row) var(--font-code);
+}
+
+.coda-grid .coda-text span {
+  font-size: 13px;
+  line-height: calc(var(--row) * 0.75);
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .coda-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Pointed at, focused or tapped, a cell shows its call on the black code
+   paper, laid over the cell. */
+.coda-grid li {
+  position: relative;
+  cursor: default;
+}
+
+.coda-grid li:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: -2px;
+}
+
+.coda-grid .coda-code {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  padding: calc(var(--row) / 4) calc(var(--row) / 2);
+  font-size: 11px;
+  line-height: calc(var(--row) * 0.8);
+  white-space: pre;
+  overflow: hidden;
+  background-position: 0 calc(var(--row) / 2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.coda-grid li:is(:hover, :focus, :focus-within) .coda-code {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coda-grid .coda-code {
+    transition: none;
+  }
+}
+
+/* no feed holes in a cell this small (the tour gives every code block
+   them, .holes-left): plain black paper, a quarter row in */
+.coda-grid pre.code.coda-code {
+  padding: calc(var(--row) / 4) calc(var(--row) / 2);
+  background-image: none;
+  -webkit-mask: none;
+  mask: none;
+}
+
+.coda-grid pre.code.coda-code::before,
+.coda-grid pre.code.coda-code::after {
+  content: none;
+  display: none;
+}
+
+/* colorMix: one end on each side of the stub, the second mirrored (hex,
+   then swatch, at the right edge), the color space between them. */
+.folder-sheet--result .folder-body > * > .mix-stub,
+.folder-sheet--result .mix-stage > .mix-stub {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.mix-stub color-input.mix-b {
+  flex-direction: row-reverse;
+}
+
+.mix-stub .mix-space {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--row) / 3);
+  white-space: nowrap;
+}
+
+.mix-stub .mix-space select.stub-select {
+  flex: 0 0 auto;
+  width: calc(11ch + var(--row));
+  min-width: 0;
+  margin-left: 0;
+}
+
+.mix-stub > * {
+  flex: 0 0 auto;
+}
+
+/* Poline: the home page's picker over the strip, its line turned by
+   dragging anywhere on the wheel. */
+.extend-poline-picker {
+  display: block;
+  width: min(100%, calc(var(--row) * 8));
+  margin: 0 auto var(--row);
+  cursor: grab;
+  touch-action: none;
+  --poline-picker-line-color: var(--pp-text);
+  --poline-picker-bg-color: var(--pp);
+  --poline-picker-line-width: 0.5;
+}
+
+.extend-poline-picker:focus-visible {
+  outline: 2px solid var(--pp-text);
+  outline-offset: 4px;
+}
+
+/* A custom function: the palette on a hue wheel (angle the hue, distance
+   the chroma), an axis toward the target hue, each member dropped onto it;
+   the furthest along is the pick. */
+.folder-sheet--result .folder-body .fn-polar > .fn-polar-chart,
+.fn-polar-chart {
+  display: block;
+  width: min(100%, calc(var(--row) * 8));
+  height: calc(var(--row) * 8);
+  margin: 0 auto var(--row);
+  overflow: visible;
+}
+
+.fn-polar-chart .ring {
+  fill: none;
+  stroke: var(--pp-text);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.fn-polar-chart .ring.faint {
+  stroke-dasharray: 2 3;
+  opacity: 0.5;
+}
+
+.fn-polar-chart .axis {
+  stroke: var(--pp-text);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.fn-polar-chart .axis-end {
+  fill: var(--pp-text);
+}
+
+.fn-polar-chart .drop {
+  stroke: var(--pp-text);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.fn-polar-chart .dot {
+  stroke: var(--pp-text);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.fn-polar-chart .win {
+  fill: none;
+  stroke: var(--pp-text);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.fn-polar-readout {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--row) / 3);
+  margin: 0;
+  font: 12px/var(--row) var(--font-code);
+}
+
+.fn-polar-stub {
+  font: 11px/var(--row) var(--font-code);
+}
+
+.fn-polar-stub > input[type="range"] {
+  flex: 1 1 auto;
+}
+
+.fn-polar-stub b {
+  min-width: 4ch;
+  text-align: right;
 }
 

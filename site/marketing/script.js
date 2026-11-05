@@ -38,6 +38,7 @@ import {
   color,
   ref,
   px,
+  string,
   ramp,
   relativeTo,
   createFunctionToken,
@@ -62,7 +63,9 @@ import {
   source,
 } from "../../src/index";
 
-import { Poline } from "poline";
+import { Poline, positionFunctions } from "poline/picker"; // also defines <poline-picker>
+import { tailwindRamps } from "dittotones/ramps/tailwind";
+import { radixRamps } from "dittotones/ramps/radix";
 
 import { buildBook, applyRampToValues } from "./demo-book.js";
 
@@ -384,66 +387,146 @@ function paintRenderers () {
 // ══════════════════════════════════════════════════════════════════════
 (function extendCustomFn () {
   // The `warmest` selector from the code sample, registered on a copy of
-  // the demo book and called through a real function token.
+  // the demo book and called through a real function token. Its target
+  // hue is the slider's (50° in the sample).
+  const chart = document.getElementById("extend-fn-chart");
+  const hueIn = document.getElementById("extend-fn-hue");
+  const hueOut = document.getElementById("extend-fn-hue-val");
+  let target = 50;
   const ext = buildBook();
+  const score = (v) => {
+    const { c = 0, h = 0 } = lch(v) ?? {};
+    return c * Math.cos(((h - target) * Math.PI) / 180);
+  };
   ext.registerFunction("warmest", (scope) => {
     let best = null, bestScore = -Infinity;
     for (const key of scope.getAllKeys()) {
       const v = scope.resolve(key);
-      const { c = 0, h = 0 } = lch(v) ?? {};
-      const score = c * Math.cos(((h - 50) * Math.PI) / 180);
-      if (score > bestScore) { bestScore = score; best = v; }
+      const s = score(v);
+      if (s > bestScore) { bestScore = s; best = v; }
     }
     return best;
   });
-  ext.getScope("ui").set("warm", createFunctionToken("warmest", [ext.getScope("values")]));
-  const winner = ext.resolve("ui.warm");
+  const values = ext.getScope("values");
+  const ui = ext.getScope("ui");
 
-  document.getElementById("extend-fn-swatch").style.background = winner;
-  document.getElementById("extend-fn-hex").textContent = winner;
+  // The chart: each member at its hue angle, its chroma the distance from
+  // the centre; an axis toward the target hue, each member dropped onto it
+  // (the foot is its score), the one reaching furthest ringed.
+  const R = 110; // the full box, as the Poline picker's circle
+  const at = (deg, r) => [r * Math.cos((deg * Math.PI) / 180), -r * Math.sin((deg * Math.PI) / 180)];
+  function paint () {
+    ui.set("warm", createFunctionToken("warmest", [values]));
+    const winner = ext.resolve("ui.warm");
+    const members = values.getAllKeys().map((k) => values.resolve(k));
+    const maxC = Math.max(0.2, ...members.map((v) => lch(v)?.c ?? 0));
+    const [ax, ay] = at(target, R);
+    let svg = `<circle class="ring" r="${R}"/><circle class="ring faint" r="${R / 2}"/>`;
+    svg += `<line class="axis" x1="${-ax}" y1="${-ay}" x2="${ax}" y2="${ay}"/>`;
+    svg += `<circle class="axis-end" cx="${ax}" cy="${ay}" r="3"/>`;
+    for (const v of members) {
+      const { c = 0, h = 0 } = lch(v) ?? {};
+      const r = (c / maxC) * R;
+      const [x, y] = at(h || 0, r);
+      const [fx, fy] = at(target, (score(v) / maxC) * R);
+      svg += `<line class="drop" x1="${x}" y1="${y}" x2="${fx}" y2="${fy}"/>`;
+      if (v === winner) svg += `<circle class="win" cx="${x}" cy="${y}" r="10"/>`;
+      svg += `<circle class="dot" cx="${x}" cy="${y}" r="6" fill="${v}"/>`;
+    }
+    chart.innerHTML = svg;
+    document.getElementById("extend-fn-swatch").style.background = winner;
+    document.getElementById("extend-fn-hex").textContent = winner;
+  }
+  hueIn?.addEventListener("input", () => {
+    target = Number(hueIn.value);
+    if (hueOut) hueOut.textContent = `${target}°`;
+    paint();
+  });
+  paint();
 })();
 
 (function extendPoline () {
   const strip = document.getElementById("extend-poline-strip");
   const swatchOut = document.getElementById("extend-poline-swatch");
   const hexOut = document.getElementById("extend-poline-hex");
+  const picker = document.getElementById("extend-poline-picker");
   if (!strip) return;
 
-  let cssColors = [];
-  try {
-    // Build a Poline ramp from ink → vermilion → paper and snap a token to it.
-    // Poline's anchorColors use HSL triples [h, s, l] in 0..360 / 0..100 / 0..100.
-    // Poline anchor format: [hueDeg, saturation 0-1, lightness 0-1].
-    const poline = new Poline({
-      anchorColors: [
-        [20, 0.30, 0.08],   // near-black warm
-        [12, 0.85, 0.45],   // vermilion
-        [42, 0.40, 0.92],   // paper
-      ],
-      numPoints: 7,
+  // Two anchors on opposite sides of the wheel at the same lightness: the
+  // line between them runs straight through the centre. Five points
+  // between them, seven colors in all. Anchors are [hue, s 0–1, l 0–1].
+  const poline = new Poline({
+    anchorColors: [[12, 0.85, 0.75], [192, 0.85, 0.75]],
+    numPoints: 5,
+    positionFunction: positionFunctions.linearPosition,
+  });
+
+  function fill () {
+    const cssColors = poline.colorsCSS;
+    strip.innerHTML = cssColors.map((c) => `<span style="background:${c}"></span>`).join("");
+    const hexes = cssColors.map((c) => hex(parse(c))).filter(Boolean);
+    const surface = book.getScope("ui").resolve("surface");
+    const border = pick(hexes, (s) => minContrastWith(color(surface), s, { minContrast: 3 }));
+    const shown = border || hexes[0];
+    if (shown) {
+      swatchOut.style.background = shown;
+      hexOut.textContent = shown;
+    }
+  }
+
+  if (picker) {
+    // Styled as on the home page: no wheel, its outline; flat dots.
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(`
+      .picker::before { display: none; }
+      .picker::after { content: ""; position: absolute; inset: 0; z-index: 1;
+        border-radius: 50%; border: 1px solid var(--poline-picker-line-color); pointer-events: none; }
+      .wheel__line { stroke-dasharray: 1 1; }
+      .wheel__point { r: 2.6px; stroke: none; }
+      .wheel__anchor { r: 4.2px; stroke: none; }
+      .wheel__saturation-ring { display: none; }
+    `);
+    const paintAnchors = () => {
+      for (const a of picker.shadowRoot?.querySelectorAll(".wheel__anchor") ?? []) a.style.fill = a.getAttribute("fill");
+    };
+    const ready = () => {
+      if (!picker.shadowRoot) return requestAnimationFrame(ready);
+      picker.shadowRoot.adoptedStyleSheets = [...picker.shadowRoot.adoptedStyleSheets, sheet];
+      picker.setPoline(poline);
+      paintAnchors();
+    };
+    ready();
+
+    // Dragging anywhere turns the whole line round the centre.
+    const turn = (deg) => { poline.shiftHue(deg); picker.updateSVG(); paintAnchors(); fill(); };
+    const angleAt = (e) => {
+      const r = picker.getBoundingClientRect();
+      return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI;
+    };
+    picker.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      picker.setPointerCapture(e.pointerId);
+      let last = angleAt(e);
+      const move = (ev) => {
+        const now = angleAt(ev);
+        const d = ((now - last + 540) % 360) - 180;
+        last = now;
+        if (d) turn(d);
+      };
+      const up = () => { picker.removeEventListener("pointermove", move); picker.removeEventListener("pointerup", up); };
+      picker.addEventListener("pointermove", move);
+      picker.addEventListener("pointerup", up);
+    }, true);
+    picker.addEventListener("keydown", (e) => {
+      const step = { ArrowLeft: -5, ArrowDown: -5, ArrowRight: 5, ArrowUp: 5 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      turn(step);
     });
-    cssColors = poline.colorsCSS;
-  } catch (e) {
-    strip.innerHTML = `<span style="background:#de5331;grid-column:1/-1">poline error: ${e.message}</span>`;
-    return;
+    picker.addEventListener("poline-change", () => { paintAnchors(); fill(); });
   }
-
-  strip.innerHTML = cssColors
-    .map((c) => `<span style="background:${c}"></span>`)
-    .join("");
-
-  // Convert poline css colors (hsl strings) to hex and let the library pick.
-  const hexes = cssColors.map((c) => hex(parse(c))).filter(Boolean);
-  const surface = book.getScope("ui").resolve("surface");
-  const border = pick(hexes, (s) => minContrastWith(color(surface), s, { minContrast: 3 }));
-  if (border) {
-    swatchOut.style.background = border;
-    hexOut.textContent = border;
-  } else if (hexes.length) {
-    // Fallback: show the first member so the demo doesn't read as broken.
-    swatchOut.style.background = hexes[0];
-    hexOut.textContent = hexes[0];
-  }
+  fill();
 })();
 
 // ══════════════════════════════════════════════════════════════════════
@@ -741,42 +824,86 @@ function paintRenderers () {
 // — mostVivid / leastVivid —
 (function demoVivid () {
   const stage = document.getElementById("vivid-stage");
-  if (!stage) return;
-  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
-  const crown = pick(palette, (s) => mostVivid(s));
-  const floor = pick(palette, (s) => leastVivid(s));
-  // Sort by chroma so the highlighted tiles sit at opposite ends of the row.
-  const sorted = [...palette].sort((a, b) => (lch(b).c || 0) - (lch(a).c || 0));
-  stage.innerHTML = sorted.map((c) => {
-    const C = lch(c).c || 0;
-    const mark = c === crown ? "crown" : c === floor ? "floor" : "";
-    return `<div class="vtile ${mark}" style="background:${c}">
-      <span class="chroma">${C.toFixed(2)}</span><span>${c}</span></div>`;
-  }).join("");
+  const again = document.getElementById("vivid-new");
+  const lo = document.getElementById("vivid-lo");
+  const hi = document.getElementById("vivid-hi");
+  const band = document.querySelector("#vivid-range .range2-band");
+  const val = document.getElementById("vivid-val");
+  if (!stage || !lo || !hi) return;
+  let palette = ["#de5331", "#dab43d", "#3c61a0", "#479549", "#eee9dc", "#0d0a03"];
+
+  function render () {
+    const range = [Number(lo.value), Number(hi.value)];
+    const opts = range[0] > 0 || range[1] < 1 ? { lightness: range } : undefined;
+    let crown = null, floor = null;
+    try {
+      crown = pick(palette, (s) => mostVivid(s, opts));
+      floor = pick(palette, (s) => leastVivid(s, opts));
+    } catch { /* nothing in the band */ }
+    // In the palette's own order: the picks land wherever they are.
+    stage.innerHTML = palette.map((c) => {
+      const l = lch(c).l;
+      const mark = c === crown ? "crown" : c === floor ? "floor" : "";
+      const out = l < range[0] - 1e-9 || l > range[1] + 1e-9 ? " is-out" : "";
+      return `<div class="vtile ${mark}${out}" style="background:${c}" title="${c} · L ${l.toFixed(2)}"></div>`;
+    }).join("");
+    // the band between the two handles, where their tips are
+    const thumb = 13, w = lo.clientWidth - thumb;
+    band.style.left = `${thumb / 2 + range[0] * w}px`;
+    band.style.width = `${(range[1] - range[0]) * w}px`;
+    val.textContent = `${range[0].toFixed(2)}–${range[1].toFixed(2)}`;
+  }
+  // the two handles never cross
+  lo.addEventListener("input", () => { if (Number(lo.value) > Number(hi.value)) lo.value = hi.value; render(); });
+  hi.addEventListener("input", () => { if (Number(hi.value) < Number(lo.value)) hi.value = lo.value; render(); });
+  new ResizeObserver(render).observe(lo);
+
+  // six colors anywhere in OKLCH: any hue, muted to loud, dark to light
+  const randomPalette = () => Array.from({ length: 6 }, () => formatHex({
+    mode: "oklch",
+    l: 0.3 + Math.random() * 0.6,
+    c: Math.random() * 0.2,
+    h: Math.random() * 360,
+  }));
+
+  render();
+  again?.addEventListener("click", () => { palette = randomPalette(); render(); });
 })();
 
 // — lightest / darkest —
 (function demoLightness () {
   const stage = document.getElementById("lightness-stage");
   const toggle = document.getElementById("lightness-readable");
+  const again = document.getElementById("lightness-new");
   if (!stage || !toggle) return;
-  const palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
+  let palette = ["#de5331","#dab43d","#3c61a0","#479549","#eee9dc","#0d0a03"];
   const SURFACE = "#eee9dc";
 
   function render () {
     const opts = toggle.checked ? { readableOn: color(SURFACE), readableContrast: 4.5 } : undefined;
-    const hi = pick(palette, (s) => lightest(s, opts));
-    const lo = pick(palette, (s) => darkest(s, opts));
+    let hi = null, lo = null;
+    try {
+      hi = pick(palette, (s) => lightest(s, opts));
+      lo = pick(palette, (s) => darkest(s, opts));
+    } catch { /* nothing reads on the page */ }
+    // In the palette's own order: the picks land wherever they are.
     stage.innerHTML = palette.map((c) => {
       const readable = contrast(SURFACE, c) >= 4.5;
       const cls = [c === hi ? "is-lightest" : "", c === lo ? "is-darkest" : "",
-                   toggle.checked && !readable ? "is-filtered" : ""].join(" ");
-      const L = lch(c).l;
-      return `<div class="ltile ${cls}" style="background:${c};color:${L > 0.6 ? "#0d0a03" : "#eee9dc"}">
-        <span class="lval">L ${L.toFixed(2)}</span><span>${c}</span></div>`;
+                   toggle.checked && !readable ? "is-out" : ""].join(" ");
+      return `<div class="ltile ${cls}" style="background:${c}" title="${c} · L ${lch(c).l.toFixed(2)}"></div>`;
     }).join("");
   }
+  // six colors, one in each sixth of the lightness range (so some always
+  // read on the page), any hue, muted to loud, in a shuffled order
+  const randomPalette = () => Array.from({ length: 6 }, (_, i) => formatHex({
+    mode: "oklch",
+    l: 0.15 + ((i + Math.random()) / 6) * 0.8,
+    c: Math.random() * 0.2,
+    h: Math.random() * 360,
+  })).sort(() => Math.random() - 0.5);
   toggle.addEventListener("change", render);
+  again?.addEventListener("click", () => { palette = randomPalette(); render(); });
   render();
 })();
 
@@ -793,11 +920,8 @@ function paintRenderers () {
   function render () {
     const seed = seedEl.value || "0";
     const picked = indexOfColor(palette, pick(palette, (s) => random(s, { type: "color", seed })));
-    stage.innerHTML = palette.map((c, i) => `
-      <div class="rtile ${i === picked ? "picked" : ""}" style="background:${c}">
-        <span>${c}</span>
-      </div>
-    `).join("");
+    stage.innerHTML = palette.map((c, i) =>
+      `<div class="rtile ${i === picked ? "picked" : ""}" style="background:${c}" title="${c}"></div>`).join("");
   }
 
   seedEl.addEventListener("input", render);
@@ -810,43 +934,66 @@ function paintRenderers () {
 
 // — nth —
 (function demoNth () {
-  const stage    = document.getElementById("nth-stage");
+  const rows     = document.getElementById("nth-rows");
   const indexEl  = document.getElementById("nth-index");
-  const presets  = document.getElementById("nth-presets");
-  if (!stage || !indexEl) return;
+  const readout  = document.getElementById("nth-readout");
+  if (!rows || !indexEl) return;
 
-  // 9-stop ramp, lightest → darkest — typical output of a ramp generator.
-  const ramp = [
-    "#efcdbb", "#eeb09a", "#ea9379",
-    "#e57557", "#de5331", "#af4427",
-    "#82351c", "#582713", "#311809",
-  ];
+  // a spacing scale, smallest → largest, as a generator writes it
+  const SCALE = [["3xs", 2], ["2xs", 4], ["xs", 8], ["s", 12], ["m", 16], ["l", 24], ["xl", 32], ["2xl", 48], ["3xl", 64]];
+  const book = new DesignBook("nth-demo");
+  const space = book.addScope("space");
+  for (const [k, n] of SCALE) space.set(k, px(n));
+  const ui = book.addScope("ui");
 
+  // The slider is a relative position, 0 to 1; at its right end the call is
+  // -1 (the last member), since nth(1) is the integer 1, the second member.
   function render () {
-    const n = parseFloat(indexEl.value);
-    const picked = Number.isNaN(n) ? -1 : indexOfColor(ramp, pick(ramp, (s) => nth(s, n)));
-    stage.style.setProperty("--nth-cols", ramp.length);
-    stage.innerHTML = ramp.map((c, i) => {
-      const label = `nth(${indexEl.value.trim()})`;
-      return `<div class="ntile ${i === picked ? "picked" : ""}" data-label="${label}" style="background:${c}"><span>${c}</span></div>`;
-    }).join("");
+    const v = Number(indexEl.value);
+    const n = v >= 1 ? -1 : v;
+    ui.set("pick", nth(ref("space"), n));
+    const value = book.resolve("ui.pick");
+    const picked = SCALE.findIndex(([, px]) => `${px}px` === value);
+    rows.innerHTML = SCALE.map(([k, px], i) => `
+      <tr class="${i === picked ? "is-pick" : ""}"><td class="no">${i}</td><td class="no">${i - SCALE.length}</td><td>space.${k}</td><td>${px}px</td></tr>`).join("");
+    if (readout) readout.innerHTML = `<span class="c-fn">nth</span>(space, <b>${n}</b>) → <b>space.${SCALE[picked][0]}</b> · ${value}`;
   }
 
-  indexEl.addEventListener("input", () => {
-    presets?.querySelectorAll("button").forEach((b) =>
-      b.classList.toggle("is-active", b.dataset.value === indexEl.value.trim()));
-    render();
-  });
-
-  presets?.addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-value]");
-    if (!btn) return;
-    indexEl.value = btn.dataset.value;
-    presets.querySelectorAll("button").forEach((b) => b.classList.toggle("is-active", b === btn));
-    render();
-  });
-
+  indexEl.addEventListener("input", render);
   render();
+})();
+
+// — nth, modes: one ramp, the roles at positions on it; dark mode is the
+//   ramp written the other way round —
+(function demoNthModes () {
+  const rampEl = document.getElementById("nm-ramp");
+  const card = document.getElementById("nm-card");
+  const sw = document.getElementById("nm-switch");
+  if (!rampEl || !card || !sw) return;
+  const RAMP = ["#eee9dc", "#d5cdb5", "#beb497", "#9c907a", "#766b5b", "#564f44", "#3a342c", "#0d0a03"];
+  const ROLES = { bg: 0, border: 0.15, muted: 0.6, text: -1 };
+
+  function render (mode) {
+    const book = new DesignBook(mode);
+    const scale = book.addScope("scale");
+    const steps = mode === "dark" ? [...RAMP].reverse() : RAMP;
+    steps.forEach((c, i) => scale.set(`s${i}`, color(c)));
+    const ui = book.addScope("ui");
+    for (const [role, n] of Object.entries(ROLES)) ui.set(role, nth(ref("scale"), n));
+    const v = Object.fromEntries(Object.keys(ROLES).map((r) => [r, book.resolve(`ui.${r}`)]));
+    for (const [role, value] of Object.entries(v)) card.style.setProperty(`--nm-${role}`, value);
+    // the ramp in the order it is written, each role under its position
+    rampEl.innerHTML = steps.map((c) => {
+      const roles = Object.keys(v).filter((r) => v[r].toLowerCase() === c.toLowerCase());
+      return `<span style="background:${c}"><b>${roles.join(" ")}</b></span>`;
+    }).join("");
+    sw.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  }
+  sw.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]");
+    if (b) render(b.dataset.mode);
+  });
+  render("light");
 })();
 
 // — sibling —
@@ -876,9 +1023,8 @@ function paintRenderers () {
     } catch { /* leave unmarked */ }
     stage.innerHTML = GRAY.map(([k, v]) => {
       const cls = [k === anchor ? "is-anchor" : "", v === result && k !== anchor ? "is-pick" : ""].join(" ");
-      const L = lch(v).l;
-      return `<button type="button" class="stile ${cls}" data-key="${k}" style="background:${v};color:${L > 0.6 ? "#0d0a03" : "#eee9dc"}"
-        aria-pressed="${k === anchor}"><span class="skey">${k}</span><span>${v}</span></button>`;
+      return `<button type="button" class="stile ${cls}" data-key="${k}" style="background:${v}"
+        title="gray.${k} · ${v}" aria-label="gray.${k}" aria-pressed="${k === anchor}"></button>`;
     }).join("");
   }
 
@@ -899,87 +1045,143 @@ function paintRenderers () {
   render();
 })();
 
+// — sibling, sizes: the same steps along a spacing scale, as a table —
+(function demoSiblingSizes () {
+  const rows = document.getElementById("sib-rows");
+  const offsets = document.getElementById("sib-offsets");
+  const wrapEl = document.getElementById("sib-wrap");
+  if (!rows || !offsets || !wrapEl) return;
+
+  // the keys from a naming scheme: smallest to largest creature
+  const VALUES = [2, 4, 8, 12, 16, 24, 32, 48, 64];
+  const SCALE = scaleNames(VALUES.length, "creatures").map((k, i) => [k, VALUES[i]]);
+  let anchor = SCALE[4][0];
+  let offset = 1;
+  const book = new DesignBook("sibling-sizes");
+  const space = book.addScope("space");
+  for (const [k, n] of SCALE) space.set(k, px(n));
+  const ui = book.addScope("ui");
+
+  function render () {
+    let result = null;
+    try {
+      ui.set("pick", sibling(ref(`space.${anchor}`), offset, { wrap: wrapEl.checked }));
+      result = book.resolve("ui.pick");
+    } catch { /* off the end of the scale */ }
+    const pickKey = SCALE.find(([k, n]) => `${n}px` === result && k !== anchor)?.[0];
+    rows.innerHTML = SCALE.map(([k, n], i) => {
+      const cls = k === anchor ? "is-anchor" : k === pickKey ? "is-pick" : "";
+      const note = k === anchor ? "anchor" : k === pickKey ? `sibling ${offset > 0 ? "+" : "−"}${Math.abs(offset)}` : "";
+      return `<tr class="${cls}" data-key="${k}" tabindex="0"><td class="no">${i}</td><td>space.${k}</td><td>${n}px</td><td>${note}</td></tr>`;
+    }).join("");
+  }
+  const move = (tr) => { if (tr) { anchor = tr.dataset.key; render(); } };
+  rows.addEventListener("click", (e) => move(e.target.closest("tr[data-key]")));
+  rows.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); move(e.target.closest("tr[data-key]")); }
+  });
+  offsets.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-offset]");
+    if (!btn) return;
+    offset = Number(btn.dataset.offset);
+    offsets.querySelectorAll("button").forEach((x) => x.classList.toggle("is-active", x === btn));
+    render();
+  });
+  wrapEl.addEventListener("change", render);
+  render();
+})();
+
 // — setOrder: a scope that keeps itself sorted —
 (function demoOrder () {
-  const seedEl  = document.getElementById("order-seed-input");
   const modesEl = document.getElementById("order-modes");
   const host    = document.getElementById("order-swatches");
-  if (!seedEl || !modesEl || !host) return;
+  if (!modesEl || !host) return;
 
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Eight named colors on a hue wheel — constant L/C, evenly-spaced hues
-  // rotated off the seed. Names are NOT in hue order, and the list is
-  // declared scrambled, so insertion ≠ value ≠ name. The value orderer
-  // (colorsort-js) walks the wheel, turning the scramble into a smooth arc.
-  // [name, L, C, hueOffset]
-  const SPEC = [
-    ["orchid", 0.70, 0.14, "+330"],
-    ["coral",  0.70, 0.14, "+20"],
-    ["teal",   0.70, 0.14, "+190"],
-    ["gold",   0.70, 0.14, "+85"],
-    ["indigo", 0.70, 0.14, "+285"],
-    ["fern",   0.70, 0.14, "+140"],
-    ["rose",   0.70, 0.14, "+5"],
-    ["azure",  0.70, 0.14, "+245"],
+  // A mixed scope: colors off the seed (lightness, chroma and hue all
+  // differ, so a perceptual sort and a lightness sort disagree), sizes and
+  // words, inserted scrambled, with names in no useful order.
+  // colors: [name, L, C, hueOffset]
+  const COLORS = [
+    ["orchid", 0.62, 0.16, "+330"], ["teal", 0.55, 0.10, "+190"],
+    ["gold", 0.84, 0.15, "+85"],    ["ink", 0.25, 0.04, "+260"],
+    ["coral", 0.70, 0.17, "+20"],   ["mist", 0.92, 0.03, "+220"],
   ];
+  const SIZES = [["gap", 16], ["hair", 4], ["pad", 8]];
+  const WORDS = [["face", "serif"], ["code", "mono"]];
+  const ORDER = ["orchid", "gap", "teal", "face", "gold", "hair", "ink", "coral", "code", "mist", "pad"];
 
-  // A real DesignBook — the scope genuinely sorts itself.
-  const book = new DesignBook("order-demo");
-  const seed = book.addScope("seed");
-  seed.set("primary", color(seedEl.getAttribute("value") || "#de5331"));
-  const palette = book.addScope("palette");
-  for (const [name, L, C, H] of SPEC) {
-    palette.set(name, relativeTo(ref("seed.primary"), "oklch", [L, C, H]));
+  // Two real books: one with the built-in orderers, one whose colors are
+  // sorted by a custom orderer (OKLCH lightness alone).
+  function makeBook (custom) {
+    const book = new DesignBook("order-demo");
+    if (custom) {
+      book.registerOrderer("color", (entries) =>
+        [...entries].sort((a, b) => (lch(a.resolved)?.l ?? 0) - (lch(b.resolved)?.l ?? 0)));
+    }
+    book.addScope("seed").set("primary", color("#de5331"));
+    const ui = book.addScope("ui");
+    for (const key of ORDER) {
+      const c = COLORS.find(([n]) => n === key);
+      const z = SIZES.find(([n]) => n === key);
+      const w = WORDS.find(([n]) => n === key);
+      if (c) ui.set(key, relativeTo(ref("seed.primary"), "oklch", [c[1], c[2], c[3]]));
+      else if (z) ui.set(key, px(z[1]));
+      else ui.set(key, string(w[1]));
+    }
+    return book;
   }
+  const books = { builtin: makeBook(false), custom: makeBook(true) };
 
   const MODES = {
-    "insertion":  null,
-    "value-asc":  [{ by: "value", direction: "asc" }],   // dark → light
-    "value-desc": [{ by: "value", direction: "desc" }],  // light → dark
-    "name":       [{ by: "name" }],
+    "insertion":  ["builtin", null],
+    "value-asc":  ["builtin", [{ by: "value", direction: "asc" }]],
+    "value-desc": ["builtin", [{ by: "value", direction: "desc" }]],
+    "name":       ["builtin", [{ by: "name" }]],
+    "type":       ["builtin", [{ by: "type", priority: ["color", "dimension", "string"] }, { by: "value" }]],
+    "lightness":  ["custom",  [{ by: "type", priority: ["color", "dimension", "string"] }, { by: "value" }]],
   };
   let mode = "value-asc";
+  const current = () => books[MODES[mode][0]].getScope("ui");
 
-  // Persistent nodes keyed by token name so reorders can FLIP-animate.
+  // One row per token, kept across reorders so they can FLIP-animate.
+  const TYPE = (key) => COLORS.some(([n]) => n === key) ? "color"
+    : SIZES.some(([n]) => n === key) ? "dimension" : "string";
   const tiles = new Map();
-  for (const [name] of SPEC) {
-    const el = document.createElement("div");
-    el.className = "order-swatch";
-    el.tabIndex = 0;
-    el.innerHTML = `<span>${name}</span>`;
-    tiles.set(name, el);
-    host.appendChild(el);
+  for (const key of ORDER) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="no"></td><td>ui.${key}</td><td>${TYPE(key)}</td><td class="val"></td>`;
+    tiles.set(key, tr);
+    host.appendChild(tr);
   }
 
   function applyOrder () {
-    const o = MODES[mode];
-    if (o) palette.setOrder(o); else palette.clearOrder();
+    const [which, order] = MODES[mode];
+    const scope = books[which].getScope("ui");
+    if (order) scope.setOrder(order); else scope.clearOrder();
   }
 
   function render () {
-    // FLIP — first: record current positions.
     const first = new Map();
     for (const [name, el] of tiles) first.set(name, el.getBoundingClientRect());
-
-    // Reorder the DOM and repaint colors per the scope's canonical order.
-    for (const name of palette.getAllKeys()) {
-      const el = tiles.get(name);
-      if (!el) continue;
-      el.style.background = palette.resolve(name);
-      host.appendChild(el); // move into sorted sequence
-    }
-
+    const scope = current();
+    scope.getAllKeys().forEach((name, i) => {
+      const tr = tiles.get(name);
+      if (!tr) return;
+      const value = String(scope.resolve(name));
+      tr.cells[0].textContent = i;
+      tr.cells[3].innerHTML = TYPE(name) === "color"
+        ? `<span class="swatch" style="background:${value}"></span>${value}` : value;
+      host.appendChild(tr);
+    });
     if (reduceMotion) return;
-    // FLIP — last + invert + play.
     for (const [name, el] of tiles) {
       const f = first.get(name);
-      const last = el.getBoundingClientRect();
-      const dx = f.left - last.left;
-      const dy = f.top - last.top;
-      if (!dx && !dy) continue;
+      const dy = f.top - el.getBoundingClientRect().top;
+      if (!dy) continue;
       el.animate(
-        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }],
+        [{ transform: `translateY(${dy}px)` }, { transform: "translateY(0)" }],
         { duration: 420, easing: "cubic-bezier(.22,.61,.36,1)" },
       );
     }
@@ -993,13 +1195,6 @@ function paintRenderers () {
     applyOrder();
     render();
   });
-
-  const onSeed = () => {
-    try { seed.set("primary", color(seedEl.value)); } catch { return; }
-    render(); // colors re-derived → re-sorts under the current rule
-  };
-  seedEl.addEventListener("input", onSeed);
-  seedEl.addEventListener("change", onSeed);
 
   applyOrder();
   render();
@@ -1059,9 +1254,9 @@ function paintRenderers () {
 (function rampSection () {
   const seedInput = document.getElementById("ramp-seed-input");
   const barsEl    = document.getElementById("ramp-bars");
+  const fromEl    = document.getElementById("ramp-from");
   if (!seedInput || !barsEl) return;
 
-  const SHADES = ["50","100","200","300","400","500","600","700","800","900","950"];
   const INITIAL_SEED = seedInput.getAttribute("value") || "#3c61a0";
 
   // The <color-input> custom element initialises its `.value` property
@@ -1071,21 +1266,27 @@ function paintRenderers () {
   seedInput.value = INITIAL_SEED;
 
   // Tiny isolated book — keeps this demo independent of the hero book.
+  // Tailwind v3 is built in; v4 and Radix come straight from dittotones.
   const rampBook = new DesignBook("ramp-demo");
-  const brand    = rampBook.addScope("brand");
+  rampBook.registerRamps("tailwind-v4", tailwindRamps);
+  rampBook.registerRamps("radix", radixRamps);
+  const SHADES = {
+    "tailwind-v3": ["50","100","200","300","400","500","600","700","800","900","950"],
+    "tailwind-v4": ["50","100","200","300","400","500","600","700","800","900","950"],
+    radix: ["1","2","3","4","5","6","7","8","9","10","11","12"],
+  };
+  const brand   = rampBook.addScope("brand");
   brand.set("primary", color(INITIAL_SEED));
-  const palette  = rampBook.addScope("palette");
-  for (const shade of SHADES) {
-    palette.set(shade, ramp(ref("brand.primary"), { shade }));
-  }
+  const palette = rampBook.addScope("palette");
+  let shades = [];
 
-  // Render the bar skeleton once.
-  for (const shade of SHADES) {
-    const bar = document.createElement("div");
-    bar.className = "ramp-bar";
-    bar.dataset.shade = shade;
-    bar.innerHTML = `<span class="shade">${shade}</span><span class="hex"></span>`;
-    barsEl.appendChild(bar);
+  // One ramp token per shade of the chosen masters; a bar for each.
+  function build (from) {
+    for (const shade of shades) palette.delete(shade);
+    shades = SHADES[from];
+    for (const shade of shades) palette.set(shade, ramp(ref("brand.primary"), { shade, from }));
+    barsEl.innerHTML = shades.map((shade) =>
+      `<div class="ramp-bar" data-shade="${shade}"><span class="shade">${shade}</span><span class="hex"></span></div>`).join("");
   }
 
   function paint () {
@@ -1095,7 +1296,7 @@ function paintRenderers () {
     } catch {
       return; // bad input, leave the bars on their last good state
     }
-    for (const shade of SHADES) {
+    for (const shade of shades) {
       const stopHex = rampBook.resolve(`palette.${shade}`);
       const bar = barsEl.querySelector(`[data-shade="${shade}"]`);
       bar.style.background = stopHex;
@@ -1105,8 +1306,10 @@ function paintRenderers () {
     }
   }
 
+  fromEl?.addEventListener("change", () => { build(fromEl.value); paint(); });
   seedInput.addEventListener("change", paint);
   seedInput.addEventListener("input", paint);
+  build(fromEl?.value || "tailwind-v3");
   paint();
 })();
 
@@ -1305,6 +1508,41 @@ wireTabs(document.querySelector(".extends-modes"));
 })();
 
 // ══════════════════════════════════════════════════════════════════════
+//  extends — light and dark as two cards: dark overrides bg and text,
+//  the buttons it inherits from light
+// ══════════════════════════════════════════════════════════════════════
+(function extendsCards () {
+  const host = document.getElementById("extends-cards");
+  if (!host) return;
+  const book = new DesignBook("extends-demo");
+  const light = book.addScope("light");
+  light.set("bg", color("#fffaed"));
+  light.set("text", color("#0d0a03"));
+  light.set("primary", color("#3c61a0"));
+  light.set("accent", color("#de5331"));
+  light.set("muted", color("#908b7f"));
+  const dark = book.addScope("dark", { extends: "light" });
+  dark.set("bg", color("#0d0a03"));
+  dark.set("text", color("#fffaed"));
+
+  const onButton = (bg) => (contrast(bg, "#fffaed") >= contrast(bg, "#0d0a03") ? "#fffaed" : "#0d0a03");
+  const chip = (bg) => `<span class="ui-card-button" style="background:${bg}"><span class="ui-card-line" style="background:${onButton(bg)}"></span></span>`;
+  host.innerHTML = ["light", "dark"].map((name) => {
+    const v = (k) => book.resolve(`${name}.${k}`);
+    return `
+    <div class="ref-card">
+      <span class="ref-card-name">${name}</span>
+      <div class="ui-card" aria-hidden="true" style="--card-surface:${v("bg")};--card-text:${v("text")};--card-subtle:${v("muted")}">
+        <span class="ui-card-line ui-card-line--title"></span>
+        <span class="ui-card-line"></span>
+        <span class="ui-card-line ui-card-line--short"></span>
+        <span class="ui-card-buttons">${chip(v("primary"))}${chip(v("accent"))}</span>
+      </div>
+    </div>`;
+  }).join("");
+})();
+
+// ══════════════════════════════════════════════════════════════════════
 //  source — one hover rule, shared by two themes whose interaction colors
 //  come from different ramps
 // ══════════════════════════════════════════════════════════════════════
@@ -1420,23 +1658,26 @@ wireTabs(document.querySelector(".extends-modes"));
   const poolEl    = document.getElementById("readable-pool");
   const resultsEl = document.getElementById("readable-results");
   if (!surfaceIn || !ratiosEl || !poolEl || !resultsEl) return;
-  resultsEl.setAttribute("data-ledger", "");
 
   const BRAND = ["#de5331", "#dab43d", "#479549", "#3c61a0", "#0d0a03", "#fffaed"];
-  const INITIAL = surfaceIn.getAttribute("value") || "#eee9dc";
+  const INITIAL = surfaceIn.getAttribute("value") || "#0d0a03";
   surfaceIn.value = INITIAL;
   let ratio = 4.5;
 
-  const result = (call, surface, value, failMsg) => value
-    ? `<div class="rd-result" style="background:${surface};color:${value}">
-         <span class="rd-call" style="color:${contrast(surface, value) >= 3 ? value : "inherit"}">${call}</span>
-         <span class="rd-sample">Read the docs →</span>
-         <span class="rd-meta">${value} · ${contrast(surface, value).toFixed(2)}:1</span>
-       </div>`
-    : `<div class="rd-result is-fail" style="background:${surface}">
-         <span class="rd-call">${call}</span>
-         <span class="rd-sample" style="color:${contrast(surface, "#0d0a03") > 4.5 ? "#0d0a03" : "#eee9dc"}">${failMsg}</span>
-       </div>`;
+  // a result: the call on a row of its own, then the pick as text on the
+  // surface, with its value and ratio
+  const result = (call, surface, value, failMsg) => {
+    const ink = contrast(surface, "#0d0a03") > 4.5 ? "#0d0a03" : "#eee9dc";
+    return `<div class="rdx-row">
+      <code class="rdx-call">${call}</code>
+      <div class="rdx-sample${value ? "" : " is-fail"}" style="background:${surface}">
+        ${value
+          ? `<span class="rdx-text" style="color:${value}">Read the docs →</span>
+             <span class="rdx-meta" style="color:${ink}">${value} · ${contrast(surface, value).toFixed(2)}:1</span>`
+          : `<span class="rdx-meta" style="color:${ink}">${failMsg}</span>`}
+      </div>
+    </div>`;
+  };
 
   function paint () {
     const surface = surfaceIn.value || INITIAL;
@@ -1479,7 +1720,7 @@ wireTabs(document.querySelector(".extends-modes"));
   const code    = document.getElementById("names-code");
   if (!seedIn || !schemes || !countIn || !rows || !code) return;
 
-  const INITIAL = seedIn.getAttribute("value") || "#dab43d";
+  const INITIAL = seedIn.getAttribute("value") || "#479549";
   seedIn.value = INITIAL;
   let scheme = "intensity";
 

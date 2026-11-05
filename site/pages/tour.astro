@@ -463,20 +463,35 @@ ui.set('heading', minContrastWith(
     <article class="fn" id="vivid">
       <header class="fn-head">
         <h3 class="rule-title">mostVivid · leastVivid</h3>
-        <code is:raw class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
+        <code is:raw class="sig">mostVivid|leastVivid( scope, { lightness?, readableOn?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLCH chroma</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Your accent is probably already in your palette.</em></p>
-          <p class="fn-detail">The two ends of the chroma axis. <code>mostVivid</code> finds the loudest member, usually the accent. <code>leastVivid</code> finds the most neutral one among your brand colors. Both can be limited to colors that read on a given surface.</p>
+          <p class="fn-detail">The two ends of the chroma axis. <code>mostVivid</code> finds the loudest member, usually the accent, which is handy when the set is generated and you can't know in advance which step that will be. <code>leastVivid</code> finds the most neutral one among your brand colors. Near black and white no color carries much chroma, so <code>lightness: [min, max]</code> compares only the members in the band you mean. Both can also be limited to colors that read on a given surface.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('accent',  mostVivid(brand))
-ui.set('surface', leastVivid(brand))</Code></Sheet>
+ui.set('surface', leastVivid(brand))
+
+// only among the mid tones
+ui.set('accent', mostVivid(brand, {
+  lightness: [0.4, 0.8],
+}))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
               <div class="vivid-stage" id="vivid-stage"></div>
+              <div class="stub vivid-stub">
+                <span class="vivid-lbl">lightness</span>
+                <div class="range2" id="vivid-range">
+                  <span class="range2-band" aria-hidden="true"></span>
+                  <Slider id="vivid-lo" min="0" max="1" step="0.01" value="0" aria-label="lightness, min" />
+                  <Slider id="vivid-hi" min="0" max="1" step="0.01" value="1" aria-label="lightness, max" />
+                </div>
+                <span class="vivid-val" id="vivid-val">0–1</span>
+                <button type="button" class="stub-button" id="vivid-new">New random palette</button>
+              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -506,12 +521,13 @@ ui.set('soft-ink', lightest(brand, {
           <Sheet name="result" label="Result" front>
             <figure class="demo">
               <div class="lightness-stage" id="lightness-stage"></div>
-              <figcaption class="lightness-caption stub">
+              <div class="stub lightness-stub">
                 <label class="lightness-toggle">
                   <input type="checkbox" id="lightness-readable" />
-                  readableOn the page surface (4.5:1)
+                  readableOn the page (4.5:1)
                 </label>
-              </figcaption>
+                <button type="button" class="stub-button" id="lightness-new">New random palette</button>
+              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -541,13 +557,13 @@ ui.set('promo-bg', random(brand, {
           <Sheet name="result" label="Result" front>
             <figure class="demo">
               <div class="random-stage" id="random-stage"></div>
-              <figcaption class="random-caption stub">
+              <div class="stub random-stub">
                 <label class="random-seed-lbl">
                   seed
                   <input id="random-seed" class="random-seed-input" type="text" value="spring-2026" spellcheck="false">
                 </label>
-                <button id="random-shuffle" class="random-shuffle" type="button">shuffle</button>
-              </figcaption>
+                <button id="random-shuffle" class="stub-button" type="button">New seed</button>
+              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -564,30 +580,48 @@ ui.set('promo-bg', random(brand, {
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Pick by position</em> instead of by name.</p>
-          <p class="fn-detail">When a ramp or a scale generates your tokens, the order carries the meaning: lightest first, darkest last; smallest first, largest last. <code>nth</code> reads that order directly. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
+          <p class="fn-detail">When a ramp or a scale generates your tokens, the order carries the meaning: lightest first, darkest last; smallest first, largest last. <code>nth</code> reads that order directly, which makes it a handy way to move along a color ramp: the surface at one end, the text at the other, the muted tone in the middle, whatever the ramp is regenerated to. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>// ramp generated lightest → darkest
-ui.set('surface', nth(ramp, 0))    // lightest
-ui.set('text',    nth(ramp, -1))   // darkest
-ui.set('muted',   nth(ramp, 0.5)) // midtone
-ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
-          <Sheet name="result" label="Result" front>
+          <Sheet name="code" label="Code"><Code is:raw>// a scale generated smallest → largest
+ui.set('hairline', nth(ref('space'), 0))   // smallest
+ui.set('section',  nth(ref('space'), -1))  // largest
+ui.set('gap',      nth(ref('space'), 0.5)) // the middle
+
+// light and dark: the same rules, the ramp written
+// the other way round
+const steps = mode === 'dark' ? [...ramp].reverse() : ramp;
+steps.forEach((c, i) => scale.set(`${i}`, color(c)));
+ui.set('bg',     nth(ref('scale'), 0));
+ui.set('text',   nth(ref('scale'), -1));
+ui.set('muted',  nth(ref('scale'), 0.6));
+ui.set('border', nth(ref('scale'), 0.15));</Code></Sheet>
+          <Sheet name="result" label="Modes" class="nth-modes">
             <figure class="demo">
-              <div class="nth-stage" id="nth-stage"></div>
-              <figcaption class="nth-caption stub">
-                <label class="nth-index-lbl">
-                  index
-                  <input id="nth-index" class="nth-index-input" type="text" value="0.5" spellcheck="false">
-                </label>
-                <div class="nth-presets" id="nth-presets">
-                  <button type="button" data-value="0">0</button>
-                  <button type="button" data-value="0.25">0.25</button>
-                  <button type="button" data-value="0.5" class="is-active">0.5</button>
-                  <button type="button" data-value="0.75">0.75</button>
-                  <button type="button" data-value="-1">-1</button>
+              <div class="nm-ramp" id="nm-ramp" aria-hidden="true"></div>
+              <div class="nm-card" id="nm-card">
+                <p class="nm-title">Field notes</p>
+                <p class="nm-muted">Twelve walks along the river</p>
+              </div>
+              <div class="stub">
+                <div class="switch nm-switch" id="nm-switch">
+                  <button type="button" data-mode="light" aria-pressed="true">light</button>
+                  <button type="button" data-mode="dark" aria-pressed="false">dark</button>
                 </div>
-              </figcaption>
+              </div>
+            </figure>
+          </Sheet>
+          <Sheet name="result" label="Sizes" front>
+            <figure class="demo">
+              <table class="ledger nth-table">
+                <thead><tr><th>index</th><th>from end</th><th>key</th><th>value</th></tr></thead>
+                <tbody id="nth-rows"></tbody>
+              </table>
+              <p class="nth-readout" id="nth-readout"></p>
+              <div class="stub nth-stub">
+                <span>index</span>
+                <Slider id="nth-index" min="0" max="1" step="0.05" value="0.5" aria-label="index" />
+              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -607,21 +641,49 @@ ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
           <p class="fn-detail">Steps through a scale, relative to a token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. The scale is the token's own scope, or the one you name (<code>ref('blue')</code>), or wherever <a href="#ref-source-title"><code>source</code></a> leads (more on that further down); it is never guessed. Steps stop at the ends, or go round with <code>wrap</code>; with <code>toward</code> a step goes in the direction of another member, so a hover steps toward the page, lighter on a light one and darker on a dark one.</p>
         </div>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>ui.set('surface',       ref('gray.g100'))
+          <Sheet name="code" label="Code"><Code is:raw>// keys from scaleNames(9, 'creatures'):
+// tardigrade, ant, beetle, … cat, … whale
+ui.set('gap',       ref('space.cat'))
+ui.set('gap-loose', sibling(ref('space.cat'), 1)) // wolf
+ui.set('gap-tight', sibling(ref('space.cat'), -1)) // hamster
+
+ui.set('surface',       ref('gray.g100'))
 ui.set('surface-hover', sibling(ref('gray.g100'), 1))
 ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
-          <Sheet name="result" label="Result" front>
+          <Sheet name="result" label="Colors" class="sibling-colors">
             <figure class="demo">
               <figcaption>Click a tile to move the anchor.</figcaption>
               <div class="sibling-stage" id="sibling-stage"></div>
               <div class="sibling-controls stub">
                 <div class="sibling-offsets" id="sibling-offsets" role="group" aria-label="Offset">
+                  <button type="button" data-offset="-3">−3</button>
                   <button type="button" data-offset="-2">−2</button>
                   <button type="button" data-offset="-1">−1</button>
                   <button type="button" data-offset="1" class="is-active">+1</button>
                   <button type="button" data-offset="2">+2</button>
+                  <button type="button" data-offset="3">+3</button>
                 </div>
                 <label class="sibling-wrap"><input type="checkbox" id="sibling-wrap" /> wrap</label>
+              </div>
+            </figure>
+          </Sheet>
+          <Sheet name="result" label="Sizes" front>
+            <figure class="demo">
+              <figcaption>Click a row to move the anchor.</figcaption>
+              <table class="ledger sib-table">
+                <thead><tr><th>#</th><th>key</th><th>value</th><th></th></tr></thead>
+                <tbody id="sib-rows"></tbody>
+              </table>
+              <div class="sibling-controls stub">
+                <div class="sibling-offsets" id="sib-offsets" role="group" aria-label="Offset">
+                  <button type="button" data-offset="-3">−3</button>
+                  <button type="button" data-offset="-2">−2</button>
+                  <button type="button" data-offset="-1">−1</button>
+                  <button type="button" data-offset="1" class="is-active">+1</button>
+                  <button type="button" data-offset="2">+2</button>
+                  <button type="button" data-offset="3">+3</button>
+                </div>
+                <label class="sibling-wrap"><input type="checkbox" id="sib-wrap" /> wrap</label>
               </div>
             </figure>
           </Sheet>
@@ -657,10 +719,10 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
           <figure class="readable-stage">
             <figcaption>Faded members fail the ratio and never reach the ranking.</figcaption>
             <div class="readable-pool" id="readable-pool"></div>
-            <div class="readable-results" id="readable-results" aria-live="polite"></div>
+            <div class="rdx" id="readable-results" aria-live="polite"></div>
             <div class="readable-controls stub">
               <label class="readable-surface">
-                <color-input id="readable-surface" value="#eee9dc" initial-colorspace="hex" no-alpha=""></color-input>
+                <color-input id="readable-surface" value="#0d0a03" initial-colorspace="hex" no-alpha=""></color-input>
                 <span>ui.surface</span>
               </label>
               <div class="readable-ratios" id="readable-ratios" role="group" aria-label="readableContrast">
@@ -681,20 +743,27 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
       <h2 class="rule-title" id="ramp-title">A full scale from one color.</h2>
       <div class="ramp-feature-text">
         <p>Pick a brand color and <code>ramp()</code> returns the matching stop
-          of a Tailwind-style tonal scale. It uses
+          of a tonal scale copied from a design system you choose. It uses
           <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
           which transfers the lightness and chroma curves of established
-          palettes onto any hue. Eleven stops, one call each, and they all
-          update when the brand color changes.</p>
+          palettes onto any hue: Tailwind, Radix, or masters of your own,
+          even scopes of the book. One call per stop, and they all update
+          when the brand color changes.</p>
+        <p>Register ramps you drew yourself and new colors get their curve.
+          It works best with many masters across your hues (at least two),
+          all the same length and running light to dark.</p>
       </div>
 
       <Folder>
-        <Sheet name="code" label="Code"><Code is:raw class="ramp-code">brand.set('primary', color('#3c61a0'));
+        <Sheet name="code" label="Code"><Code is:raw class="ramp-code">import { radixRamps } from 'dittotones/ramps/radix';
+
+book.registerRamps('radix', radixRamps);
+brand.set('primary', color('#3c61a0'));
 
 const palette = book.addScope('palette');
-for (const shade of ['50','100',...,'950']) {
-  palette.set(shade,
-    ramp(ref('brand.primary'), { shade }));
+for (const shade of ['1', '2', …, '12']) {
+  palette.set(shade, ramp(ref('brand.primary'),
+    { shade, from: 'radix' }));
 }</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="ramp-stage">
@@ -702,6 +771,11 @@ for (const shade of ['50','100',...,'950']) {
             <div class="ramp-seed stub">
               <color-input id="ramp-seed-input" value="#3c61a0" initial-colorspace="hex" no-alpha=""></color-input>
               <span class="ramp-seed-lbl">brand.primary</span>
+              <select class="stub-select" id="ramp-from" aria-label="Masters to copy">
+                <option value="tailwind-v3">Tailwind v3</option>
+                <option value="tailwind-v4">Tailwind v4</option>
+                <option value="radix">Radix</option>
+              </select>
             </div>
           </div>
         </Sheet>
@@ -729,7 +803,7 @@ for (const shade of ['50','100',...,'950']) {
             <div class="stub">
               <div class="names-head">
                 <div class="names-seed">
-                  <color-input id="names-seed-input" value="#dab43d" initial-colorspace="hex" no-alpha=""></color-input>
+                  <color-input id="names-seed-input" value="#479549" initial-colorspace="hex" no-alpha=""></color-input>
                 </div>
                 <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
                   <button type="button" data-scheme="intensity" class="is-active">intensity</button>
@@ -738,6 +812,8 @@ for (const shade of ['50','100',...,'950']) {
                   <button type="button" data-scheme="tones">tones</button>
                   <button type="button" data-scheme="objects">objects</button>
                   <button type="button" data-scheme="things">things</button>
+                  <button type="button" data-scheme="creatures">creatures</button>
+                  <button type="button" data-scheme="greek">greek</button>
                 </div>
               </div>
               <label class="names-count">
@@ -766,32 +842,34 @@ for (const shade of ['50','100',...,'950']) {
       </div>
 
       <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>const palette = book.addScope('palette', {
-  order: [{ by: 'value' }],  // perceptual
+        <Sheet name="code" label="Code"><Code is:raw>// colors, sizes and words, inserted in any order
+const ui = book.addScope('ui', {
+  order: [{ by: 'value' }],  // colors perceptual, sizes by size
 });
 
-// insert in any order, it stays sorted
-const p = ref('brand.primary');
-palette.set('teal',
-  relativeTo(p, 'oklch', [.7, .14, '+190']));
-palette.set('coral',
-  relativeTo(p, 'oklch', [.7, .14, '+20']));
+ui.setOrder([{ by: 'name' }]);
+ui.setOrder([
+  { by: 'type', priority: ['color', 'dimension', 'string'] },
+  { by: 'value' },           // then each group by value
+]);
 
-palette.getAllKeys();  // one smooth order</Code></Sheet>
+// your own: colors by lightness alone
+book.registerOrderer('color', (entries) =>
+  [...entries].sort((a, b) => L(a.resolved) - L(b.resolved)));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="order-stage">
-            <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
-            <figcaption class="order-caption">Eight colors, inserted in random order.</figcaption>
+            <table class="ledger order-table">
+              <thead><tr><th>#</th><th>key</th><th>type</th><th>value</th></tr></thead>
+              <tbody id="order-swatches" aria-live="polite"></tbody>
+            </table>
             <div class="order-head stub">
-              <div class="order-seed">
-                <color-input id="order-seed-input" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
-                <span class="order-seed-lbl">brand.primary</span>
-              </div>
               <div class="order-modes" id="order-modes" role="group" aria-label="Sort criterion">
                 <button type="button" data-mode="insertion">insertion</button>
                 <button type="button" data-mode="value-asc" class="is-active">value</button>
-                <button type="button" data-mode="value-desc">value ↺</button>
+                <button type="button" data-mode="value-desc">value ↓</button>
                 <button type="button" data-mode="name">name</button>
+                <button type="button" data-mode="type">type → value</button>
+                <button type="button" data-mode="lightness">lightness</button>
               </div>
             </div>
           </div>
@@ -804,95 +882,12 @@ palette.getAllKeys();  // one smooth order</Code></Sheet>
   <section class="extends-feature" aria-labelledby="extends-title">
     <div class="extends-head">
       <h2 class="rule-title" id="extends-title">Inherit, and override what changes.</h2>
-      <div class="extends-modes" role="tablist" aria-label="Ways to inherit">
-        <button type="button" role="tab" id="tab-theme-layers" aria-controls="theme-layers" aria-selected="false" tabindex="-1">layers</button>
-        <button type="button" role="tab" id="tab-theme-extends" aria-controls="theme-extends" aria-selected="true" tabindex="0" class="is-active">scope extends</button>
-      </div>
     </div>
 
     <div class="extends-panels">
-      <div class="extends-feature-body split" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
+      <div class="extends-feature-body split" id="theme-extends">
         <div class="extends-feature-text">
-          <p><strong>Across a whole system.</strong> Every shop in a chain shares
-            the brand, but the old-town store has its own accent. Write the
-            shop's system once as a layer; each store is another layer that only
-            holds what's different about it, here a single color. Composing a
-            book from the stack puts the override into the same graph as
-            everything else, so every ref and selector built on that color
-            is recomputed.</p>
-        </div>
-
-        <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>const system = layer('store-system', (book) =&gt; {
-  const brand = book.addScope('brand');
-  brand.set('highlight', color('#3c61a0'));
-  // … ink, paper …
-  const ui = book.addScope('ui');
-  ui.set('link',  ref('brand.highlight'));
-  ui.set('hover', darken(ref('ui.link'),
-    { amount: 0.2 }));
-  ui.set('tint', colorMix(ref('ui.link'),
-    ref('brand.paper'), { ratio: 0.85 }));
-});
-
-// a store is only what sets it apart
-const oldTown = layer('old-town', {
-  brand: { highlight: color('#de5331') },
-});
-const harbour = layer('harbour', {
-  brand: { highlight: color('#479549') },
-});
-
-composeBook('old-town', [system, oldTown]);</Code></Sheet>
-          <Sheet name="result" label="Result" front>
-            <figure class="extends-stage">
-              <div class="extends-pane">
-                <div class="extends-pane-head">
-                  <span class="extends-pane-name">old-town</span>
-                  <span class="extends-pane-meta">on <code>store-system</code></span>
-                </div>
-                <div class="extends-rows extends-rows--keys">
-                  <div class="ext-row ext-row--override">
-                    <span class="ext-key">brand.highlight</span>
-                    <span class="ext-swatch" style="background:#de5331"></span>
-                    <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) <span class="ext-layer">old-town</span></span>
-                  </div>
-                  <div class="ext-row ext-row--override">
-                    <span class="ext-key">ui.link</span>
-                    <span class="ext-swatch" style="background:#de5331"></span>
-                    <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #de5331</span></span>
-                  </div>
-                  <div class="ext-row ext-row--override">
-                    <span class="ext-key">ui.hover</span>
-                    <span class="ext-swatch" style="background:#a53b22"></span>
-                    <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a53b22</span></span>
-                  </div>
-                  <div class="ext-row ext-row--override">
-                    <span class="ext-key">ui.tint</span>
-                    <span class="ext-swatch" style="background:#f0d4c1"></span>
-                    <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #f0d4c1</span></span>
-                  </div>
-                  <div class="ext-row ext-row--inherited">
-                    <span class="ext-key">brand.ink</span>
-                    <span class="ext-swatch" style="background:#0d0a03"></span>
-                    <span class="ext-val">store-system <span class="ext-resolved">→ #0d0a03</span></span>
-                  </div>
-                  <div class="ext-row ext-row--inherited">
-                    <span class="ext-key">brand.paper</span>
-                    <span class="ext-swatch" style="background:#eee9dc"></span>
-                    <span class="ext-val">store-system <span class="ext-resolved">→ #eee9dc</span></span>
-                  </div>
-                </div>
-              </div>
-              <figcaption>Dimmed rows are inherited.</figcaption>
-            </figure>
-          </Sheet>
-        </Folder>
-      </div>
-
-      <div class="extends-feature-body split is-active" id="theme-extends" role="tabpanel" aria-labelledby="tab-theme-extends" tabindex="0">
-        <div class="extends-feature-text">
-          <p><strong>Inside one book.</strong> When two variants live side by
+          <p>When two variants live side by
             side, one scope can extend another. Every token carries over unless
             you redefine it, and the graph keeps track: change a token in the
             parent and everything that inherits it is recomputed. The editor dims
@@ -901,7 +896,7 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
             one</a> reads from the inheriting scope, and
             <a href="#ref-parent-title"><code>inherited</code></a> reads the value
             a scope overrides. Once a theme has to change root values across the
-            whole system, use layers instead.</p>
+            whole system, use <a href="#layers-title">layers</a> instead.</p>
         </div>
 
         <Folder>
@@ -954,6 +949,7 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
                 </div>
               </div>
               <figcaption>Dimmed rows are inherited.</figcaption>
+              <div class="ref-buttons ref-themes extends-cards" id="extends-cards"></div>
             </figure>
           </Sheet>
         </Folder>
@@ -1076,6 +1072,86 @@ book.addScope('button-green', { extends: 'button' })
       </Folder>
     </div>
 
+      <div class="extends-feature-body split feature-sub" id="theme-layers">
+        <h3 class="rule-title" id="layers-title">Across a whole system: layers.</h3>
+        <div class="extends-feature-text">
+          <p>Every shop in a chain shares
+            the brand, but the old-town store has its own accent. Write the
+            shop's system once as a layer; each store is another layer that only
+            holds what's different about it, here a single color. Composing a
+            book from the stack puts the override into the same graph as
+            everything else, so every ref and selector built on that color
+            is recomputed.</p>
+        </div>
+
+        <Folder>
+          <Sheet name="code" label="Code"><Code is:raw>const system = layer('store-system', (book) =&gt; {
+  const brand = book.addScope('brand');
+  brand.set('highlight', color('#3c61a0'));
+  // … ink, paper …
+  const ui = book.addScope('ui');
+  ui.set('link',  ref('brand.highlight'));
+  ui.set('hover', darken(ref('ui.link'),
+    { amount: 0.2 }));
+  ui.set('tint', colorMix(ref('ui.link'),
+    ref('brand.paper'), { ratio: 0.85 }));
+});
+
+// a store is only what sets it apart
+const oldTown = layer('old-town', {
+  brand: { highlight: color('#de5331') },
+});
+const harbour = layer('harbour', {
+  brand: { highlight: color('#479549') },
+});
+
+composeBook('old-town', [system, oldTown]);</Code></Sheet>
+          <Sheet name="result" label="Result" front>
+            <figure class="extends-stage">
+              <div class="extends-pane">
+                <div class="extends-pane-head">
+                  <span class="extends-pane-name">old-town</span>
+                  <span class="extends-pane-meta">on <code>store-system</code></span>
+                </div>
+                <div class="extends-rows extends-rows--keys">
+                  <div class="ext-row ext-row--override">
+                    <span class="ext-key">brand.highlight</span>
+                    <span class="ext-swatch" style="background:#de5331"></span>
+                    <span class="ext-val"><span class="c-fn">color</span>(<span class="c-str">'#de5331'</span>) <span class="ext-layer">old-town</span></span>
+                  </div>
+                  <div class="ext-row ext-row--override">
+                    <span class="ext-key">ui.link</span>
+                    <span class="ext-swatch" style="background:#de5331"></span>
+                    <span class="ext-val"><span class="c-fn">ref</span> <span class="ext-resolved">→ #de5331</span></span>
+                  </div>
+                  <div class="ext-row ext-row--override">
+                    <span class="ext-key">ui.hover</span>
+                    <span class="ext-swatch" style="background:#a53b22"></span>
+                    <span class="ext-val"><span class="c-fn">darken</span> <span class="ext-resolved">→ #a53b22</span></span>
+                  </div>
+                  <div class="ext-row ext-row--override">
+                    <span class="ext-key">ui.tint</span>
+                    <span class="ext-swatch" style="background:#f0d4c1"></span>
+                    <span class="ext-val"><span class="c-fn">colorMix</span> <span class="ext-resolved">→ #f0d4c1</span></span>
+                  </div>
+                  <div class="ext-row ext-row--inherited">
+                    <span class="ext-key">brand.ink</span>
+                    <span class="ext-swatch" style="background:#0d0a03"></span>
+                    <span class="ext-val">store-system <span class="ext-resolved">→ #0d0a03</span></span>
+                  </div>
+                  <div class="ext-row ext-row--inherited">
+                    <span class="ext-key">brand.paper</span>
+                    <span class="ext-swatch" style="background:#eee9dc"></span>
+                    <span class="ext-val">store-system <span class="ext-resolved">→ #eee9dc</span></span>
+                  </div>
+                </div>
+              </div>
+              <figcaption>Dimmed rows are inherited.</figcaption>
+            </figure>
+          </Sheet>
+        </Folder>
+      </div>
+
     <div class="typo-feature-body split feature-sub">
       <h3 class="rule-title" id="typo-title">Type styles as one token.</h3>
       <div class="typo-feature-text">
@@ -1119,11 +1195,15 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
   <!-- ─── Value transforms ──────────────────────────────────────────── -->
   <section class="coda">
     <h2 class="rule-title" id="transforms-title">Value transforms.</h2>
-    <p>Eight operations that take an input and apply a formula, for the
+    <p>Operations that take an input and apply a formula, for the
       small decisions like a hover shade, a step in a scale or a timing curve,
       without leaving the graph.</p>
-    <ul class="coda-list">
-      <li>
+    <ul class="coda-grid">
+      <li tabindex="0">
+        <Code is:raw class="coda-code">colorMix(
+  ref('brand.blue'),
+  ref('brand.red'),
+  { ratio: 0.5 })</Code>
         <div class="coda-text">
           <b>colorMix</b>
           <span>Blend two colors in any space.</span>
@@ -1132,7 +1212,10 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 56 24" width="56" height="24"><circle cx="12" cy="12" r="9" fill="#3c61a0"/><circle cx="28" cy="12" r="9" fill="#9f5e6a"/><circle cx="44" cy="12" r="9" fill="#de5331"/></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">lighten(
+  ref('ui.accent'),
+  { amount: 0.3 })</Code>
         <div class="coda-text">
           <b>lighten</b>
           <span>Mix toward white in OKLCH.</span>
@@ -1141,7 +1224,10 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#192d4e"/><circle cx="28" cy="12" r="9" fill="#9aaed1"/></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">darken(
+  ref('ui.link'),
+  { amount: 0.2 })</Code>
         <div class="coda-text">
           <b>darken</b>
           <span>Mix toward black in OKLCH.</span>
@@ -1150,7 +1236,10 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 40 24" width="40" height="24"><circle cx="12" cy="12" r="9" fill="#9aaed1"/><circle cx="28" cy="12" r="9" fill="#192d4e"/></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">shade(
+  ref('ui.surface'),
+  { amount: 0.1 })</Code>
         <div class="coda-text">
           <b>shade</b>
           <span>A visible step: darker on light, lighter on dark.</span>
@@ -1159,7 +1248,11 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 48 24" width="48" height="24"><circle cx="12" cy="12" r="8" fill="#f0e8d8"/><circle cx="12" cy="12" r="10" fill="none" stroke="#cbb89a" stroke-width="1.2"/><circle cx="36" cy="12" r="8" fill="#2d3033"/><circle cx="36" cy="12" r="10" fill="none" stroke="#5a6065" stroke-width="1.2"/></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">relativeTo(
+  ref('brand.blue'),
+  'oklch',
+  [null, null, '+180'])</Code>
         <div class="coda-text">
           <b>relativeTo</b>
           <span>Modify a color per channel.</span>
@@ -1181,7 +1274,10 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           </svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">spacingScale(
+  ref('space.base'),
+  { multiplier: 2 })</Code>
         <div class="coda-text">
           <b>spacingScale</b>
           <span>A base size times a multiplier.</span>
@@ -1190,7 +1286,11 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 56 24" width="56" height="24" fill="currentColor"><rect x="0" y="10" width="4" height="4"/><rect x="6" y="9" width="6" height="6"/><rect x="14" y="8" width="8" height="8"/><rect x="24" y="6" width="12" height="12"/><rect x="38" y="4" width="16" height="16"/></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">typographyScale(
+  ref('type.base'),
+  { ratio: 1.25,
+    step: 3 })</Code>
         <div class="coda-text">
           <b>typographyScale</b>
           <span>A base size times ratio<sup>step</sup>.</span>
@@ -1199,7 +1299,11 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <svg viewBox="0 0 60 24" width="60" height="24" fill="currentColor"><text x="2" y="20" font-size="22" font-family="Libertinus Serif, serif">A</text><text x="22" y="20" font-size="14" font-family="Libertinus Serif, serif">A</text><text x="40" y="20" font-size="9" font-family="Libertinus Serif, serif">A</text></svg>
         </span>
       </li>
-      <li>
+      <li tabindex="0">
+        <Code is:raw class="coda-code">timing(
+  ms(200),
+  'ease-out',
+  { delay: 50 })</Code>
         <div class="coda-text">
           <b>timing</b>
           <span>Duration, easing and delay as one value.</span>
@@ -1233,12 +1337,11 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
             <div class="mix-row">
               <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
             </div>
-            <div class="stub">
+            <div class="stub mix-stub">
               <color-input id="mix-a" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
-              <color-input id="mix-b" value="#3c61a0" initial-colorspace="hex" no-alpha=""></color-input>
               <label class="mix-space">
                 <span>interpolated in</span>
-                <select id="mix-space-sel">
+                <select class="stub-select" id="mix-space-sel">
                   <option value="oklch">oklch</option>
                   <option value="oklab">oklab</option>
                   <option value="lch">lch</option>
@@ -1250,6 +1353,7 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
                   <option value="display-p3">display-p3</option>
                 </select>
               </label>
+              <color-input class="mix-b" id="mix-b" value="#3c61a0" initial-colorspace="hex" no-alpha=""></color-input>
             </div>
           </div>
         </Sheet>
@@ -1334,11 +1438,19 @@ book.registerFunction('warmest', (scope) =&gt; {
 
 ui.set('warm', createFunctionToken('warmest', [values]));</Code></Sheet>
           <Sheet name="result" label="Result" front>
-            <p class="extend-result" id="extend-fn-result">
-              <span class="extend-result-label">ui.warm = warmest( values )</span>
-              <span class="extend-result-swatch" id="extend-fn-swatch"></span>
-              <code id="extend-fn-hex">—</code>
-            </p>
+            <figure class="demo fn-polar">
+              <svg class="fn-polar-chart" id="extend-fn-chart" viewBox="-110 -110 220 220" aria-hidden="true"></svg>
+              <p class="fn-polar-readout" id="extend-fn-result">
+                <span><span class="c-fn">warmest</span>(values) →</span>
+                <span class="extend-result-swatch" id="extend-fn-swatch"></span>
+                <code id="extend-fn-hex">—</code>
+              </p>
+              <div class="stub fn-polar-stub">
+                <span>toward hue</span>
+                <Slider id="extend-fn-hue" min="0" max="359" step="1" value="50" aria-label="Target hue" />
+                <b id="extend-fn-hue-val">50°</b>
+              </div>
+            </figure>
           </Sheet>
         </Folder>
       </article>
@@ -1351,10 +1463,11 @@ ui.set('warm', createFunctionToken('warmest', [values]));</Code></Sheet>
           and the selectors work on it like on any other palette.
         </p>
         <Folder>
-          <Sheet name="code" label="Code"><Code is:raw>// anchors as [hue, saturation, lightness], s and l in 0–1
+          <Sheet name="code" label="Code"><Code is:raw>// two anchors across the wheel: a straight line
+// through its centre, seven colors along it
 const poline = new Poline({
-  anchorColors: [[20, .3, .08], [12, .85, .45], [42, .4, .92]],
-  numPoints: 7,
+  anchorColors: [[12, .85, .75], [192, .85, .75]],
+  numPoints: 5,
 });
 const ramp = book.addScope('ramp');
 poline.colorsCSS.forEach((c, i) => ramp.set(`s${i}`, color(c)));
@@ -1364,6 +1477,7 @@ ui.set('border', minContrastWith(
 ));</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <div class="extend-result poline" id="extend-poline-result">
+              <poline-picker class="extend-poline-picker" id="extend-poline-picker" tabindex="0" aria-label="Color wheel: drag around it, or use the arrow keys, to turn the line"></poline-picker>
               <div class="poline-strip" id="extend-poline-strip"></div>
               <p class="extend-result-line">
                 <span is:raw class="extend-result-label">minContrastWith( ui.surface, ramp, { minContrast: 3 } ) → </span>

@@ -2247,7 +2247,7 @@ h1, h2, h3 {
 }
 .readable-ratios { display: inline-flex; align-items: center; gap: 6px; }
 .readable-ratios::before {
-  content: "minContrast";
+  content: "readableContrast";
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
