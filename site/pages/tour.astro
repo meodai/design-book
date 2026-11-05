@@ -226,7 +226,7 @@ ui.set('text', mostVivid(ref('ink'), {
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Change the brand color</em> and every contrast is checked again.</p>
-          <p class="fn-detail">The member of a palette with the highest WCAG contrast against a background. The check is part of the rule, so you don't redo it after every redesign.</p>
+          <p class="fn-detail">The member with the highest contrast against a target: the WCAG ratio for colors, the ratio between two values for sizes and text styles, so a heading can be the style that stands out most from the body. The check is part of the rule, so you don't redo it after every redesign.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('label', bestContrastWith(
@@ -252,8 +252,8 @@ ui.set('text', mostVivid(ref('ink'), {
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
-          <p class="fn-claim"><em>Colors from outside</em> snap to the nearest one you own.</p>
-          <p class="fn-detail">Finds the nearest member by distance in OKLab, so colors that look alike are treated alike. Handy when colors come from outside the system: imported logos, user uploads, a partner's brand kit.</p>
+          <p class="fn-claim"><em>Values from outside</em> snap to the nearest one you own.</p>
+          <p class="fn-detail">Finds the nearest member: by distance in OKLab for colors, so colors that look alike are treated alike, by value for sizes and text styles. Handy when values come from outside the system: an imported logo, a partner's brand kit, the 13px in a mockup that should be your 12px.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>brand.set('logo', closest(
@@ -287,8 +287,8 @@ ui.set('text', mostVivid(ref('ink'), {
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
-          <p class="fn-claim"><em>The odd one out</em> in a palette.</p>
-          <p class="fn-detail">The member with the largest average OKLab distance to all the others: the one swatch nothing else gets mistaken for. Exclude members with <code>not</code> and the pick moves to the next one.</p>
+          <p class="fn-claim"><em>The odd one out</em> in a scope.</p>
+          <p class="fn-detail">The member furthest from all the others: by average OKLab distance for colors, the one swatch nothing else gets mistaken for, by value for sizes and text styles. Exclude members with <code>not</code> and the pick moves to the next one.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('highlight', furthestFrom(brand, {
@@ -315,7 +315,7 @@ ui.set('text', mostVivid(ref('ink'), {
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>As subtle as possible</em> while still readable.</p>
-          <p class="fn-detail">The lowest contrast that still reaches a ratio (4.5 by default). Good for hairlines, captions and dim labels, which then pass the next contrast audit without anyone checking them by hand.</p>
+          <p class="fn-detail">The lowest contrast that still reaches a ratio. For colors that is WCAG (4.5 by default): hairlines, captions and dim labels that pass the next audit without anyone checking them by hand. For sizes and text styles it is the ratio between two values: the smallest heading that still reads as bigger than the body.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('caption', minContrastWith(
@@ -354,8 +354,8 @@ ui.set('text', mostVivid(ref('ink'), {
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
-          <p class="fn-claim"><em>Spacing that knows its own scale.</em></p>
-          <p class="fn-detail">Steps to the next member up or down, in px, rem, ms or whatever unit the scale uses. Add a step to the scale and every gap, padding and duration that referred to it moves along.</p>
+          <p class="fn-claim"><em>Spacing and type that know their scale.</em></p>
+          <p class="fn-detail">Steps to the next member up or down, in px, rem, ms or whatever unit the scale uses, or to the next text style by its font size. Add a step to the scale and every gap, padding, duration and heading that referred to it moves along.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('gap', nextLarger(
@@ -505,7 +505,7 @@ ui.set('promo-bg', random(brand, {
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Pick by position</em> instead of by name.</p>
-          <p class="fn-detail">When a ramp or scale generates your palette, the order carries the meaning: lightest first, darkest last. <code>nth</code> reads that order directly. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
+          <p class="fn-detail">When a ramp or a scale generates your tokens, the order carries the meaning: lightest first, darkest last; smallest first, largest last. <code>nth</code> reads that order directly. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>// ramp generated lightest → darkest
