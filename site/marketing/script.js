@@ -7,6 +7,7 @@ import {
   formatHex,
   converter,
   wcagContrast,
+  differenceEuclidean,
 } from "https://esm.sh/culori@4?bundle";
 
 import "hdr-color-input";
@@ -266,10 +267,55 @@ book.registerRenderer("tailwind", tailwindRenderer);
       dotSize: 5,
       strokeWidth: 1.5,
       interactive: true,
+      // every dependency, the ramp's and the transforms' too (the
+      // renderer shows only refs and selector picks by default)
+      linksOnly: false,
     });
     viz.innerHTML = renderer.render();
+    keepRampAnchor();
+    paintCard();
     // Renderers also feed the next section
     paintRenderers();
+  }
+
+  // The ramp is built round the brand color, so of its edges from
+  // brand.primary only the one to the step nearest that color (in OKLab)
+  // is drawn: the step the brand sits on. The others, and their labels,
+  // are taken out.
+  const oklabDistance = differenceEuclidean("oklab");
+  function keepRampAnchor () {
+    const seed = book.resolve("brand.primary");
+    const edges = [...viz.querySelectorAll('g.connection[data-to="brand.primary"]')]
+      .filter((g) => g.dataset.from?.startsWith("values.shade-"));
+    if (edges.length < 2) return;
+    let anchor = null;
+    let nearest = Infinity;
+    for (const g of edges) {
+      const d = oklabDistance(seed, book.resolve(g.dataset.from));
+      if (d < nearest) { nearest = d; anchor = g.dataset.from; }
+    }
+    viz.querySelectorAll('[data-to="brand.primary"]').forEach((el) => {
+      if (el.dataset.from?.startsWith("values.shade-") && el.dataset.from !== anchor) el.remove();
+    });
+  }
+
+  // The card on the blueprint: the book's ui decisions, applied.
+  const card = document.getElementById("graph-card");
+  const CARD_TOKENS = {
+    "--card-surface": "ui.surface",
+    "--card-text": "ui.text",
+    "--card-accent": "ui.accent",
+    "--card-on-accent": "ui.onAccent",
+    "--card-hover": "ui.hover",
+    "--card-subtle": "ui.subtle",
+    "--card-gap": "ui.gap",
+    "--card-breath": "ui.breath",
+  };
+  function paintCard () {
+    if (!card) return;
+    for (const [prop, key] of Object.entries(CARD_TOKENS)) {
+      try { card.style.setProperty(prop, book.resolve(key)); } catch {}
+    }
   }
 
   function onBrandChange () {

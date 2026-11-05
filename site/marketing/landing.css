@@ -546,45 +546,30 @@ pre {
 
 .section {
   max-width: var(--measure);
-  /* the space above the next section's rule, where its title sits */
+  /* the space above the next section's title */
   margin: 0 auto calc(var(--row) * 6);
   padding: 0 var(--gutter);
 }
 
+/* A section's head: its title (.rule-title, shared.css: the line and
+   hatching under it are the title's), the intro under it. */
 .section-head {
-  display: grid;
-  /* the intro under its title, not beside it */
-  grid-template-columns: minmax(0, 1fr);
-  gap: calc(var(--row) * 2);
-  align-items: start;
-  /* the title sits on the rule at its top (shared.css) */
-  padding-top: 0;
-  position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
 
-/* The rule above each section runs the full width of the page and
-   stops at the rails. The body is a size container, so 100cqw is the
-   page between the rails, scrollbar excluded. */
-.section-head::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(50% - 50cqw);
-  width: 100cqw;
-  height: 1px;
-  background: var(--hair);
-}
-
 .section-head h2 {
-  /* on the rule (shared.css), the page's ground cutting it */
-  --title-ground: var(--ground);
   text-wrap: balance;
 }
 
 .section-head p {
-  margin: 0;
+  margin-top: 0;
+  margin-bottom: 0;
   max-width: 34em;
+}
+
+/* The line under a title and its hatching: the page's hairline. */
+:root {
+  --rule-color: var(--hair);
 }
 
 /* ─── Ledger ─────────────────────────────────────────────────────── */
@@ -1567,45 +1552,30 @@ pre {
 
 .section {
   max-width: var(--measure);
-  /* the space above the next section's rule, where its title sits */
+  /* the space above the next section's title */
   margin: 0 auto calc(var(--row) * 6);
   padding: 0 var(--gutter);
 }
 
+/* A section's head: its title (.rule-title, shared.css: the line and
+   hatching under it are the title's), the intro under it. */
 .section-head {
-  display: grid;
-  /* the intro under its title, not beside it */
-  grid-template-columns: minmax(0, 1fr);
-  gap: calc(var(--row) * 2);
-  align-items: start;
-  /* the title sits on the rule at its top (shared.css) */
-  padding-top: 0;
-  position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
 
-/* The rule above each section runs the full width of the page and
-   stops at the rails. The body is a size container, so 100cqw is the
-   page between the rails, scrollbar excluded. */
-.section-head::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(50% - 50cqw);
-  width: 100cqw;
-  height: 1px;
-  background: var(--hair);
-}
-
 .section-head h2 {
-  /* on the rule (shared.css), the page's ground cutting it */
-  --title-ground: var(--ground);
   text-wrap: balance;
 }
 
 .section-head p {
-  margin: 0;
+  margin-top: 0;
+  margin-bottom: 0;
   max-width: 34em;
+}
+
+/* The line under a title and its hatching: the page's hairline. */
+:root {
+  --rule-color: var(--hair);
 }
 
 /* ─── Ledger ─────────────────────────────────────────────────────── */

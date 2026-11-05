@@ -46,7 +46,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <!-- ─── The ledger: one book, live ───────────────────────────────────── -->
   <section class="section" aria-labelledby="ledger-title">
     <div class="section-head">
-      <h2 id="ledger-title">Bring your own design.</h2>
+      <h2 class="rule-title rule-title--under" id="ledger-title">Bring your own design.</h2>
       <p>
         The rules don't make your design decisions for you. Your colors, sizes
         and type come from wherever you like: picked by eye, taken from a brand
@@ -130,7 +130,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
           </table>
         </Sheet>
 
-      <Sheet name="graph" label="Graph" as="article" class="sheet-graph" bodyClass="graph-body">
+      <Sheet name="graph" label="Graph" as="article" class="sheet-graph" bodyClass="graph-body blueprint">
           <div class="graph" id="graph" role="img" aria-label="Every scope of the book as a table, with a line for each reference between tokens"></div>
           <p class="graph-note">Rendered with <code is:raw>book.render('svg', { interactive: true })</code>. Point at a token to follow its references.</p>
         </Sheet>
@@ -152,7 +152,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <!-- ─── Three readers ───────────────────────────────────────────────── -->
   <section class="section" aria-labelledby="readers-title">
     <div class="section-head">
-      <h2 id="readers-title">One book for designers, developers and language models.</h2>
+      <h2 class="rule-title rule-title--under" id="readers-title">One book for designers, developers and language models.</h2>
       <p>
         A hex code doesn't tell you why it was picked. A rule does, and
         each of them can read it in their own form. The sheets below are rendered
@@ -186,7 +186,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <!-- ─── Principles ──────────────────────────────────────────────────── -->
   <section class="section" aria-labelledby="principles-title">
     <div class="section-head">
-      <h2 id="principles-title">What it is built on</h2>
+      <h2 class="rule-title rule-title--under" id="principles-title">What it is built on</h2>
     </div>
 
     <dl class="principles ruled-list">
@@ -224,7 +224,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <!-- ─── Start ───────────────────────────────────────────────────────── -->
   <section class="section start" aria-labelledby="start-title">
     <div class="section-head">
-      <h2 id="start-title">Start with one rule.</h2>
+      <h2 class="rule-title rule-title--under" id="start-title">Start with one rule.</h2>
     </div>
     <div class="start-grid">
   <pre is:raw class="start-code holes-left">import {
@@ -254,5 +254,6 @@ book.render('css-variables');</pre>
   <Footer current="overview" />
   <script>
     import '../marketing/landing.js';
+    import '../marketing/blueprint.js';
   </script>
 </Page>

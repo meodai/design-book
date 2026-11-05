@@ -272,9 +272,7 @@ html, body {
 }
 
 .article-content h2 {
-  font-size: 40px;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  /* size: .rule-title (shared.css) */
   font-weight: 400;
 }
 

@@ -120,8 +120,6 @@ body {
 
 .article-content h2 {
   position: relative;
-  font-size: clamp(28px, 2.6vw, 38px);
-  line-height: 1.1;
 }
 
 /* The section number hangs in the margin like the No. column of a
@@ -162,62 +160,32 @@ body {
   background: color-mix(in srgb, var(--paper) 90%, var(--black));
 }
 
-/* ═══ Sections: rules from rail to rail ═════════════════════════════ */
-/* Six rows above a section's rule, where its title sits. */
+/* ═══ Sections ════════════════════════════════════════════════════ */
+/* Each section's title is a .rule-title (shared.css): the line under it,
+   from rail to rail, and its hatching are the title's. Six rows above a
+   title; the page clips the lines and the rails cover their ends. */
+.article-content {
+  --rule-color: var(--article-rule);
+}
+
 .article-content section {
   position: relative;
   border-top: 0;
   margin-top: calc(var(--row) * 6);
-  padding-top: calc(var(--row) * 3);
+  padding-top: 0;
 }
 
 .article-content section:first-of-type {
   margin-top: 0;
-  padding-top: 0;
 }
 
 .article-content section > h2:first-child {
   margin-top: 0;
 }
 
-/* A ruled section's title sits on its rule (shared.css), so the
-   section has no top padding; the space is under the title. */
-.article-content section + section {
-  display: flow-root; /* or the title's negative margin collapses
-                         into the section's and moves the rule too */
-  padding-top: 0;
-}
-
-.article-content section + section > h2:first-child {
-  margin-bottom: calc(var(--row) * 2);
-}
-
-/* The rules run past both rails: the page clips them and the rails
-   cover their ends. The sticky example stays on top of them. */
 html,
 body {
   overflow-x: clip;
-}
-
-.article-content section + section::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100vw;
-  width: 300vw;
-  height: 1px;
-  background: var(--article-rule);
-}
-
-/* The hero's rule: where the article proper starts. */
-.layout::before {
-  content: "";
-  position: absolute;
-  left: -100vw;
-  width: 300vw;
-  height: 1px;
-  margin-top: calc(var(--row) * -2);
-  background: var(--article-rule);
 }
 
 /* ═══ Token lists: the shared ledger ═══════════════════════════════ */

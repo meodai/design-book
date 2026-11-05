@@ -107,7 +107,6 @@ li {
 
 /* Active buttons and toggles take the blue, like the landing page's
    highlights, with the off-white on it. */
-.graph-controls button:hover,
 .sibling-offsets button.is-active,
 .ref-modes button.is-active,
 .readable-ratios button.is-active {
@@ -161,21 +160,12 @@ body {
   container-type: inline-size;
 }
 
-/* ── Section rules run from rail to rail ────────────────────────── */
+/* ── Sections ────────────────────────────────────────────────────────
+   No section draws a rule of its own: the line under a section's title
+   is the title's (.rule-title, shared.css). */
 body > section {
   position: relative;
   border-top: 0;
-}
-
-body > section + section::before,
-.fn + .fn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: calc(50% - 50cqw);
-  width: 100cqw;
-  height: 1px;
-  background: var(--rule);
 }
 
 .fn {
@@ -205,7 +195,8 @@ body > section + section::before,
 .vivid-stage,
 .fn .demo,
 .extend-result,
-.graph-viz {
+.graph-viz,
+.graph-controls {
   --pp: var(--blue);
   --pp-text: var(--on-black);
   --surface: var(--pp);
@@ -424,21 +415,113 @@ p em {
   --active-outline: var(--blue);
 }
 
+/* ── The card on the graph ───────────────────────────────────────────
+   A small piece of UI made of the demo book's ui tokens (script.js
+   writes them into --card-*): ui.surface, its text as loading bars in
+   ui.text and ui.subtle, padded by ui.gap, its button ui.accent /
+   ui.onAccent and
+   ui.hover when pointed at, with the tables' hatched, outlined shadow.
+   Narrow, it lies on the blueprint under the drawing; wider, it floats
+   off the blueprint's corner. */
+.graph-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--card-breath, 8px);
+  width: min(100%, calc(var(--row) * 9));
+  margin: var(--row) calc(var(--row) / 2) calc(var(--row) / 2) auto;
+  padding: var(--card-gap, 16px);
+  color: var(--card-text, var(--black));
+  background: var(--card-surface, var(--paper));
+  border: 1px solid var(--pp-text);
+}
+
+.graph-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  translate: 10px 10px;
+  border: 1px solid var(--pp-text);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--pp-text) 0 1.2px,
+    transparent 1.2px 4px
+  );
+}
+
+/* Its text as placeholder bars, as a component looks while it loads:
+   the title in ui.text, the lines in ui.subtle. */
+.graph-card-line {
+  display: block;
+  width: 100%;
+  height: 6px;
+  background: var(--card-subtle, currentColor);
+}
+
+.graph-card-line--title {
+  width: 70%;
+  height: 12px;
+  margin-bottom: 4px;
+  background: var(--card-text, currentColor);
+}
+
+.graph-card-line--short {
+  width: 60%;
+}
+
+.graph-card-button {
+  display: block;
+  margin-top: calc(var(--card-gap, 16px) - var(--card-breath, 8px));
+  padding: 11px calc(var(--row) / 2);
+  background: var(--card-accent, var(--blue));
+  cursor: pointer;
+}
+
+.graph-card-button .graph-card-line {
+  width: calc(var(--row) * 2);
+  background: var(--card-on-accent, var(--on-black));
+}
+
+.graph-card-button:hover {
+  background: var(--card-hover, var(--black));
+}
+
+/* From 900px it floats: off the blueprint's bottom right corner, half
+   outside the paper (which lets it show), so the paper keeps its size. */
+@media (min-width: 900px) {
+  .graph-viz {
+    overflow: visible;
+  }
+
+  .graph-card {
+    position: absolute;
+    right: calc(var(--row) * -1);
+    bottom: calc(var(--row) * -2.5);
+    margin: 0;
+  }
+}
+
+/* The graph's controls: a blue paper of their own (in the list above),
+   without a tab, under the text. */
 .graph-controls {
-  border-top: 1px solid var(--rule);
+  align-items: center;
+  margin-top: var(--row);
 }
 
 .graph-controls button {
   min-height: var(--row);
   padding: 3px 12px;
-  color: var(--pp-text);
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--pp-text) 42%, var(--pp, var(--paper)));
+  color: var(--black);
+  background: var(--paper);
+  border: 1px solid var(--paper);
 }
 
+/* Pointed at, it flips: the paper's own color, outlined. */
 .graph-controls button:hover {
-  color: var(--pp);
-  background: var(--pp-text);
+  color: var(--pp-text);
+  background: transparent;
   border-color: var(--pp-text);
 }
 
@@ -481,27 +564,107 @@ p em {
 
 /* ── A selector's head: its signature in quiet monospace, the kinds it
       works on as a line, not boxes ─────────────────────────────────── */
-.fn-head .sig {
-  padding: 0;
-  font-size: 11px;
-  color: var(--muted);
-  background: none;
-  border: 0;
+/* ── A function ─────────────────────────────────────────────────────
+   Its name (a .rule-title, shared.css) with the kinds it works on beside
+   it: small tabs standing on the name's line, each kind in its own ink
+   (color red, size yellow, text style green, any blue). Under the line,
+   inset like the text, the signature: a strip in the rails' blue, as far
+   below the line as the folder's tabs (--fn-drop). Then the pitch.
+
+   From 900px the whole function is one grid with the split's columns
+   (its head and body only group the markup, display: contents): the
+   name and the kinds share the first row, the signature and the folder
+   start one --fn-drop under the line, side by side, and the pitch
+   follows the signature. Narrower, it stacks. */
+.fn {
+  --fn-drop: calc(var(--row) * 2);
+}
+
+.fn-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--row);
+}
+
+.fn-head > .rule-title {
+  grid-column: 1;
+  margin-bottom: 0;
 }
 
 .fn-kinds {
-  gap: 0 var(--row);
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
   font-family: var(--font-mono);
   font-size: 11px;
 }
 
+.fn-head > .fn-kinds {
+  position: relative; /* in front of the name's hatching */
+  z-index: 1;
+  margin-left: 0;
+}
+
 .fn-kinds li {
-  padding: 0;
-  border: 0;
+  padding: 0 calc(var(--row) / 2);
+  line-height: calc(var(--row) * 0.8);
+  color: var(--kind-ink, var(--on-black));
+  background: var(--kind);
 }
 
 .fn-kinds b {
   font-weight: 700;
+  margin-right: 4px;
+}
+
+.kind-color { --kind: var(--red); }
+.kind-size { --kind: var(--yellow); --kind-ink: var(--black); }
+.kind-text { --kind: var(--green); }
+.kind-any { --kind: var(--blue); }
+
+.fn-head > .sig {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin: var(--fn-drop) 0 0 var(--inset);
+  padding: calc(var(--row) / 4) calc(var(--row) / 2);
+  font-size: 11px;
+  line-height: calc(var(--row) / 2);
+  white-space: normal;
+  color: var(--on-black);
+  background: var(--blue);
+  border: 0;
+}
+
+@media (min-width: 900px) {
+  .fn {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--split-gap);
+    align-items: start;
+  }
+
+  .fn-head,
+  .fn-body {
+    display: contents;
+  }
+
+  .fn-head > .rule-title { grid-area: 1 / 1; }
+  .fn-head > .fn-kinds { grid-area: 1 / 2; }
+  .fn-head > .sig { grid-area: 2 / 1; }
+  .fn-body > .fn-pitch { grid-area: 3 / 1; margin-top: calc(var(--row) * 2); }
+
+  .fn-body > .folder {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    margin-top: var(--fn-drop);
+  }
 }
 
 /* ── Value transforms: one numbered ledger, name and what it does ── */
@@ -1654,10 +1817,11 @@ pre.code.holes-left,
   }
 }
 
-/* ── Rules between sections ─────────────────────────────────────────
-   As much space above a rule as under it: a section's padding is the same
-   at its top and its bottom (--section-space), and so is a sub-section's
-   (--sub-space) and a function's. */
+/* ── Space between sections ──────────────────────────────────────────
+   A title (.rule-title, shared.css) heads its block, its line under it;
+   the space above it is the block's own: a section's padding is the same
+   at its top and its bottom (--section-space), and so is a function's
+   (--sub-space); a merged block has twice that above it. */
 body {
   --section-space: calc(var(--row) * 8);
   --sub-space: clamp(56px, 6vw, calc(var(--row) * 3));
@@ -1670,19 +1834,15 @@ body {
 .extends-feature,
 .renderers,
 .extend,
-.coda {
-  padding-top: var(--title-gap);
+.coda,
+.sections-head {
+  padding-top: var(--section-space);
   padding-bottom: var(--section-space);
-}
-
-/* Under a title on the rule, less: the title already stands in it. */
-body {
-  --title-gap: calc(var(--row) * 4);
+  border-top: 0;
 }
 
 .sections-head {
-  position: relative;
-  padding-top: var(--title-gap);
+  padding-bottom: 0;
 }
 
 .fn,
@@ -1691,38 +1851,21 @@ body {
   padding-bottom: var(--sub-space);
 }
 
-/* The first screen ends on the same space as every section. */
-.hero.first-screen {
-  padding-bottom: var(--section-space);
-}
-
-.feature-sub {
-  margin-top: var(--sub-space);
-  padding-top: var(--sub-space);
-}
-
-/* ── Titles on the rule: twice the space above it ─────────────────
-   A section's rule (and the title on it) gets its own space above on top
-   of the section before's bottom padding; so does a merged block's and a
-   function's. */
-body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
-           .extends-feature, .coda, .renderers, .extend),
-.sections-head {
-  margin-top: var(--section-space);
+/* The function list ends on a function's bottom space; the section after
+   it gets the rest, so it has the same space above as any other. */
+main.sections {
+  padding-bottom: calc(var(--section-space) - var(--sub-space));
 }
 
 .feature-sub {
   margin-top: calc(var(--sub-space) * 2);
+  padding-top: 0;
+  border-top: 0;
 }
 
-.fn-panels > .fn + .fn {
-  margin-top: var(--sub-space);
-}
-
-/* The function list ends on a function's bottom space; the section after
-   it gets the rest, so its rule has the same space above as any other. */
-main.sections {
-  padding-bottom: calc(var(--section-space) - var(--sub-space));
+/* The first screen ends on the same space as every section. */
+.hero.first-screen {
+  padding-bottom: var(--section-space);
 }
 
 /* On a phone the Code tab sits just after Result's: clear of it whichever

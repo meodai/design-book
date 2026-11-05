@@ -29,11 +29,18 @@ pages share), `site/article/`, `site/editor/` and `site/naming/`.
 A section that sets text beside a demo carries the class `split` (shared.css):
 two columns from 900px (5 : 7; `split--wide-start` for 7 : 5), one gutter
 for all of them (`--split-gap`), stacked below.
-Section titles (landing, tour, article) are claim-sized (`--title-size`) and
-sit on their section's rule, the page's color behind them (`--title-ground`);
-what follows them is inset 2.2rem, as in the article (shared.css). The tour's
-sub-sections (`.feature-sub` blocks, `.fn` heads) do the same a size down
-(`--sub-title-size`).
+A section starts with a title carrying the class `rule-title` (shared.css) —
+the one way, on every page: the title draws the line under it (rail to rail),
+the diagonal hatching standing on that line (thinning upward, an SVG mask in
+`--hatch`) and its own size (claim-sized h2, `--sub-title-size` h3); the color
+is `--rule-color`, set per page. Nothing else draws section lines. In a grid it
+spans every column; what follows it in its box is inset (`--inset`).
+A box holding the dependency graph carries `blueprint` (shared.css): a drafting
+grid on the paper's color in its ink, a frame one row in, and cells numbered
+across the top and lettered down the side by `site/marketing/blueprint.js`
+(imported by the landing and the tour), which also gives each graph table a
+hatched, outlined shadow about 10px down-right, under the connections; inside
+a blueprint the tables' rows are filled with the paper.
 `package.json` lists `./site/**` under `sideEffects`, or the bundler drops
 their side-effect imports.
 

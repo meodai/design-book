@@ -838,10 +838,8 @@ input[type="checkbox"]:focus-visible {
 }
 
 /* ─── Color picker (hdr-color-input) ─────────────────────────────────
-   Written on the paper like everything else: a one-row square swatch
-   with a hairline in the paper's text color, the hex as text on the
-   paper, underlined like the other choices. Its panel is a flat black
-   paper, no shadow, no rounding. */
+   A one-row square swatch, no outline, and right against it the hex in a box of the page's paper, dark text,
+   padded. Its panel is a flat black paper, no shadow, no rounding. */
 color-input {
   /* The component's own palette: its panel is black paper. */
   --canvas: var(--black);
@@ -850,6 +848,7 @@ color-input {
   --radius-round: 0;
   display: inline-flex;
   align-items: center;
+  gap: 0; /* the swatch and the hex touch (the component sets 0.625rem) */
   height: var(--row);
   color: inherit;
   vertical-align: top;
@@ -876,27 +875,44 @@ color-input::part(chip) {
   block-size: 100%;
   border: 0;
   border-radius: 0;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 40%, var(--pp, var(--paper)));
+  box-shadow: none;
+  scale: 1; /* no zoom on hover (the component's own) */
 }
 
+/* One highlight for the swatch (hover) and the hex (focus), inside the
+   box: a 3px band of paper, then a 2px dark ring, so the ring keeps clear
+   of the paper around it (dark blue too) and reads on any swatch. The
+   swatch's keyboard focus is the same ring as an outline (the chip
+   covers the button, so its shadow cannot show). */
+color-input::part(chip):hover,
+color-input::part(input):focus {
+  box-shadow:
+    inset 0 0 0 3px var(--paper),
+    inset 0 0 0 5px var(--black);
+}
+
+color-input::part(trigger):focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: -5px;
+}
+
+/* The hex: a box of paper right against the swatch, no gap, with room
+   inside it. */
 color-input::part(input) {
   box-sizing: border-box;
-  width: 9ch;
+  width: calc(7ch + var(--row));
   height: var(--row);
-  margin: 0 0 0 10px;
-  padding: 0;
+  margin: 0;
+  padding: 0 calc(var(--row) / 2);
   font: 12px/var(--row) var(--font-code);
-  color: inherit;
-  background: none;
+  color: var(--black);
+  background: var(--paper);
   border: 0;
   border-radius: 0;
-  box-shadow: inset 0 -1px 0 currentColor;
+  box-shadow: none;
   outline: 0;
 }
 
-color-input::part(input):focus {
-  box-shadow: inset 0 -2px 0 currentColor;
-}
 
 color-input::part(panel) {
   color-scheme: dark;
@@ -986,94 +1002,29 @@ color-input::part(controls) {
   bottom: calc(var(--row) * 7.5);
 }
 
-/* ─── Titles on the rule ────────────────────────────────────────────
-   A section's title is as large as the landing's claim and its first
-   line sits on the rule above its section, centered on it (half its
-   1.2 line up), the page's color behind it (--title-ground) cutting
-   the rule. Where the title heads the ruled box (landing, article) it
-   stays in flow and the box has no top padding; on the tour it sits in
-   a column, so it is taken out of flow (left auto: its own place
-   across) and the section's space below the rule goes to the text. */
+/* ─── A title over a line: .rule-title ──────────────────────────────
+   The one way a section starts, on every page: put the class on its
+   title (an h2, or an h3 for a block or a function inside a section).
+   The title draws everything itself, so nothing else draws section
+   lines:
+   - the line under it, from rail to rail (::before; the page clips it
+     at the window and the rails cover its ends);
+   - a band of diagonal hatching standing on that line, behind the
+     letters, fading upward by getting thinner, not lighter: each stroke
+     is a wedge, 3px wide at the line and nothing at the top (an SVG
+     pattern, skewed to 45deg, as a mask over the line's color)
+     (::after);
+   - its size: claim-sized as an h2, a size down as an h3.
+   The line and hatching are the page's rule grey (--rule-color, set per
+   page). In a grid (.split) it spans every column. What follows it in
+   its box is inset (--inset), as in the article. With .rule-title--under
+   the title sits under its line instead (the landing). */
 :root {
   --title-size: clamp(30px, 4vw, 54px);
-}
-
-.section-head > h2,
-.sections-head > h2,
-body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
-           .extends-feature, .coda, .renderers, .extend) h2,
-.article-content section + section > h2:first-child {
-  position: relative;
-  z-index: 1;
-  width: fit-content;
-  max-width: 100%;
-  margin: -0.6em 0 0 -0.3em;
-  padding: 0 0.3em;
-  background: var(--title-ground, var(--paper));
-  font-size: var(--title-size);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.sections-head > h2,
-body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
-           .extends-feature, .coda, .renderers, .extend) h2 {
-  position: absolute;
-  top: 0;
-}
-
-/* Sub-sections on the tour, the same way a step down: a merged block
-   (.feature-sub, ruled at its top) and a function (.fn, ruled from the
-   second on). A block's title sits in a column, so it leaves the flow
-   like a section's; a function's whole head (name, signature, kinds)
-   stays in flow on the rule, the function has no top padding. */
-:root {
   --sub-title-size: clamp(26px, 3vw, 40px);
-}
-
-.feature-sub {
-  position: relative;
-}
-
-.feature-sub > div > h3:first-child,
-.fn-panels > .fn + .fn > .fn-head {
-  z-index: 1;
-  width: fit-content;
-  max-width: 100%;
-  margin: calc(var(--sub-title-size) * -0.6) 0 0 -0.3em;
-  padding: 0 0.3em;
-  background: var(--title-ground, var(--paper));
-}
-
-.feature-sub > div > h3:first-child {
-  position: absolute;
-  top: -1px; /* on the block's border */
-}
-
-.feature-sub > div > h3:first-child,
-.fn-head > h3 {
-  font-size: var(--sub-title-size);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.fn-panels > .fn + .fn {
-  display: flow-root; /* keep the head's negative margin inside */
-  padding-top: 0;
-}
-
-.fn-panels > .fn + .fn > .fn-head {
-  position: relative;
-  margin-bottom: calc(var(--row) * 2);
-  padding: 0 calc(var(--sub-title-size) * 0.3);
-  margin-left: calc(var(--sub-title-size) * -0.3);
-}
-
-/* What follows a title is inset, as in the article (--inset): the
-   paragraphs, lists and controls under a section's or a block's title,
-   and a function's pitch. A merged block under a section's text keeps
-   its place. Phones use the whole width. */
-:root {
+  --rule-color: var(--rule);
+  --band: calc(var(--row) * 2);
+  --hatch: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='56'%3E%3Cdefs%3E%3Cpattern id='h' width='8' height='56' patternUnits='userSpaceOnUse' patternTransform='skewX(-45)'%3E%3Cpolygon points='1.5,0 0,56 3,56'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='280' height='56' fill='url(%23h)'/%3E%3C/svg%3E");
   --inset: 2.2rem;
 }
 
@@ -1083,10 +1034,59 @@ body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
   }
 }
 
-:is(.section-head, .sections-head, .graph-text, .ref-feature-text,
-    .readable-feature-text, .ramp-feature-text, .extends-head, .coda,
-    .renderers-head, .extend-head) > h2 ~ :not(.feature-sub),
-.feature-sub > div > h3:first-child ~ *,
+.rule-title {
+  position: relative;
+  isolation: isolate;
+  grid-column: 1 / -1;
+  margin: 0 0 calc(var(--row) * 2);
+  font-size: var(--title-size);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h3.rule-title {
+  font-size: var(--sub-title-size);
+}
+
+.rule-title::before,
+.rule-title::after {
+  content: "";
+  position: absolute;
+  left: -100vw;
+  width: 300vw;
+  pointer-events: none;
+}
+
+.rule-title::before {
+  top: 100%;
+  height: 1px;
+  background: var(--rule-color);
+}
+
+.rule-title::after {
+  z-index: -1;
+  bottom: 0;
+  height: var(--band);
+  background: var(--rule-color);
+  -webkit-mask: var(--hatch) left bottom / auto var(--band) repeat-x;
+  mask: var(--hatch) left bottom / auto var(--band) repeat-x;
+}
+
+/* --under: the title under its line instead of over it; the line runs
+   along its top, the hatching stands on it above the title. */
+.rule-title--under {
+  padding-top: calc(var(--row) * 2); /* as much as under it */
+}
+
+.rule-title--under::before {
+  top: 0;
+}
+
+.rule-title--under::after {
+  bottom: 100%;
+}
+
+.rule-title ~ :not(.feature-sub),
 .fn-pitch {
   margin-left: var(--inset);
 }
@@ -1104,10 +1104,91 @@ body > :is(.graph, .ref-feature, .readable-feature, .ramp-feature,
   translate: calc(var(--row) / -2) 0;
 }
 
-.article-content section:first-of-type > h2:first-child {
-  font-size: var(--title-size);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+/* ─── Blueprint: a drafting grid behind a drawing (.blueprint) ──────
+   For the boxes that hold the dependency graph. On the paper's own
+   color, in its ink: a fine grid every half row, a heavier one every two
+   rows (one cell), a frame one row in (--bp-gutter, also the padding),
+   and in that margin the cells numbered across the top and lettered down
+   the side (written by blueprint.js, redrawn on resize). Everything is
+   behind the content, which stays where the padding puts it. The graph's
+   table rows are filled with the paper. */
+.blueprint {
+  --bp-gutter: var(--row);
+  --bp-cell: calc(var(--row) * 2);
+  --bp-minor: color-mix(in oklch, var(--pp-text) 9%, transparent);
+  --bp-major: color-mix(in oklch, var(--pp-text) 20%, transparent);
+  position: relative;
+  isolation: isolate;
+  padding: var(--bp-gutter);
+}
+
+.blueprint::before,
+.blueprint::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.blueprint::before {
+  inset: 0;
+  background-color: var(--pp);
+  background-image:
+    linear-gradient(to right, var(--bp-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bp-major) 1px, transparent 1px),
+    linear-gradient(to right, var(--bp-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bp-minor) 1px, transparent 1px);
+  background-size:
+    var(--bp-cell) var(--bp-cell),
+    var(--bp-cell) var(--bp-cell),
+    calc(var(--bp-cell) / 4) calc(var(--bp-cell) / 4),
+    calc(var(--bp-cell) / 4) calc(var(--bp-cell) / 4);
+  background-position: var(--bp-gutter) var(--bp-gutter);
+}
+
+.blueprint::after {
+  inset: var(--bp-gutter);
+  border: 1px solid color-mix(in oklch, var(--pp-text) 45%, transparent);
+}
+
+/* The graph's tables are paper laid on the drawing: their rows (which
+   the SVG renderer leaves unfilled) take the page's paper, and a row
+   pointed at a shade of it. */
+.blueprint .palette-table__row:not(.palette-table__row--header) {
+  fill: var(--paper);
+  fill-opacity: 1;
+}
+
+.blueprint svg.interactive .palette-table__row[data-token-key]:not(.palette-table__row--header):hover {
+  fill: color-mix(in oklch, var(--paper) 88%, var(--pp-text));
+  fill-opacity: 1;
+}
+
+/* The tables' hatched shadows (blueprint.js): lines of one weight in
+   the paper's ink, inside a clear 1px outline of it. */
+.blueprint .bp-hatch {
+  stroke: var(--pp-text);
+  stroke-width: 1.2;
+}
+
+.blueprint .bp-shadows rect {
+  stroke: var(--pp-text);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.blueprint-labels {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  font: 11px/1 var(--font-code);
+  color: color-mix(in oklch, var(--pp-text) 60%, transparent);
+}
+
+.blueprint-labels span {
+  position: absolute;
+  translate: -50% -50%;
 }
 
 /* ─── Split: text beside a demo ─────────────────────────────────────

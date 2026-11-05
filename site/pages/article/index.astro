@@ -70,7 +70,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <article class="article-content">
 
         <section>
-          <h2>1. Static links are the baseline</h2>
+          <h2 class="rule-title">1. Static links are the baseline</h2>
           <p>
             Most token systems already have the familiar split: raw values in
             one place, semantic names in another. A small pool of source
@@ -108,7 +108,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>2. Some links are really formulas</h2>
+          <h2 class="rule-title">2. Some links are really formulas</h2>
           <p>
             Some semantic tokens are not really aliases. They are tiny
             policies. <code>color.buttonText</code> is a good example. Writing
@@ -136,7 +136,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>3. Choose one of a set</h2>
+          <h2 class="rule-title">3. Choose one of a set</h2>
           <p>
             One kind of dynamic connection looks at a pool of candidates and
             picks one. It is useful whenever the decision is comparative: the
@@ -203,7 +203,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>4. Extend a decision</h2>
+          <h2 class="rule-title">4. Extend a decision</h2>
           <p>
             A treatment rarely exists once. The card that holds the report
             needs an inverted version for a callout: the same decisions, made
@@ -271,7 +271,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>5. Do something to a value</h2>
+          <h2 class="rule-title">5. Do something to a value</h2>
           <p>
             The second kind of dynamic connection does not choose from a set.
             It takes an input and applies a small operation to it. This is
@@ -377,7 +377,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>6. Truly procedural design</h2>
+          <h2 class="rule-title">6. Truly procedural design</h2>
           <p>For a long time, tokenising everything felt like the end of creative freedom to me. Every choice was locked in, and every relationship was buried in a dependency graph nobody wanted to climb. Once the system was set up, exploring happened somewhere else: in Figma, in a script, in ad-hoc decisions made outside the system and patched in later.</p>
           <p>With procedural tokens the exploring can happen inside the system. Every value token in this article, every grey and every accent, is a point on a single color line. Drag any anchor and the whole system shifts together: the values move, the refs that point at them follow, the ramp is interpolated again and the contrast rules pick again.</p>
           <div class="poline-demo" aria-label="Palette generator driving every value token">
@@ -400,7 +400,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         </section>
 
         <section>
-          <h2>7. Better links</h2>
+          <h2 class="rule-title">7. Better links</h2>
           <p>
             This is not an argument against static refs. Most links should
             stay static, because static is clear. The point is simply to stop

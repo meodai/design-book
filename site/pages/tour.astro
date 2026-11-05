@@ -27,14 +27,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         instead: the highest-contrast text on a surface, the next bigger gap in
         a scale, the most vivid color that <em>still passes WCAG</em>. Change an
         input and every token that depends on it is worked out again, contrast
-        included. It grew out of earlier experiments like
-        <a href="https://github.com/meodai/paletter" target="_blank" rel="noopener">paletter</a>
-        and <a href="https://meodai.github.io/color-router/" target="_blank" rel="noopener">Color Router</a>.</p>
+        included.</p>
 
-      <p class="install-note">TypeScript · ESM · three dependencies
-        (<a href="https://culorijs.org/" target="_blank" rel="noopener">culori</a>,
-        <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
-        <a href="https://github.com/darosh/colorsort-js" target="_blank" rel="noopener">colorsort-js</a>).</p>
+      <p class="install-note">TypeScript · ESM</p>
     </div>
     <div class="hero-illustration" id="hero-illustration">
       <svg viewBox="-200 -200 400 400" aria-hidden="true">
@@ -58,17 +53,18 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   <!-- ─── The graph: hero visual ────────────────────────────────────── -->
   <section class="graph split" aria-labelledby="graph-title">
+    <h2 class="rule-title" id="graph-title">A web of decisions, not a list of values.</h2>
     <div class="graph-text">
-      <h2 id="graph-title">Every token knows what it depends on.</h2>
       <p>Each token is a node and each reference an edge. The library tracks
         references, computed values and selectors that read a whole scope, so
         when an input changes it recomputes exactly what depends on it, either
         right away or all at once with <code>flush()</code> in batch mode. A
         change that would create a cycle is refused, and
         <code>watch(key, fn)</code> calls you back when a value changes.</p>
-      <p>The diagram on the right is the graph of the book behind this page,
-        drawn by the built-in <code>SVGRenderer</code>. Play with the controls
-        and watch it redraw.</p>
+      <p>The diagram on the right is a small demo book: a brand color, a ramp
+        made from it, a spacing scale and the UI decisions on top, drawn by
+        the built-in <code>SVGRenderer</code>. Change the brand color or flip
+        the ramp and watch it redraw.</p>
       <div class="graph-controls">
         <label>
           <span>brand</span>
@@ -77,14 +73,23 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         <button type="button" id="graph-invert">Flip ramp</button>
       </div>
     </div>
-    <div class="graph-viz" id="graph-viz" aria-label="Dependency graph"></div>
+    <div class="graph-viz blueprint">
+      <div id="graph-viz" aria-label="Dependency graph"></div>
+      <!-- A card built from the book's ui tokens, painted by script.js. -->
+      <div class="graph-card" id="graph-card" aria-hidden="true">
+        <span class="graph-card-line graph-card-line--title"></span>
+        <span class="graph-card-line"></span>
+        <span class="graph-card-line graph-card-line--short"></span>
+        <span class="graph-card-button"><span class="graph-card-line"></span></span>
+      </div>
+    </div>
   </section>
 
   <!-- ─── ref(): point at a source instead of copying it ───────────── -->
   <section class="ref-feature" aria-labelledby="ref-title">
     <div class="ref-feature-body split">
+      <h2 class="rule-title" id="ref-title">References instead of copies.</h2>
       <div class="ref-feature-text">
-        <h2 id="ref-title">References instead of copies.</h2>
         <p>A hex code pasted in two places is two decisions, and sooner or
           later they drift apart. <code>ref()</code> stores where a value comes
           from, the key and not the value, so changing the source changes
@@ -122,8 +127,8 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
     </div>
 
     <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-relative-title">Relative refs.</h3>
       <div class="ref-feature-text">
-        <h3 id="ref-relative-title">Relative refs.</h3>
         <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
           that key in whichever scope reads the token. A variant extends its
           base and overrides one value; every inherited token that reads it
@@ -158,8 +163,8 @@ book.addScope('button-danger', {
     </div>
 
     <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-parent-title">Reading one level up.</h3>
       <div class="ref-feature-text">
-        <h3 id="ref-parent-title">Reading one level up.</h3>
         <p><code>inParent(ref('.interaction'))</code> is the interaction color
           the scope would have inherited, so a scope can override a value in
           terms of the one it replaces. Here a hover state is one step from its
@@ -199,7 +204,7 @@ hover.set('interaction', sibling(
   <main class="sections">
 
     <header class="sections-head">
-      <h2>Kinds of decision</h2>
+      <h2 class="rule-title">Kinds of decision</h2>
       <p>Thirteen built-in selectors. Each one takes a scope of candidates
         and returns the member that fits its rule, and picks again whenever a
         member changes, is added or is removed.</p>
@@ -243,9 +248,9 @@ hover.set('interaction', sibling(
     <!-- bestContrastWith -->
     <article class="fn" id="best-contrast">
       <header class="fn-head">
-        <h3>bestContrastWith</h3>
+        <h3 class="rule-title">bestContrastWith</h3>
         <code is:raw class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -271,9 +276,9 @@ hover.set('interaction', sibling(
     <!-- closest -->
     <article class="fn" id="closest">
       <header class="fn-head">
-        <h3>closest</h3>
+        <h3 class="rule-title">closest</h3>
         <code is:raw class="sig">closest( target, scope, { direction?, upTo?, minDistance?, readableOn?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLab distance</li><li class="kind-size"><b>size</b> value</li><li class="kind-text"><b>text style</b> font size</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -304,9 +309,9 @@ hover.set('interaction', sibling(
     <!-- furthestFrom -->
     <article class="fn" id="furthest">
       <header class="fn-head">
-        <h3>furthestFrom</h3>
+        <h3 class="rule-title">furthestFrom</h3>
         <code is:raw class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLab distance</li><li class="kind-size"><b>size</b> value</li><li class="kind-text"><b>text style</b> font size</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -331,9 +336,9 @@ hover.set('interaction', sibling(
     <!-- minContrastWith -->
     <article class="fn" id="min-contrast">
       <header class="fn-head">
-        <h3>minContrastWith</h3>
+        <h3 class="rule-title">minContrastWith</h3>
         <code is:raw class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -372,9 +377,9 @@ hover.set('interaction', sibling(
     <!-- nextLarger / nextSmaller -->
     <article class="fn" id="next-step">
       <header class="fn-head">
-        <h3>nextLarger · nextSmaller</h3>
+        <h3 class="rule-title">nextLarger · nextSmaller</h3>
         <code is:raw class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } ) = closest( …, { direction } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-size"><b>size</b> value</li><li class="kind-text"><b>text style</b> font size</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -428,9 +433,9 @@ hover.set('interaction', sibling(
     <!-- mostVivid / leastVivid -->
     <article class="fn" id="vivid">
       <header class="fn-head">
-        <h3>mostVivid · leastVivid</h3>
+        <h3 class="rule-title">mostVivid · leastVivid</h3>
         <code is:raw class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH chroma</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLCH chroma</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -453,9 +458,9 @@ ui.set('surface', leastVivid(brand))</Code></Sheet>
     <!-- lightest / darkest -->
     <article class="fn" id="lightness">
       <header class="fn-head">
-        <h3>lightest · darkest</h3>
+        <h3 class="rule-title">lightest · darkest</h3>
         <code is:raw class="sig">lightest|darkest( scope, { readableOn?, readableContrast?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH lightness</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> OKLCH lightness</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -488,9 +493,9 @@ ui.set('soft-ink', lightest(brand, {
     <!-- random -->
     <article class="fn" id="random">
       <header class="fn-head">
-        <h3>random</h3>
+        <h3 class="rule-title">random</h3>
         <code is:raw class="sig">random( scope, { type, seed?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> filtered by type</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-any"><b>any</b> filtered by type</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -524,9 +529,9 @@ ui.set('promo-bg', random(brand, {
     <!-- nth -->
     <article class="fn" id="nth">
       <header class="fn-head">
-        <h3>nth</h3>
+        <h3 class="rule-title">nth</h3>
         <code is:raw class="sig">nth( scope, index, { not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> by position</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-any"><b>any</b> by position</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -564,9 +569,9 @@ ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
     <!-- sibling -->
     <article class="fn" id="sibling">
       <header class="fn-head">
-        <h3>sibling</h3>
+        <h3 class="rule-title">sibling</h3>
         <code is:raw class="sig">sibling( ref, offset, { wrap?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> along the scale it comes from</li></ul>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-any"><b>any</b> along the scale it comes from</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
@@ -603,8 +608,8 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
   <!-- ─── readableOn: contrast as a filter ─────────────────────────── -->
   <section class="readable-feature" aria-labelledby="readable-title">
     <div class="readable-feature-body split">
+      <h2 class="rule-title" id="readable-title">Only readable colors.</h2>
       <div class="readable-feature-text">
-        <h2 id="readable-title">Only readable colors.</h2>
         <p>Every color selector except the two contrast ones takes
           <code>readableOn</code> and <code>readableContrast</code> (4.5 by
           default). Members that don't reach the ratio against that backdrop
@@ -645,8 +650,8 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
   <!-- ─── ramp: single color → full tonal scale ────────────────────── -->
   <section class="ramp-feature" aria-labelledby="ramp-title">
     <div class="ramp-feature-body split">
+      <h2 class="rule-title" id="ramp-title">A full scale from one color.</h2>
       <div class="ramp-feature-text">
-        <h2 id="ramp-title">A full scale from one color.</h2>
         <p>Pick a brand color and <code>ramp()</code> returns the matching stop
           of a Tailwind-style tonal scale. It uses
           <a href="https://www.npmjs.com/package/dittotones" target="_blank" rel="noopener">dittotones</a>,
@@ -677,8 +682,8 @@ for (const shade of ['50','100',...,'950']) {
     </div>
 
     <div class="names-feature-body split feature-sub">
+      <h3 class="rule-title" id="names-title">Naming the steps.</h3>
       <div class="names-feature-text">
-        <h3 id="names-title">Naming the steps.</h3>
         <p>Generated colors still need keys. <code>scaleNames()</code> takes
           them from a naming convention (<code>50 … 950</code>, t-shirt sizes,
           an intensity ladder, 100 objects by size) and fits it to however many
@@ -718,8 +723,8 @@ for (const shade of ['50','100',...,'950']) {
     </div>
 
     <div class="order-feature-body split feature-sub">
+      <h3 class="rule-title" id="order-title">Sorted scopes.</h3>
       <div class="order-feature-text">
-        <h3 id="order-title">Sorted scopes.</h3>
         <p>Give a scope an <code>order</code> and it stays sorted by
           <code>value</code>, <code>name</code> or <code>type</code>, or a
           combination of them. Colors are sorted through
@@ -769,7 +774,7 @@ palette.getAllKeys();  // one smooth order</Code></Sheet>
   <!-- ─── Inheritance: layers across books, extends inside one ───────── -->
   <section class="extends-feature" aria-labelledby="extends-title">
     <div class="extends-head">
-      <h2 id="extends-title">Inherit, and override what changes.</h2>
+      <h2 class="rule-title" id="extends-title">Inherit, and override what changes.</h2>
       <div class="extends-modes" role="tablist" aria-label="Ways to inherit">
         <button type="button" role="tab" id="tab-theme-layers" aria-controls="theme-layers" aria-selected="false" tabindex="-1">layers</button>
         <button type="button" role="tab" id="tab-theme-extends" aria-controls="theme-extends" aria-selected="true" tabindex="0" class="is-active">scope extends</button>
@@ -927,8 +932,8 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
     </div>
 
     <div class="typo-feature-body split feature-sub">
+      <h3 class="rule-title" id="typo-title">Type styles as one token.</h3>
       <div class="typo-feature-text">
-        <h3 id="typo-title">Type styles as one token.</h3>
         <p>A type style is a set of properties: family, size, weight,
           line-height, tracking. <code>typography()</code> makes it one token,
           the W3 <code>typography</code> composite, so it sits in a scope like
@@ -969,7 +974,7 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
 
   <!-- ─── Value transforms ──────────────────────────────────────────── -->
   <section class="coda">
-    <h2>Value transforms.</h2>
+    <h2 class="rule-title">Value transforms.</h2>
     <p>Eight operations that take an input and apply a formula, for the
       small decisions like a hover shade, a step in a scale or a timing curve,
       without leaving the graph.</p>
@@ -1062,8 +1067,8 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
     </ul>
 
     <div class="mix-feature-body split feature-sub">
+      <h3 class="rule-title" id="mix-title">Mixing two colors.</h3>
       <div class="mix-feature-text">
-        <h3 id="mix-title">Mixing two colors.</h3>
         <p><code>colorMix()</code> interpolates between two colors, and the color
           space decides the path: <code>rgb</code> goes straight through the
           cube, <code>lab</code> and <code>oklab</code> follow perceptual lines,
@@ -1109,7 +1114,7 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
   <!-- ─── One source, many outputs ─────────────────────────────────── -->
   <section class="renderers">
     <header class="renderers-head">
-      <h2>Many outputs from one book.</h2>
+      <h2 class="rule-title">Many outputs from one book.</h2>
       <p>The same book renders to CSS variables, JSON and the
         <a href="https://www.designtokens.org/tr/drafts/format/">W3 Design Tokens</a>
         format out of the box. A custom renderer is one call,
@@ -1154,7 +1159,7 @@ const config = book.render('tailwind');</Code>
   <!-- ─── Bring your own everything ─────────────────────────────────── -->
   <section class="extend">
     <header class="extend-head">
-      <h2>Your own rules and libraries.</h2>
+      <h2 class="rule-title">Your own rules and libraries.</h2>
       <p>The built-in selectors are a starting set. You can register any
         function that takes the token's resolved arguments (scopes arrive as
         scopes) and its options, and returns a value. Tokens that call it work
@@ -1233,5 +1238,6 @@ ui.set('border', minContrastWith(
     import '../marketing/docs-folders.js';
     import '../marketing/script.js';
     import '../marketing/docs-rails.js';
+    import '../marketing/blueprint.js';
   </script>
 </Page>

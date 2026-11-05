@@ -354,7 +354,6 @@ h1, h2, h3 {
   cursor: pointer;
   color: var(--text);
 }
-.graph-controls button:hover { background: var(--text); color: var(--surface); border-color: var(--text); }
 
 .graph-viz {
   padding: 18px;
@@ -370,11 +369,6 @@ h1, h2, h3 {
   margin: 0 auto;
   padding: clamp(60px, 8vw, 100px) var(--gutter) 0;
   border-top: 1px solid var(--rule);
-}
-.sections-head h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  line-height: 1.12;
-  margin-bottom: 0.4em;
 }
 .sections-head p {
   font-size: 17px;
@@ -394,56 +388,13 @@ h1, h2, h3 {
   border-top: none;
 }
 
+/* A function's head: its name (a .rule-title, shared.css), then its
+   signature and kinds under the line. */
 .fn-head {
   margin-bottom: 28px;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-}
-.fn-head h3 {
-  font-size: clamp(30px, 3.8vw, 44px);
-  line-height: 1.1;
-  margin: 0;
-}
-.fn-head .sig {
-  display: inline-block;
-  font-size: 10px;
-  letter-spacing: 0.01em;
-  color: var(--muted);
-  background: var(--surface-2);
-  border: 1px solid var(--rule);
-  padding: 2px 9px;
-  border-radius: 0;
-  white-space: nowrap;
-  position: relative;
-  top: -0.6em;
 }
 
 /* What a function works on: one tag per kind, with what it measures there. */
-.fn-kinds {
-  flex-basis: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--muted);
-}
-.fn-kinds li {
-  padding: 2px 8px;
-  border: 1px solid var(--rule);
-  border-radius: 0;
-}
-.fn-kinds b {
-  font-weight: 600;
-  color: var(--text);
-  margin-right: 4px;
-}
-
 /* The pitch beside its folder (code and result), one row. */
 .fn-body {
   align-items: start;
@@ -487,8 +438,7 @@ h1, h2, h3 {
 .mix-feature-text :is(h2, h3),
 .order-feature-text :is(h2, h3),
 .typo-feature-text :is(h2, h3),
-.extends-feature-text :is(h2, h3),
-.renderers-head h2 {
+.extends-feature-text :is(h2, h3) {
   font-family: var(--font-display);
   font-size: clamp(26px, 3vw, 36px);
   line-height: 1.15;
@@ -1663,11 +1613,6 @@ h1, h2, h3 {
   gap: 12px 24px;
   margin-bottom: clamp(20px, 2.4vw, 32px);
 }
-.extends-head h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  line-height: 1.12;
-  margin: 0;
-}
 /* Both panels share one grid cell, so the block is as tall as the
    taller one and switching never shifts the page below it. */
 .extends-panels { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -1798,11 +1743,6 @@ h1, h2, h3 {
   border-top: 1px solid var(--rule);
 }
 .renderers-head { margin-bottom: 32px; }
-.renderers-head h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  line-height: 1.12;
-  margin-bottom: 0.5em;
-}
 .renderers-head p {
   font-size: 17px;
   line-height: 1.6;
@@ -1882,11 +1822,6 @@ h1, h2, h3 {
 }
 .extend-head {
   margin-bottom: 32px;
-}
-.extend-head h2 {
-  font-size: clamp(28px, 3.4vw, 40px);
-  line-height: 1.12;
-  margin-bottom: 0.5em;
 }
 .extend-head p {
   font-size: 17px;
@@ -1989,10 +1924,6 @@ h1, h2, h3 {
   margin: 0 auto;
   padding: clamp(48px, 6vw, 80px) var(--gutter);
   border-top: 1px solid var(--rule);
-}
-.coda h2 {
-  font-size: clamp(28px, 3.4vw, 36px);
-  margin-bottom: 0.6em;
 }
 .coda > p {
   max-width: 64ch;
@@ -2393,7 +2324,6 @@ h1, h2, h3 {
 }
 
 @media (max-width: 599px) {
-  .fn-head .sig { white-space: normal; top: 0; }
 }
 .ltile, .stile { min-width: 0; overflow: hidden; }
 @media (max-width: 599px) {
