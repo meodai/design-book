@@ -124,14 +124,61 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
     </div>
   </section>
 
+  <!-- ─── Why: what CSS cannot do ───────────────────────────────────── -->
+  <section class="ref-feature" aria-labelledby="why-title">
+    <div class="ref-feature-body split">
+      <h2 class="rule-title" id="why-title">The reason is the token.</h2>
+      <div class="ref-feature-text">
+        <p>A custom property can point at another one, and CSS's
+          <code>contrast-color()</code> even picks black or white for you. What
+          CSS cannot do is choose from <em>your</em> palette by <em>your</em>
+          rule: the most vivid of your colors that still reads on this surface,
+          the next size up in your scale. In Design Book the reason is the
+          token. It documents the decision, and when an input changes, a member
+          is added or the context turns dark, the decision is made again and
+          every value is rerouted to what fits.</p>
+        <p>On the right the surface never sits still. The text is not a color
+          but a rule, the loudest ink that still reads, so it picks again every
+          time.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const ink = book.addScope('ink');
+ink.set('black',  color('#0d0a03'));
+ink.set('paper',  color('#fffaed'));
+ink.set('blue',   color('#172c4f'));
+ink.set('red',    color('#de5331'));
+ink.set('yellow', color('#dab43d'));
+ink.set('green',  color('#479549'));
+
+// the reason, not the answer: the most
+// vivid ink that still reads (4.5:1)
+ui.set('text', mostVivid(ref('ink'), {
+  readableOn: ref('ui.surface'),
+}));
+
+// set ui.surface to anything:
+// the text decides again</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="why-stage">
+            <div class="why-sample" id="why-sample" aria-hidden="true">Read me.</div>
+            <div class="extends-pane">
+              <div class="extends-rows extends-rows--keys" id="why-rows"></div>
+            </div>
+          </figure>
+        </Sheet>
+      </Folder>
+    </div>
+  </section>
+
   <!-- ─── Selector functions: one panel, a switcher ─────────────────── -->
   <main class="sections">
 
     <header class="sections-head">
       <h2 class="rule-title">Kinds of decision</h2>
-      <p>Thirteen built-in selectors. Each one takes a scope of candidates
-        and returns the member that fits its rule, and picks again whenever a
-        member changes, is added or is removed.</p>
+      <p>A selector takes a scope of candidates and returns the member that
+        fits its rule, and picks again whenever a member changes, is added or
+        is removed. Thirteen are built in.</p>
     </header>
 
     <nav class="fn-index" aria-label="Selectors">

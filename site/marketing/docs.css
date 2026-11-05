@@ -189,6 +189,7 @@ body > section {
 .random-stage,
 .readable-stage,
 .ref-stage,
+.why-stage,
 .sibling-stage,
 .step-stage,
 .typo-stage,
@@ -2030,3 +2031,20 @@ main.sections {
 .folder-sheet--result .rd-result :is(.rd-call, .rd-meta) {
   line-height: var(--row);
 }
+
+/* The reason is the token: the moving surface with its text, a block
+   four rows tall, under it the two tokens as a ledger. */
+.why-stage {
+  margin: 0;
+  display: grid;
+}
+
+.why-sample {
+  display: flex;
+  align-items: center;
+  height: calc(var(--row) * 4);
+  padding: 0 var(--row);
+  font: 600 32px/1 var(--font-text);
+  letter-spacing: -0.02em;
+}
+

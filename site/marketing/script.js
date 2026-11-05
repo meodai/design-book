@@ -1221,6 +1221,74 @@ wireTabs(document.querySelector(".extends-modes"));
 })();
 
 // ══════════════════════════════════════════════════════════════════════
+//  The reason is the token — a surface that keeps moving, and the text
+//  rule (the most vivid readable ink) deciding again each time
+// ══════════════════════════════════════════════════════════════════════
+(function whySection () {
+  const sampleEl = document.getElementById("why-sample");
+  const rowsEl   = document.getElementById("why-rows");
+  if (!sampleEl || !rowsEl) return;
+  rowsEl.setAttribute("data-ledger", "");
+
+  const book = new DesignBook("why-demo");
+  const ink = book.addScope("ink");
+  ink.set("black",  color("#0d0a03"));
+  ink.set("paper",  color("#fffaed"));
+  ink.set("blue",   color("#172c4f"));
+  ink.set("red",    color("#de5331"));
+  ink.set("yellow", color("#dab43d"));
+  ink.set("green",  color("#479549"));
+  const ui = book.addScope("ui");
+  ui.set("surface", color("#3965cf"));
+  ui.set("text", mostVivid(ref("ink"), { readableOn: ref("ui.surface") }));
+
+  const toHex = (c) => formatHex(c);
+  // the surface drifts: hue goes round, lightness swings slowly, so the
+  // pick crosses from light text to dark and through the colored inks
+  const surfaceAt = (t) => toHex({ mode: "oklch", l: 0.55 + 0.33 * Math.sin(t / 2300), c: 0.13, h: (t / 40) % 360 });
+
+  const row = (key, swatch, val) => `<div class="ext-row ext-row--override">
+      <span class="ext-key">${key}</span>
+      <span class="ext-swatch" style="background:${swatch}"></span>
+      <span class="ext-val">${val}</span>
+    </div>`;
+
+  function paint (surface) {
+    ui.set("surface", color(surface));
+    let text;
+    try {
+      text = book.resolve("ui.text");
+    } catch {
+      return; // nothing reads on this one: keep the last pick on screen
+    }
+    sampleEl.style.background = surface;
+    sampleEl.style.color = text;
+    const name = ink.getAllKeys().find((k) => ink.resolve(k) === text) ?? text;
+    rowsEl.innerHTML =
+      row("ui.surface", surface, `<span class="ext-resolved">${surface}</span>`) +
+      row("ui.text", text, `<span class="c-fn">mostVivid</span> <span class="ext-resolved">→ ink.${name} · ${contrast(surface, text).toFixed(1)}:1</span>`);
+  }
+
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let running = false;
+  let frame = 0;
+  let lastPaint = 0;
+  const tick = (t) => {
+    if (!running) return;
+    // a new surface a few times a second is enough to read
+    if (t - lastPaint > 120) { paint(surfaceAt(t)); lastPaint = t; }
+    frame = requestAnimationFrame(tick);
+  };
+  paint(surfaceAt(0));
+  if (still) return;
+  new IntersectionObserver(([entry]) => {
+    running = entry.isIntersecting;
+    if (running) frame = requestAnimationFrame(tick);
+    else cancelAnimationFrame(frame);
+  }).observe(sampleEl);
+})();
+
+// ══════════════════════════════════════════════════════════════════════
 //  READABLE ON — contrast as a filter before ranking
 // ══════════════════════════════════════════════════════════════════════
 (function readableSection () {
