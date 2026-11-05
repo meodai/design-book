@@ -4,7 +4,7 @@ import { largestImpl, smallestImpl } from './generic/extremes';
 import type { Direction, Kind } from './kinds';
 import { colorMixImpl } from './color/color-mix';
 import { darkenImpl } from './color/darken';
-import { furthestFromImpl } from './color/furthest-from';
+import { furthestFromImpl } from './generic/furthest-from';
 import { leastVividImpl } from './color/least-vivid';
 import { lightestImpl, darkestImpl } from './color/lightest-darkest';
 import { lightenImpl } from './color/lighten';
@@ -36,7 +36,8 @@ export { closest, nextLarger, nextSmaller, nextLighter, nextDarker } from './gen
 export type { ClosestOptions, NextOptions } from './generic/closest';
 export { largest, smallest } from './generic/extremes';
 export type { ExtremeOptions } from './generic/extremes';
-export { furthestFrom } from './color/furthest-from';
+export { furthestFrom } from './generic/furthest-from';
+export type { FurthestFromOptions } from './generic/furthest-from';
 export { mostVivid } from './color/most-vivid';
 export { leastVivid } from './color/least-vivid';
 export { lightest, darkest } from './color/lightest-darkest';
@@ -100,11 +101,14 @@ export function registerBuiltinFunctions(book: {
 			direction: options.direction, upTo, minDistance: options.minDistance,
 		});
 	});
+	book.registerFunction('furthestFrom', (targetValue: string, scope: Scope, ...rest: unknown[]) => {
+		const { readableOn, options } = splitReadableArgs<{ not?: string[]; readableContrast?: number; maxDistance?: number }>(rest);
+		return furthestFromImpl(targetValue, scope, ex('furthestFrom', scope, options.not), readableOn, options.readableContrast, options.maxDistance);
+	});
 	book.registerFunction('largest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => largestImpl(scope, { ...options, not: ex('largest', scope, options?.not) }));
 	book.registerFunction('smallest', (scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }) => smallestImpl(scope, { ...options, not: ex('smallest', scope, options?.not) }));
 	// The targetless pool selectors share one shape: (pool, readableOn?, options).
 	const poolSelectors: Array<[string, (scope: Scope, not: string[], readableOn: string | null, readableContrast?: number, type?: Kind) => string]> = [
-		['furthestFrom', furthestFromImpl],
 		['mostVivid', mostVividImpl],
 		['leastVivid', leastVividImpl],
 		['lightest', lightestImpl],

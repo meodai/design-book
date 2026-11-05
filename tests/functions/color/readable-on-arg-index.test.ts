@@ -5,7 +5,7 @@ import { mostVivid } from '../../../src/functions/color/most-vivid';
 import { leastVivid } from '../../../src/functions/color/least-vivid';
 import { lightest, darkest } from '../../../src/functions/color/lightest-darkest';
 import { closest } from '../../../src/functions/generic/closest';
-import { furthestFrom } from '../../../src/functions/color/furthest-from';
+import { furthestFrom } from '../../../src/functions/generic/furthest-from';
 import { readableOnArgIndex } from '../../../src/functions/color/readable';
 
 // The backdrop is stored as a trailing argument; readableOnArgIndex finds it
@@ -25,7 +25,7 @@ describe('readableOnArgIndex', () => {
     ['leastVivid', (o?: any) => leastVivid(ref('pool'), o)],
     ['lightest', (o?: any) => lightest(ref('pool'), o)],
     ['darkest', (o?: any) => darkest(ref('pool'), o)],
-    ['furthestFrom', (o?: any) => furthestFrom(ref('pool'), o)],
+    ['furthestFrom', (o?: any) => furthestFrom(color('#ff0000'), ref('pool'), o)],
     ['closest', (o?: any) => closest(color('#ff0000'), ref('pool'), o)],
   ] as const;
 

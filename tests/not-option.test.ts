@@ -4,7 +4,7 @@ import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { minContrastWith } from '../src/functions/color/min-contrast';
 import { closest } from '../src/functions/generic/closest';
-import { furthestFrom } from '../src/functions/color/furthest-from';
+import { furthestFrom } from '../src/functions/generic/furthest-from';
 import { mostVivid } from '../src/functions/color/most-vivid';
 import { leastVivid } from '../src/functions/color/least-vivid';
 
@@ -101,13 +101,12 @@ describe('"not" option excludes keys from the candidate pool', () => {
     palette.set('outlier', color('#ffffff')); // by far the most distant
 
     const ui = book.addScope('ui');
-    ui.set('out',           furthestFrom(ref('palette')));
-    ui.set('outNotOutlier', furthestFrom(ref('palette'), { not: [ref('palette.outlier')] }));
+    ui.set('out',           furthestFrom(color('#000000'), ref('palette')));
+    ui.set('outNotOutlier', furthestFrom(color('#000000'), ref('palette'), { not: [ref('palette.outlier')] }));
 
     expect(book.resolve('ui.out')).toBe('#ffffff');
-    // Without the outlier, the survivors are all clustered near black; the
-    // furthest of them is no longer #ffffff.
-    expect(book.resolve('ui.outNotOutlier')).not.toBe('#ffffff');
+    // Without the outlier, the furthest from black is the lightest grey left.
+    expect(book.resolve('ui.outNotOutlier')).toBe('#202020');
   });
 
   it('leastVivid skips excluded keys', () => {

@@ -4,6 +4,40 @@ All notable changes to Design Book are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-11-05
+
+### Changed
+
+- **`furthestFrom` takes a target**: `furthestFrom(target, scope, options?)`
+  is the member of the target's kind furthest from it, the mirror of
+  `closest`: colors by OKLab distance, sizes by value (same unit), text
+  styles by font size. The targetless "odd one out" form and its `type`
+  option are gone; pass the value to measure from.
+
+### Added
+
+- **`maxDistance`** on `furthestFrom`: the furthest member that is no
+  further than that (OKLab distance for colors, the target's unit for sizes
+  and text styles). Nothing within it throws.
+
+## [0.19.0] - 2026-11-04
+
+### Added
+
+- **`inherited(ref, levels?)`** reads a reference further up the `extends`
+  chain, replacing `inParent` / `inRoot`.
+- **`source(ref, hops?)`** follows a reference to the token it refers to,
+  where a member is named (a `sibling` anchor or `toward`, a `not` entry).
+
+### Changed
+
+- **`sibling(anchor, scope?, steps?, options?)`** walks the anchor's own
+  scope unless a scale is named; with one it follows the anchor's
+  references, or the member a selector picked, into it.
+- **`not` entries** name a pool key, an inherited member's source key, what
+  their references lead into, or what a selector picked from that pool;
+  anything else throws.
+
 ## [0.18.0] - 2026-11-04
 
 ### Changed

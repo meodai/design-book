@@ -6,7 +6,7 @@ import {
 import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
-// Item 6: bestContrastWith, closest and furthestFrom already serialize
+// Item 6: bestContrastWith, closest and furthestFrom serialize
 // their `not` option (it's set generically via fn.options), but their
 // parsers threw away everything past the required positional arguments —
 // so the exclusion list silently vanished on every round trip.
@@ -50,7 +50,7 @@ describe('bestContrastWith / closest / furthestFrom options round-trip', () => {
 
   it('round-trips furthestFrom with a not-list', () => {
     const ui = book.addScope('ui-06c');
-    const original = furthestFrom(brand, { not: ['brand-06.a', 'brand-06.b'] });
+    const original = furthestFrom(ref('brand-06.a'), brand, { not: ['brand-06.a', 'brand-06.b'] });
     ui.set('outlier', original);
 
     const serialized = getTokenDisplayValue(ui, 'outlier');

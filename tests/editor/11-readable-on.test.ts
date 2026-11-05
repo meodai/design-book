@@ -35,7 +35,7 @@ describe('readableOn in the editor', () => {
     ['lightest',     () => lightest(pool, { readableOn: ref('bg-10.white'), readableContrast: 7 })],
     ['darkest',      () => darkest(pool, { readableOn: ref('bg-10.white') })],
     ['closest', () => closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white') })],
-    ['furthestFrom', () => furthestFrom(pool, { readableOn: ref('bg-10.white') })],
+    ['furthestFrom', () => furthestFrom(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), maxDistance: 0.4 })],
     ['bestContrastWith', () => bestContrastWith(color('#ffff00'), pool, { readableOn: ref('bg-10.white'), not: ['pool-10.gray'] })],
     ['minContrastWith', () => minContrastWith(color('#ffff00'), pool, { minContrast: 1.5, readableOn: ref('bg-10.white'), readableContrast: 3 })],
   ];

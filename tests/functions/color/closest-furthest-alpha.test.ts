@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { closestImpl } from '../../../src/functions/generic/closest';
-import { furthestFromImpl } from '../../../src/functions/color/furthest-from';
+import { furthestFromImpl } from '../../../src/functions/generic/furthest-from';
 import { color } from '../../../src/tokens';
 
 function pool(entries: Record<string, string>) {
@@ -37,14 +37,14 @@ describe('closest and translucent candidates', () => {
 
 describe('furthestFrom and translucent candidates', () => {
   it('judges a translucent candidate composited over the readableOn backdrop', () => {
-    // Opaque, the hairline is pure black and the outlier among the reds; on
-    // white it reads as #f2f2f2, and the blue is then the odd one out.
+    // Opaque, the hairline is pure black and the furthest from white; on
+    // white it reads as #f2f2f2, and the blue is then the furthest.
     const s = pool({
       hair: '#0000000d',
       pink: '#ffdddd',
-      rose: '#ffcccc',
       blue: '#0000ff',
     });
-    expect(furthestFromImpl(s, [], '#ffffff', 1)).toBe('#0000ff');
+    expect(furthestFromImpl('#ffffff', s)).toBe('#0000000d');
+    expect(furthestFromImpl('#ffffff', s, [], '#ffffff', 1)).toBe('#0000ff');
   });
 });

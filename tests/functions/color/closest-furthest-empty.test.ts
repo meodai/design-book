@@ -3,7 +3,7 @@ import { DesignBook } from '../../../src/design-book';
 import { color, ref, string } from '../../../src/tokens';
 import { FunctionError } from '../../../src/errors';
 import { closest, closestImpl } from '../../../src/functions/generic/closest';
-import { furthestFrom, furthestFromImpl } from '../../../src/functions/color/furthest-from';
+import { furthestFrom, furthestFromImpl } from '../../../src/functions/generic/furthest-from';
 
 // Like every other color selector, closest / furthestFrom throw instead
 // of handing back a transparent '#00000000' nobody asked for.
@@ -35,15 +35,15 @@ describe('closest / furthestFrom with nothing to pick', () => {
     const book = new DesignBook('test');
     const empty = book.addScope('empty');
     const ui = book.addScope('ui');
-    ui.set('far', furthestFrom(ref('empty')));
-    expect(() => book.resolve('ui.far')).toThrow(/furthestFrom: scope "empty" has no colors, sizes or text styles/);
+    ui.set('far', furthestFrom(color('#ff0000'), ref('empty')));
+    expect(() => book.resolve('ui.far')).toThrow(/furthestFrom: scope "empty" has no colors to compare/);
   });
 
   it('furthestFrom throws when `not` empties the pool', () => {
     const book = new DesignBook('test');
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
-    expect(() => furthestFromImpl(p, ['p.red'])).toThrow(FunctionError);
+    expect(() => furthestFromImpl('#00ff00', p, ['p.red'])).toThrow(FunctionError);
   });
 
   it('still works through a reference target', () => {

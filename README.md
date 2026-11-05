@@ -100,12 +100,12 @@ nextDarker(target, ref('scope'), { minDistance })     // closest, darker
 closest(target, ref('scope'), { upTo: ref('.page') })  // closest on the page's side
 bestContrastWith(target, ref('scope'))                // Highest contrast
 minContrastWith(target, ref('scope'), { minContrast }) // Lowest contrast that reaches minContrast
-furthestFrom(ref('scope'))                            // Most distant from the others
+furthestFrom(target, ref('scope'), { maxDistance? }) // Most distant member of the target's kind
 lightest(ref('scope')) / darkest(ref('scope'))        // Extremes of lightness (colors)
 largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes, text styles)
 ```
 
-**The target decides the kind.** A pool may hold colors, sizes and text styles side by side; a comparison only looks at the members of the target's kind and skips the rest. Sizes are compared within one unit (`px` with `px`, `rem` with `rem` — there is no root size to convert with), and `typography()` text styles with text styles, by their font size. Nothing of that kind in the pool throws and says so: *closest: scope "brand" has no text styles in rem*. Functions without a target take their kind from their name (`lightest` colors, `largest` sizes and text styles), and `furthestFrom` / `largest` / `smallest` take `{ type: 'color' | 'size' | 'text' }` when a pool holds more than one group.
+**The target decides the kind.** A pool may hold colors, sizes and text styles side by side; a comparison only looks at the members of the target's kind and skips the rest. Sizes are compared within one unit (`px` with `px`, `rem` with `rem` — there is no root size to convert with), and `typography()` text styles with text styles, by their font size. Nothing of that kind in the pool throws and says so: *closest: scope "brand" has no text styles in rem*. Functions without a target take their kind from their name (`lightest` colors, `largest` sizes and text styles), and `largest` / `smallest` take `{ type: 'size' | 'text' }` when a pool holds more than one group.
 
 | | Colors | Sizes | Text styles |
 |---|---|---|---|
@@ -114,10 +114,18 @@ largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes
 | `minDistance` | OKLCH lightness, 0–1 | the target's unit | the target's unit |
 | `bestContrastWith` / `minContrastWith` | WCAG luminance ratio | ratio of the two sizes | ratio of the font sizes |
 | `furthestFrom` | OKLab distance | value | font size |
+| `maxDistance` (`furthestFrom`) | OKLab distance, 0 to about 1 | the target's unit | the target's unit |
 | extremes | `lightest` / `darkest` | `largest` / `smallest` | `largest` / `smallest` |
 | `readableOn` | yes | — | — |
 
 **`closest` and its direction.** Colors are compared by perceptual distance (Euclidean in OKLab), so `nextLighter` from a blue is the nearest lighter *blue*, not a yellow that happens to be the next step up in lightness. `nextLarger` / `nextSmaller` / `nextLighter` / `nextDarker` are `closest` with `direction: 'larger' | 'smaller' | 'lighter' | 'darker'` — the editor writes them back that way. `upTo: ref('.page')` takes the side from where another value lies and stops there: one rule that is lighter on a light page and darker on a dark one, or that steps a size upTo another. `minDistance` is the gap the pick must clear past the target. The target does not need to be a member, and the pool needs no order.
+
+**`furthestFrom`** is its mirror: the member that looks least like the target, by the same measure. An accent that stands apart from the surface, a display size far from the body. `maxDistance` keeps the pick in reach: the furthest member no further than that.
+
+```typescript
+ui.set('accent',  furthestFrom(ref('ui.surface'), ref('palette')));
+ui.set('display', furthestFrom(ref('text.body'), ref('text'), { maxDistance: 2 })); // rem
+```
 
 ```typescript
 // scope.space = { xs: 4px, s: 8px, m: 12px, l: 16px, xl: 24px }

@@ -142,17 +142,16 @@ describe('largest / smallest / furthestFrom', () => {
     expect(() => book.resolve('ui.big2')).toThrow(/mixes/);
   });
 
-  it('furthestFrom compares sizes when asked, colors by default', () => {
+  it('furthestFrom compares what the target is: colors, sizes or text styles', () => {
     const { book, ui } = mixed();
-    const sizes = book.addScope('sizes');
-    sizes.set('a', px(8));
-    sizes.set('b', px(10));
-    sizes.set('c', px(12));
-    sizes.set('d', px(48));
-    ui.set('odd', furthestFrom(ref('sizes')));
-    expect(book.resolve('ui.odd')).toBe('48px');
-    ui.set('color', furthestFrom(ref('brand')));
-    expect(['#2d60a5', '#8fb3ff', '#13254a']).toContain(book.resolve('ui.color'));
+    ui.set('farSize', furthestFrom(px(10), ref('brand')));
+    expect(book.resolve('ui.farSize')).toBe('40px');
+    ui.set('farRem', furthestFrom(rem(1), ref('brand')));
+    expect(book.resolve('ui.farRem')).toBe('3rem');
+    ui.set('farColor', furthestFrom(color('#13254a'), ref('brand')));
+    expect(book.resolve('ui.farColor')).toBe('#8fb3ff');
+    ui.set('farText', furthestFrom(ref('type.small'), ref('type')));
+    expect(book.resolve('ui.farText')).not.toBe(book.resolve('type.small'));
   });
 });
 

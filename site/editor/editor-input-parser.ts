@@ -518,12 +518,13 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return smallest(getScopeArg(parseArg(args[0], book)), parseSelectorTail('smallest', args.slice(1), book) as any);
   },
 
-  // furthestFrom(scope, readableOn?, options?)
-  furthestFrom(argsStr, book, currentScope) {
+  // furthestFrom(target, scope, readableOn?, options?)
+  furthestFrom(argsStr, book) {
     const args = splitArgs(argsStr);
-    if (args.length < 1) throw new Error('furthestFrom requires 1 argument');
-    const scope = getScopeArg(parseArg(args[0], book));
-    return furthestFrom(scope, parseSelectorTail('furthestFrom', args.slice(1), book));
+    if (args.length < 2) throw new Error('furthestFrom requires 2 arguments: a target and a scope');
+    const target = getTokenArg(parseArg(args[0], book));
+    const scope = getScopeArg(parseArg(args[1], book));
+    return furthestFrom(target, scope, parseSelectorTail('furthestFrom', args.slice(2), book));
   },
 
   // lightest(scope, readableOn?, options?) / darkest(scope, readableOn?, options?)
@@ -770,6 +771,8 @@ function parseSelectorTail(
       options.minContrast = parseFloat(valueStr);
     } else if (key === 'minDistance') {
       options.minDistance = parseFloat(valueStr);
+    } else if (key === 'maxDistance' && name === 'furthestFrom') {
+      options.maxDistance = parseFloat(valueStr);
     } else if (key === 'type') {
       options.type = parseQuotedString(valueStr) as 'color' | 'size' | 'text';
     } else if (key === 'direction') {
@@ -802,6 +805,8 @@ function parseNotList(valueStr: string, book?: DesignBook): Array<ReferenceValue
 type SelectorTailOptions = {
   type?: 'color' | 'size' | 'text';
   minDistance?: number;
+  /** furthestFrom only: how far the pick may be. */
+  maxDistance?: number;
   direction?: 'lighter' | 'darker' | 'larger' | 'smaller';
   upTo?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
-import { furthestFrom } from '../src/functions/color/furthest-from';
+import { furthestFrom } from '../src/functions/generic/furthest-from';
 import { lighten } from '../src/functions/color/lighten';
 import { CircularDependencyError } from '../src/errors';
 
@@ -17,8 +17,8 @@ describe('mutual pool references between function tokens', () => {
     s.set('white', color('#ffffff'));
     s.set('black', color('#000000'));
     s.set('red', color('#e03e1a'));
-    // bg picks the color furthest from the rest of the pool …
-    s.set('bg', furthestFrom(ref('semantic')));
+    // bg picks the pool's color furthest from red …
+    s.set('bg', furthestFrom(ref('semantic.red'), ref('semantic')));
     // … while text picks the best contrast against bg, from the same pool.
     s.set('text', bestContrastWith(ref('semantic.bg'), ref('semantic')));
 

@@ -107,7 +107,7 @@ export function measuredGroups(scope: Scope, not: ReadonlyArray<string> = []): M
 }
 
 /**
- * For a function without a target (`largest`, `furthestFrom`): the one group
+ * For a function without a target (`largest` / `smallest`): the one group
  * of sizes or text styles the pool holds, narrowed by `type` when given.
  * Several groups (px and rem, sizes and text styles) are ambiguous and throw.
  */
