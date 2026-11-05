@@ -6,7 +6,7 @@
 import { converter, formatHex, parse, wcagContrast } from "culori";
 import { Poline, positionFunctions } from "poline/picker"; // also defines <poline-picker>
 import { generateColorRamp, colorUtils } from "rampensau";
-import "./sliders.js";
+import "../components/slider/slider.js";
 import "hdr-color-input";
 import { highlight } from "sugar-high";
 import {

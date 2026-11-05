@@ -1,0 +1,163 @@
+/* The height the ticks round the handle rise by while it is used. */
+@property --wave {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* How close the handle is to either end tick, 0 to 1. */
+@property --near-lo {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --near-hi {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* ─── Slider: a ruler with a marker ──────────────────────────────────
+   One row tall, so it sits exactly in a table cell, and its track lies
+   on the row's own bottom rule: a hairline on the last pixel, in the
+   ink like the end ticks; the small ticks take the rule's color. Ticks
+   rise from it only (slider.js sets --ticks from min, max and step;
+   the ends taller). The handle is a diamond, a square on its corner,
+   filled with the paper and outlined in the ink, its bottom corner on
+   the ticks; it grows a little while hovered or focused. It is drawn as
+   background layers of the thumb.
+
+   While it is used (pressed or focused from the keyboard) the handle
+   grows to full size and the ticks round it rise in a wave up to its
+   tip, as on RYBitten; the handle itself never moves up or down. Each tick is a slice of one gradient,
+   so the wave is a second, tall set of ticks under a paper cover with a
+   dome cut out of it at the handle (--p, set by slider.js).
+
+   The end ticks are taller, but they sink to the tip while the handle
+   is over them (--near-lo, --near-hi,
+   0 to 1, set by slider.js), so at min and max the tip lands on the end
+   tick, as on RYBitten. */
+input[type="range"] {
+  --ticks: 10;
+  --thumb: 13px; /* the diamond's width */
+  --wave-peak: 4px; /* how high the wave lifts the ticks: to the tip */
+  --tip: calc(var(--row) - 7px - var(--wave-peak)); /* the bottom corner */
+  /* an end tick: 13px, down to the tick under the tip when the handle is on it */
+  --lo-h: calc(13px - (6px - var(--wave-peak)) * var(--near-lo));
+  --hi-h: calc(13px - (6px - var(--wave-peak)) * var(--near-hi));
+  /* small ticks in the table's rule color (the ledger's mix outside a
+     table); the bottom line in the ink, like the end ticks */
+  --tick-ink: var(--lg-rule, color-mix(in srgb, currentColor 28%, var(--pp, var(--paper))));
+  --track-ink: currentColor;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  display: block;
+  min-width: 0;
+  height: var(--row);
+  margin: 0;
+  /* The handle travels the whole width, so its tip runs from half a
+     handle in from the left to half a handle in from the right: the
+     ruler is drawn in that inset box (--in), its end ticks centred
+     exactly under the tip at min and max. */
+  --in: calc(var(--thumb) / 2 - 0.5px);
+  --ruler: calc(100% - var(--in) * 2);
+  --ticks-img: repeating-linear-gradient(to right, var(--tick-ink) 0 1px, transparent 1px calc((100% - 1px) / var(--ticks)));
+  padding: 0;
+  color: inherit;
+  background:
+    /* the two ends */
+    linear-gradient(currentColor, currentColor) left var(--in) bottom 0 / 1px var(--lo-h) no-repeat,
+    linear-gradient(currentColor, currentColor) right var(--in) bottom 0 / 1px var(--hi-h) no-repeat,
+    /* a tick per step */
+    var(--ticks-img) left var(--in) bottom 0 / var(--ruler) 7px no-repeat,
+    /* the track, in the ink, on the row's rule */
+    linear-gradient(var(--track-ink), var(--track-ink)) left var(--in) bottom 0 / var(--ruler) 1px no-repeat;
+  accent-color: currentColor;
+  cursor: ew-resize;
+  transition:
+    --wave 0.3s cubic-bezier(0.3, 0.7, 0, 1),
+    --near-lo 0.3s cubic-bezier(0.3, 0.7, 0, 1),
+    --near-hi 0.3s cubic-bezier(0.3, 0.7, 0, 1);
+}
+
+input[type="range"]:is(:active, :focus-visible) {
+  --wave: var(--wave-peak);
+  background:
+    linear-gradient(currentColor, currentColor) left var(--in) bottom 0 / 1px var(--lo-h) no-repeat,
+    linear-gradient(currentColor, currentColor) right var(--in) bottom 0 / 1px var(--hi-h) no-repeat,
+    var(--ticks-img) left var(--in) bottom 0 / var(--ruler) 7px no-repeat,
+    linear-gradient(var(--track-ink), var(--track-ink)) left var(--in) bottom 0 / var(--ruler) 1px no-repeat,
+    /* the cover, with the dome cut out at the handle */
+    radial-gradient(ellipse var(--row) calc(7px + var(--wave)) at calc(var(--p, 0) * 100%) 100%, transparent 99%, var(--pp, var(--paper)) 100%) left var(--in) top 0 / var(--ruler) 100% no-repeat,
+    /* the tall ticks */
+    var(--ticks-img) left var(--in) bottom 0 / var(--ruler) 100% no-repeat;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--row);
+  background: none;
+  border: 0;
+}
+
+input[type="range"]::-moz-range-track {
+  height: var(--row);
+  background: none;
+  border: 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  --ink: currentColor;
+  --paper-fill: var(--pp, var(--paper));
+  width: var(--thumb);
+  height: var(--row);
+  /* a diamond: four quarter-squares, each a triangle with its outer
+     edge in the ink; its bottom corner is the tip */
+  --d: calc(var(--thumb) / 2);
+  background:
+    linear-gradient(to bottom right, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% - var(--d) / 2) calc(var(--tip) - var(--d) * 2) / var(--d) var(--d) no-repeat,
+    linear-gradient(to bottom left, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% + var(--d) / 2) calc(var(--tip) - var(--d) * 2) / var(--d) var(--d) no-repeat,
+    linear-gradient(to top right, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% - var(--d) / 2) calc(var(--tip) - var(--d)) / var(--d) var(--d) no-repeat,
+    linear-gradient(to top left, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% + var(--d) / 2) calc(var(--tip) - var(--d)) / var(--d) var(--d) no-repeat;
+  border: 0;
+  border-radius: 0;
+  transform: scale(0.8);
+  transform-origin: 50% var(--tip);
+  transition: transform 0.15s;
+}
+
+input[type="range"]::-moz-range-thumb {
+  --ink: currentColor;
+  --paper-fill: var(--pp, var(--paper));
+  width: var(--thumb);
+  height: var(--row);
+  /* a diamond: four quarter-squares, each a triangle with its outer
+     edge in the ink; its bottom corner is the tip */
+  --d: calc(var(--thumb) / 2);
+  background:
+    linear-gradient(to bottom right, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% - var(--d) / 2) calc(var(--tip) - var(--d) * 2) / var(--d) var(--d) no-repeat,
+    linear-gradient(to bottom left, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% + var(--d) / 2) calc(var(--tip) - var(--d) * 2) / var(--d) var(--d) no-repeat,
+    linear-gradient(to top right, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% - var(--d) / 2) calc(var(--tip) - var(--d)) / var(--d) var(--d) no-repeat,
+    linear-gradient(to top left, transparent 50%, var(--ink) 50% calc(50% + 1px), var(--paper-fill) calc(50% + 1px)) calc(50% + var(--d) / 2) calc(var(--tip) - var(--d)) / var(--d) var(--d) no-repeat;
+  border: 0;
+  border-radius: 0;
+  transform: scale(0.8);
+  transform-origin: 50% var(--tip);
+  transition: transform 0.15s;
+}
+
+/* Focus shows as the grown handle and the wave, not as a box. */
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]:is(:hover, :active, :focus-visible)::-webkit-slider-thumb {
+  transform: scale(1);
+}
+
+input[type="range"]:is(:hover, :active, :focus-visible)::-moz-range-thumb {
+  transform: scale(1);
+}

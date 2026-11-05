@@ -18,7 +18,7 @@ Run a single test file: `npx vitest run tests/graph.test.ts`
 
 The site is one Astro project (`astro.config.mjs`, sources in `site/`):
 `site/pages/` (index, tour, article, editor, naming; the docs are the README, linked from the footer), `site/layouts/Page.astro`,
-shared components in `site/components/` (Footer, InstallBar: the bottom bar with the name and the install line, Logo).
+shared components in `site/components/` (Footer, InstallBar: the bottom bar with the name and the install line, Logo, and `slider/`: the range-input ruler, `slider.css` + `slider.js`, imported once per page; it styles every native `<input type="range">`, its track is the row's bottom rule and its ticks rise from it).
 Page markup sits in `site/partials/*.html` (raw HTML: its code samples are
 full of braces) with `{{base}}` for the site root and `<!--brand-->` where the
 top line goes. Each page's scripts and stylesheets sit in a folder of their

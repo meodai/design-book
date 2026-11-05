@@ -28,7 +28,7 @@ import 'hdr-color-input';
 // article's demos and map its sections on the rails.
 import './dress.js';
 import '../marketing/docs-rails.js';
-import '../marketing/sliders.js';
+import '../components/slider/slider.js';
 
 // ---------------------------------------------------------------------------
 // 1. Token setup
