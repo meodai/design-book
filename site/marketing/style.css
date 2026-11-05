@@ -2136,7 +2136,7 @@ h1, h2, h3 {
 }
 /* `.code` carries a named grid-area from the selector panels; not here. */
 .ref-css { margin: 0; grid-area: auto; }
-/* inParent demo: page switch, the ramp with the tokens marked, two buttons */
+/* inherited demo: the ramp with the tokens marked, the card with both buttons */
 .ref-modes { display: flex; flex-wrap: wrap; gap: 6px; }
 .ref-modes button {
   font: inherit;
@@ -2171,7 +2171,7 @@ h1, h2, h3 {
   padding: 20px;
   border: 1px solid var(--rule);
 }
-.ref-buttons div { display: grid; gap: 6px; justify-items: start; }
+.ref-buttons > div { display: grid; gap: 6px; justify-items: start; }
 .ref-buttons span { font-family: var(--font-mono); font-size: 11px; }
 .ref-buttons button {
   font: inherit;

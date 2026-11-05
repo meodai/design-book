@@ -35,7 +35,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <svg viewBox="-200 -200 400 400" aria-hidden="true">
         <g class="hi-ring" id="hi-ring"></g>
       </svg>
-      <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hsl" no-alpha=""></color-input>
+      <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hex" no-alpha=""></color-input>
       <div class="hi-pill">
         <select class="hi-fn" id="hi-fn" aria-label="Selector function">
           <option value="bestContrastWith">bestContrastWith</option>
@@ -68,7 +68,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <div class="graph-controls">
         <label>
           <span>brand</span>
-          <color-input id="graph-brand" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+          <color-input id="graph-brand" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
         </label>
         <button type="button" id="graph-invert">Flip ramp</button>
       </div>
@@ -76,11 +76,11 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     <div class="graph-viz blueprint">
       <div id="graph-viz" aria-label="Dependency graph"></div>
       <!-- A card built from the book's ui tokens, painted by script.js. -->
-      <div class="graph-card" id="graph-card" aria-hidden="true">
-        <span class="graph-card-line graph-card-line--title"></span>
-        <span class="graph-card-line"></span>
-        <span class="graph-card-line graph-card-line--short"></span>
-        <span class="graph-card-button"><span class="graph-card-line"></span></span>
+      <div class="ui-card graph-card" id="graph-card" aria-hidden="true">
+        <span class="ui-card-line ui-card-line--title"></span>
+        <span class="ui-card-line"></span>
+        <span class="ui-card-line ui-card-line--short"></span>
+        <span class="ui-card-button"><span class="ui-card-line"></span></span>
       </div>
     </div>
   </section>
@@ -90,12 +90,16 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     <div class="ref-feature-body split">
       <h2 class="rule-title" id="ref-title">References instead of copies.</h2>
       <div class="ref-feature-text">
-        <p>A hex code pasted in two places is two decisions, and sooner or
-          later they drift apart. <code>ref()</code> stores where a value comes
-          from, the key and not the value, so changing the source changes
-          everything that points at it. Refs can chain, cross scopes and read a
-          single field of a type style, and in CSS the link stays a
+        <p>This part you already know from Figma variables and CSS custom
+          properties. A hex code pasted in two places is two decisions, and
+          sooner or later they drift apart; <code>ref()</code> stores where a
+          value comes from, the key and not the value, so changing the source
+          changes everything that points at it. Refs chain, cross scopes and
+          read a single field of a type style, and in CSS the link stays a
           <code>var()</code>.</p>
+        <p>It is the foundation, not the point. A reference can only say
+          <em>use that one</em>; everything after this section is about the
+          tokens that decide which one.</p>
       </div>
 
       <Folder>
@@ -108,19 +112,10 @@ ui.set('focus', ref('ui.link'));
 ui.set('border', ref('ui.link'));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="ref-stage">
-            <label class="ref-control">
-              <color-input id="ref-source" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
-              <span>brand.primary</span>
-            </label>
             <div class="extends-pane">
-              <div class="extends-pane-head">
-                <span class="extends-pane-name">ui</span>
-                <span class="extends-pane-meta">reads <code>brand</code></span>
-              </div>
               <div class="extends-rows extends-rows--keys" id="ref-rows"></div>
             </div>
             <pre is:raw class="code ref-css" id="ref-css" aria-label="CSS output"></pre>
-            <figcaption>Change the source. Every ref follows, and the CSS keeps the chain.</figcaption>
           </figure>
         </Sheet>
       </Folder>
@@ -130,11 +125,17 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
       <h3 class="rule-title" id="ref-relative-title">Relative refs.</h3>
       <div class="ref-feature-text">
         <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
-          that key in whichever scope reads the token. A variant extends its
-          base and overrides one value; every inherited token that reads it
-          relatively picks up the variant's value. Base and variant end up side
-          by side, as <code>--button-hover</code> and
-          <code>--button-danger-hover</code>.</p>
+          that key in whichever scope reads the token, much like
+          <code>this</code> in a method, or a CSS <code>var()</code> that is
+          looked up on the element using it.</p>
+        <p>That is what makes <a href="#extends-title">extending scopes</a>
+          cheap. A variant overrides one value, and every inherited token that
+          reads it relatively follows; nothing you already wrote has to be
+          written again. Base and variant end up side by side, as
+          <code>--button-hover</code> and <code>--button-danger-hover</code>.</p>
+        <p>It also makes a scope speak about itself. A button's text can be
+          <code>bestContrastWith(ref('.bg'), brand)</code>: the best contrast
+          to its own background, whichever button it ends up in.</p>
       </div>
 
       <Folder>
@@ -151,26 +152,32 @@ book.addScope('button-danger', {
 }).set('bg', ref('brand.error'));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="ref-stage">
-            <label class="ref-control">
-              <color-input id="ref-danger" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
-              <span>brand.error</span>
-            </label>
             <div class="ref-panes" id="ref-panes"></div>
-            <figcaption>One override. The dimmed rows are inherited, and still follow it.</figcaption>
+            <div class="stub">
+              <label class="ref-control">
+                <color-input id="ref-danger" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
+                <span>brand.error</span>
+              </label>
+            </div>
           </figure>
         </Sheet>
       </Folder>
     </div>
 
     <div class="ref-feature-body split feature-sub">
-      <h3 class="rule-title" id="ref-parent-title">Reading one level up.</h3>
+      <h3 class="rule-title" id="ref-parent-title">Up the scope tree: inherited.</h3>
       <div class="ref-feature-text">
-        <p><code>inParent(ref('.interaction'))</code> is the interaction color
-          the scope would have inherited, so a scope can override a value in
-          terms of the one it replaces. Here a hover state is one step from its
-          parent's interaction color toward its parent's background: lighter on
-          a light page, darker on a dark one, with the same rule.
-          <code>inRoot</code> reads the top of the chain instead.</p>
+        <p>A token sits in two trees. Its <em>scope</em> may extend another
+          scope, and its <em>value</em> may refer to another token. Design Book
+          never climbs either on its own; two words climb them on purpose.</p>
+        <p><code>inherited</code> climbs the scope tree. A scope that overrides
+          <code>interaction</code> cannot read <code>ref('.interaction')</code>
+          to work out the new value: that is the token it is defining, and the
+          book refuses the cycle. <code>inherited(ref('.interaction'))</code>
+          reads the one it replaces, the value it would have inherited;
+          <code>inherited(ref, 2)</code> two scopes up, <code>inherited(ref,
+          'root')</code> the top. Here a variant's hover is its parent's
+          interaction color, two steps lighter along the blue ramp.</p>
       </div>
 
       <Folder>
@@ -181,19 +188,50 @@ base.set('interaction', ref('blue.600'));
 const hover = book.addScope('base-hover', {
   extends: 'base',
 });
+// two steps lighter than the one it replaces
 hover.set('interaction', sibling(
-  inParent(ref('.interaction')),
-  { toward: inParent(ref('.background')) },
+  inherited(ref('.interaction')), ref('blue'), -2,
 ));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="ref-stage">
-            <div class="ref-modes" id="ref-parent-modes" role="group" aria-label="base.background">
-              <button type="button" data-background="blue.50" class="is-active"><code>base.background</code> blue.50</button>
-              <button type="button" data-background="blue.900"><code>base.background</code> blue.900</button>
-            </div>
             <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
             <div class="ref-buttons" id="ref-buttons"></div>
-            <figcaption>One rule. The hover steps toward whatever the parent's page is.</figcaption>
+          </figure>
+        </Sheet>
+      </Folder>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-source-title">Back to the value: source.</h3>
+      <div class="ref-feature-text">
+        <p><code>source</code> climbs the other tree, the references.
+          <code>card.interaction = ref('blue.600')</code>, so
+          <code>source(ref('.interaction'))</code> is <code>blue.600</code>,
+          the token it refers to; <code>source(ref, 'root')</code> follows
+          the references to the token where the value is written.</p>
+        <p>It is how you move relative to a value in the scale it was
+          generated in: a step lighter, a size up, without looking up the next
+          shade and typing it in. When you know the scale, name it:
+          <code>sibling(ref('.interaction'), ref('blue'), -2)</code>. When a
+          rule is shared by themes whose colors come from different ramps, let
+          it go back to wherever the value comes from: one rule, a blue button
+          and a green one.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const button = book.addScope('button');
+button.set('interaction', ref('blue.500'));
+// two steps lighter, in whichever ramp
+// the interaction color comes from
+button.set('hover', sibling(
+  source(ref('.interaction'), 'root'), -2,
+));
+
+book.addScope('button-green', { extends: 'button' })
+  .set('interaction', ref('green.500'));</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="ref-stage">
+            <div class="ref-buttons ref-themes" id="ref-themes"></div>
           </figure>
         </Sheet>
       </Folder>
@@ -264,7 +302,6 @@ hover.set('interaction', sibling(
 ))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>One palette · six surfaces · text auto-picked.</figcaption>
               <div class="contrast-row" id="demo-contrast"></div>
               <div class="contrast-palette" id="demo-contrast-palette" aria-label="Palette in use"></div>
             </figure>
@@ -294,11 +331,13 @@ hover.set('interaction', sibling(
             <figure class="demo">
               <figcaption>A stray hue · ranked against the palette · closest wins.</figcaption>
               <div class="closest-stage">
-                <div class="closest-target">
-                  <span class="swatch" id="closest-target-swatch"></span>
-                </div>
-                <div class="closest-arrow" aria-hidden="true">→</div>
                 <div class="closest-ranked" id="closest-ranked"></div>
+              </div>
+              <div class="stub">
+                <label class="closest-target">
+                  <span class="swatch" id="closest-target-swatch"></span>
+                  <span>target</span>
+                </label>
               </div>
             </figure>
           </Sheet>
@@ -353,7 +392,6 @@ hover.set('interaction', sibling(
 ))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>Same surface and palette, three ratios, three answers.</figcaption>
               <div class="min-stage">
                 <div class="min-card">
                   <div class="min-label">ratio 3 · AA large</div>
@@ -394,21 +432,8 @@ hover.set('interaction', sibling(
 ))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>Drag the target. Min-distance filters out steps that are too close.</figcaption>
               <div class="step-stage">
                 <div class="step-scale" id="step-scale" aria-label="Spacing scale"></div>
-                <div class="step-controls">
-                  <label>
-                    <span class="step-lbl">target</span>
-                    <Slider id="step-target" min="0" max="6" step="1" value="3" />
-                    <span class="step-val" id="step-target-val">12px</span>
-                  </label>
-                  <label>
-                    <span class="step-lbl">minDistance</span>
-                    <Slider id="step-min" min="0" max="20" step="1" value="0" />
-                    <span class="step-val" id="step-min-val">0px</span>
-                  </label>
-                </div>
                 <div class="step-readout">
                   <div class="step-cell">
                     <span class="step-key">nextSmaller</span>
@@ -423,6 +448,18 @@ hover.set('interaction', sibling(
                     <span class="step-result" id="step-larger">—</span>
                   </div>
                 </div>
+              </div>
+              <div class="step-controls stub">
+                <label>
+                  <span class="step-lbl">target</span>
+                  <Slider id="step-target" min="0" max="6" step="1" value="3" />
+                  <span class="step-val" id="step-target-val">12px</span>
+                </label>
+                <label>
+                  <span class="step-lbl">minDistance</span>
+                  <Slider id="step-min" min="0" max="20" step="1" value="0" />
+                  <span class="step-val" id="step-min-val">0px</span>
+                </label>
               </div>
             </figure>
           </Sheet>
@@ -447,7 +484,6 @@ hover.set('interaction', sibling(
 ui.set('surface', leastVivid(brand))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>The same palette sorted by chroma, with both ends marked.</figcaption>
               <div class="vivid-stage" id="vivid-stage"></div>
             </figure>
           </Sheet>
@@ -477,13 +513,13 @@ ui.set('soft-ink', lightest(brand, {
 }))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption class="lightness-caption">
+              <div class="lightness-stage" id="lightness-stage"></div>
+              <figcaption class="lightness-caption stub">
                 <label class="lightness-toggle">
                   <input type="checkbox" id="lightness-readable" />
                   readableOn the page surface (4.5:1)
                 </label>
               </figcaption>
-              <div class="lightness-stage" id="lightness-stage"></div>
             </figure>
           </Sheet>
         </Folder>
@@ -512,14 +548,14 @@ ui.set('promo-bg', random(brand, {
 }))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption class="random-caption">
+              <div class="random-stage" id="random-stage"></div>
+              <figcaption class="random-caption stub">
                 <label class="random-seed-lbl">
                   seed
                   <input id="random-seed" class="random-seed-input" type="text" value="spring-2026" spellcheck="false">
                 </label>
                 <button id="random-shuffle" class="random-shuffle" type="button">shuffle</button>
               </figcaption>
-              <div class="random-stage" id="random-stage"></div>
             </figure>
           </Sheet>
         </Folder>
@@ -546,20 +582,20 @@ ui.set('muted',   nth(ramp, 0.5)) // midtone
 ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption class="nth-caption">
+              <div class="nth-stage" id="nth-stage"></div>
+              <figcaption class="nth-caption stub">
                 <label class="nth-index-lbl">
                   index
                   <input id="nth-index" class="nth-index-input" type="text" value="0.5" spellcheck="false">
                 </label>
+                <div class="nth-presets" id="nth-presets">
+                  <button type="button" data-value="0">0</button>
+                  <button type="button" data-value="0.25">0.25</button>
+                  <button type="button" data-value="0.5" class="is-active">0.5</button>
+                  <button type="button" data-value="0.75">0.75</button>
+                  <button type="button" data-value="-1">-1</button>
+                </div>
               </figcaption>
-              <div class="nth-stage" id="nth-stage"></div>
-              <div class="nth-presets" id="nth-presets">
-                <button type="button" data-value="0">0</button>
-                <button type="button" data-value="0.25">0.25</button>
-                <button type="button" data-value="0.5" class="is-active">0.5</button>
-                <button type="button" data-value="0.75">0.75</button>
-                <button type="button" data-value="-1">-1</button>
-              </div>
             </figure>
           </Sheet>
         </Folder>
@@ -570,13 +606,13 @@ ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
     <article class="fn" id="sibling">
       <header class="fn-head">
         <h3 class="rule-title">sibling</h3>
-        <code is:raw class="sig">sibling( ref, offset, { wrap?, not? } )</code>
+        <code is:raw class="sig">sibling( ref, scope?, steps?, { toward?, wrap?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li class="kind-any"><b>any</b> along the scale it comes from</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>One step lighter than whatever the surface is.</em></p>
-          <p class="fn-detail">Steps through the scope a token lives in, relative to that token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. Steps stop at the ends, or go round with <code>wrap</code>.</p>
+          <p class="fn-detail">Steps through a scale, relative to a token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. The scale is the token's own scope, or the one you name (<code>ref('blue')</code>), or wherever <a href="#ref-source-title"><code>source</code></a> leads; it is never guessed. Steps stop at the ends, or go round with <code>wrap</code>; with <code>toward</code> a step goes in the direction of another member, so a hover steps toward the page, lighter on a light one and darker on a dark one.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>ui.set('surface',       ref('gray.g100'))
@@ -584,9 +620,9 @@ ui.set('surface-hover', sibling(ref('gray.g100'), 1))
 ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
           <Sheet name="result" label="Result" front>
             <figure class="demo">
-              <figcaption>Click a tile to move the anchor · pick an offset.</figcaption>
+              <figcaption>Click a tile to move the anchor.</figcaption>
               <div class="sibling-stage" id="sibling-stage"></div>
-              <div class="sibling-controls">
+              <div class="sibling-controls stub">
                 <div class="sibling-offsets" id="sibling-offsets" role="group" aria-label="Offset">
                   <button type="button" data-offset="-2">−2</button>
                   <button type="button" data-offset="-1">−1</button>
@@ -627,9 +663,12 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
 }));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="readable-stage">
-            <div class="readable-controls">
+            <figcaption>Faded members fail the ratio and never reach the ranking.</figcaption>
+            <div class="readable-pool" id="readable-pool"></div>
+            <div class="readable-results" id="readable-results" aria-live="polite"></div>
+            <div class="readable-controls stub">
               <label class="readable-surface">
-                <color-input id="readable-surface" value="#eee9dc" initial-colorspace="hsl" no-alpha=""></color-input>
+                <color-input id="readable-surface" value="#eee9dc" initial-colorspace="hex" no-alpha=""></color-input>
                 <span>ui.surface</span>
               </label>
               <div class="readable-ratios" id="readable-ratios" role="group" aria-label="readableContrast">
@@ -638,9 +677,6 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
                 <button type="button" data-ratio="7">7</button>
               </div>
             </div>
-            <div class="readable-pool" id="readable-pool"></div>
-            <div class="readable-results" id="readable-results" aria-live="polite"></div>
-            <figcaption>Faded members fail the ratio and never reach the ranking.</figcaption>
           </figure>
         </Sheet>
       </Folder>
@@ -670,12 +706,11 @@ for (const shade of ['50','100',...,'950']) {
 }</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="ramp-stage">
-            <div class="ramp-seed">
-              <color-input id="ramp-seed-input" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
+            <div class="ramp-bars" id="ramp-bars"></div>
+            <div class="ramp-seed stub">
+              <color-input id="ramp-seed-input" value="#3c61a0" initial-colorspace="hex" no-alpha=""></color-input>
               <span class="ramp-seed-lbl">brand.primary</span>
             </div>
-            <div class="ramp-arrow" aria-hidden="true">→</div>
-            <div class="ramp-bars" id="ramp-bars"></div>
           </div>
         </Sheet>
       </Folder>
@@ -698,25 +733,27 @@ for (const shade of ['50','100',...,'950']) {
         <Sheet name="code" label="Code"><pre is:raw class="code" id="names-code"></pre></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="names-stage">
-            <div class="names-head">
-              <div class="names-seed">
-                <color-input id="names-seed-input" value="#dab43d" initial-colorspace="hsl" no-alpha=""></color-input>
-              </div>
-              <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
-                <button type="button" data-scheme="intensity" class="is-active">intensity</button>
-                <button type="button" data-scheme="hundreds">hundreds</button>
-                <button type="button" data-scheme="tshirt">tshirt</button>
-                <button type="button" data-scheme="tones">tones</button>
-                <button type="button" data-scheme="objects">objects</button>
-                <button type="button" data-scheme="things">things</button>
-              </div>
-            </div>
-            <label class="names-count">
-              <span>steps</span>
-              <Slider id="names-count" min="3" max="9" value="9" />
-              <b id="names-count-val">9</b>
-            </label>
             <div class="names-rows" id="names-rows" aria-live="polite"></div>
+            <div class="stub">
+              <div class="names-head">
+                <div class="names-seed">
+                  <color-input id="names-seed-input" value="#dab43d" initial-colorspace="hex" no-alpha=""></color-input>
+                </div>
+                <div class="names-schemes" id="names-schemes" role="group" aria-label="Naming scheme">
+                  <button type="button" data-scheme="intensity" class="is-active">intensity</button>
+                  <button type="button" data-scheme="hundreds">hundreds</button>
+                  <button type="button" data-scheme="tshirt">tshirt</button>
+                  <button type="button" data-scheme="tones">tones</button>
+                  <button type="button" data-scheme="objects">objects</button>
+                  <button type="button" data-scheme="things">things</button>
+                </div>
+              </div>
+              <label class="names-count">
+                <span>steps</span>
+                <Slider id="names-count" min="3" max="9" value="9" />
+                <b id="names-count-val">9</b>
+              </label>
+            </div>
           </div>
         </Sheet>
       </Folder>
@@ -751,9 +788,11 @@ palette.set('coral',
 palette.getAllKeys();  // one smooth order</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="order-stage">
-            <div class="order-head">
+            <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
+            <figcaption class="order-caption">Eight colors, inserted in random order.</figcaption>
+            <div class="order-head stub">
               <div class="order-seed">
-                <color-input id="order-seed-input" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
+                <color-input id="order-seed-input" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
                 <span class="order-seed-lbl">brand.primary</span>
               </div>
               <div class="order-modes" id="order-modes" role="group" aria-label="Sort criterion">
@@ -763,8 +802,6 @@ palette.getAllKeys();  // one smooth order</Code></Sheet>
                 <button type="button" data-mode="name">name</button>
               </div>
             </div>
-            <div class="order-swatches" id="order-swatches" aria-live="polite"></div>
-            <figcaption class="order-caption">Eight colors, inserted in random order. Pick a rule and the scope sorts itself again; change the seed for new colors.</figcaption>
           </div>
         </Sheet>
       </Folder>
@@ -855,7 +892,7 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
                   </div>
                 </div>
               </div>
-              <figcaption>One override. Everything derived from it follows; the rest stays dim.</figcaption>
+              <figcaption>Dimmed rows are inherited.</figcaption>
             </figure>
           </Sheet>
         </Folder>
@@ -870,7 +907,7 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
             inherited rows, so only the changes stand out. A full reference keeps
             pointing at the key it names; a <a href="#ref-relative-title">relative
             one</a> reads from the inheriting scope, and
-            <a href="#ref-parent-title"><code>inParent</code></a> reads the value
+            <a href="#ref-parent-title"><code>inherited</code></a> reads the value
             a scope overrides. Once a theme has to change root values across the
             whole system, use layers instead.</p>
         </div>
@@ -924,7 +961,7 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
                   </div>
                 </div>
               </div>
-              <figcaption>Inherited rows dimmed. The overrides are the only thing you read.</figcaption>
+              <figcaption>Dimmed rows are inherited.</figcaption>
             </figure>
           </Sheet>
         </Folder>
@@ -965,7 +1002,6 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
           <figure class="typo-stage">
             <div class="typo-sample typo-sample--heading">Type styles travel whole.</div>
             <div class="typo-sample typo-sample--hero">Variants follow.</div>
-            <figcaption>One scope. Two tokens. The variant reads the rest from its base.</figcaption>
           </figure>
         </Sheet>
       </Folder>
@@ -1087,24 +1123,26 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <div class="mix-stage">
             <div class="mix-row">
-              <color-input id="mix-a" value="#de5331" initial-colorspace="hsl" no-alpha=""></color-input>
               <div class="mix-strip" id="mix-strip" aria-hidden="true"></div>
-              <color-input id="mix-b" value="#3c61a0" initial-colorspace="hsl" no-alpha=""></color-input>
             </div>
-            <label class="mix-space">
-              <span>interpolated in</span>
-              <select id="mix-space-sel">
-                <option value="oklch">oklch</option>
-                <option value="oklab">oklab</option>
-                <option value="lch">lch</option>
-                <option value="lab" selected>lab</option>
-                <option value="hsl">hsl</option>
-                <option value="hwb">hwb</option>
-                <option value="srgb">srgb</option>
-                <option value="srgb-linear">srgb-linear</option>
-                <option value="display-p3">display-p3</option>
-              </select>
-            </label>
+            <div class="stub">
+              <color-input id="mix-a" value="#de5331" initial-colorspace="hex" no-alpha=""></color-input>
+              <color-input id="mix-b" value="#3c61a0" initial-colorspace="hex" no-alpha=""></color-input>
+              <label class="mix-space">
+                <span>interpolated in</span>
+                <select id="mix-space-sel">
+                  <option value="oklch">oklch</option>
+                  <option value="oklab">oklab</option>
+                  <option value="lch">lch</option>
+                  <option value="lab" selected>lab</option>
+                  <option value="hsl">hsl</option>
+                  <option value="hwb">hwb</option>
+                  <option value="srgb">srgb</option>
+                  <option value="srgb-linear">srgb-linear</option>
+                  <option value="display-p3">display-p3</option>
+                </select>
+              </label>
+            </div>
           </div>
         </Sheet>
       </Folder>

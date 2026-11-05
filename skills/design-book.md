@@ -171,7 +171,7 @@ functions mix or pick existing tokens; they don't invent new primitives.
 | `--text: <darkest readable gray>` | `darkest(ref('grays'), { readableOn: ref('color.surface') })` (`lightest` for the opposite) |
 | `--ramp-100…900`: hand-mixed steps | `colorMix(ref('color.surface'), ref('color.interaction'), { ratio })` per step |
 | `--button-hover`: the next stop of the ramp | `sibling(ref('values.blue-500'), 1)` |
-| `--border`: a few steps from the text toward the surface | `sibling(ref('color.text'), 2, { toward: ref('color.surface') })` |
+| `--border`: a few steps from the text toward the surface | `sibling(ref('color.text'), ref('values'), 2, { toward: ref('color.surface') })` |
 | `--space-sm/md/lg/xl`: multiples of a base | `spacingScale(ref('space.base'), { multiplier })` |
 | `--gap-loose`: the next size up from another | `nextLarger(ref('space.m'), ref('space'))` / `nextSmaller` |
 | `--font-h1/h2/h3`: modular scale | `typographyScale(ref('font-size.base'), { ratio, step })` |
@@ -236,7 +236,7 @@ const normal = book.addScope('context-normal');
 normal.set('surface',            nth(ref('scale'), 0));
 normal.set('surface--alternate', nth(ref('scale'), 1));
 normal.set('text',   bestContrastWith(ref('.surface--alternate'), ref('scale')));
-normal.set('border', sibling(ref('.text'), 2, { toward: ref('.surface') }));
+normal.set('border', sibling(ref('.text'), ref('scale'), 2, { toward: ref('.surface') }));
 
 // Weak only says what differs; text and border are worked out on its surfaces.
 const weak = book.addScope('context-weak', { extends: 'context-normal' });
@@ -246,8 +246,16 @@ weak.set('surface--alternate', nth(ref('scale'), 3));
 
 Use a full key (`ref('context-normal.action')`) only where a context should
 deliberately read another one: an inherited relative rule follows the
-inheriting context, which is sometimes exactly the bug. `inParent(ref('.x'))`
+inheriting context, which is sometimes exactly the bug. `inherited(ref('.x'))`
 reads the value a context overrides, for "one step from what it replaces".
+
+**Name the scale a `sibling` steps in.** `sibling` walks its anchor's own
+scope unless told otherwise; it never guesses. `sibling(ref('.text'),
+ref('scale'), 2)` steps in `scale` from wherever `.text` lands there (a
+reference followed into it, or the member a selector picked from it). For a
+rule shared by themes on different ramps, `sibling(source(ref('.x'),
+'root'), 1)` steps in whichever scale the value is written in. `not`
+entries follow the same rule against the selector's pool.
 
 **Pick from one curated pool.** Put one ordered scale of refs between the
 raw palette families and the contexts (light to dark, say `scale.0` …

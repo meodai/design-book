@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DesignBook, dimension, px, rem, spacingScale } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // Item 5: only px/rem/ms dimensions parsed. Non-shortcut units (em, ch,

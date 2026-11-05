@@ -73,8 +73,9 @@ ref('scope.token')        // Reference to another token
 ref('.token')             // Relative: `token` in whichever scope reads it (see Relative refs)
 ref('scope')              // A scope, where a function searches one: mostVivid(ref('palette'))
 ref('.')                  // The scope that reads the token, as a pool
-inParent(ref('.token'))   // The same reference one `extends` level up (see Navigation)
-inRoot(ref('.token'))     // … at the top of the chain
+inherited(ref('.token'))          // The same reference one `extends` level up (see Navigation)
+inherited(ref('.token'), 'root')  // … at the top of the chain
+source(ref('.token'), 'root')     // The token its references end at (a sibling anchor, toward or not entry)
 
 px(16)                    // Dimension shortcuts
 rem(1.5)
@@ -175,31 +176,28 @@ ui.set('accent', mostVivid(ref('palette'), {
 Plain strings work too — `not: ['palette.error']` is equivalent to
 `not: [ref('palette.error')]`.
 
-**A `not` entry does not have to be a key of the pool.** It names a member
-the same way a `sibling` anchor does (see [How a key names a
+**A `not` entry does not have to be a key of the pool.** A reference that
+leads into the pool names the member it leads to (see [How a key names a
 member](#how-a-key-names-a-member)), so you can write the role you mean
-instead of looking up where its color lives:
+instead of looking up which shade it is:
 
 ```typescript
-// scale.900 is ref('brand.ink'): one exclusion works in either pool
-ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('brand.ink')] }));
-ui.set('mark', bestContrastWith(ref('.bg'), ref('brand'), { not: [ref('brand.ink')] }));
+// ui.accent = ref('scale.800'): the accent's shade is left out
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('ui.accent')] }));
 
-// whatever the default text picked, the link is something else
-ui.set('text', bestContrastWith(ref('.bg'), ref('scale')));
-ui.set('link', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('.text')] }));
+// whatever the accent ends up being, in whichever ramp
+ui.set('muted', bestContrastWith(ref('.bg'), ref('scale'), { not: [source(ref('.accent'), 'root')] }));
 ```
 
-An entry outside the pool is read for its value, so the rule follows it:
-when `.bg` turns dark and `.text` picks a light member, `.link` leaves
-that member out instead.
+The rule reads the entry, so it follows it: re-point `ui.accent` to
+`scale.600` and `text` leaves out `scale.600` instead.
 
-An entry outside the pool that names no member **throws** rather than
-silently excluding nothing — a typo or a key from the wrong scope is a
-mistake you want to see:
+An entry that names no member **throws** rather than silently excluding
+nothing — a typo, a key from the wrong scope, or a selector that picked
+from another scope is a mistake you want to see:
 
 ```text
-mostVivid: `not` entry "other.red" is not a member of "scale" and does not lead to one, so it would exclude nothing
+mostVivid: `not` entry "other.red" is not a member of "scale" and its references do not lead into it, so it would exclude nothing
 ```
 
 A key of the pool itself never throws, even when it does not exist (yet), so
@@ -208,25 +206,25 @@ a `not` list can name a member that comes and goes.
 ### How a key names a member
 
 `not` entries, a `sibling` anchor and its `toward` target all name a
-*member of a scope*. They share one lookup, so a key means the same thing in
-all three places:
+*member of a scope*: the pool of the selector, or the scale a `sibling`
+walks. They share one rule, so a key means the same thing in all three
+places — and **nothing is guessed**. A reference is followed only as far as
+you say:
 
 | The key is… | It names… |
 |---|---|
-| a member of the pool (`scale.300`) | that member |
+| a member of the scope (`scale.300`) | that member |
 | the key an inherited member comes from (`base.b` for `kid.b`) | the inherited member |
-| a reference (`ui.surface = ref('scale.0')`) | the member the reference leads to, followed one scope at a time |
-| a selector (`ui.text = bestContrastWith(…, ref('scale'))`) | the member it picked |
-| the target of a member (`brand.ink`, with `scale.900 = ref('brand.ink')`) | that member — `not` only, since a `sibling` anchor needs one place to start |
+| a reference that leads into the scope (`ui.surface = ref('scale.0')`) | the member it leads to, its references followed until they land in the scope |
+| `source(ref('.surface'), 'root')` | the token the references end at (or `n` references on, with `source(ref, n)`), then read as above |
+| `inherited(ref('.surface'))` | the same key one scope up the `extends` chain, then read as above |
+| a selector that picked a member of the scope (`ui.text = bestContrastWith(…, ref('scale'))`) | the member it picked — every built-in selector reports it exactly |
+| anything else — a computed value, a selector that picked from another scope, references that go elsewhere | nothing: it throws |
 
-A selector names the member it picked **exactly**: every built-in selector
-reports the key it chose while it resolves, so two members with the same
-value are never confused — `sibling(ref('.text'), 1)` steps from the one
-`.text` picked, and `not: [ref('.text')]` leaves out that one and keeps its
-twin. A computed value (`lighten(…)`) is on no scale. A [custom
-function](#custom-functions) that picks a member can report it the same way;
-one that does not is matched by value (the first member with the same
-resolved value).
+A token sits in two trees: its **scope** may extend another scope, and its
+**value** may refer to another token. `inherited` climbs the first,
+`source` the second; neither is ever climbed on its own. A member that
+refers to the entry is not matched by it.
 
 ### Keeping only readable candidates with `readableOn`
 
@@ -334,39 +332,56 @@ ui.set('muted-text', nth(ref('ramp'), 0.7));    // dark but not darkest
 sibling(ref('ramp.s300'))                     // The member after ramp.s300 (one step is the default)
 sibling(ref('ramp.s300'), -1)                 // The member before it
 sibling(ref('ramp.s900'), 1, { wrap: true })  // Past the end → back to the first
-sibling(ref('.button'), 4, { toward: ref('.page') })  // Four steps toward the page's color
+sibling(ref('.interaction'), ref('blue'), -2) // Two steps back in blue, from where .interaction points
+sibling(source(ref('.interaction'), 'root'), -2)  // … in whichever scale its value is written
+sibling(ref('.button'), ref('ramp'), 4, { toward: ref('.page') })  // Four steps toward the page's color
 ```
 
-Where `nth` addresses a position in a scope, `sibling` steps from a token:
-it finds where the anchor's color lives and returns the value that many
+Where `nth` addresses a position in a scope, `sibling(anchor, scope?,
+steps?, options?)` steps from a token and returns the value that many
 members along (key order, inherited members included). Any integer works.
 Past either end it stops at the first or last member; pass
 `{ wrap: true }` to wrap around instead. `not` skips members while stepping.
 
-**Where it steps.** A plain value steps in its own scope. A reference is
-followed to the scale its color comes from: with `ui.surface =
-ref('ramp.s100')`, `sibling(ref('ui.surface'), 1)` is `ramp.s200`. A
-selector steps from the member it picked (`lightest(ref('ramp'))` → its
-lightest member, even when another member has the same value), and a
-`sibling` of a `sibling` keeps walking the same scale. A computed color (`lighten(…)`) is
-on no scale and throws. The lookup is the one `not` uses — see [How a key
-names a member](#how-a-key-names-a-member).
+**Which scale it walks is never guessed:**
 
-**`toward`** takes the direction from where another token's color sits on
-the same scale, so one rule fits a light and a dark scope, and it stops
-when it reaches the target. A negative count walks away from it instead:
+- **By default, the anchor's own scope** — the one its key is written in.
+  `sibling(ref('space.s'), 1)` is the next member of `space`, even when
+  `space.s` is a reference into a primitive scale.
+- **A scope you name**: `sibling(ref('.interaction'), ref('blue'), -2)`
+  follows `.interaction`'s references until they land in `blue`, and steps
+  from there. If they never land there, it throws.
+- **Wherever the value comes from**, with
+  [`source`](#addresses-ref-inherited-source):
+  `sibling(source(ref('.interaction'), 'root'), -2)` walks the scale the
+  value is written in. That is the rule to share between themes whose
+  colors come from different ramps.
+
+With a scale named, a selector counts as the member it picked, when that
+member is in the scale: `sibling(ref('.text'), ref('scale'), 2, { toward:
+ref('.surface') })` is two steps from whatever text was picked, toward the
+surface — and follows when the pick changes. Without a named scale the
+anchor's own scope is walked and no selector is asked; `source` never
+looks through a pick either. A computed color (`lighten(…)`) is no member
+of any scale. The rule is the one `not` uses —
+see [How a key names a member](#how-a-key-names-a-member).
+
+**`toward`** takes the direction from where another member sits on the
+walked scale (its references followed into it, like a `not` entry), so one
+rule fits a light and a dark scope, and it stops when it reaches the
+target. A negative count walks away from it instead:
 
 ```typescript
 // written once, inherited by a dark variant: lighter on a light page, darker on a dark one
-light.set('hover', sibling(ref('.button'), 2, { toward: ref('.page') }));
+light.set('hover', sibling(ref('.button'), ref('ramp'), 2, { toward: ref('.page') }));
 
-// a hover state one step from its parent's interaction color, toward its parent's background
-hover.set('interaction', sibling(inParent(ref('.interaction')), { toward: inParent(ref('.background')) }));
+// a variant's hover: its parent's interaction color, two steps lighter
+hover.set('interaction', sibling(inherited(ref('.interaction')), ref('ramp'), -2));
 ```
 
-Anchor and target must live on the same scale (otherwise it throws and names
-both), and `toward` does not combine with `wrap`. Like every reference,
-`toward` reads the scope that reads the rule — no implicit parent.
+A target that does not lead into the walked scale throws, and `toward` does
+not combine with `wrap`. Like every reference, `toward` reads the scope
+that reads the rule — no implicit parent.
 
 ```typescript
 // ramp runs light → dark
@@ -567,7 +582,8 @@ as an argument (`ref('palette')`): the implementation receives the live
 `Scope`, and the book indexes it as the function's pool, so adding or
 changing a member re-resolves it. When the function returns one of the
 members, report which one with `picked(scope, key, value)`, so a `sibling`
-anchored on it and a `not` entry naming it know the exact member:
+stepping in that scope and a `not` entry naming it know the exact member,
+and the SVG renderer draws its edge from it:
 
 ```typescript
 import { picked, type Scope } from 'design-book';
@@ -578,7 +594,7 @@ book.registerFunction('secondOf', (scope: Scope) => {
 });
 ```
 
-Without `picked` it still works; the member is then found by its value.
+Without `picked` it still works as a value; it just cannot be stepped from or excluded by name, and the renderer finds its member by value.
 
 If you want your custom function to render as native CSS (e.g. as a
 `color-mix` expression instead of the resolved hex), register a function
@@ -670,10 +686,10 @@ dark.allTokens();                      // { bg: <token>, text: <token>, … }, i
 
 Some functions find things by where they are rather than by what they are. Two kinds:
 
-- **Addresses** say *where* to read: `ref`, `inParent`, `inRoot`. They return a reference and never compute anything.
+- **Addresses** say *where* to read: `ref`, `inherited`, `source`. They return a reference and never compute anything.
 - **Positions** pick a member by its *place* in a scope and return its value: `nth`, `sibling`.
 
-### Addresses: `ref`, `inParent`, `inRoot`
+### Addresses: `ref`, `inherited`, `source`
 
 A reference is a path. The number of segments says what it names, and a leading dot makes it relative to the scope that reads it:
 
@@ -687,32 +703,59 @@ A reference is a path. The number of segments says what it names, and a leading 
 
 A token or field reference is a value. A scope reference is a pool, the argument a selector searches: `bestContrastWith(ref('.bg'), ref('palette'))`. Each is only accepted where it fits — `ui.set('x', ref('palette'))` and `lighten(ref('.'))` throw ("names a scope"), and so does `mostVivid(ref('palette.blue'))` ("needs a scope to search"). Passing the scope object itself, `mostVivid(palette)`, still works: the constructor stores it as `ref('palette')`, so a function token is always plain data.
 
-`inParent` and `inRoot` read the same path further up the `extends` chain. They return the same kind of reference they are given — a scope stays a scope, a token a token:
+A token sits in **two trees**: its *scope* may extend another scope, and its *value* may refer to another token. Two words climb them, each only when you ask:
+
+| | climbs | one step | `'root'` |
+|---|---|---|---|
+| `inherited(ref, n?)` | the scope tree (`extends`) | the parent scope's same key | the top scope's same key |
+| `source(ref, n?)` | the value tree (references) | the token it refers to | the token where the value is written |
+
+#### `inherited`: up the scope tree
+
+`inherited` reads the same path further up the `extends` chain. It returns the same kind of reference it is given — a scope stays a scope, a token a token:
 
 ```typescript
 const card     = book.addScope('card');
 const inverted = book.addScope('card-inverted', { extends: 'card' });
 const callout  = book.addScope('callout', { extends: 'card-inverted' });
 
-inverted.set('border', inParent(ref('.surface')));        // card's surface
-callout.set('corner',  inParent(ref('.radius'), 2));      // two levels up: card's radius
-card.set('base',       inRoot(ref('.surface')));          // the root's surface, from anywhere in the chain
-callout.set('pick',    lightest(inParent(ref('.'))));     // the lightest member of card-inverted
+inverted.set('border', inherited(ref('.surface')));            // card's surface
+callout.set('corner',  inherited(ref('.radius'), 2));          // two levels up: card's radius
+card.set('base',       inherited(ref('.surface'), 'root'));    // the root's surface, from anywhere in the chain
+callout.set('pick',    lightest(inherited(ref('.'))));         // the lightest member of card-inverted
 
 // Override a token in terms of the value it replaces — not a cycle:
-callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
+callout.set('surface', lighten(inherited(ref('.surface')), { amount: 0.2 }));
 ```
 
-- A relative reference counts from the scope that reads the rule, so an inherited rule re-binds: written on `card-inverted`, `inParent(ref('.surface'))` is card's surface; inherited by `callout`, it is card-inverted's. An absolute one counts from the scope it names: `inParent(ref('card-inverted.surface'))` is `card.surface` wherever it is read.
-- If the parent does not declare the token itself, inheritance carries on upward — `inParent(ref('.x'))` is the value the scope would have if it had not overridden `x`.
+- A relative reference counts from the scope that reads the rule, so an inherited rule re-binds: written on `card-inverted`, `inherited(ref('.surface'))` is card's surface; inherited by `callout`, it is card-inverted's. An absolute one counts from the scope it names: `inherited(ref('card-inverted.surface'))` is `card.surface` wherever it is read.
+- If the parent does not declare the token itself, inheritance carries on upward — `inherited(ref('.x'))` is the value the scope would have if it had not overridden `x`.
 - Only `extends` makes a parent. Reading from a scope (`ref('palette.white')`) does not.
-- `inParent` past the top of the chain throws (`"card" has no parent`, `"callout" has only 2 levels above it`); `inRoot` on a scope that extends nothing is that scope. Levels are whole numbers of 1 or more, and `inParent(inParent(x))` is `inParent(x, 2)`.
+- Past the top of the chain it throws (`"card" has no parent`, `"callout" has only 2 levels above it`); `'root'` on a scope that extends nothing is that scope. Levels are whole numbers of 1 or more, and `inherited(inherited(x))` is `inherited(x, 2)`.
 - A reference that ends on its own key is a cycle and is rejected when written, as with `ref`.
-- `sibling` and `variant` take a navigated reference too: `sibling(inParent(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `variant(inParent(ref('.title')), { fontWeight: '700' })` is a live variant of the title this scope replaces.
+- `sibling` and `variant` take it too: `sibling(inherited(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `variant(inherited(ref('.title')), { fontWeight: '700' })` is a live variant of the title this scope replaces.
+
+#### `source`: back along the references
+
+`source` follows a token's references: with `card.interaction = ref('blue.600')`, `source(ref('card.interaction'))` names `blue.600`. `source(ref, 2)` follows two references; `source(ref, 'root')` follows them to the token where the value is written — the first that is not a reference (a color, a size, or a function such as a selector, which is not looked through).
+
+```typescript
+// one hover rule, shared by themes whose interaction colors come from different ramps
+button.set('hover', sibling(source(ref('.interaction'), 'root'), -2));
+book.addScope('button-green', { extends: 'button' }).set('interaction', ref('green.500'));
+
+// leave out whatever the accent ends up being
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [source(ref('.accent'), 'root')] }));
+```
+
+- It names a member, so it is read where a member is named: a `sibling` anchor or `toward` target, a `not` entry. As a value or inside a value argument it is refused (write the `ref` itself), and so is `source(ref('palette'))` — a scope has no references.
+- Following more references than there are throws.
+- With both, inheritance is read first: `source(inherited(ref('.interaction')), 'root')` is the inherited interaction, followed to its scale.
+- The rule re-reads its start: re-point a reference on the way and the result follows.
 
 ### Positions: `nth`, `sibling`
 
-These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), 4, { toward: ref('.page') })` four steps toward the page. See [Index selection](#index-selection-require-a-scope-to-search) and [Relative steps](#relative-steps).
+These pick a member of a scope by its place in the scope's key order and return its value: `nth(ref('gray'), 0)` the first, `sibling(ref('gray.g100'), 1)` the next one after `g100`, `sibling(ref('.button'), ref('ramp'), 4, { toward: ref('.page') })` four steps along `ramp` toward the page. `sibling` walks its anchor's own scope unless you name one or use `source`. See [Index selection](#index-selection-require-a-scope-to-search) and [Relative steps](#relative-steps).
 
 Picking by *value* is a different thing: `closest` and its aliases (`nextLarger`, `nextLighter` …) choose the nearest value up or down whatever order the scope is in — see [Comparisons](#comparisons-any-kind).
 
@@ -1342,7 +1385,7 @@ they fit together.
 
 **Token constructors.** `color`, `ref`, `px`, `rem`, `ms`, `dimension`, `string`, `val`, `createFunctionToken`.
 
-**Navigation.** `inParent(reference, levels?)`, `inRoot(reference)`: the same reference further up the `extends` chain.
+**Navigation.** `inherited(reference, levels? | 'root')`: the same reference further up the `extends` chain. `source(reference, hops? | 'root')`: the token a reference refers to, along its references — read as a `sibling` anchor, a `toward` target or a `not` entry.
 
 **Functions.**
 - Comparisons (any kind): `closest` with the aliases `nextLarger`, `nextSmaller`, `nextLighter`, `nextDarker`; `bestContrastWith`, `minContrastWith`, `furthestFrom`, `lightest`, `darkest`, `largest`, `smallest`

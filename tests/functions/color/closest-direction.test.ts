@@ -2,7 +2,7 @@ import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { converter } from 'culori';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref, closest, FunctionError } from '../../../src/index';
-import { parseTokenInput } from '../../../editor/editor-input-parser';
+import { parseTokenInput } from '../../../site/editor/editor-input-parser';
 import { loadEditorModule } from '../../editor/load-editor';
 
 const L = (hex: string) => converter('oklch')(hex)!.l;

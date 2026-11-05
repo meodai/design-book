@@ -830,11 +830,12 @@ input[type="checkbox"]:focus-visible {
 
 /* Inline pieces in a ledger cell get a short line height, so a cell that
    mixes fonts (text and code) stays exactly one row: the cell's own
-   line decides the height. */
+   line decides the height. They sit on its baseline, so their text lines
+   up with the plain text of the cells beside it. */
 .ledger :is(td, th) > :not(.swatch),
 [data-ledger] > * > * :is(code, span, b, a) {
   line-height: 18px;
-  vertical-align: middle;
+  vertical-align: baseline;
 }
 
 /* ─── Color picker (hdr-color-input) ─────────────────────────────────

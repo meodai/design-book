@@ -1,12 +1,12 @@
 import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import {
-  color, ref, px, rem, typography, inParent, inRoot,
+  color, ref, px, rem, typography, inherited, 
   mostVivid, lightest, darkest, nth, lighten, sibling, variant, bestContrastWith,
   CircularDependencyError, FunctionError, TokenError,
 } from '../src/index';
 import type { ReferenceValue } from '../src/tokens';
-import { parseTokenInput } from '../editor/editor-input-parser';
+import { parseTokenInput } from '../site/editor/editor-input-parser';
 import { loadEditorModule } from './editor/load-editor';
 
 /** card ← card-inverted ← callout, reading colors from palette. */
@@ -49,11 +49,11 @@ describe('ref() addresses any level of the book', () => {
   });
 });
 
-describe('inParent / inRoot', () => {
+describe('inherited', () => {
   // 1
   it('counts a relative reference from the scope that reads the rule', () => {
     const { book, inverted } = cards();
-    inverted.set('border', inParent(ref('.surface')));
+    inverted.set('border', inherited(ref('.surface')));
     expect(book.resolve('card-inverted.border')).toBe('#ffffff');
     // callout reads the inherited rule: its parent is card-inverted
     expect(book.resolve('callout.border')).toBe('#13254a');
@@ -62,21 +62,21 @@ describe('inParent / inRoot', () => {
   // 2
   it('counts an absolute reference from the scope it names', () => {
     const { book, callout } = cards();
-    callout.set('border', inParent(ref('card-inverted.surface')));
+    callout.set('border', inherited(ref('card-inverted.surface')));
     expect(book.resolve('callout.border')).toBe('#ffffff');
   });
 
   // 3
   it('continues up the chain when the parent does not declare the token', () => {
     const { book, callout } = cards();
-    callout.set('corner', inParent(ref('.radius')));
+    callout.set('corner', inherited(ref('.radius')));
     expect(book.resolve('callout.corner')).toBe('4px');
   });
 
   // 4
   it('lets a scope override a token in terms of the value it replaces', () => {
     const { book, callout } = cards();
-    callout.set('surface', lighten(inParent(ref('.surface')), { amount: 0.2 }));
+    callout.set('surface', lighten(inherited(ref('.surface')), { amount: 0.2 }));
     const parent = book.resolve('card-inverted.surface');
     expect(book.resolve('callout.surface')).not.toBe(parent);
     // and the text, inherited from card, re-decides against it
@@ -86,15 +86,15 @@ describe('inParent / inRoot', () => {
   // 5
   it('throws past the top of the chain', () => {
     const { card, callout } = cards();
-    expect(() => card.set('x', inParent(ref('.surface')))).toThrow(/"card" has no parent/);
-    expect(() => callout.set('x', inParent(ref('.surface'), 3))).toThrow(/only 2 levels above it/);
+    expect(() => card.set('x', inherited(ref('.surface')))).toThrow(/"card" has no parent/);
+    expect(() => callout.set('x', inherited(ref('.surface'), 3))).toThrow(/only 2 levels above it/);
     expect(card.hasOwn('x')).toBe(false);
   });
 
   // 6
-  it('reads a root scope itself with inRoot', () => {
+  it("reads a root scope itself with inherited(…, 'root')", () => {
     const { book, card } = cards();
-    card.set('base', inRoot(ref('.surface')));
+    card.set('base', inherited(ref('.surface'), 'root'));
     expect(book.resolve('card.base')).toBe('#ffffff');
     expect(book.resolve('callout.base')).toBe('#ffffff');
   });
@@ -102,12 +102,12 @@ describe('inParent / inRoot', () => {
   // 7
   it('takes a whole number of levels, 1 by default, and nesting adds up', () => {
     const r = ref('.surface');
-    expect(inParent(r)).toEqual(inParent(r, 1));
-    expect(inParent(inParent(r))).toEqual(inParent(r, 2));
-    expect(inRoot(inParent(r))).toEqual(inRoot(r));
-    expect(inParent(inRoot(r))).toEqual(inRoot(r));
-    expect(() => inParent(r, 0)).toThrow();
-    expect(() => inParent(r, 1.5)).toThrow();
+    expect(inherited(r)).toEqual(inherited(r, 1));
+    expect(inherited(inherited(r))).toEqual(inherited(r, 2));
+    expect(inherited(inherited(r), 'root')).toEqual(inherited(r, 'root'));
+    expect(inherited(inherited(r, 'root'))).toEqual(inherited(r, 'root'));
+    expect(() => inherited(r, 0)).toThrow();
+    expect(() => inherited(r, 1.5)).toThrow();
   });
 
   // 8
@@ -119,7 +119,7 @@ describe('inParent / inRoot', () => {
     swatches.set('pick', darkest(ref('.')));
     const dark = book.addScope('swatches-dark', { extends: 'swatches' });
     dark.set('a', color('#333333'));
-    dark.set('from-parent', lightest(inParent(ref('.'))));
+    dark.set('from-parent', lightest(inherited(ref('.'))));
     // the relative pool re-binds: swatches-dark searches its own members
     expect(book.resolve('swatches.pick')).toBe('#2d60a5');
     expect(book.resolve('swatches-dark.pick')).toBe('#333333');
@@ -140,7 +140,7 @@ describe('inParent / inRoot', () => {
   // 9
   it('navigates fields like tokens', () => {
     const { book, callout } = cards();
-    callout.set('size', inParent(ref('.title.fontSize')));
+    callout.set('size', inherited(ref('.title.fontSize')));
     expect(book.resolve('callout.size')).toBe('1.5rem');
   });
 
@@ -148,7 +148,7 @@ describe('inParent / inRoot', () => {
   it('refuses a scope where a value is expected', () => {
     const { card } = cards();
     expect(() => card.set('x', ref('palette'))).toThrow(/names a scope/);
-    expect(() => card.set('x', inParent(ref('.')))).toThrow();
+    expect(() => card.set('x', inherited(ref('.')))).toThrow();
     expect(() => lighten(ref('.'))).toThrow(FunctionError);
     expect(() => lighten(ref('palette'))).toThrow(/needs a value, got the scope 'palette'/);
   });
@@ -161,7 +161,7 @@ describe('inParent / inRoot', () => {
   // 12
   it('notifies a navigated reference when the token it reads changes', () => {
     const { book, inverted, callout } = cards();
-    callout.set('border', inParent(ref('.surface')));
+    callout.set('border', inherited(ref('.surface')));
     const watcher = vi.fn();
     book.watch('callout.border', watcher);
     inverted.set('surface', ref('palette.ink'));
@@ -171,7 +171,7 @@ describe('inParent / inRoot', () => {
   // 13
   it('falls back further up when the parent loses its own token', () => {
     const { book, inverted, callout } = cards();
-    callout.set('border', inParent(ref('.surface')));
+    callout.set('border', inherited(ref('.surface')));
     inverted.delete('surface');
     expect(book.resolve('callout.border')).toBe('#ffffff');
   });
@@ -189,7 +189,7 @@ describe('inParent / inRoot', () => {
     const palette = book.addScope('palette', { extends: 'card' });
     palette.set('color', color('#2d60a5'));
     card.set('text', ref('palette.color'));
-    expect(() => card.set('color', inParent(ref('palette.color')))).toThrow(CircularDependencyError);
+    expect(() => card.set('color', inherited(ref('palette.color')))).toThrow(CircularDependencyError);
   });
 
   it('anchors sibling on a navigated reference: it walks the scope the anchor lands in', () => {
@@ -201,7 +201,7 @@ describe('inParent / inRoot', () => {
     gray.set('next', sibling(ref('.g100'), 1));
     const warm = book.addScope('gray-warm', { extends: 'gray' });
     warm.set('g300', color('#d0c8c0'));
-    warm.set('parent-next', sibling(inParent(ref('.g100')), 1));
+    warm.set('parent-next', sibling(inherited(ref('.g100')), 1));
 
     // relative: walks the reading scope; navigated: walks the parent
     expect(book.resolve('gray-warm.next')).toBe('#d0c8c0');
@@ -212,7 +212,7 @@ describe('inParent / inRoot', () => {
     gray.set('g300', color('#bbbbbb'));
     expect(watcher).toHaveBeenCalledWith('#bbbbbb', expect.anything());
 
-    expect(() => gray.set('x', sibling(inParent(ref('.g100')), 1))).toThrow(/"gray" has no parent/);
+    expect(() => gray.set('x', sibling(inherited(ref('.g100')), 1))).toThrow(/"gray" has no parent/);
   });
 
   it('builds a live variant on a navigated base', () => {
@@ -221,7 +221,7 @@ describe('inParent / inRoot', () => {
     type.set('title', typography({ fontSize: rem(2), fontWeight: '400' }));
     const article = book.addScope('article', { extends: 'type' });
     // a variant of the title it replaces: not a variant of itself
-    article.set('title', variant(inParent(ref('.title')), { fontWeight: '700' }));
+    article.set('title', variant(inherited(ref('.title')), { fontWeight: '700' }));
 
     expect(book.resolve('article.title')).toBe('font-size: 2rem; font-weight: 700');
     expect(book.resolve('article.title.fontSize')).toBe('2rem');
@@ -232,7 +232,7 @@ describe('inParent / inRoot', () => {
     expect(watcher).toHaveBeenCalledWith('font-size: 2.5rem; font-weight: 700', expect.anything());
     expect(book.resolve('article.title.fontSize')).toBe('2.5rem');
 
-    expect(() => type.set('x', variant(inParent(ref('.title')), { fontWeight: '700' }))).toThrow(/"type" has no parent/);
+    expect(() => type.set('x', variant(inherited(ref('.title')), { fontWeight: '700' }))).toThrow(/"type" has no parent/);
   });
 
   it('re-binds when the chain is rebuilt with a different parent', () => {
@@ -240,17 +240,17 @@ describe('inParent / inRoot', () => {
     book.addScope('a').set('x', color('#111111'));
     book.addScope('b').set('x', color('#222222'));
     const child = book.addScope('child', { extends: 'a' });
-    child.set('y', inParent(ref('.x')));
+    child.set('y', inherited(ref('.x')));
     expect(book.resolve('child.y')).toBe('#111111');
     book.deleteScope('child');
-    book.addScope('child', { extends: 'b' }).set('y', inParent(ref('.x')));
+    book.addScope('child', { extends: 'b' }).set('y', inherited(ref('.x')));
     expect(book.resolve('child.y')).toBe('#222222');
   });
 
   it('a TokenError names the scope that has no parent', () => {
     const { card } = cards();
     try {
-      card.set('x', inParent(ref('.surface')));
+      card.set('x', inherited(ref('.surface')));
     } catch (e) {
       expect(e).toBeInstanceOf(TokenError);
     }
@@ -265,7 +265,7 @@ describe('renderers and the editor', () => {
 
   it('render a navigated reference as the key it reads', () => {
     const { book, callout } = cards();
-    callout.set('border', inParent(ref('.surface')));
+    callout.set('border', inherited(ref('.surface')));
     expect(book.render('css-variables')).toContain('--callout-border: var(--card-inverted-surface)');
     const w3 = JSON.parse(book.render('w3-design-tokens'));
     expect(w3.callout.border.$value).toBe('{card-inverted.surface}');
@@ -274,20 +274,20 @@ describe('renderers and the editor', () => {
   it('parse and print scope refs and navigation', () => {
     const { book, callout } = cards();
     for (const input of [
-      "inParent(ref('.surface'))",
-      "inParent(ref('.surface'), 2)",
-      "inRoot(ref('.surface'))",
+      "inherited(ref('.surface'))",
+      "inherited(ref('.surface'), 2)",
+      "inherited(ref('.surface'), 'root')",
     ]) {
       const token = parseTokenInput(input, book, callout);
       callout.set('probe', token);
       expect(getTokenDisplayValue(callout, 'probe')).toBe(input);
     }
-    const selector = parseTokenInput("lightest(inParent(ref('.')))", book, callout);
+    const selector = parseTokenInput("lightest(inherited(ref('.')))", book, callout);
     callout.set('probe', selector);
-    expect(getTokenDisplayValue(callout, 'probe')).toBe("lightest(inParent(ref('.')))");
+    expect(getTokenDisplayValue(callout, 'probe')).toBe("lightest(inherited(ref('.')))");
     for (const input of [
-      "sibling(inParent(ref('.surface')), 1)",
-      "variant(inParent(ref('.title')), { fontWeight: '700' })",
+      "sibling(inherited(ref('.surface')), 1)",
+      "variant(inherited(ref('.title')), { fontWeight: '700' })",
     ]) {
       callout.set('probe', parseTokenInput(input, book, callout));
       expect(getTokenDisplayValue(callout, 'probe')).toBe(input);

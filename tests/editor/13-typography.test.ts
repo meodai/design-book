@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DesignBook, ref, rem, string, typography, variant } from '../../src/index';
-import { parseTokenInput, FUNCTION_NAMES } from '../../editor/editor-input-parser';
+import { parseTokenInput, FUNCTION_NAMES } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // typography() takes an object of fields and variant() a base plus an

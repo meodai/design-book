@@ -20,7 +20,7 @@ import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
 import { siblingImpl, scopeOfKey } from './generic/sibling';
-import { excludedMembers, locateMember } from './members';
+import { excludedMembers, landIn, memberStart } from './members';
 import type { Scope } from '../scope';
 import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
@@ -168,43 +168,43 @@ export function registerBuiltinFunctions(book: {
 	);
 	book.registerFunction(
 		'sibling',
-		(options?: { from?: unknown; offset?: number; wrap?: boolean; not?: string[]; toward?: unknown }) => {
-			if (!options || typeof options.from !== 'string' || !options.from.includes('.')) {
-				const reason = (options?.from as { unresolvable?: string } | undefined)?.unresolvable;
-				throw new FunctionError(reason ? `sibling: ${reason}` : 'sibling: a fully-qualified `from` key is required', 'sibling');
+		// (scope?, options): the scope argument, when given, is the scale walked.
+		(...args: unknown[]) => {
+			const options = args[args.length - 1] as { from?: unknown; offset?: number; wrap?: boolean; not?: unknown[]; toward?: unknown } | undefined;
+			const pool = args.length > 1 ? (args[0] as Scope | undefined) : undefined;
+			if (!options || options.from === undefined) {
+				throw new FunctionError('sibling: a fully-qualified `from` key is required', 'sibling');
 			}
+			const unreadable = (options.from as { unresolvable?: string }).unresolvable;
+			if (unreadable) throw new FunctionError(`sibling: ${unreadable}`, 'sibling');
 			if (!Number.isInteger(options.offset)) {
 				throw new FunctionError(`sibling: offset must be an integer, got ${options.offset}`, 'sibling');
 			}
-			const anchorScope = scopeOfKey(options.from);
-			if (!book.getScope(anchorScope)) {
-				throw new FunctionError(`sibling: unknown scope "${anchorScope}"`, 'sibling');
+			// The anchor as written, a `source` followed.
+			const start = memberStart(book, 'sibling', options.from);
+			if (start === undefined || !start.includes('.')) {
+				throw new FunctionError('sibling: a fully-qualified `from` key is required', 'sibling');
 			}
-			// Step along the scale the anchor's color lives on.
-			const anchor = locateMember(book, options.from);
-			if (!anchor) {
-				throw new FunctionError(`sibling: the value of "${options.from}" is not a member of any scope, so there is nothing to step along`, 'sibling');
+			// The scale: the scope argument (the anchor's references followed into
+			// it), or the anchor's own scope.
+			const scope = pool ?? book.getScope(scopeOfKey(start));
+			if (!scope) throw new FunctionError(`sibling: unknown scope "${scopeOfKey(start)}"`, 'sibling');
+			const anchor = landIn(book, start, scope.name);
+			if (anchor === undefined) {
+				throw new FunctionError(`sibling: "${start}" is not in "${scope.name}" and its references do not lead into it`, 'sibling');
 			}
-			const scope = book.getScope(anchor.scope);
-			if (!scope) {
-				throw new FunctionError(`sibling: unknown scope "${anchor.scope}"`, 'sibling');
-			}
+			// The target is read against the same scale, like a `not` entry.
 			let toward: string | undefined;
 			if (options.toward !== undefined) {
-				if (typeof options.toward !== 'string') {
-					const reason = (options.toward as { unresolvable?: string }).unresolvable;
-					throw new FunctionError(`sibling: \`toward\` could not be read${reason ? `: ${reason}` : ''}`, 'sibling');
+				const reason = (options.toward as { unresolvable?: string }).unresolvable;
+				if (reason) throw new FunctionError(`sibling: \`toward\` could not be read: ${reason}`, 'sibling');
+				const target = memberStart(book, 'sibling', options.toward);
+				toward = target === undefined ? undefined : landIn(book, target, scope.name);
+				if (toward === undefined) {
+					throw new FunctionError(`sibling: \`toward\` "${target}" is not in "${scope.name}" and its references do not lead into it`, 'sibling');
 				}
-				const target = locateMember(book, options.toward);
-				if (!target || target.scope !== anchor.scope) {
-					throw new FunctionError(
-						`sibling: "${options.toward}" is ${target ? `in "${target.scope}"` : 'not a member of any scope'}, but "${options.from}" steps along "${anchor.scope}"`,
-						'sibling',
-					);
-				}
-				toward = target.key;
 			}
-			return siblingImpl(scope, anchor.key, options.offset as number, options.wrap ?? false, ex('sibling', scope, options.not), toward);
+			return siblingImpl(scope, anchor, options.offset as number, options.wrap ?? false, ex('sibling', scope, options.not), toward);
 		},
 	);
 }

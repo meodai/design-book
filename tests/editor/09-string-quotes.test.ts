@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DesignBook, string } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // Item 9: string()'s quote regexes required at least one character between

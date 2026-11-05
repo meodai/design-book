@@ -3,7 +3,7 @@ import {
   DesignBook, color, ref,
   bestContrastWith, closest, furthestFrom,
 } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // Item 6: bestContrastWith, closest and furthestFrom already serialize

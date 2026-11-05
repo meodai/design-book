@@ -9,6 +9,8 @@ import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { poolKeys } from '../scope-members';
+import { poolArg } from '../args';
+import type { PoolArg } from '../args';
 import { picked } from '../picks';
 
 export interface SiblingOptions {
@@ -131,69 +133,103 @@ export function siblingImpl(
 }
 
 /**
- * Steps along the scale the anchor's color lives on (see `locateMember` in `../members`):
- * `sibling(ref('gray.g100'), 1)` is the next member of `gray`, and
- * `sibling(ref('.surface'), 11)` — with `.surface` a `ref('brand-scale.100')` —
- * steps along `brand-scale`. The step count defaults to 1.
+ * Steps along a scale, from an anchor: `sibling(ref('gray.g100'), 1)` is the
+ * next member of `gray`. The step count defaults to 1; a negative count
+ * steps back.
  *
- * `toward` takes the direction from where another token's color sits on the
- * same scale, so one rule fits a light and a dark scope:
- * `sibling(ref('.major-action--default'), 4, { toward: ref('.surface') })` is
- * four steps toward the page, lighter on a light page, darker on a dark one.
- * It stops at the target; a negative count walks away from it. Both anchor
- * and target may be `inParent` / `inRoot` references.
+ * **Which scale** is never guessed:
+ *
+ * - by default, the anchor's own scope — the one its key is written in
+ *   (`sibling(ref('space.s'), 1)` walks `space`, even when `space.s` is a
+ *   reference into another scale);
+ * - with a scope argument, that scope: `sibling(ref('.interaction'),
+ *   ref('blue'), -2)` follows `.interaction`'s references until they land in
+ *   `blue` (refused if they never do) and steps from there;
+ * - with `source(…)`, wherever the references lead:
+ *   `sibling(source(ref('.interaction'), 'root'), -2)` walks the scale the
+ *   value is written in, whichever that is — a rule that holds across themes
+ *   whose interaction colors come from different ramps.
+ *
+ * `inherited(ref('.x'))` reads the anchor one scope up the `extends` chain.
+ *
+ * `toward` takes the direction from where another member sits on the same
+ * scale (its references followed into it, like a `not` entry), so one rule
+ * fits a light and a dark page: `sibling(ref('.interaction'), ref('blue'), 4,
+ * { toward: ref('.surface') })` is four steps toward the page. It stops at the
+ * target; a negative count walks away from it.
  *
  * The anchor's *key* is what matters (its position), not its value, so it is
  * stored in the options rather than as an argument the resolver would turn
- * into a value. The scope it walks is declared in `metadata.iteratedScopes`.
+ * into a value. The scope it walks is declared in `metadata.iteratedScopes`
+ * (or, given as a scope argument, is the function's argument).
  */
 export function sibling(
   anchor: ReferenceValue,
+  pool?: PoolArg | number | SiblingOptions,
   offset?: number | SiblingOptions,
   options?: SiblingOptions,
 ): FunctionTokenValue {
-  if (!isReferenceValue(anchor)) {
+  if (!isReferenceValue(anchor) || anchor.key === '.') {
     throw new FunctionError('sibling: the anchor must be a ref(...) to a token', 'sibling');
   }
-  if (typeof offset === 'object' && offset !== null) {
-    options = offset;
-    offset = undefined;
+  // sibling(anchor, pool?, steps?, options?): the pool and the count are
+  // each optional, in that order.
+  const rest: unknown[] = [pool, offset, options].filter((r) => r !== undefined);
+  let scale: ReferenceValue | undefined;
+  if (rest.length > 0 && typeof rest[0] !== 'number' && !isPlainOptions(rest[0])) {
+    scale = poolArg('sibling', rest.shift());
   }
-  const steps = offset ?? 1;
+  const steps = typeof rest[0] === 'number' ? (rest.shift() as number) : 1;
+  if (rest.length > 1 || (rest.length === 1 && !isPlainOptions(rest[0]))) {
+    throw new FunctionError('sibling: expects (anchor, scope?, steps?, options?)', 'sibling');
+  }
+  const opts = (rest[0] ?? {}) as SiblingOptions;
   if (!Number.isInteger(steps)) {
     throw new FunctionError(`sibling: the step count must be an integer, got ${String(steps)}`, 'sibling');
   }
-  const toward = options?.toward;
+  const toward = opts.toward;
   if (toward !== undefined) {
     if (!isReferenceValue(toward) || isScopeKey(toward.key)) {
       throw new FunctionError('sibling: `toward` must be a ref(...) to a token', 'sibling');
     }
-    if (options?.wrap) {
+    if (opts.wrap) {
       throw new FunctionError('sibling: `toward` and `wrap` do not go together: toward stops at its target', 'sibling');
     }
   }
 
   const scopeName = scopeOfKey(anchor.key);
-  // A navigated anchor or target (`inParent(ref('.g100'))`) names its key
-  // only once a scope reads the token: keep the reference, and let binding
-  // add the key as a dependency. A key is stored as is.
-  const asStored = (r: ReferenceValue) => (r.up !== undefined ? { type: 'reference' as const, key: r.key, up: r.up } : r.key);
+  // A navigated anchor or target (`inherited(ref('.g100'))`) names its key
+  // only once a scope reads the token, a `source` one only once it is
+  // followed: keep the reference (binding adds an inherited key as a
+  // dependency). A plain key is stored as is.
+  const asStored = (r: ReferenceValue) => (r.up !== undefined || r.via !== undefined
+    ? { type: 'reference' as const, key: r.key, ...(r.up !== undefined ? { up: r.up } : {}), ...(r.via !== undefined ? { via: r.via } : {}) }
+    : r.key);
   const keys = [anchor, ...(toward ? [toward] : [])].filter((r) => r.up === undefined).map((r) => r.key);
+  // The scope walked: the scope argument; else the anchor's own scope, known
+  // now unless the anchor still has to be navigated or followed.
+  const walks = scale ? [] : anchor.up !== undefined || anchor.via !== undefined ? [] : [scopeName];
 
-  return createFunctionToken('sibling', [], {
-    description: options?.description,
+  return createFunctionToken('sibling', scale ? [scale] : [], {
+    description: opts.description,
     options: {
       from: asStored(anchor),
       offset: steps,
-      wrap: options?.wrap ?? false,
-      not: normalizeNotKeys(options?.not),
+      wrap: opts.wrap ?? false,
+      not: normalizeNotKeys(opts.not),
       ...(toward ? { toward: asStored(toward) } : {}),
     },
     metadata: {
       dependencies: keys,
       visualDependencies: keys,
-      iteratedScopes: anchor.up !== undefined ? [] : [scopeName],
+      iteratedScopes: walks,
       returnType: undefined,
     },
   });
+}
+
+/** An options object, as opposed to a scope or a scope reference. */
+function isPlainOptions(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && !isReferenceValue(value)
+    && typeof (value as { getAllKeys?: unknown }).getAllKeys !== 'function';
 }

@@ -4,7 +4,7 @@ import {
   closest, furthestFrom, mostVivid, leastVivid, lightest, darkest,
   bestContrastWith, minContrastWith,
 } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // `readableOn` is stored as a trailing positional argument, so the

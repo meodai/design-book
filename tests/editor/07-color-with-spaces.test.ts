@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { DesignBook, color, colorMix } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // Item 7: color() nested inside a function arg used a regex

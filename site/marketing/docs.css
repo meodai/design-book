@@ -380,7 +380,7 @@ p em {
 }
 
 .extends-rows--keys {
-  --ledger-cols: calc(11ch + 28px) 10px minmax(0, 1fr);
+  --ledger-cols: calc(16ch + 28px) 10px minmax(0, 1fr); /* "brand.highlight" fits */
 }
 
 .ext-row {
@@ -415,13 +415,14 @@ p em {
   --active-outline: var(--blue);
 }
 
-/* ── The card on the graph ───────────────────────────────────────────
-   A small piece of UI made of the demo book's ui tokens (script.js
-   writes them into --card-*): ui.surface, its text as loading bars in
-   ui.text and ui.subtle, padded by ui.gap, its button ui.accent /
-   ui.onAccent and
-   ui.hover when pointed at, with the tables' hatched, outlined shadow. */
-.graph-card {
+/* ── A UI card (.ui-card) ─────────────────────────────────────────────
+   A small piece of UI drawn from a book's tokens, written into --card-*
+   by the page's script: its surface, its text as loading bars (the title
+   in --card-text, the lines in --card-subtle), padded by --card-gap, a
+   button in --card-accent / --card-on-accent (--card-hover pointed at),
+   with the tables' hatched, outlined shadow. Used on the graph (the demo
+   book's ui decisions) and for the two scopes of "Reading one level up". */
+.ui-card {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -434,7 +435,13 @@ p em {
   border: 1px solid var(--pp-text);
 }
 
-.graph-card::before {
+/* Its shadow sits under it (z-index -1), so whatever holds a card keeps
+   it on its own layer, above the paper. */
+:has(> .ui-card) {
+  isolation: isolate;
+}
+
+.ui-card::before {
   content: "";
   position: absolute;
   inset: -1px;
@@ -448,27 +455,25 @@ p em {
   );
 }
 
-/* Its text as placeholder bars, as a component looks while it loads:
-   the title in ui.text, the lines in ui.subtle. */
-.graph-card-line {
+.ui-card-line {
   display: block;
   width: 100%;
   height: 6px;
   background: var(--card-subtle, currentColor);
 }
 
-.graph-card-line--title {
+.ui-card-line--title {
   width: 70%;
   height: 12px;
   margin-bottom: 4px;
   background: var(--card-text, currentColor);
 }
 
-.graph-card-line--short {
+.ui-card-line--short {
   width: 60%;
 }
 
-.graph-card-button {
+.ui-card-button {
   display: block;
   margin-top: calc(var(--card-gap, 16px) - var(--card-breath, 8px));
   padding: 11px calc(var(--row) / 2);
@@ -476,13 +481,13 @@ p em {
   cursor: pointer;
 }
 
-.graph-card-button .graph-card-line {
+.ui-card-button .ui-card-line {
   width: calc(var(--row) * 2);
   background: var(--card-on-accent, var(--on-black));
 }
 
-.graph-card-button:hover {
-  background: var(--card-hover, var(--black));
+.ui-card-button:hover {
+  background: var(--card-hover, var(--card-accent, var(--black)));
 }
 
 /* It floats off the blueprint's bottom right corner, partly outside the
@@ -965,7 +970,7 @@ pre.code.holes-left,
 }
 
 .folder-sheet--result .extend-result.poline {
-  gap: var(--row);
+  column-gap: var(--row); /* rows: the result's rhythm */
 }
 
 .folder-sheet--result .extend-result-line {
@@ -1387,7 +1392,12 @@ pre.code.holes-left,
   margin-inline: calc(var(--row) * -1);
 }
 
-/* inParent: the ramp as a list, a row per step, number left and the
+/* The refs' results end on their last table or strip: no space under it. */
+.folder-sheet--result .ref-stage:has(> .ref-css:last-child) {
+  padding-bottom: 0;
+}
+
+/* inherited: the ramp as a list, a row per step, number left and the
    role it plays right; the two buttons on a strip of the page color. */
 .folder-sheet--result .ref-ramp {
   grid-template-columns: minmax(0, 1fr);
@@ -1410,11 +1420,42 @@ pre.code.holes-left,
   box-shadow: inset 0 1px 0 var(--strip-line);
 }
 
+/* inherited: the page as one card, four rows tall (the part stays whole
+   rows), its button at rest and in its hover state side by side. */
 .folder-sheet--result .folder-body .ref-buttons {
-  margin-inline: calc(var(--row) * -1);
-  padding: var(--row);
+  display: block;
+  padding: 0;
   border: 0;
+  background: none;
+}
+
+/* source: the two themes' cards side by side. */
+.folder-sheet--result .folder-body .ref-themes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 var(--row);
+}
+
+.folder-sheet--result .ref-themes .ui-card {
+  width: calc(100% - 10px);
+}
+
+.ui-card-buttons {
+  display: flex;
+  gap: calc(var(--row) / 2);
+}
+
+/* Inside a card nothing gets the hairline results draw round a swatch. */
+.folder-sheet--result .ui-card [style*="background"] {
+  box-shadow: none;
+}
+
+.folder-sheet--result .ref-buttons .ui-card {
+  --card-gap: calc(var(--row) / 2);
+  --card-breath: 6px;
+  box-sizing: border-box;
+  width: min(calc(100% - 10px), calc(var(--row) * 12));
+  height: calc(var(--row) * 4);
 }
 
 .folder-sheet--result .ref-ramp-step {
@@ -1470,28 +1511,15 @@ pre.code.holes-left,
   outline-offset: -2px;
 }
 
-/* colorMix: the two ends on one line, the path between them below as an
-   edge-to-edge strip. */
+/* colorMix: the path between the two ends as an edge-to-edge strip (the
+   ends are pickers on its stub). */
 .folder-sheet--result .mix-row {
-  grid-template-columns: auto auto;
-  justify-content: space-between;
-  row-gap: var(--row);
-  column-gap: 0;
-}
-
-.folder-sheet--result .mix-row > :first-child {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.folder-sheet--result .mix-row > :last-child {
-  grid-column: 2;
-  grid-row: 1;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .folder-sheet--result .folder-body .mix-strip {
   grid-column: 1 / -1;
-  grid-row: 2;
+  grid-row: 1;
   height: calc(var(--row) * 2);
   margin-inline: calc(var(--row) * -1);
   gap: 0;
@@ -1874,4 +1902,131 @@ main.sections {
    paper is in front (the one behind shifts half a row right). */
 @media (max-width: 640px) {
   .folder-sheet--code { --tab-left: 80px; }
+}
+
+/* ── Controls: a ticket stub (.stub) ──────────────────────────────────
+   A result's little controls (pickers, switches, a count) always come
+   last, on a stub torn off along a perforation: a dashed line across the
+   whole sheet on one of the paper's rules (the last pixel of the stub's
+   first row), with a round notch punched through the paper on each edge,
+   half of it outside, like a ticket; the controls under it run to the
+   sheet's bottom edge. docs-folders.js starts the stub on a rule, gives
+   it the result's rounding and tells the result where the perforation
+   is (--perf-y). Put the class on the controls' own box, or a box around
+   them, as the last child of the result. */
+.folder-sheet--result .folder-body > * > .stub {
+  --stub-ink: color-mix(in srgb, var(--pp-text) 50%, transparent);
+  /* the paper's rule: the last pixel of the stub's first row */
+  --perf: calc(var(--row) - 1px);
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  /* always the sheet's full width, whatever its own box would do */
+  justify-self: stretch;
+  align-self: stretch;
+  width: auto;
+  /* right after the last part: its first row is the blank row above
+     the perforation, its second the blank row under it */
+  margin: 0 calc(var(--row) * -1) calc(var(--row) * -1);
+  padding: calc(var(--row) * 2) var(--row) var(--row);
+  /* the controls in rows: a row each, a blank row between lines that
+     wrap apart, on the paper's rules */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  gap: var(--row) calc(var(--row) / 2);
+  /* one voice for its labels: the small mono of the captions */
+  font: 12px/var(--row) var(--font-code);
+  background:
+    linear-gradient(to right, var(--stub-ink) 50%, transparent 0)
+      left var(--perf) / 8px 1px repeat-x,
+    /* its own paper: the rules again, all but the one the perforation
+       replaces, so the dashes have clean gaps */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--row) - 1px),
+      var(--hair) calc(var(--row) - 1px) var(--row)
+    ) left var(--row) / 100% calc(100% - var(--row)) no-repeat,
+    /* opaque from the perforation down (its first row stays see-through,
+       so a shadow hanging into it shows), the perforation's own pixel
+       covering the rule under it */
+    linear-gradient(var(--pp), var(--pp)) left var(--perf) / 100% calc(100% - var(--perf)) no-repeat;
+}
+
+/* The notches: cut through the result's paper (the only box that
+   paints it), centred on each edge, half of the hole outside it. */
+.folder-sheet--result .folder-body > :has(> .stub) {
+  --perf-y: -100px;
+  --punch: transparent 7px, #000 7.5px;
+  -webkit-mask:
+    radial-gradient(circle at 0 var(--perf-y), var(--punch)),
+    radial-gradient(circle at 100% var(--perf-y), var(--punch));
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle at 0 var(--perf-y), var(--punch)),
+    radial-gradient(circle at 100% var(--perf-y), var(--punch));
+  mask-composite: intersect;
+}
+
+/* The naming demo's controls wrap inside their stub, each on a row. */
+.stub :is(.names-head, .names-schemes) {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* ── A result's rhythm ─────────────────────────────────────────────────
+   Every result reads the same way: a blank row, a part, a blank row, the
+   next part, …, a blank row (the result's own padding), so nothing is
+   ever closer or further apart than one row. Its parts carry no space of
+   their own; docs-folders.js rounds each part to whole rows, so the next
+   one starts on a rule. A stub follows its part directly (its first row
+   is the blank one). A result that is one line (p.extend-result) is left
+   as it is. */
+.folder-sheet--result .folder-body > :not(p) {
+  row-gap: 0;
+}
+
+.folder-sheet--result .folder-body > :not(p) > :not(.stub) {
+  margin-block: 0;
+}
+
+/* The selectors' stages are bare (no rows of their own above and under
+   them); a part that is a panel keeps its padding. */
+.folder-sheet--result .folder-body > .demo > [class*="-stage"] {
+  padding-block: 0;
+}
+
+.folder-sheet--result .folder-body > :not(p) > * + :not(.stub) {
+  margin-top: var(--row);
+}
+
+.folder-sheet--result .folder-body > * > .stub > * {
+  margin-block: 0;
+}
+
+/* Stages whose marks hang outside their box keep a row for them: under
+   it for nth's pick, sibling's anchor and sibling and lightest's names,
+   over it for the
+   sizes nextLarger writes above its bars. */
+.folder-sheet--result .folder-body > .demo > :is(.nth-stage, .sibling-stage, .lightness-stage) {
+  padding-bottom: var(--row);
+}
+
+.folder-sheet--result .folder-body > .demo > .step-stage {
+  padding-top: var(--row);
+}
+
+/* A slider takes the stub's full width, on a row of its own (nextLarger's
+   two, the naming demo's count). */
+.step-controls.stub > label,
+.stub > .names-count {
+  flex: 1 1 100%;
+}
+
+
+/* readable: a call that wraps writes one line per row, so its result is
+   whole rows tall. */
+.folder-sheet--result .rd-result :is(.rd-call, .rd-meta) {
+  line-height: var(--row);
 }

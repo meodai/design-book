@@ -11,7 +11,7 @@ import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf,
 import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl } from './functions/color/ramp';
-import { locateMember } from './functions/members';
+import { followSource } from './functions/members';
 import { FunctionError } from './errors';
 import { getTailwindRamps } from './data/tailwind-ramps';
 import { registerBuiltinRenderers } from './renderers/builtin';
@@ -354,7 +354,7 @@ export class DesignBook {
   }
 
   /** How tokens read this book's `extends` chains while they are bound
-   *  (`inParent` / `inRoot`). The version moves with every scope added or
+   *  (`inherited`). The version moves with every scope added or
    *  removed, so a cached binding never outlives the chain it followed. */
   private readonly _binding: BindingContext = {
     parentOf: (name: string) => this.scopeManager.getScope(name)?.extendsScope,
@@ -1065,23 +1065,24 @@ export class DesignBook {
     }
   }
 
-  /** The scopes a `sibling` token currently steps along: where its anchor
-   *  (and `toward` target) lives. Empty for any other token. */
+  /** The scope a `sibling` with a `source(…)` anchor currently steps along:
+   *  where the anchor's references lead, which only following them tells
+   *  (every other sibling declares its scope up front). Empty for any other
+   *  token. */
   private _walkedScopes(token: FunctionTokenValue): string[] {
-    if (token.name !== 'sibling') return [];
-    const names: string[] = [];
-    for (const key of [token.options?.from, token.options?.toward]) {
-      if (typeof key !== 'string') continue;
-      try {
-        const member = locateMember(this, key);
-        if (member) names.push(member.scope);
-      } catch { /* not resolvable yet; the next notification indexes it */ }
+    if (token.name !== 'sibling' || token.args.length > 0) return [];
+    const from = token.options?.from as { key?: unknown; via?: unknown } | undefined;
+    if (!from || typeof from.key !== 'string' || (from.via !== 'root' && typeof from.via !== 'number')) return [];
+    try {
+      const key = followSource(this, 'sibling', from.key, from.via as number | 'root');
+      return [key.slice(0, key.indexOf('.'))];
+    } catch {
+      return []; // not followable yet; the next notification indexes it
     }
-    return names;
   }
 
-  /** Re-index a notified `sibling`: what it steps along can change with
-   *  its anchor, which notifies it but is not its own write. */
+  /** Re-index a notified `sibling`: where a `source` anchor leads can change
+   *  with the tokens on the way, which notify it but are not its own write. */
   private _reindexDynamic(key: string): void {
     const token = this.getTokenByKey(key);
     if (token?.type === 'function' && (token as FunctionTokenValue).name === 'sibling') {

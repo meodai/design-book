@@ -6,7 +6,7 @@ import {
   largest, smallest, furthestFrom, bestContrastWith, minContrastWith,
   FunctionError,
 } from '../src/index';
-import { parseTokenInput } from '../editor/editor-input-parser';
+import { parseTokenInput } from '../site/editor/editor-input-parser';
 import { loadEditorModule } from './editor/load-editor';
 
 /** One pool holding every kind: colors, px sizes, rem sizes and text styles. */

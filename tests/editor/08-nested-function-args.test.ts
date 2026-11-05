@@ -3,7 +3,7 @@ import {
   DesignBook, color, ref,
   bestContrastWith, colorMix, lighten, spacingScale,
 } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
 // Item 8: a function token nested inside another function's args (e.g.

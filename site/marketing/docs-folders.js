@@ -22,14 +22,41 @@ document.querySelector(".coda-list")?.setAttribute("data-ledger", "");
 new MutationObserver(() => markLedgers()).observe(document.body, { childList: true, subtree: true });
 
 // A result is a whole number of rows tall, so its paper ends on a line.
+// When it ends on a stub (its controls, docs.css), the stub starts on a
+// rule (its perforation lies on one) and takes the extra at its bottom,
+// so it still reaches the sheet's bottom edge; the result is told where
+// the perforation is (--perf-y), to punch its holes there.
 const ROW = 28;
 const snap = new ResizeObserver((entries) => {
   for (const { target } of entries) {
-    target.style.paddingBottom = "";
-    const base = parseFloat(getComputedStyle(target).paddingBottom) || 0;
+    // each part takes whole rows, so the next starts on a rule: what is
+    // missing goes under it, outside its box (a box with a background
+    // keeps its own size)
+    if (target.tagName !== "P") {
+      for (const part of target.children) {
+        if (part.classList.contains("stub")) continue;
+        part.style.marginBottom = "";
+        const ph = part.getBoundingClientRect().height;
+        const rest = ph % ROW;
+        if (ph && rest > 0.5) part.style.marginBottom = `${ROW - rest}px`;
+      }
+    }
+    const stub = target.lastElementChild?.classList.contains("stub") ? target.lastElementChild : null;
+    if (stub) {
+      // the stub starts on a rule, so its perforation lies on one
+      stub.style.marginTop = "";
+      const off = (stub.getBoundingClientRect().top - target.getBoundingClientRect().top) % ROW;
+      if (off > 0.5) stub.style.marginTop = `${parseFloat(getComputedStyle(stub).marginTop) + ROW - off}px`;
+      // where the perforation is, for the holes the result cuts on it
+      const perf = stub.getBoundingClientRect().top - target.getBoundingClientRect().top + ROW - 0.5;
+      target.style.setProperty("--perf-y", `${perf}px`);
+    }
+    const pad = stub ?? target;
+    pad.style.paddingBottom = "";
+    const base = parseFloat(getComputedStyle(pad).paddingBottom) || 0;
     const h = target.getBoundingClientRect().height;
     const extra = (ROW - (h % ROW)) % ROW;
-    if (extra > 0.5) target.style.paddingBottom = `${base + extra}px`;
+    if (extra > 0.5) pad.style.paddingBottom = `${base + extra}px`;
   }
 });
 for (const result of document.querySelectorAll(".folder-sheet--result .folder-body > *")) snap.observe(result);

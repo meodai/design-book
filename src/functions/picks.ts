@@ -9,8 +9,8 @@ import type { Scope } from '../scope';
  * each function call in its own frame (`inFrame`), so a selector's report
  * lands in its own frame — not in the frame of a pool member it resolved on
  * the way, which may be a selector too. `capturePick` resolves a token and
- * returns what its call reported; `locateMember` uses it to find the member
- * a `sibling` anchor or a `not` entry names.
+ * returns what its call reported; the SVG renderer uses it to draw a
+ * selector's edge from the member it picked.
  *
  * Nothing is stored on tokens or in the book: a pick is read by resolving
  * again, the same way the value is.

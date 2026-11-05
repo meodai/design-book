@@ -25,9 +25,14 @@ export interface ReferenceValue {
   /** A path: `scope`, `scope.token` or `scope.token.field`; relative to the
    *  reading scope with a leading dot (`.`, `.token`, `.token.field`). */
   key: string;
-  /** Read the path this many `extends` levels up (`inParent`), or at the
-   *  top of the chain (`inRoot`). */
+  /** Read the path this many `extends` levels up, or at the top of the
+   *  chain (`inherited`). */
   up?: number | 'root';
+  /** Follow the token this path names along its references: this many
+   *  hops, or to the token where the value is written (`source`). Only a
+   *  member-naming slot reads it: a `sibling` anchor or `toward` target, a
+   *  `not` entry. */
+  via?: number | 'root';
   description?: string;
 }
 
@@ -152,8 +157,8 @@ export function color(value: string, options?: { description?: string; [key: str
  *
  * A token reference is a value; a scope reference is a pool, the argument a
  * selector like `mostVivid(ref('palette'))` searches. Each is only accepted
- * where it fits. Wrap a reference in `inParent` / `inRoot` to read it further
- * up the `extends` chain.
+ * where it fits. Wrap a reference in `inherited` to read it further up the
+ * `extends` chain, in `source` to name what it refers to.
  */
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
   if (typeof key !== 'string' || key === '' || key.startsWith('..')) {
@@ -166,30 +171,63 @@ export function ref(key: string, options?: { description?: string; [key: string]
 }
 
 /**
- * The same path, read `levels` steps up the `extends` chain (default 1) from
- * the scope it starts in — for a relative reference, the scope that reads it.
- * `inParent(ref('.surface'))` is the surface the scope would have if it did
- * not override it; `inParent(ref('.'))` is the parent scope, as a pool.
- * Reading past the top of the chain throws.
+ * The same path, read up the **`extends` chain**: what the scope would have
+ * inherited, had it not written its own. `inherited(ref('.surface'))` is the
+ * parent scope's `surface` (for a relative path, the parent of the scope
+ * that reads it); `inherited(ref('.surface'), 2)` two scopes up;
+ * `inherited(ref('.surface'), 'root')` the top of the chain (on a scope that
+ * extends nothing, the scope itself). `inherited(ref('.'))` is the parent
+ * scope, as a pool. Reading past the top of the chain is refused.
+ *
+ * It is how a scope overrides a key in terms of the value it replaces: a
+ * scope cannot read its own `.surface` to work out its own `.surface`.
+ * Its counterpart along references is `source`.
  */
-export function inParent(reference: ReferenceValue, levels: number = 1): ReferenceValue {
+export function inherited(reference: ReferenceValue, levels: number | 'root' = 1): ReferenceValue {
   if (!isReferenceValue(reference)) {
-    throw new Error('inParent: expects a ref(...)');
+    throw new Error('inherited: expects a ref(...)');
   }
+  if (levels === 'root') return { ...reference, up: 'root' };
   if (!Number.isInteger(levels) || levels < 1) {
-    throw new Error(`inParent: levels must be a whole number of 1 or more, got ${String(levels)}`);
+    throw new Error(`inherited: levels must be a whole number of 1 or more, or 'root', got ${String(levels)}`);
   }
   if (reference.up === 'root') return reference;
   return { ...reference, up: (reference.up ?? 0) + levels };
 }
 
-/** The same path, read at the top of the `extends` chain. On a scope that
- *  extends nothing, that is the scope itself. */
-export function inRoot(reference: ReferenceValue): ReferenceValue {
+/**
+ * The token a reference refers to, followed along its **references**:
+ * `card.interaction = ref('blue.600')`, so `source(ref('card.interaction'))`
+ * names `blue.600`. `source(ref, 2)` follows two references;
+ * `source(ref, 'root')` follows them to the token where the value is written
+ * (the first one that is not a reference — a color, a size, or a function
+ * such as a selector, which is not looked through). Following more
+ * references than there are is refused.
+ *
+ * It names a member, so it is read where a member is named: a `sibling`
+ * anchor (`sibling(source(ref('.interaction'), 'root'), -2)` steps along
+ * `blue`) or `toward` target, and a `not` entry. As a value, or as a pool, it
+ * is refused: write the ref itself. Combined with `inherited`, inheritance is
+ * read first: `source(inherited(ref('.x')), 'root')`.
+ */
+export function source(reference: ReferenceValue, hops: number | 'root' = 1): ReferenceValue {
   if (!isReferenceValue(reference)) {
-    throw new Error('inRoot: expects a ref(...)');
+    throw new Error('source: expects a ref(...)');
   }
-  return { ...reference, up: 'root' };
+  if (isScopeKey(reference.key)) {
+    throw new Error(`source: "${reference.key}" is a scope; source follows a token's references`);
+  }
+  if (hops === 'root') return { ...reference, via: 'root' };
+  if (!Number.isInteger(hops) || hops < 1) {
+    throw new Error(`source: hops must be a whole number of 1 or more, or 'root', got ${String(hops)}`);
+  }
+  if (reference.via === 'root') return reference;
+  return { ...reference, via: (reference.via ?? 0) + hops };
+}
+
+/** True for a reference that `source` marked to be followed. */
+export function isSourceReference(arg: unknown): arg is ReferenceValue & { via: number | 'root' } {
+  return isReferenceValue(arg) && arg.via !== undefined;
 }
 
 export function dimension(value: number, unit: string, options?: { description?: string; [key: string]: any }): TokenValue {
@@ -236,8 +274,8 @@ export function isFieldKey(key: string): boolean {
 //
 // A reference key is a path: `scope`, `scope.token`, `scope.token.field`.
 // A leading dot makes it relative to the scope that reads it (`.`,
-// `.token`), and `up` (`inParent` / `inRoot`) moves it up the `extends`
-// chain. Tokens keep both as written — they are shared data, and an
+// `.token`), and `up` (`inherited`) moves it up the `extends` chain; `via`
+// (`source`) is kept as it is and followed where a member is named. Tokens keep both as written — they are shared data, and an
 // inherited token is the same object in every scope that inherits it — and
 // are *bound* whenever a scope hands them out (`Scope.get`): the bound copy
 // holds plain, fully-qualified paths, so resolution, the graph and the
@@ -318,7 +356,7 @@ export function hasRelativeKeys(token: unknown): boolean {
   return traitsOf(token).relative;
 }
 
-/** True when the token holds a relative path or an `inParent` / `inRoot`
+/** True when the token holds a relative path or an `inherited`
  *  navigation — anything a scope has to bind before it can be read. */
 export function needsBinding(token: unknown): boolean {
   const traits = traitsOf(token);
@@ -354,8 +392,8 @@ function navigate(path: string, up: number | 'root', context: BindingContext): s
     if (parent === undefined) {
       return {
         error: level === 0
-          ? `"${start}" has no parent: it extends no scope, so inParent cannot read "${path}" there`
-          : `"${start}" has only ${level} level${level === 1 ? '' : 's'} above it, so inParent cannot go ${up} up`,
+          ? `"${start}" has no parent: it extends no scope, so inherited(...) cannot read "${path}" there`
+          : `"${start}" has only ${level} level${level === 1 ? '' : 's'} above it, so inherited(...) cannot go ${up} up`,
       };
     }
     scope = parent;
@@ -369,7 +407,7 @@ function bindReference(reference: ReferenceValue, scope: string, context: Bindin
   const { up, ...plain } = reference;
   if (up === undefined) return { ...plain, key: qualified };
   if (!context) {
-    return { ...plain, key: qualified, unresolvable: `"${reference.key}" needs a book to read inParent / inRoot` } as UnresolvableReference;
+    return { ...plain, key: qualified, unresolvable: `"${reference.key}" needs a book to read inherited(...)` } as UnresolvableReference;
   }
   const navigated = navigate(qualified, up, context);
   if (typeof navigated !== 'string') {
@@ -381,7 +419,7 @@ function bindReference(reference: ReferenceValue, scope: string, context: Bindin
 const boundTokens = new WeakMap<object, { version: number; byScope: Map<string, unknown> }>();
 
 /** The token as `scope` reads it: relative paths qualified against `scope`
- *  and `inParent` / `inRoot` followed through `context`. A token that needs
+ *  and `inherited` followed through `context`. A token that needs
  *  neither comes back as is; a bound copy is cached, so binding the same
  *  token to the same scope gives the same object until the scopes change. */
 export function bindToken<T>(token: T, scope: string, context?: BindingContext): T {
@@ -414,7 +452,13 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
         else if (isReferenceValue(key)) {
           const bound = bindReference(key, scope, context);
           if (isUnresolvableReference(bound)) options[name] = bound;
-          else {
+          else if (bound.via !== undefined) {
+            // a `source` anchor: stays a reference, followed when resolved;
+            // it reads its start key (a dependency the constructor already
+            // declared, unless `inherited` named it only now)
+            options[name] = { type: 'reference', key: bound.key, via: bound.via };
+            if (key.up !== undefined) landed[name] = bound.key;
+          } else {
             options[name] = bound.key;
             landed[name] = bound.key;
           }
@@ -424,7 +468,10 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
         options.not = options.not.map((n: unknown) => {
           if (typeof n === 'string') return q(n);
           const r = bindToken(n, scope, context);
-          return isReferenceValue(r) && !isUnresolvableReference(r) ? r.key : r;
+          if (isReferenceValue(r) && !isUnresolvableReference(r)) {
+            return r.via !== undefined ? { type: 'reference', key: r.key, via: r.via } : r.key;
+          }
+          return r;
         });
       }
     }
@@ -439,7 +486,9 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
         metadata.dependencies = [...(metadata.dependencies ?? []), key];
         metadata.visualDependencies = [...(metadata.visualDependencies ?? []), key];
       }
-      if (landed.from !== undefined) {
+      // the scope an anchor walks, once it is known; a `source` anchor's is
+      // only known when it is followed (the book indexes it then)
+      if (landed.from !== undefined && typeof options?.from === 'string') {
         metadata.iteratedScopes = [...(metadata.iteratedScopes ?? []), landed.from.slice(0, landed.from.indexOf('.'))];
       }
     }
@@ -447,6 +496,22 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
   }
   cache.byScope.set(scope, bound);
   return bound as T;
+}
+
+/** Where a `source` reference sits outside a member-naming slot (a value,
+ *  or a value argument of a function), a message saying so; else
+ *  `undefined`. `Scope.set` refuses such a token. */
+export function misplacedSource(token: unknown): string | undefined {
+  if (isSourceReference(token)) {
+    return `source(ref('${token.key}')) names a member, for a sibling anchor, a toward target or a not entry; as a value, write ref('${token.key}')`;
+  }
+  if (isFunctionTokenValue(token)) {
+    for (const arg of token.args) {
+      const error = misplacedSource(arg);
+      if (error) return error;
+    }
+  }
+  return undefined;
 }
 
 /** The first navigation in a bound token that could not be followed, or
@@ -473,7 +538,7 @@ export function extractDependencies(args: FunctionArg[]): string[] {
     if (isReferenceValue(arg)) {
       // A scope reference is a pool, read through the selector index — not
       // a value. A navigation that failed reads nothing, and one not yet
-      // followed (`inParent` before a scope binds it) names no key yet: the
+      // followed (`inherited` before a scope binds it) names no key yet: the
       // bound argument carries its dependency.
       if (isScopeKey(arg.key) || isUnresolvableReference(arg) || arg.up !== undefined) continue;
       deps.add(arg.key);
@@ -506,9 +571,16 @@ function notDependencies(fn: FunctionTokenValue): string[] {
   const not = fn.options?.not;
   if (!Array.isArray(not) || not.length === 0) return [];
   const iterated = new Set(iteratedScopesOf(fn));
-  return not.filter((n): n is string => {
-    return typeof n === 'string' && !isRelativeKey(n) && n.includes('.') && !iterated.has(scopeOf(n));
-  });
+  const deps: string[] = [];
+  for (const n of not) {
+    // a `source` entry is followed from its start key, so it reads it
+    if (isSourceReference(n)) {
+      if (!isRelativeKey(n.key)) deps.push(tokenKeyOf(n.key));
+      continue;
+    }
+    if (typeof n === 'string' && !isRelativeKey(n) && n.includes('.') && !iterated.has(scopeOf(n))) deps.push(n);
+  }
+  return deps;
 }
 
 /** Normalises a `not` option into an array of fully-qualified token keys.
@@ -518,9 +590,10 @@ function notDependencies(fn: FunctionTokenValue): string[] {
  *  the search pool. */
 export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): Array<string | ReferenceValue> {
   if (!not || not.length === 0) return [];
-  // A navigated reference (`inParent(ref('.x'))`) stays a reference until a
-  // scope binds it; a plain one is stored as its key.
-  return not.map((n) => (typeof n === 'string' ? n : n.up !== undefined ? n : n.key));
+  // A navigated reference (`inherited(ref('.x'))`) stays a reference until a
+  // scope binds it, a `source` one until it is followed; a plain one is
+  // stored as its key.
+  return not.map((n) => (typeof n === 'string' ? n : n.up !== undefined || n.via !== undefined ? n : n.key));
 }
 
 /** Names of the scopes a function token iterates — the scope arguments of

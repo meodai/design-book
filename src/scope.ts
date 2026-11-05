@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvableReference, unresolvableIn } from './tokens';
+import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvableReference, misplacedSource, unresolvableIn } from './tokens';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { ReferenceResolver, BookLike } from './reference-resolver';
@@ -129,9 +129,12 @@ export class Scope {
         qualified,
       );
     }
-    // inParent / inRoot past the top of the chain, as this scope reads it.
+    // inherited(...) past the top of the chain, as this scope reads it.
     const unresolvable = unresolvableIn(bound);
     if (unresolvable) throw new TokenError(`${qualified}: ${unresolvable}`, qualified);
+    // source(...) names a member; it is no value.
+    const misplaced = misplacedSource(value);
+    if (misplaced) throw new TokenError(`${qualified}: ${misplaced}`, qualified);
     if (isTypographyToken(value) && typographyBase(bound as FunctionTokenValue) === qualified) {
       const error = new CircularDependencyError([qualified, qualified]);
       error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +

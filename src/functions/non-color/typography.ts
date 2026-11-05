@@ -18,7 +18,7 @@ interface TypographyOptions {
   /** Names of the token's own fields, one per arg. */
   fields: string[];
   /** A live variant's base, `scope.token`: fields it doesn't set read the
-   *  base's. A navigated base (`inParent(ref('.title'))`) is kept as the
+   *  base's. A navigated base (`inherited(ref('.title'))`) is kept as the
    *  reference until a scope binds the token. */
   base?: string | ReferenceValue;
   /** Fields of the base the variant drops. */

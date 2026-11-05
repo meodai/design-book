@@ -8,8 +8,8 @@ import { FunctionError } from '../errors';
 
 /**
  * A selector's pool argument, as the token stores it: a reference to a scope.
- * Accepts `ref('palette')`, `ref('.')` (either inside `inParent` / `inRoot`
- * too), or the scope object itself — `mostVivid(palette)` — which becomes
+ * Accepts `ref('palette')`, `ref('.')` (also inside `inherited`)
+ * or the scope object itself — `mostVivid(palette)` — which becomes
  * `ref('palette')` here, so the token holds data, not a live scope. A token
  * reference or anything else is refused with a message that says what to
  * write instead.

@@ -435,7 +435,7 @@ function serializeTypography(fn: any): string {
   const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
   const base = fn.options?.base;
   if (!base) return `typography(${fields}${tail})`;
-  // A navigated base (inParent / inRoot) is kept as the reference.
+  // A navigated base (inherited) is kept as the reference.
   return `variant(${typeof base === 'string' ? `ref('${base}')` : serializePlainToken(base)}, ${fields}${tail})`;
 }
 
@@ -449,11 +449,15 @@ function serializeFunctionToken(fn: any): string {
     const extras: string[] = [];
     if (toward !== undefined) extras.push(`toward: ${typeof toward === 'string' ? `ref('${toward}')` : serializePlainToken(toward)}`);
     if (wrap) extras.push('wrap: true');
-    if (Array.isArray(not) && not.length > 0) extras.push(`not: ${JSON.stringify(not)}`);
+    if (Array.isArray(not) && not.length > 0) {
+      extras.push(`not: [${not.map((n: any) => (typeof n === 'string' ? JSON.stringify(n) : serializePlainToken(n))).join(', ')}]`);
+    }
     if (fn.description) extras.push(`description: ${JSON.stringify(fn.description)}`);
     const tail = extras.length > 0 ? `, { ${extras.join(', ')} }` : '';
     const anchor = typeof from === 'string' ? `ref('${from}')` : serializePlainToken(from);
-    return `sibling(${anchor}, ${offset}${tail})`;
+    // the scale, when given, is the function's argument
+    const scale = fn.args?.[0] ? `${serializePlainToken(fn.args[0])}, ` : '';
+    return `sibling(${anchor}, ${scale}${offset}${tail})`;
   }
 
   // The color selectors' `readableOn` backdrop is stored as a trailing
@@ -528,9 +532,11 @@ function quote(value: string): string {
 
 function serializePlainToken(tv: any): string {
   if (tv.type === 'reference') {
-    const written = `ref('${tv.key}')`;
-    if (tv.up === 'root') return `inRoot(${written})`;
-    if (typeof tv.up === 'number') return tv.up === 1 ? `inParent(${written})` : `inParent(${written}, ${tv.up})`;
+    // inherited(…) first, then source(…) around it: the order they are read in
+    const distance = (d: number | 'root') => (d === 1 ? '' : d === 'root' ? ", 'root'" : `, ${d}`);
+    let written = `ref('${tv.key}')`;
+    if (tv.up !== undefined) written = `inherited(${written}${distance(tv.up)})`;
+    if (tv.via !== undefined) written = `source(${written}${distance(tv.via)})`;
     return written;
   }
   if (tv.type === 'color') {
@@ -1106,7 +1112,7 @@ function createCompletionSource(_book: DesignBook, _currentScope: Scope) {
         // A pool is a scope reference: this scope first, then its parent, then every scope.
         const pools = [
           { label: "ref('.')", detail: 'this scope' },
-          ...(_currentScope.extendsScope ? [{ label: "inParent(ref('.'))", detail: `parent: ${_currentScope.extendsScope}` }] : []),
+          ...(_currentScope.extendsScope ? [{ label: "inherited(ref('.'))", detail: `parent: ${_currentScope.extendsScope}` }] : []),
           ...book.getAllScopes().map((scope) => ({ label: `ref('${scope.name}')`, detail: 'scope' })),
         ];
         for (const pool of pools) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { color, colorMix, lighten } from '../../src/index';
-import { parseTokenInput } from '../../editor/editor-input-parser';
+import { parseTokenInput } from '../../site/editor/editor-input-parser';
 
 // Item 2: parseOptionsArg silently dropped options it could not parse
 // (single-quoted string values, leading-dot numbers), quietly falling back

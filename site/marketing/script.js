@@ -13,13 +13,12 @@ import {
 import "hdr-color-input";
 
 // Default every <color-input> on the page (declarative + dynamically created)
-// to open its picker in HSL while keeping hex as the surfaced value format.
-// `initial-colorspace` only seeds the picker UI at upgrade time; subsequent
-// reads from `.value` stay in whatever format the value attribute used.
+// to hex: the field shows the value in the picker's color space, and the
+// hex field (shared.css) is sized for a hex.
 {
   const applyHsl = (el) => {
     if (el.hasAttribute("initial-colorspace")) return;
-    el.setAttribute("initial-colorspace", "hsl");
+    el.setAttribute("initial-colorspace", "hex");
   };
   document.querySelectorAll("color-input").forEach(applyHsl);
   new MutationObserver((records) => {
@@ -59,7 +58,8 @@ import {
   random,
   nth,
   sibling,
-  inParent,
+  inherited,
+  source,
 } from "../../src/index";
 
 import { Poline } from "poline";
@@ -485,7 +485,7 @@ function paintRenderers () {
   if (!swatchHost || !stage) return;
 
   const picker = document.createElement("color-input");
-  picker.setAttribute("initial-colorspace", "hsl");
+  picker.setAttribute("initial-colorspace", "hex");
   picker.setAttribute("value", "#7f4dc4");
   picker.setAttribute("no-alpha", "");
   picker.className = "closest-picker";
@@ -1043,9 +1043,10 @@ wireTabs(document.querySelector(".extends-modes"));
   const rowsEl   = document.getElementById("ref-rows");
   const cssEl    = document.getElementById("ref-css");
   const panesEl  = document.getElementById("ref-panes");
-  if (!sourceIn || !dangerIn || !rowsEl || !cssEl || !panesEl) return;
+  if (!dangerIn || !rowsEl || !cssEl || !panesEl) return;
 
-  const SOURCE = sourceIn.getAttribute("value") || "#3c61a0";
+  // The first demo is a still picture; a source picker is optional.
+  const SOURCE = sourceIn?.getAttribute("value") || "#3c61a0";
   const DANGER = dangerIn.getAttribute("value") || "#de5331";
 
   const book = new DesignBook("ref-demo");
@@ -1070,16 +1071,23 @@ wireTabs(document.querySelector(".extends-modes"));
   // The token as written: a ref with its key, a function by name.
   const written = (token) => token.type === "reference"
     ? `<span class="c-fn">ref</span>(<span class="c-str">'${token.key}'</span>)`
-    : `<span class="c-fn">${token.name}</span>`;
+    : token.type === "color"
+      ? `<span class="c-fn">color</span>(<span class="c-str">'${token.rawValue}'</span>)`
+      : `<span class="c-fn">${token.name}</span>`;
 
   const row = (scope, name, label = name) => {
     const inherited = scope.isInherited(name);
     const value = book.resolve(`${scope.name}.${name}`);
-    const source = inherited ? "inherit" : written(scope.getRaw(name));
+    const raw = scope.getRaw(name);
+    const source = inherited ? "inherit" : written(raw);
+    // a plain color already says its value; only what is derived shows it
+    const resolved = !inherited && raw.type === "color"
+      ? ""
+      : ` <span class="ext-resolved">→ ${value}</span>`;
     return `<div class="ext-row ext-row--${inherited ? "inherited" : "override"}">
       <span class="ext-key">${label}</span>
       <span class="ext-swatch" style="background:${value}"></span>
-      <span class="ext-val">${source} <span class="ext-resolved">→ ${value}</span></span>
+      <span class="ext-val">${source}${resolved}</span>
     </div>`;
   };
 
@@ -1092,7 +1100,9 @@ wireTabs(document.querySelector(".extends-modes"));
     </div>`;
 
   function paint () {
-    rowsEl.innerHTML = ["link", "focus", "border"].map((n) => row(ui, n, `ui.${n}`)).join("");
+    // the source first, then what points at it
+    rowsEl.innerHTML = row(brand, "primary", "brand.primary")
+      + ["link", "focus", "border"].map((n) => row(ui, n, `ui.${n}`)).join("");
     const lines = book.render("css-variables").split("\n")
       .filter((l) => /^\s*--(brand-primary|ui-[\w-]+):/.test(l))
       .map((l) => `  ${l.trim()}`);
@@ -1107,25 +1117,25 @@ wireTabs(document.querySelector(".extends-modes"));
     input.addEventListener("input", update);
     input.addEventListener("change", update);
   };
-  bind(sourceIn, "primary", SOURCE);
+  if (sourceIn) bind(sourceIn, "primary", SOURCE);
   bind(dangerIn, "error", DANGER);
 
   paint();
 })();
 
 // ══════════════════════════════════════════════════════════════════════
-//  inParent — a hover one step from the parent's interaction color,
-//  toward the parent's background
+//  inherited — a variant's hover: its parent's interaction color, two
+//  steps lighter along the ramp
 // ══════════════════════════════════════════════════════════════════════
 (function parentSection () {
-  const modesEl   = document.getElementById("ref-parent-modes");
   const rampEl    = document.getElementById("ref-ramp");
   const buttonsEl = document.getElementById("ref-buttons");
-  if (!modesEl || !rampEl || !buttonsEl) return;
+  if (!rampEl || !buttonsEl) return;
 
+  // a lively ramp with clear steps, so a move along it shows
   const BLUE = {
-    "50": "#ccd0d3", "100": "#aab7c8", "200": "#8a9ebe", "300": "#6a86b2", "400": "#4b6da6",
-    "500": "#385890", "600": "#2f4870", "700": "#263852", "800": "#1e2835", "900": "#15191a",
+    "50": "#e9eefb", "100": "#ccd8f6", "200": "#a8bdef", "300": "#81a0e7", "400": "#5a82dd",
+    "500": "#3965cf", "600": "#2c4fa8", "700": "#223c80", "800": "#182a59", "900": "#0e1833",
   };
   const book = new DesignBook("parent-demo");
   const blue = book.addScope("blue");
@@ -1134,7 +1144,7 @@ wireTabs(document.querySelector(".extends-modes"));
   base.set("background", ref("blue.50"));
   base.set("interaction", ref("blue.600"));
   book.addScope("base-hover", { extends: "base" })
-    .set("interaction", sibling(inParent(ref(".interaction")), { toward: inParent(ref(".background")) }));
+    .set("interaction", sibling(inherited(ref(".interaction")), ref("blue"), -2));
 
   const ink = (bg) => (contrast(bg, "#fffaed") >= contrast(bg, "#0d0a03") ? "#fffaed" : "#0d0a03");
 
@@ -1152,24 +1162,62 @@ wireTabs(document.querySelector(".extends-modes"));
         ${marks(value).map((m) => `<b>${m}</b>`).join("")}
         <span>${step}</span>
       </div>`).join("");
-    buttonsEl.style.background = page;
-    buttonsEl.style.borderColor = page;
-    buttonsEl.innerHTML = [["base", rest], ["base-hover", hover]].map(([name, bg]) => `
-      <div>
-        <span style="color:${ink(page)}">${name}</span>
-        <button type="button" tabindex="-1" style="background:${bg};color:${ink(bg)}">Read more</button>
-      </div>`).join("");
+    // the page as a small piece of UI (.ui-card, as on the graph): its
+    // button at rest (base) and, beside it, in its hover state (base-hover)
+    const text = ink(page);
+    const button = (bg) => `<span class="ui-card-button" style="background:${bg}"><span class="ui-card-line" style="background:${ink(bg)}"></span></span>`;
+    buttonsEl.innerHTML = `
+      <div class="ref-card">
+        <span class="ref-card-name">base.interaction · base-hover.interaction</span>
+        <div class="ui-card" aria-hidden="true" style="--card-surface:${page};--card-text:${text};--card-subtle:color-mix(in oklch, ${text} 45%, ${page})">
+          <span class="ui-card-line ui-card-line--title"></span>
+          <span class="ui-card-line"></span>
+          <span class="ui-card-line ui-card-line--short"></span>
+          <span class="ui-card-buttons">${button(rest)}${button(hover)}</span>
+        </div>
+      </div>`;
   }
 
-  modesEl.addEventListener("click", (e) => {
-    const button = e.target.closest("[data-background]");
-    if (!button) return;
-    base.set("background", ref(button.dataset.background));
-    for (const b of modesEl.querySelectorAll("[data-background]")) b.classList.toggle("is-active", b === button);
-    paint();
-  });
-
   paint();
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  source — one hover rule, shared by two themes whose interaction colors
+//  come from different ramps
+// ══════════════════════════════════════════════════════════════════════
+(function sourceSection () {
+  const themesEl = document.getElementById("ref-themes");
+  if (!themesEl) return;
+
+  const RAMPS = {
+    blue: ["#e9eefb", "#ccd8f6", "#a8bdef", "#81a0e7", "#5a82dd", "#3965cf", "#2c4fa8", "#223c80", "#182a59", "#0e1833"],
+    green: ["#e7f6ec", "#c6ead2", "#9ddbb2", "#6fca8f", "#45b46f", "#2f9a58", "#257b47", "#1c5e37", "#134126", "#0a2616"],
+  };
+  const STEPS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"];
+  const book = new DesignBook("source-demo");
+  for (const [name, values] of Object.entries(RAMPS)) {
+    const scope = book.addScope(name);
+    values.forEach((value, i) => scope.set(STEPS[i], color(value)));
+  }
+  const button = book.addScope("button");
+  button.set("interaction", ref("blue.500"));
+  button.set("hover", sibling(source(ref(".interaction"), "root"), -2));
+  book.addScope("button-green", { extends: "button" }).set("interaction", ref("green.500"));
+
+  const page = "#eee9dc";
+  const ink = "#0d0a03";
+  const onButton = (bg) => (contrast(bg, "#fffaed") >= contrast(bg, ink) ? "#fffaed" : ink);
+  const chip = (bg) => `<span class="ui-card-button" style="background:${bg}"><span class="ui-card-line" style="background:${onButton(bg)}"></span></span>`;
+  themesEl.innerHTML = ["button", "button-green"].map((name) => `
+    <div class="ref-card">
+      <span class="ref-card-name">${name}: interaction · hover</span>
+      <div class="ui-card" aria-hidden="true" style="--card-surface:${page};--card-text:${ink};--card-subtle:color-mix(in oklch, ${ink} 45%, ${page})">
+        <span class="ui-card-line ui-card-line--title"></span>
+        <span class="ui-card-line"></span>
+        <span class="ui-card-line ui-card-line--short"></span>
+        <span class="ui-card-buttons">${chip(book.resolve(`${name}.interaction`))}${chip(book.resolve(`${name}.hover`))}</span>
+      </div>
+    </div>`).join("");
 })();
 
 // ══════════════════════════════════════════════════════════════════════

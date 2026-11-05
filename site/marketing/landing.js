@@ -815,7 +815,7 @@ function renderSource() {
     // Each swatch is the site's own picker (hdr-color-input), so it opens
     // the same black-paper panel as the docs, not the system dialog.
     handSwatches.innerHTML = HAND[name].map((hex, i) =>
-      `<color-input class="hand-swatch" value="${hex}" initial-colorspace="hsl" no-alpha ` +
+      `<color-input class="hand-swatch" value="${hex}" initial-colorspace="hex" no-alpha ` +
       `data-index="${i}" title="${name} color ${i + 1}: ${hex}" aria-label="${name} color ${i + 1}"></color-input>`).join("");
   }
   if (source === "ramp") {

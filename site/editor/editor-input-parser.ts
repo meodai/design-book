@@ -1,5 +1,5 @@
 import {
-  color, ref, inParent, inRoot, px, rem, ms, dimension, string,
+  color, ref, inherited, source, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
   closest, nextLighter, nextDarker, furthestFrom, mostVivid, leastVivid,
@@ -20,7 +20,8 @@ import { parse } from 'culori';
  *   #ff0000 or any CSS color         -> color(value)
  *   ref('scope.token')               -> ref('scope.token')
  *   ref('scope'), ref('.')           -> a scope, where a function takes one
- *   inParent(ref('.x'), 2), inRoot(ref('.x')) -> the reference, further up the extends chain
+ *   inherited(ref('.x'), 2 | 'root') -> the reference, further up the extends chain
+ *   source(ref('.x'), 2 | 'root')    -> the token it refers to, along its references
  *   px(16), rem(1.5), ms(200)        -> dimension tokens
  *   bestContrastWith(arg, scope)      -> function tokens
  *   colorMix(arg1, arg2, ...)        -> function tokens
@@ -43,7 +44,7 @@ export function parseTokenInput(
   const described = parseDescribedConstructor(trimmed, book, currentScope);
   if (described) return described;
 
-  // ref('scope.token'), and the same inside inParent(…, n) / inRoot(…)
+  // ref('scope.token'), and the same inside inherited(…) / source(…)
   const reference = parseReference(trimmed);
   if (reference) return reference;
 
@@ -221,21 +222,18 @@ function splitArgs(argsStr: string): string[] {
   return args;
 }
 
-/** `ref('path')`, or one wrapped in `inParent(…, n)` / `inRoot(…)`;
- *  `undefined` for anything else. */
+/** `ref('path')`, or one wrapped in `inherited(…, n | 'root')` /
+ *  `source(…, n | 'root')`; `undefined` for anything else. */
 function parseReference(text: string): ReferenceValue | undefined {
   const trimmed = text.trim();
   const plain = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
   if (plain) return ref(plain[1]);
-  const parent = trimmed.match(/^inParent\(\s*(.+?)\s*(?:,\s*(\d+)\s*)?\)$/s);
-  if (parent) {
-    const inner = parseReference(parent[1]);
-    if (inner) return inParent(inner, parent[2] === undefined ? 1 : Number(parent[2]));
-  }
-  const root = trimmed.match(/^inRoot\(\s*(.+?)\s*\)$/s);
-  if (root) {
-    const inner = parseReference(root[1]);
-    if (inner) return inRoot(inner);
+  const wrapped = trimmed.match(/^(inherited|source)\(\s*(.+?)\s*(?:,\s*(\d+|['"]root['"])\s*)?\)$/s);
+  if (wrapped) {
+    const inner = parseReference(wrapped[2]);
+    if (!inner) return undefined;
+    const distance = wrapped[3] === undefined ? 1 : /root/.test(wrapped[3]) ? 'root' as const : Number(wrapped[3]);
+    return wrapped[1] === 'inherited' ? inherited(inner, distance) : source(inner, distance);
   }
   return undefined;
 }
@@ -247,7 +245,7 @@ function parseArg(
 ): { type: 'ref'; value: ReferenceValue } | { type: 'token'; value: AnyTokenValue } | { type: 'scope'; value: ReferenceValue } | { type: 'raw'; value: string | number } {
   const trimmed = arg.trim();
 
-  // ref('...'), inParent(ref('...')), inRoot(ref('...'))
+  // ref('...'), inherited(ref('...')), source(ref('...'))
   const reference = parseReference(trimmed);
   if (reference) {
     return isScopeKey(reference.key) ? { type: 'scope', value: reference } : { type: 'ref', value: reference };
@@ -616,13 +614,22 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return nth(scope, indexParsed.value as number, options);
   },
 
-  // sibling(ref('scope.token'), steps?, { toward?, wrap?, not? }?)
+  // sibling(ref('scope.token'), ref('scale')?, steps?, { toward?, wrap?, not? }?)
   sibling(argsStr, book, currentScope) {
     const args = splitArgs(argsStr);
-    if (args.length < 1) throw new Error('sibling requires an anchor: sibling(ref(...), steps?, { toward? })');
+    if (args.length < 1) throw new Error('sibling requires an anchor: sibling(ref(...), ref(scale)?, steps?, { toward? })');
     const anchor = getTokenArg(parseArg(args[0], book));
-    // The step count is optional (1); the options object may follow the anchor directly.
+    // The scale and the step count are optional (the anchor's own scope, 1);
+    // the options object may follow the anchor directly.
     let rest = args.slice(1);
+    let scale: ReferenceValue | undefined;
+    if (rest.length > 0) {
+      const first = parseArg(rest[0], book);
+      if (first.type === 'scope') {
+        scale = first.value;
+        rest = rest.slice(1);
+      }
+    }
     let steps = 1;
     if (rest.length > 0 && !rest[0].trim().startsWith('{')) {
       const offsetParsed = parseArg(rest[0], book);
@@ -644,7 +651,9 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
       else if (key === 'description') options.description = parseQuotedString(valueStr);
       else throw new Error(`sibling: unknown option \`${key}\` (expected toward, wrap, not or description)`);
     }
-    return sibling(anchor as ReferenceValue, steps, options);
+    return scale
+      ? sibling(anchor as ReferenceValue, scale, steps, options)
+      : sibling(anchor as ReferenceValue, steps, options);
   },
 
   // random(scope, { type, seed?, not? })
