@@ -777,6 +777,10 @@ footer.imprint .imprint-made a {
   overflow: visible;
 }
 
+.logo .logo-fill {
+  fill: var(--logo-fill, none);
+}
+
 .logo text {
   font: italic 800 30px var(--font-text);
 }

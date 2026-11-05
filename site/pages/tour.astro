@@ -22,8 +22,15 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
 
-  <section class="hero first-screen split split--wide-start">
-    <Logo class="intro-logo" thin />
+  <section class="hero first-screen hero--centered">
+    <div class="hero-illustration" id="hero-illustration">
+      <svg viewBox="-200 -200 400 400" role="group" aria-labelledby="hc-title">
+        <title id="hc-title">Eight selectors picking from one palette against the color in the middle: a segment per selector, a ring per color, the picked color filled</title>
+        <g class="hc" id="hc-chart"></g>
+      </svg>
+      <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hex" no-alpha=""></color-input>
+      <Logo class="intro-logo hero-emblem" thin upright />
+    </div>
     <div class="hero-text">
       <h1>A tour of Design Book</h1>
       <p class="deck">Most design systems store answers: a hex picked here, a spacing
@@ -34,24 +41,6 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
         included.</p>
 
       <p class="install-note">TypeScript · ESM</p>
-    </div>
-    <div class="hero-illustration" id="hero-illustration">
-      <svg viewBox="-200 -200 400 400" aria-hidden="true">
-        <g class="hi-ring" id="hi-ring"></g>
-      </svg>
-      <color-input class="hi-center" id="hi-center" value="#0d0a03" initial-colorspace="hex" no-alpha=""></color-input>
-      <div class="hi-pill">
-        <select class="hi-fn" id="hi-fn" aria-label="Selector function">
-          <option value="bestContrastWith">bestContrastWith</option>
-          <option value="minContrastWith">minContrastWith</option>
-          <option value="closest">closest</option>
-          <option value="furthestFrom">furthestFrom</option>
-          <option value="mostVivid">mostVivid</option>
-          <option value="leastVivid">leastVivid</option>
-          <option value="lightest">lightest</option>
-          <option value="darkest">darkest</option>
-        </select>
-      </div>
     </div>
   </section>
 

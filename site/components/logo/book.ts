@@ -60,6 +60,10 @@ export interface Lines {
    *  draws the gap like the cover, one gap-width past the pages, so a
    *  hairline cover is never cut through at the steep sides of the tip. */
   fold?: 'shift' | 'normal';
+  /** 'upright': the notch on top and the point below on one vertical line
+   *  (through the spine's middle), so the fold does not lean with the
+   *  letters. By default it leans, as the book's edges do. */
+  spine?: 'lean' | 'upright';
 }
 
 export function book(ink: Ink, lines: Lines = {}): Book {
@@ -70,8 +74,9 @@ export function book(ink: Ink, lines: Lines = {}): Book {
   const mid = baseline - ink.cap / 2;
   const W = FRAME + PAD + (ink.right - ink.left) + PAD + FRAME;
   const lean = (x: number, y: number): [number, number] => [x + SLANT * (mid - y), y];
-  const spineTop = lean(W / 2, TOP)[0];
-  const spineBottom = lean(W / 2, bottom)[0];
+  const upright = lines.spine === 'upright';
+  const spineTop = upright ? W / 2 + SLANT * (mid - (TOP + bottom) / 2) : lean(W / 2, TOP)[0];
+  const spineBottom = upright ? spineTop : lean(W / 2, bottom)[0];
 
   // The folds, upright, as Bézier segments relative to the spine at the
   // pages' edge: the notch on top (left to right), the point at the

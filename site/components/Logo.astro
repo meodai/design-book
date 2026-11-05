@@ -6,14 +6,18 @@ import { book, maskShapes } from './logo/book';
 
 // It links to the landing page: the class goes on the link, the drawing
 // fills it.
-const { class: className, thin = false } = Astro.props as { class?: string; thin?: boolean };
+const { class: className, thin = false, upright = false } = Astro.props as { class?: string; thin?: boolean; upright?: boolean };
 const home = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 // The letters' ink, measured from Valley Sans italic 800 at 30 in the
 // book's leaned frame, relative to the text's anchor (its middle): from
 // the D's stem to the K's arms, and above and below the baseline.
 // thin: hairlines for the wordmark at the top of an intro (42px tall,
 // about 0.87px to a unit): a 1px edge round the page, a 2px cover.
-const b = book({ left: -108.2, right: 111.4, cap: 22.1, below: 0.4 }, thin ? { frame: 1.15, cover: 2.3, fold: 'normal' } : {});
+// upright: the fold at the spine stands straight instead of leaning.
+const b = book({ left: -108.2, right: 111.4, cap: 22.1, below: 0.4 }, {
+  ...(thin ? { frame: 1.15, cover: 2.3, fold: 'normal' as const } : {}),
+  ...(upright ? { spine: 'upright' as const } : {}),
+});
 const id = `logo-${Math.random().toString(36).slice(2, 8)}`;
 ---
 <a class:list={['logo-link', className]} href={home} aria-label="Design Book, home">
@@ -21,6 +25,9 @@ const id = `logo-${Math.random().toString(36).slice(2, 8)}`;
   <defs>
     <mask id={id} maskUnits="userSpaceOnUse" x="-40" y="-20" width="340" height="110" set:html={maskShapes(b)} />
   </defs>
+  <!-- under it, the book's outline in --logo-fill (none unless a page
+       sets it), so what the mask cuts out can be paper instead of see-through -->
+  <path class="logo-fill" d={b.cover} />
   <rect x="-40" y="-20" width="340" height="110" fill="currentColor" mask={`url(#${id})`} />
   <text x={b.x} y={b.baseline} text-anchor="middle" fill="currentColor">DESIGNBOOK</text>
 </svg>

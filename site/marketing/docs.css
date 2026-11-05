@@ -3187,3 +3187,200 @@ main.sections {
   }
 }
 
+/* The tour's opening chart, after the old radial plates: fine black rules
+   between rings and segments, a double rim with a diamond at each
+   division, labels set along the rim, the picks as solid bands. */
+.hc .hc-rule {
+  fill: none;
+  stroke: var(--text, var(--black));
+  stroke-width: 0.8;
+}
+
+.hc .hc-thin {
+  stroke-width: 0.4;
+}
+
+.hc .hc-pick {
+  stroke: var(--text, var(--black));
+  stroke-width: 1.6;
+}
+
+.hc .hc-mark {
+  fill: var(--paper);
+  stroke: var(--text, var(--black));
+  stroke-width: 1;
+}
+
+.hc .hc-band {
+  stroke: var(--text, var(--black));
+  stroke-width: 0.3;
+}
+
+.hc .hc-tick {
+  fill: var(--paper);
+  stroke: var(--text, var(--black));
+  stroke-width: 0.8;
+}
+
+.hc .hc-hub {
+  fill: var(--paper);
+  stroke: var(--text, var(--black));
+  stroke-width: 0.8;
+}
+
+.hc .hc-label {
+  font-family: var(--font-code);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  fill: var(--text, var(--black));
+}
+
+/* Each segment a link to its selector's section: invisible until pointed
+   at or focused, then a faint wash of the ink. */
+.hc .hc-hit {
+  fill: transparent;
+  stroke: none;
+  cursor: pointer;
+  transition: fill 0.15s;
+}
+
+.hc a:is(:hover, :focus-visible) .hc-hit {
+  fill: color-mix(in srgb, var(--text, var(--black)) 10%, transparent);
+}
+
+.hc a:focus-visible {
+  outline: none;
+}
+
+.hc a:focus-visible .hc-hit {
+  stroke: var(--text, var(--black));
+  stroke-width: 1.5;
+}
+
+/* The opening, centred: the chart, the wordmark over its top edge
+   like the title on an old plate, then the title and the first
+   paragraph under it. */
+.hero.hero--centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.hero--centered .hero-illustration {
+  width: min(100%, 440px);
+  max-width: none;
+  margin: 0 auto;
+}
+
+.hero--centered .hero-text {
+  max-width: 40rem;
+  margin-top: calc(var(--row) * 3);
+}
+
+.hero--centered .hero-text h1 {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero--centered .hero-text .deck {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-illustration > .hero-emblem {
+  display: block;
+  box-sizing: content-box;
+  width: calc(var(--row) * 6);
+  line-height: 0;
+  position: absolute;
+  left: 50%;
+  top: 2%; /* the rim's top */
+  z-index: 2;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  translate: calc(-50% + 1px) calc(-50% - 3px); /* set into the rim, its fold on the division line below */
+  --logo-fill: var(--paper); /* its page is paper, not see-through */
+}
+
+.hero-illustration > .hero-emblem .logo {
+  /* not the chart: .hero-illustration svg places that one over the box */
+  position: static;
+  inset: auto;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The hub while the target drifts on its own: the palette as a pie,
+   turning; the picker on top of it invisible (still there to be taken). */
+.hc .hc-pie {
+  animation: hc-pie-turn 12s linear infinite;
+}
+
+.hc .hc-pie path {
+  stroke: var(--text, var(--black));
+  stroke-width: 0.6;
+}
+
+.hc .hc-pie-rim {
+  fill: none;
+  stroke: var(--text, var(--black));
+  stroke-width: 1;
+}
+
+@keyframes hc-pie-turn {
+  to { rotate: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc .hc-pie {
+    animation: none;
+  }
+}
+
+.hero-illustration .hi-center.is-hidden {
+  opacity: 0;
+}
+
+/* a paper eye in the middle of the pie */
+.hc .hc-pie-eye {
+  fill: var(--paper);
+  stroke: var(--text, var(--black));
+  stroke-width: 0.8;
+}
+
+/* A segment broken out of the circle: its wedge, crisp, behind the page
+   from the inner rim out, tinted faintly (so the text over it reads): in
+   black when it picked black, in its pick's color while pointed at. */
+.hero-glow-clip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: -1;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 260vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  pointer-events: none;
+  background: conic-gradient(var(--glow));
+  /* from the inner rim (164 of the chart's 400 units), so the labels'
+     band is in it too, to the page's edges */
+  mask-image: radial-gradient(circle, transparent 0 var(--hole, 180px), black calc(var(--hole, 180px) + 1px));
+  /* the tints are in the gradient's colors */
+}
+
+/* The glow sits behind the chart and the first screen's text; the next
+   section, drawn after, lies over it with its title's hatching. */
+.hero.hero--centered {
+  isolation: isolate;
+}
+

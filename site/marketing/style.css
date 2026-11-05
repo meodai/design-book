@@ -2427,6 +2427,11 @@ color-input::part(gamut) { border-radius: 0; }
 .hi-center::part(output) { display: none; }
 .hi-center::part(input) { display: none; }
 .hi-center::part(chip) { inline-size: 100%; block-size: 100%; border: 0; box-shadow: none; }
+/* Round, so its hover ring is round too (the shared square inset ring
+   would show as a rounded square inside the circle). */
+.hi-center::part(chip),
+.hi-center::part(trigger) { border-radius: 50%; }
+.hi-center::part(chip):hover { box-shadow: inset 0 0 0 3px var(--paper); }
 
 .hero h1 {
   font-size: clamp(44px, 6.5vw, 80px);

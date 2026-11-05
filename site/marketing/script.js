@@ -56,6 +56,8 @@ import {
   darkest,
   nextLarger,
   nextSmaller,
+  nextLighter,
+  nextDarker,
   random,
   nth,
   sibling,
@@ -128,79 +130,262 @@ const PALETTE_CONTRAST_SURFACES = [
 //  HERO ILLUSTRATION — selector ring
 // ══════════════════════════════════════════════════════════════════════
 (function heroIllustration () {
-  const root     = document.getElementById("hero-illustration");
-  const ringEl   = document.getElementById("hi-ring");
-  const fnSel    = document.getElementById("hi-fn");
+  // A chart of decisions in the manner of the old radial plates: a segment
+  // per selector, labelled round the rim; a ring per palette color, from
+  // the hub out; in each segment the color that selector picks is a solid
+  // band, the others a thin line of their color. The hub holds the target
+  // (the color picker), and every selector here reads it, so every segment
+  // picks again when it changes (one with nothing on its side is empty).
+  const chart    = document.getElementById("hc-chart");
   const centerEl = document.getElementById("hi-center");
-  if (!root || !ringEl || !fnSel || !centerEl) return;
+  if (!chart || !centerEl) return;
 
-  const PALETTE = [
-    "#de5331", "#dab43d", "#479549", "#3c61a0", "#eee9dc", "#0d0a03",
-  ];
+  const PALETTE = ["#de5331", "#dab43d", "#479549", "#3c61a0", "#eee9dc", "#0d0a03"];
   const INITIAL_CENTER = centerEl.getAttribute("value") || "#0d0a03";
   centerEl.value = INITIAL_CENTER;
   let CENTER = INITIAL_CENTER;
-  const RADIUS = 150;
-  const N = PALETTE.length;
-  const SVG_NS = "http://www.w3.org/2000/svg";
 
-  const positions = PALETTE.map((_, i) => {
-    const a = (i / N) * Math.PI * 2 - Math.PI / 2;
-    return { x: Math.cos(a) * RADIUS, y: Math.sin(a) * RADIUS };
-  });
+  const SELECTORS = [
+    ["bestContrastWith", (s) => bestContrastWith(color(CENTER), s)],
+    ["minContrastWith",  (s) => minContrastWith(color(CENTER), s, { minContrast: 3 })],
+    ["closest",          (s) => closest(color(CENTER), s)],
+    ["furthestFrom",     (s) => furthestFrom(color(CENTER), s)],
+    ["nextLighter",      (s) => nextLighter(color(CENTER), s)],
+    ["nextDarker",       (s) => nextDarker(color(CENTER), s)],
+    ["mostVivid",  (s) => mostVivid(s, { readableOn: color(CENTER) })],
+    ["leastVivid", (s) => leastVivid(s, { readableOn: color(CENTER) })],
+  ];
 
-  const curve = document.createElementNS(SVG_NS, "path");
-  curve.setAttribute("class", "hi-curve");
-  ringEl.appendChild(curve);
-
-  const dots = PALETTE.map((c, i) => {
-    const dot = document.createElementNS(SVG_NS, "circle");
-    dot.setAttribute("class", "hi-dot");
-    dot.setAttribute("cx", positions[i].x);
-    dot.setAttribute("cy", positions[i].y);
-    dot.setAttribute("r", 11);
-    dot.setAttribute("fill", c);
-    ringEl.appendChild(dot);
-    return dot;
-  });
-
-  // Every option runs the real selector over the ring. The vivid/lightness
-  // ones ignore the centre — they rank the ring itself.
-  const selectors = {
-    bestContrastWith: (s) => bestContrastWith(color(CENTER), s),
-    minContrastWith:  (s) => minContrastWith(color(CENTER), s, { minContrast: 3 }),
-    closest:     (s) => closest(color(CENTER), s),
-    furthestFrom:     (s) => furthestFrom(color(CENTER), s),
-    mostVivid:        (s) => mostVivid(s),
-    leastVivid:       (s) => leastVivid(s),
-    lightest:         (s) => lightest(s),
-    darkest:          (s) => darkest(s),
+  const HUB = 44, RIM = 164, LABEL = 178, OUTER = 192;
+  const ringW = (RIM - HUB) / PALETTE.length;
+  const seg = (2 * Math.PI) / SELECTORS.length;
+  const pt = (r, a) => `${(r * Math.sin(a)).toFixed(2)} ${(-r * Math.cos(a)).toFixed(2)}`;
+  // a ring sector; `gap` pulls its sides in by that much (in units, about
+  // a pixel each), so neighbouring segments stand apart
+  const sector = (r0, r1, a0, a1, gap = 0) => {
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const i0 = a0 + gap / r0, i1 = a1 - gap / r0, o0 = a0 + gap / r1, o1 = a1 - gap / r1;
+    return `M${pt(r0, i0)} L${pt(r1, o0)} A${r1} ${r1} 0 ${large} 1 ${pt(r1, o1)} L${pt(r0, i1)} A${r0} ${r0} 0 ${large} 0 ${pt(r0, i0)}Z`;
+  };
+  // Between two segments: 1px of paper with a black line on each side of
+  // it (0.8 wide, centred 0.9 out from the division). The cells stop at
+  // the lines' outer edge (0.5 + 0.8).
+  const EDGE = 0.9, GAP_PICK = 1.3, GAP_BAND = 1.3;
+  // a straight line parallel to the division at angle a, `d` to its side
+  const edge = (a, d, r0, r1) => {
+    const off = (r) => { const [x, y] = pt(r, a).split(" ").map(Number); return `${(x + d * Math.cos(a)).toFixed(2)} ${(y + d * Math.sin(a)).toFixed(2)}`; };
+    return `M${off(r0)} L${off(r1)}`;
+  };
+  // an arc to set a label on, read left to right on either half
+  const arc = (r, a0, a1) => {
+    const mid = (a0 + a1) / 2;
+    const lower = Math.cos(mid) < 0;
+    return lower
+      ? `M${pt(r, a1)} A${r} ${r} 0 0 0 ${pt(r, a0)}`
+      : `M${pt(r, a0)} A${r} ${r} 0 0 1 ${pt(r, a1)}`;
   };
 
-  function update () {
-    const fn = selectors[fnSel.value] || selectors.bestContrastWith;
-    const winnerIdx = indexOfColor(PALETTE, pick(PALETTE, fn));
-
-    dots.forEach((d, i) => {
-      d.classList.toggle("is-winner", i === winnerIdx);
-      d.setAttribute("r", i === winnerIdx ? 14 : 11);
-    });
-
-    const p = positions[winnerIdx];
-    curve.setAttribute("d", p ? `M 0 0 L ${p.x} ${p.y}` : "");
+  // The wedges across the page: a segment that picked black carries on in
+  // black, faint; the segment under the pointer carries on in the color it
+  // picked, whatever that is.
+  let lastPicks = [];
+  let hovered = -1;
+  const PAPER = "#eee9dc", INK = "#0d0a03";
+  function paintWedges () {
+    const deg = 360 / SELECTORS.length;
+    const stops = SELECTORS.map((_, i) => {
+      const pickColor = PALETTE[lastPicks[i]];
+      // the paper on the paper would not show: a grey for it
+      const tint = (col) => col === INK ? `color-mix(in srgb, ${INK} 10%, transparent)`
+        : col === PAPER ? `color-mix(in srgb, ${INK} 6%, transparent)`
+        : `color-mix(in srgb, ${col} 20%, transparent)`;
+      const c = i === hovered && pickColor ? tint(pickColor)
+        : pickColor === INK ? tint(INK)
+        : "transparent";
+      return `${c} ${i * deg}deg ${(i + 1) * deg}deg`;
+    }).join(", ");
+    document.querySelector(".hero-glow")?.style.setProperty("--glow", stops);
   }
+
+  function draw () {
+    const picks = SELECTORS.map(([, fn]) => indexOfColor(PALETTE, pick(PALETTE, fn)));
+    let out = "<defs>";
+    SELECTORS.forEach(([name], i) => {
+      const a0 = i * seg + 0.02, a1 = (i + 1) * seg - 0.02;
+      const lower = Math.cos((a0 + a1) / 2) < 0;
+      out += `<path id="hc-l${i}" d="${arc(lower ? LABEL + 3 : LABEL - 3, a0, a1)}"/>`;
+    });
+    out += "</defs>";
+    let marks = "";
+    // the cells
+    SELECTORS.forEach((_, i) => {
+      const a0 = i * seg, a1 = (i + 1) * seg;
+      PALETTE.forEach((c, m) => {
+        const r0 = HUB + m * ringW, r1 = r0 + ringW;
+        if (picks[i] === m) {
+          // the pick: the whole cell in its color, outlined, a diamond in
+          // its middle (so a pick the color of the paper still shows)
+          out += `<path class="hc-pick" d="${sector(r0, r1, a0, a1, GAP_PICK)}" fill="${c}"/>`;
+          // a long diamond along the radius, its tips pointing at the hub
+          const am = (a0 + a1) / 2, rm = (r0 + r1) / 2, L = 6, W = 4.5; // a little longer than wide, its tips at the hub
+          const P = (r, a) => pt(r, a).replace(" ", ",");
+          const side = W / rm; // the half-width, as an angle at that radius
+          marks += `<path class="hc-mark" d="M${P(rm - L, am)} L${P(rm, am + side)} L${P(rm + L, am)} L${P(rm, am - side)}Z"/>`;
+        } else {
+          // not picked: a slim band, a quarter of the ring, its color still there
+          const mid = (r0 + r1) / 2, h = ringW / 8;
+          out += `<path class="hc-band" d="${sector(mid - h, mid + h, a0, a1, GAP_BAND)}" fill="${c}"/>`;
+        }
+      });
+    });
+    // the rules: a circle between rings, a line between segments, the rim
+    for (let m = 0; m <= PALETTE.length; m++) out += `<circle class="hc-rule" r="${HUB + m * ringW}"/>`;
+    out += `<circle class="hc-rule" r="${OUTER}"/><circle class="hc-rule hc-thin" r="${OUTER - 3}"/>`;
+    // fine spokes through each segment, as on the plates
+    SELECTORS.forEach((_, i) => {
+      for (let k = 1; k < 4; k++) {
+        const a = (i + k / 4) * seg;
+        out += `<path class="hc-rule hc-thin" d="M${pt(HUB, a)} L${pt(RIM, a)}"/>`;
+      }
+    });
+    SELECTORS.forEach((_, i) => {
+      const a = i * seg;
+      // through the rim one line; through the rings a line on each side of
+      // the 1px gap
+      out += `<path class="hc-rule" d="M${pt(RIM, a)} L${pt(OUTER, a)}"/>`;
+      out += `<path class="hc-rule" d="${edge(a, EDGE, HUB, RIM)}"/><path class="hc-rule" d="${edge(a, -EDGE, HUB, RIM)}"/>`;
+      // a small diamond on the rim at each division
+      const [x, y] = pt(OUTER - 1.5, a).split(" ").map(Number); // between the rim's two lines
+      out += `<rect class="hc-tick" x="${x - 4}" y="${y - 4}" width="8" height="8" transform="rotate(45 ${x} ${y})"/>`;
+    });
+    // the labels, along the rim
+    SELECTORS.forEach(([name], i) => {
+      out += `<text class="hc-label"><textPath href="#hc-l${i}" startOffset="50%" text-anchor="middle">${name}</textPath></text>`;
+    });
+    // the hub: a rosette round the target
+    out += `<circle class="hc-hub" r="${HUB - 2}"/><circle class="hc-rule" r="${HUB - 8}"/><circle class="hc-rule hc-thin" r="${HUB - 11}"/>`;
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * 2 * Math.PI;
+      out += `<path class="hc-rule hc-thin" d="M${pt(HUB - 8, a)} L${pt(HUB - 2, a)}"/>`;
+    }
+    // the picks' diamonds last, on top of every rule
+    cells.innerHTML = out + marks;
+    lastPicks = picks;
+    paintWedges();
+  }
+
+  // Each segment leads to its selector's section. The links are a layer of
+  // their own, drawn once, so hovering one survives the redraws.
+  const ANCHOR = {
+    bestContrastWith: "best-contrast", minContrastWith: "min-contrast",
+    closest: "closest", furthestFrom: "furthest",
+    nextLighter: "closest", nextDarker: "closest",
+    mostVivid: "vivid", leastVivid: "vivid",
+  };
+  const cells = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const links = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  links.setAttribute("class", "hc-links");
+  chart.append(cells, links);
+  // While the target drifts on its own, the hub shows the palette instead
+  // of the target: a pie of its colors, turning. The picker stays on top,
+  // invisible, so the first touch lands on it, stops the drift and shows
+  // the picker again.
+  const pie = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  pie.setAttribute("class", "hc-pie");
+  const PIE_R = 16;
+  pie.innerHTML = PALETTE.map((c, k) => {
+    const a0 = (k / PALETTE.length) * 2 * Math.PI, a1 = ((k + 1) / PALETTE.length) * 2 * Math.PI;
+    return `<path d="M0 0 L${pt(PIE_R, a0)} A${PIE_R} ${PIE_R} 0 0 1 ${pt(PIE_R, a1)}Z" fill="${c}"/>`;
+  }).join("") + `<circle class="hc-pie-rim" r="${PIE_R}"/><circle class="hc-pie-eye" r="5"/>`;
+  chart.append(pie);
+  // A segment breaks out of the circle: its wedge, crisp, carries on
+  // across the page behind the chart (which, and in what: paintWedges).
+  // It is clipped to a box from the top of the first screen down to the
+  // next section title's line, so the wedges run on behind that title's
+  // hatching; the box and the hub's place in it are measured, again on
+  // resize.
+  const hero = chart.closest("section");
+  const clip = document.createElement("div");
+  clip.className = "hero-glow-clip";
+  clip.setAttribute("aria-hidden", "true");
+  const glow = document.createElement("div");
+  glow.className = "hero-glow";
+  clip.append(glow);
+  hero.prepend(clip);
+  const nextTitle = hero.nextElementSibling?.querySelector(".rule-title");
+  const placeGlow = () => {
+    const h = hero.getBoundingClientRect();
+    const hub = chart.ownerSVGElement.getBoundingClientRect();
+    const end = nextTitle ? nextTitle.getBoundingClientRect().bottom : h.bottom;
+    clip.style.height = `${end - h.top}px`;
+    glow.style.left = `${hub.left + hub.width / 2 - h.left}px`;
+    glow.style.top = `${hub.top + hub.height / 2 - h.top}px`;
+    glow.style.setProperty("--hole", `${(hub.width * 164) / 400}px`);
+  };
+  placeGlow();
+  new ResizeObserver(placeGlow).observe(hero);
+  if (document.fonts) document.fonts.ready.then(placeGlow);
+  links.innerHTML = SELECTORS.map(([name], i) =>
+    `<a href="#${ANCHOR[name]}" aria-label="${name}"><path class="hc-hit" d="${sector(HUB, OUTER, i * seg, (i + 1) * seg)}"/></a>`).join("");
+  [...links.children].forEach((a, i) => {
+    const on = () => { hovered = i; paintWedges(); };
+    const off = () => { if (hovered === i) { hovered = -1; paintWedges(); } };
+    a.addEventListener("pointerenter", on);
+    a.addEventListener("pointerleave", off);
+    a.addEventListener("focus", on);
+    a.addEventListener("blur", off);
+  });
 
   function onCenterChange () {
     const v = centerEl.value;
     if (!v) return;
     CENTER = v;
-    update();
+    draw();
   }
 
-  fnSel.addEventListener("change", update);
+  // Until someone takes the picker, the target turns slowly round the hue
+  // wheel while its lightness zigzags, and the picks follow it. Stops for
+  // good on the first touch; pauses while the chart is off screen; never
+  // runs for reduced motion.
+  let drifting = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let visible = true;
+  let hue = 30;
+  // lightness bounces 0 → 100 → 0 (|i mod 200 − 100|), on a period of its
+  // own, so hue and lightness keep meeting anew
+  let i = 0;
+  const showPie = (on) => {
+    pie.style.display = on ? "" : "none";
+    centerEl.classList.toggle("is-hidden", on);
+  };
+  const stopDrift = () => { drifting = false; showPie(false); };
+  for (const type of ["pointerdown", "focusin", "keydown"]) centerEl.addEventListener(type, stopDrift);
+
+  let timer = 0;
+  function drift () {
+    if (!drifting) { clearInterval(timer); timer = 0; return; }
+    hue = (hue + 2) % 360;
+    const light = Math.abs((i += 3) % 200 - 100) / 100;
+    const value = formatHex({ mode: "oklch", l: 0.22 + 0.7 * light, c: 0.14, h: hue });
+    centerEl.value = value;
+    CENTER = value;
+    draw();
+  }
+
+  // (input / change also fire when the drift sets the value, so they do not
+  // stop it; a person's input always starts with a press, focus or key)
   centerEl.addEventListener("change", onCenterChange);
   centerEl.addEventListener("input", onCenterChange);
-  update();
+  draw();
+  // The timer runs only while the chart is on screen and the tab shown.
+  const run = () => {
+    const on = drifting && visible && !document.hidden;
+    if (on && !timer) timer = setInterval(drift, 140);
+    if (!on && timer) { clearInterval(timer); timer = 0; }
+  };
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; run(); }).observe(chart.ownerSVGElement);
+  document.addEventListener("visibilitychange", run);
+  showPie(drifting);
+  run();
 })();
 
 // ══════════════════════════════════════════════════════════════════════
@@ -485,9 +670,37 @@ function paintRenderers () {
       .wheel__point { r: 2.6px; stroke: none; }
       .wheel__anchor { r: 4.2px; stroke: none; }
       .wheel__saturation-ring { display: none; }
+      .wheel__outlines circle { fill: none; stroke: var(--poline-picker-line-color); pointer-events: none; }
     `);
+    // As on the home page: the ends in their own color, and every dot
+    // ringed (1px away, a 1px line) in a group of our own that the
+    // picker's redraws never touch.
+    const SVG_NS = "http://www.w3.org/2000/svg";
     const paintAnchors = () => {
-      for (const a of picker.shadowRoot?.querySelectorAll(".wheel__anchor") ?? []) a.style.fill = a.getAttribute("fill");
+      const root = picker.shadowRoot;
+      const svg = root?.querySelector("svg");
+      const wheel = root?.querySelector(".wheel");
+      if (!svg || !wheel) return;
+      const anchors = [...root.querySelectorAll(".wheel__anchor")];
+      for (const a of anchors) a.style.fill = a.getAttribute("fill");
+      let outlines = wheel.querySelector(".wheel__outlines");
+      if (!outlines) {
+        outlines = document.createElementNS(SVG_NS, "g");
+        outlines.setAttribute("class", "wheel__outlines");
+        wheel.append(outlines);
+      }
+      const px = 100 / (svg.clientWidth || 224);
+      const near = (a, b) => Math.hypot(a.getAttribute("cx") - b.getAttribute("cx"), a.getAttribute("cy") - b.getAttribute("cy")) < 4.5;
+      const dots = [...anchors, ...[...root.querySelectorAll(".wheel__point")].filter((p) => !anchors.some((a) => near(a, p)))];
+      while (outlines.children.length > dots.length) outlines.lastElementChild.remove();
+      dots.forEach((dot, i) => {
+        const ring = outlines.children[i] ?? outlines.appendChild(document.createElementNS(SVG_NS, "circle"));
+        const r = parseFloat(getComputedStyle(dot).r) || Number(dot.getAttribute("r"));
+        ring.setAttribute("cx", dot.getAttribute("cx"));
+        ring.setAttribute("cy", dot.getAttribute("cy"));
+        ring.setAttribute("r", String(r + px * 1.5));
+        ring.setAttribute("stroke-width", String(px));
+      });
     };
     const ready = () => {
       if (!picker.shadowRoot) return requestAnimationFrame(ready);
