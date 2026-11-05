@@ -172,51 +172,10 @@
   outline-offset: 2px;
 }
 
-/* The tab row (folder.js moves every paper's tab into it): a flex row on
-   top of the folder, one row tall where the folder kept that row free
-   for its tabs, so the folder's height and rhythm stay. Tabs stand side
-   by side at their own width, never overlapping; short of room they
-   shrink and cut their name rather than run into each other. A tab
-   behind rises half a row, as its paper does. */
-.folder.has-tab-row {
-  padding-top: 0;
-  grid-template-rows: var(--row) auto;
-}
-
-.folder.has-tab-row > .folder-sheet {
-  grid-area: 2 / 1;
-}
-
-.folder-tabs {
-  grid-area: 1 / 1;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  min-width: 0;
-  height: var(--row);
-}
-
-.folder > .folder-tabs > .folder-tab {
-  position: relative;
-  inset: auto;
-  left: auto;
-  flex: 0 1 auto;
-  min-width: 0;
-  text-overflow: ellipsis;
-  transition: translate 0.25s ease;
-}
-
-.folder > .folder-tabs > .folder-tab:not(.is-front) {
-  translate: 0 calc(var(--row) / -2);
-  cursor: pointer;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .folder-tabs > .folder-tab {
-    transition: none;
-  }
+/* The tabs' places along the edge are set from their widths by
+   Folder.astro, and change when the front paper does: they slide. */
+.folder-tab {
+  transition: left 0.25s ease;
 }
 
 /* ─── Ledger ────────────────────────────────────────────────────────
@@ -1051,6 +1010,43 @@ color-input::part(controls) {
   transform: translateY(calc(var(--row) / 2 - 2px));
 }
 
+/* The active tab's dot: round and a little small while a tab is behind,
+   it turns into a square, then a diamond, and grows as its paper comes
+   forward (the diamond, as on the sliders' handles). */
+/* Its drop is `translate` (applied before rotate and scale, in the page's
+   own axes), not `transform`, which would be turned with the diamond. */
+.folder-tab::after {
+  transform: none;
+  translate: 0 -100%;
+  scale: 0.9;
+  transition:
+    translate 0.2s ease,
+    border-radius 0.2s ease,
+    rotate 0.25s ease 0.1s,
+    scale 0.25s ease 0.1s;
+}
+
+.folder-sheet:not(.is-front) .folder-tab:is(:hover, :focus-visible)::after,
+.folder-tabs > .folder-tab:not(.is-front):is(:hover, :focus-visible)::after {
+  transform: none;
+  translate: 0 calc(var(--row) / 2 - 2px);
+}
+
+.folder-sheet.is-front > .folder-tab::after,
+.folder-tabs > .folder-tab.is-front::after {
+  transform: none;
+  translate: 0 calc(var(--row) / 2 - 2px);
+  border-radius: 0;
+  rotate: 45deg;
+  scale: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-tab::after {
+    transition: none;
+  }
+}
+
 /* Both rails, above the bar: legends and scales end at the same heights. */
 .rail .rail-legend {
   bottom: calc(var(--row) * 2.5);
@@ -1179,13 +1175,7 @@ h3.rule-title {
   transition: translate 0.25s ease;
 }
 
-.folder--inset > .folder-tabs {
-  padding-left: var(--inset);
-}
 
-.folder--inset .folder-sheet:not(.is-front) > .folder-tab {
-  translate: calc(var(--row) / -2) 0;
-}
 
 /* ─── Blueprint: a drafting grid behind a drawing (.blueprint) ──────
    For the boxes that hold the dependency graph. On the paper's own

@@ -1,13 +1,48 @@
 ---
 // Papers in a folder: put <Sheet>s in it, the one in front last (it is
-// drawn on top). tabRow sets the tabs side by side instead of where the
-// page's CSS puts them (--tab-left). The switching is folder/folder.js.
+// drawn on top). Each paper keeps its tab, so the tab takes the paper's
+// colors and moves with it; the inline script right after the folder
+// sets every tab's place along the top edge (--tab-left) from the widths
+// of the tabs before it, before the page is first painted, and again
+// when the front paper changes, the fonts arrive or the folder changes
+// width, so the tabs stand side by side and never overlap. Order: as the page placed them (their
+// --tab-left), or front to back with tabRow. The switching is
+// folder/folder.js.
 import type { HTMLAttributes } from 'astro/types';
 
 type Props = HTMLAttributes<'div'> & { tabRow?: boolean };
 const { class: className, tabRow, ...rest } = Astro.props;
 ---
 <div class:list={['folder', className]} data-tab-row={tabRow ? '' : undefined} {...rest}><slot /></div>
+<script is:inline>
+  (function (folder) {
+    if (!folder) return;
+    var sheets = Array.prototype.slice.call(folder.querySelectorAll(':scope > .folder-sheet'));
+    var order = sheets.map(function (sheet, i) {
+      return { sheet: sheet, i: i, tab: sheet.querySelector(':scope > .folder-tab') };
+    }).filter(function (e) { return e.tab; });
+    if (folder.hasAttribute('data-tab-row')) order.reverse();
+    else order.sort(function (a, b) { return a.tab.offsetLeft - b.tab.offsetLeft || a.i - b.i; });
+    // A paper behind sits half a row to the right, its tab with it; the
+    // places allow for that, so every tab keeps a 4px gap to the next
+    // whichever paper is in front (and are set again when that changes).
+    var shift = function (e) {
+      return e.sheet.classList.contains('is-front') ? 0 : parseFloat(getComputedStyle(folder).getPropertyValue('--row')) / 2 || 14;
+    };
+    function place() {
+      var left = 0;
+      order.forEach(function (e, i) {
+        e.sheet.style.setProperty('--tab-left', left + 'px');
+        var next = order[i + 1];
+        if (next) left += e.tab.offsetWidth + 4 + shift(e) - shift(next);
+      });
+    }
+    place();
+    folder.addEventListener('sheetchange', place);
+    if (document.fonts) document.fonts.ready.then(place);
+    if (window.ResizeObserver) new ResizeObserver(place).observe(folder);
+  })(document.currentScript && document.currentScript.previousElementSibling);
+</script>
 <script>
   import './folder/folder.js';
 </script>
