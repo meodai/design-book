@@ -1,6 +1,7 @@
 ---
 import Page from '../../layouts/Page.astro';
 import InstallBar from '../../components/InstallBar.astro';
+import Logo from '../../components/Logo.astro';
 import Footer from '../../components/Footer.astro';
 import '../../editor/style.css';
 import '../../marketing/shared.css';
@@ -14,6 +15,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 >
   <section class="editor-hero">
       <header class="intro">
+        <Logo class="intro-logo" thin />
         <h1>The editor.</h1>
         <p>
           Tokens hold values, references, or <strong>rules</strong>: change one

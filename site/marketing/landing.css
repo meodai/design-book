@@ -491,20 +491,6 @@ pre {
   color: var(--highlight);
 }
 
-/* The mark: a book lying open, two pages and a spine, with the pages
-   beneath showing on either side, in outline. */
-.logo {
-  display: block;
-  width: 2.2em;
-  height: 1.86em;
-  margin: 0.35em 0 0;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1px;
-  stroke-linejoin: miter;
-  overflow: visible;
-}
-
 .hero-foot {
   margin-top: 0;
   display: flex;
@@ -1521,20 +1507,6 @@ pre {
   font-size: clamp(22px, 2.2vw, 30px);
   line-height: var(--row);
   color: var(--highlight);
-}
-
-/* The mark: a book lying open, two pages and a spine, with the pages
-   beneath showing on either side, in outline. */
-.logo {
-  display: block;
-  width: 2.2em;
-  height: 1.86em;
-  margin: 0.35em 0 0;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1px;
-  stroke-linejoin: miter;
-  overflow: visible;
 }
 
 .hero-foot {

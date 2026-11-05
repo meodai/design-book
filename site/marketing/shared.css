@@ -543,26 +543,24 @@
   text-decoration: none;
 }
 
-.install-bar .bar-brand .logo {
-  width: 26px;
-  height: 22px;
-}
+
 
 body:has(> .rail-left) .install-bar {
   margin-left: calc(var(--rail) * -1);
   margin-right: 0;
 }
 
-body:has(> .rail-left) .install-bar .bar-brand {
-  gap: 0;
-  padding-left: 0;
+/* The mark, in the bar's corner: under the rail, centred in it. */
+.install-bar .bar-brand .mark {
+  display: block;
+  height: 26px;
+  width: auto;
 }
 
-body:has(> .rail-left) .install-bar .bar-brand .logo {
-  box-sizing: content-box;
-  width: 24px;
-  height: 20px;
-  padding: 0 calc((var(--rail) - 24px) / 2);
+body:has(> .rail-left) .install-bar .bar-brand {
+  justify-content: center;
+  width: var(--rail);
+  padding: 0;
 }
 
 .install-bar .bar-nav {
@@ -639,10 +637,8 @@ body:has(> .rail-left) .install-bar .bar-brand .logo {
     white-space: nowrap;
   }
 
-  body:has(> .rail-left) .install-bar .bar-brand .logo {
-    width: 22px;
-    height: 18px;
-    padding: 0;
+  .install-bar .bar-brand .mark {
+    height: 22px;
   }
 
   .install-bar .bar-nav {
@@ -762,18 +758,16 @@ footer.imprint .imprint-made a {
   }
 }
 
-/* ─── The book, drawn in outline ────────────────────────────────── */
+/* ─── The wordmark: DESIGNBOOK on an open book (components/Logo) ── */
 .logo {
   display: block;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1px;
-  stroke-linejoin: miter;
+  height: 30px;
+  width: auto;
   overflow: visible;
 }
 
-.logo * {
-  vector-effect: non-scaling-stroke;
+.logo text {
+  font: italic 800 30px var(--font-text);
 }
 
 /* ─── Jumps: the rail's section numbers glide to their section ──── */
@@ -971,6 +965,25 @@ color-input::part(controls) {
 
 .rail .rail-scale {
   bottom: calc(var(--row) * 7.5);
+}
+
+/* The wordmark at the top of a page's intro: large, at its top left. On a
+   first screen it sits in the corner the screen's inset leaves; elsewhere
+   it heads the intro. */
+.intro-logo {
+  height: calc(var(--row) * 1.5);
+  margin: 0 0 calc(var(--row) * 2);
+}
+
+section.first-screen {
+  position: relative;
+}
+
+section.first-screen > .intro-logo {
+  position: absolute;
+  top: calc(var(--row) * 2);
+  left: var(--first-inset);
+  margin: 0;
 }
 
 /* A first screen: as tall as the window above the bar (--bar-h), centered by its

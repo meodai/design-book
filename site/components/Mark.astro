@@ -1,0 +1,17 @@
+---
+// The mark: the wordmark's book with "DB" on it (logo/book.ts, logo/db.ts),
+// in the text color, the page cut out. The favicon is the same drawing.
+import { book, maskShapes } from './logo/book';
+import { DB_FLIPPED as DB, DB_FLIPPED_INK as DB_INK } from './logo/db';
+
+const b = book(DB_INK);
+const { class: className } = Astro.props as { class?: string };
+const id = `mark-${Math.random().toString(36).slice(2, 8)}`;
+---
+<svg class:list={['mark', className]} viewBox={b.viewBox} role="img" aria-label="Design Book">
+  <defs>
+    <mask id={id} maskUnits="userSpaceOnUse" x="-40" y="-20" width="200" height="120" set:html={maskShapes(b)} />
+  </defs>
+  <rect x="-40" y="-20" width="200" height="120" fill="currentColor" mask={`url(#${id})`} />
+  <path transform={`translate(${b.x} ${b.baseline})`} fill="currentColor" d={DB} />
+</svg>

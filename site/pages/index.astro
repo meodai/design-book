@@ -4,6 +4,7 @@ import InstallBar from '../components/InstallBar.astro';
 import Folder from '../components/Folder.astro';
 import Sheet from '../components/Sheet.astro';
 import Slider from '../components/Slider.astro';
+import Logo from '../components/Logo.astro';
 import Footer from '../components/Footer.astro';
 import '../marketing/shared.css';
 import '../marketing/landing.css';
@@ -27,6 +28,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   <!-- ─── Hero: the claim as a live sentence ─────────────────────────── -->
   <section class="hero first-screen" id="hero">
+    <Logo class="intro-logo" thin />
     <h1 class="claim" id="claim">
       <span class="out" data-out="ground"><span class="hash" aria-hidden="true">#</span><span class="hex">eee9dc</span></span>
       and

@@ -5,6 +5,7 @@ import Folder from '../components/Folder.astro';
 import Sheet from '../components/Sheet.astro';
 import Code from '../components/Code.astro';
 import Slider from '../components/Slider.astro';
+import Logo from '../components/Logo.astro';
 import Footer from '../components/Footer.astro';
 import '../marketing/style.css';
 import '../marketing/shared.css';
@@ -18,6 +19,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 >
 
   <section class="hero first-screen">
+    <Logo class="intro-logo" thin />
     <div class="hero-text">
       <h1>A tour of Design Book</h1>
       <p class="deck">Most design systems store answers: a hex picked here, a spacing

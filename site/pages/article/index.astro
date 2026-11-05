@@ -1,6 +1,7 @@
 ---
 import Page from '../../layouts/Page.astro';
 import InstallBar from '../../components/InstallBar.astro';
+import Logo from '../../components/Logo.astro';
 import Footer from '../../components/Footer.astro';
 import '../../article/style.css';
 import '../../marketing/shared.css';
@@ -15,6 +16,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   bodyAttrs={{ 'data-sections': '.article-content > section' }}
 >
   <section class="article-hero first-screen">
+    <Logo class="intro-logo" thin />
       <header class="article-header">
           <h1>Procedural Tokens — encoding design decisions</h1>
           <p class="lede">
