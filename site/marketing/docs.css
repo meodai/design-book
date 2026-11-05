@@ -34,9 +34,6 @@ body {
   color: var(--on-black);
 }
 
-html {
-  scrollbar-color: var(--blue) var(--paper);
-}
 
 /* ── Type ───────────────────────────────────────────────────────── */
 h1,

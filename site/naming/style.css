@@ -7,7 +7,6 @@
   --naming-gutter: clamp(20px, 6vw, 96px);
   --pp: var(--paper);
   --pp-text: var(--black);
-  scrollbar-color: var(--blue) var(--paper);
 }
 
 body {

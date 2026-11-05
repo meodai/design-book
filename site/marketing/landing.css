@@ -53,8 +53,12 @@
 
 html {
   overflow-x: clip;
-  /* The rail beside it is the mark's color, so the scrollbar is the
-     other way round: the page's color on the mark's. */
+}
+
+/* The rails are the mark's color: the track is the mark, the handle the
+   page's color (as strong as the shared rule it replaces). */
+html,
+html:has(body > .rail-left) {
   scrollbar-color: var(--ground) var(--highlight);
 }
 

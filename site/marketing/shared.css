@@ -1005,6 +1005,20 @@ color-input::part(controls) {
   bottom: calc(var(--row) * 7.5);
 }
 
+/* ─── The scrollbar ─────────────────────────────────────────────────
+   Its track is the page's side, its handle the other color. A page
+   without rails (naming) has the paper as its side: a blue handle on it.
+   A page with rails has their color as its side, so the track reads as
+   part of the right rail and the handle is the paper. (The landing,
+   whose rails are the mark, sets its own; the editor too.) */
+html {
+  scrollbar-color: var(--blue) var(--paper);
+}
+
+html:has(body > .rail-left) {
+  scrollbar-color: var(--paper) var(--rail-bg, var(--blue));
+}
+
 /* ─── A title over a line: .rule-title ──────────────────────────────
    The one way a section starts, on every page: put the class on its
    title (an h2, or an h3 for a block or a function inside a section).

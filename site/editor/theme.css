@@ -23,7 +23,6 @@
 
   font-family: var(--font-text);
   font-weight: 400;
-  scrollbar-color: var(--blue) var(--paper);
 }
 
 body {

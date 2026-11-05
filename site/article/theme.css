@@ -29,7 +29,6 @@
 
 html {
   overflow-x: clip;
-  scrollbar-color: var(--blue) var(--paper);
 }
 
 body {
