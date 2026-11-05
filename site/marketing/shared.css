@@ -544,7 +544,6 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-right: auto;
   padding: 0 var(--row);
   font: 600 16px / var(--bar-h) var(--font-text);
   letter-spacing: -0.01em;
@@ -578,6 +577,12 @@ body:has(> .rail-left) .install-bar .bar-brand {
   gap: var(--row);
   padding: 0 var(--row);
   font: 15px var(--font-text);
+}
+
+/* Home, left, after the mark; the other pages on the right. */
+.install-bar .bar-home {
+  margin-right: auto;
+  padding-left: 10px;
 }
 
 .install-bar .bar-nav a {

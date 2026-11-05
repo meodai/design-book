@@ -13,6 +13,9 @@ const links = [
   <a class="bar-brand" href={base} aria-current={home ? 'page' : undefined}>
     <Mark />
   </a>
+  <nav class="bar-nav bar-home" aria-label="Home">
+    <a href={base} aria-current={home ? 'page' : undefined}>Home</a>
+  </nav>
   <nav class="bar-nav" aria-label="Pages">
     {links.map(([id, label, href]) => (
       <a href={href} aria-current={id === current ? 'page' : undefined}>{label}</a>
