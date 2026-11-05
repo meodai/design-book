@@ -667,7 +667,7 @@ body:has(> .rail-left) .install-bar .bar-brand {
 /* ─── Footer ─────────────────────────────────────────────────────────
    Links bottom left, Elastiq bottom right; under a dashed line, what the
    site is set in and built with, and the license. Its links start where
-   the bar's name does, and on pages with rails it runs over the left
+   the bar's Front Desk does, and on pages with rails it runs over the left
    rail too. */
 footer.imprint {
   --imprint-line: color-mix(in srgb, var(--imprint-ink, var(--on-black)) 35%, var(--imprint-bg, var(--blue)));
@@ -678,7 +678,9 @@ footer.imprint {
   align-items: baseline;
   gap: calc(var(--row) / 2) calc(var(--row) * 2);
   margin: 0;
-  padding: var(--row) 40px calc(var(--row) * 2) calc(var(--row) + 36px);
+  /* its links start under the bar's Front Desk: past the mark (its
+     padding, its 37px, the nav's 10px) */
+  padding: var(--row) 40px calc(var(--row) * 2) calc(var(--row) * 2 + 47px);
   font: 15px var(--font-text);
   color: var(--imprint-ink, var(--on-black));
   background: var(--imprint-bg, var(--blue));
@@ -689,7 +691,7 @@ footer.imprint {
 body:has(> .rail-left) footer.imprint {
   z-index: 11;
   margin-left: calc(var(--rail) * -1);
-  padding-left: var(--rail);
+  padding-left: calc(var(--rail) + 10px);
 }
 
 footer.imprint > * {
@@ -763,10 +765,13 @@ footer.imprint .imprint-made a {
 }
 
 @media (max-width: 640px) {
-  footer.imprint,
-  body:has(> .rail-left) footer.imprint {
+  footer.imprint {
     gap: var(--row);
-    padding: var(--row) 14px calc(var(--row) * 2);
+    padding: var(--row) 14px calc(var(--row) * 2) 87px;
+  }
+
+  body:has(> .rail-left) footer.imprint {
+    padding-left: 28px;
   }
 
   .imprint-nav {
