@@ -1849,10 +1849,11 @@ pre.code.holes-left,
 }
 
 /* ── Space between sections ──────────────────────────────────────────
-   A title (.rule-title, shared.css) heads its block, its line under it;
-   the space above it is the block's own: a section's padding is the same
-   at its top and its bottom (--section-space), and so is a function's
-   (--sub-space); a merged block has twice that above it. */
+   A title (.rule-title, shared.css) heads its block, its line under it.
+   The space above a section's title is the section before it's bottom
+   padding (--section-space), so a section starts on its title; a
+   function has its space at both ends (--sub-space), a merged block twice
+   that above it. */
 body {
   --section-space: calc(var(--row) * 8);
   --sub-space: clamp(56px, 6vw, calc(var(--row) * 3));
@@ -1867,7 +1868,7 @@ body {
 .extend,
 .coda,
 .sections-head {
-  padding-top: var(--section-space);
+  padding-top: 0;
   padding-bottom: var(--section-space);
   border-top: 0;
 }

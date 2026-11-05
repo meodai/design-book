@@ -129,17 +129,17 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
     <div class="ref-feature-body split">
       <h2 class="rule-title" id="why-title">The reason is the token.</h2>
       <div class="ref-feature-text">
-        <p>A custom property can point at another one, and CSS's
-          <code>contrast-color()</code> even picks black or white for you. What
-          CSS cannot do is choose from <em>your</em> palette by <em>your</em>
-          rule: the most vivid of your colors that still reads on this surface,
-          the next size up in your scale. In Design Book the reason is the
-          token. It documents the decision, and when an input changes, a member
-          is added or the context turns dark, the decision is made again and
-          every value is rerouted to what fits.</p>
-        <p>On the right the surface never sits still. The text is not a color
-          but a rule, the loudest ink that still reads, so it picks again every
-          time.</p>
+        <p>A custom property can point at another, and CSS's
+          <code>contrast-color()</code> picks black or white. But CSS cannot
+          choose from <em>your</em> palette by <em>your</em> rule. In Design
+          Book the rule is the token: it documents the decision and makes it
+          again whenever an input changes.</p>
+        <p>On the right the surface never sits still. The text, the loudest ink
+          that still reads, picks again every time.</p>
+        <p>Rules come in two kinds. <a href="#transforms-title">Transforms</a>
+          change a value, like <code>color-mix()</code> and <code>calc()</code>,
+          only more. <a href="#kinds-title">Selectors</a> route: they pick one
+          member of a scope, like <code>mostVivid</code> here.</p>
       </div>
 
       <Folder>
@@ -175,7 +175,7 @@ ui.set('text', mostVivid(ref('ink'), {
   <main class="sections">
 
     <header class="sections-head">
-      <h2 class="rule-title">Kinds of decision</h2>
+      <h2 class="rule-title" id="kinds-title">Kinds of decision</h2>
       <p>A selector takes a scope of candidates and returns the member that
         fits its rule, and picks again whenever a member changes, is added or
         is removed. Thirteen are built in.</p>
@@ -1059,7 +1059,7 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
 
   <!-- ─── Value transforms ──────────────────────────────────────────── -->
   <section class="coda">
-    <h2 class="rule-title">Value transforms.</h2>
+    <h2 class="rule-title" id="transforms-title">Value transforms.</h2>
     <p>Eight operations that take an input and apply a formula, for the
       small decisions like a hover shade, a step in a scale or a timing curve,
       without leaving the graph.</p>
