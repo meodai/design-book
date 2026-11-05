@@ -1653,3 +1653,44 @@ pre.code.holes-left,
     overflow-x: auto;
   }
 }
+
+/* ── Rules between sections ─────────────────────────────────────────
+   As much space above a rule as under it: a section's padding is the same
+   at its top and its bottom (--section-space), and so is a sub-section's
+   (--sub-space) and a function's. */
+body {
+  --section-space: calc(var(--row) * 8);
+  --sub-space: clamp(56px, 6vw, calc(var(--row) * 3));
+}
+
+.graph,
+.ref-feature,
+.readable-feature,
+.ramp-feature,
+.extends-feature,
+.renderers,
+.extend,
+.coda {
+  padding-top: var(--section-space);
+  padding-bottom: var(--section-space);
+}
+
+.sections-head {
+  padding-top: var(--section-space);
+}
+
+.fn,
+.fn-panels > .fn {
+  padding-top: var(--sub-space);
+  padding-bottom: var(--sub-space);
+}
+
+/* The first screen ends on the same space as every section. */
+.hero.first-screen {
+  padding-bottom: var(--section-space);
+}
+
+.feature-sub {
+  margin-top: var(--sub-space);
+  padding-top: var(--sub-space);
+}

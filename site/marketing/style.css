@@ -21,14 +21,6 @@
 
 * { box-sizing: border-box; }
 
-/* Single-column grids by default; a long code line or a nowrap pill must
-   not stretch a column wider than the phone. */
-:where(.fn-body, .graph, .hero, .ramp-feature-body, .order-feature-body,
-       .mix-feature-body, .typo-feature-body, .extends-feature-body,
-       .readable-feature-body, .names-feature-body) {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 html, body {
   margin: 0;
   padding: 0;
@@ -126,8 +118,6 @@ h1, h2, h3 {
   margin: 0 auto;
   padding: clamp(40px, 8vw, 90px) var(--gutter) clamp(40px, 6vw, 70px);
   display: grid;
-  grid-template-columns: 7fr 5fr;
-  gap: clamp(28px, 4vw, 56px);
   align-items: center;
 }
 
@@ -227,7 +217,6 @@ h1, h2, h3 {
 .hi-fn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 @media (max-width: 899px) {
-  .hero { grid-template-columns: minmax(0, 1fr); }
   .hero-illustration { max-width: 420px; margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -303,8 +292,6 @@ h1, h2, h3 {
   padding: clamp(48px, 7vw, 90px) var(--gutter);
   border-top: 1px solid var(--rule);
   display: grid;
-  grid-template-columns: 5fr 7fr;
-  gap: clamp(28px, 4vw, 56px);
   align-items: start;
 }
 .graph-text h2 {
@@ -376,9 +363,6 @@ h1, h2, h3 {
 }
 .graph-viz svg { width: 100%; height: auto; max-width: 100%; }
 
-@media (max-width: 899px) {
-  .graph { grid-template-columns: minmax(0, 1fr); }
-}
 
 /* ── Sections header (intro to the function list) ───────────────── */
 .sections-head {
@@ -460,21 +444,9 @@ h1, h2, h3 {
   margin-right: 4px;
 }
 
+/* The pitch beside its folder (code and result), one row. */
 .fn-body {
-  display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
-}
-@media (min-width: 900px) {
-  .fn-body {
-    grid-template-columns: 5fr 7fr;
-    grid-template-areas:
-      "pitch demo"
-      "code  demo";
-    align-items: start;
-  }
-  .fn-pitch { grid-area: pitch; }
-  .code     { grid-area: code; align-self: start; }
-  .demo     { grid-area: demo; align-self: start; }
+  align-items: start;
 }
 
 .fn-pitch {
@@ -1298,11 +1270,7 @@ h1, h2, h3 {
 /* — setOrder demo — */
 .order-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
-}
-@media (min-width: 900px) {
-  .order-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .order-feature-text { max-width: 56ch; }
 .order-feature-text code:not(.code code) {
@@ -1412,11 +1380,7 @@ h1, h2, h3 {
 /* — colorMix demo — */
 .mix-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
-}
-@media (min-width: 900px) {
-  .mix-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .mix-feature-text { max-width: 56ch; }
 .mix-feature-text :is(h2, h3) {
@@ -1504,13 +1468,9 @@ h1, h2, h3 {
 .mix-space select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ramp-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
 }
 @media (min-width: 900px) {
-  .ramp-feature-body {
-    grid-template-columns: 5fr 7fr;
-  }
   .ramp-stage { align-self: start; }
 }
 
@@ -1621,13 +1581,9 @@ h1, h2, h3 {
 /* ── Typography: a style is a scope ─────────────────────────────── */
 .typo-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
 }
 @media (min-width: 900px) {
-  .typo-feature-body {
-    grid-template-columns: 5fr 7fr;
-  }
   .typo-stage { align-self: start; }
 }
 .typo-feature-text { max-width: 56ch; }
@@ -1694,13 +1650,9 @@ h1, h2, h3 {
 }
 .extends-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
 }
 @media (min-width: 900px) {
-  .extends-feature-body {
-    grid-template-columns: 5fr 7fr;
-  }
   .extends-stage { align-self: start; }
 }
 .extends-head {
@@ -2209,12 +2161,7 @@ h1, h2, h3 {
 }
 .ref-feature-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
-}
-@media (min-width: 900px) {
-  .ref-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .ref-feature-text { max-width: 56ch; }
 .ref-feature-text :is(h2, h3) {
@@ -2323,11 +2270,7 @@ h1, h2, h3 {
 }
 .readable-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
-}
-@media (min-width: 900px) {
-  .readable-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .readable-feature-text { max-width: 56ch; }
 .readable-feature-text h2 {
@@ -2476,11 +2419,7 @@ color-input::part(gamut) { border-radius: 0; }
 /* ── Names: keys for a generated ramp ───────────────────────────── */
 .names-feature-body {
   display: grid;
-  gap: clamp(20px, 2.4vw, 32px);
   align-items: start;
-}
-@media (min-width: 900px) {
-  .names-feature-body { grid-template-columns: 5fr 7fr; }
 }
 .names-feature-text { max-width: 56ch; }
 .names-feature-text :is(h2, h3) {

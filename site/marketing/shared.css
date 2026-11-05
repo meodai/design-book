@@ -30,6 +30,8 @@
 
   /* Every line, ruling, padding and gap is a multiple of the row. */
   --row: 28px;
+  /* the gutter between the two columns of a split section */
+  --split-gap: calc(var(--row) * 3);
   --rail: calc(var(--row) * 2);
 
   /* One feed hole of printer paper, cut with a mask. */
@@ -965,6 +967,26 @@ color-input::part(controls) {
 
 .rail .rail-scale {
   bottom: calc(var(--row) * 7.5);
+}
+
+/* ─── Split: text beside a demo ─────────────────────────────────────
+   Two columns from 900px, the demo wider (5 : 7), with one gutter for
+   every split section (--split-gap); stacked below. --wide-start gives
+   the first column the wider share (7 : 5). */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(20px, 2.4vw, 32px) var(--split-gap);
+}
+
+@media (min-width: 900px) {
+  .split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+
+  .split--wide-start {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
 }
 
 /* The wordmark at the top of a page's intro: large, at its top left. On a

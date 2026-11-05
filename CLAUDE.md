@@ -26,6 +26,9 @@ a bare attribute on a custom element is written `no-alpha=""` (Astro would print
 Each page's scripts and stylesheets sit in a folder of their
 own: `site/marketing/` (landing and tour, plus `shared.css`, the style all
 pages share), `site/article/`, `site/editor/` and `site/naming/`.
+A section that sets text beside a demo carries the class `split` (shared.css):
+two columns from 900px (5 : 7; `split--wide-start` for 7 : 5), one gutter
+for all of them (`--split-gap`), stacked below.
 `package.json` lists `./site/**` under `sideEffects`, or the bundler drops
 their side-effect imports.
 

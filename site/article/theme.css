@@ -163,9 +163,22 @@ body {
 }
 
 /* ═══ Sections: rules from rail to rail ═════════════════════════════ */
+/* As much space above a section's rule as under it: three rows each
+   side, the heading under it without a margin of its own. */
 .article-content section {
   position: relative;
   border-top: 0;
+  margin-top: calc(var(--row) * 3);
+  padding-top: calc(var(--row) * 3);
+}
+
+.article-content section:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.article-content section > h2:first-child {
+  margin-top: 0;
 }
 
 /* The rules run past both rails: the page clips them and the rails

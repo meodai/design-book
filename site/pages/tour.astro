@@ -18,7 +18,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
 >
 
-  <section class="hero first-screen">
+  <section class="hero first-screen split split--wide-start">
     <Logo class="intro-logo" thin />
     <div class="hero-text">
       <h1>A tour of Design Book</h1>
@@ -57,7 +57,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   </section>
 
   <!-- ─── The graph: hero visual ────────────────────────────────────── -->
-  <section class="graph" aria-labelledby="graph-title">
+  <section class="graph split" aria-labelledby="graph-title">
     <div class="graph-text">
       <h2 id="graph-title">Every token knows what it depends on.</h2>
       <p>Each token is a node and each reference an edge. The library tracks
@@ -82,7 +82,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   <!-- ─── ref(): point at a source instead of copying it ───────────── -->
   <section class="ref-feature" aria-labelledby="ref-title">
-    <div class="ref-feature-body">
+    <div class="ref-feature-body split">
       <div class="ref-feature-text">
         <h2 id="ref-title">References instead of copies.</h2>
         <p>A hex code pasted in two places is two decisions, and sooner or
@@ -121,7 +121,7 @@ ui.set('border', ref('ui.link'));</Code></Sheet>
       </Folder>
     </div>
 
-    <div class="ref-feature-body feature-sub">
+    <div class="ref-feature-body split feature-sub">
       <div class="ref-feature-text">
         <h3 id="ref-relative-title">Relative refs.</h3>
         <p>Leave the scope off, as in <code>ref('.bg')</code>, and the ref reads
@@ -157,7 +157,7 @@ book.addScope('button-danger', {
       </Folder>
     </div>
 
-    <div class="ref-feature-body feature-sub">
+    <div class="ref-feature-body split feature-sub">
       <div class="ref-feature-text">
         <h3 id="ref-parent-title">Reading one level up.</h3>
         <p><code>inParent(ref('.interaction'))</code> is the interaction color
@@ -247,7 +247,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Change the brand color</em> and every contrast is checked again.</p>
           <p class="fn-detail">The member of a palette with the highest WCAG contrast against a background. The check is part of the rule, so you don't redo it after every redesign.</p>
@@ -275,7 +275,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">closest( target, scope, { direction?, upTo?, minDistance?, readableOn?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Colors from outside</em> snap to the nearest one you own.</p>
           <p class="fn-detail">Finds the nearest member by distance in OKLab, so colors that look alike are treated alike. Handy when colors come from outside the system: imported logos, user uploads, a partner's brand kit.</p>
@@ -308,7 +308,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">furthestFrom( scope, { readableOn?, readableContrast?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLab distance</li><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>The odd one out</em> in a palette.</p>
           <p class="fn-detail">The member with the largest average OKLab distance to all the others: the one swatch nothing else gets mistaken for. Exclude members with <code>not</code> and the pick moves to the next one.</p>
@@ -335,7 +335,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> WCAG ratio</li><li><b>size</b> value ratio</li><li><b>text style</b> font-size ratio</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>As subtle as possible</em> while still readable.</p>
           <p class="fn-detail">The lowest contrast that still reaches a ratio (4.5 by default). Good for hairlines, captions and dim labels, which then pass the next contrast audit without anyone checking them by hand.</p>
@@ -376,7 +376,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">nextLarger|nextSmaller( target, scope, { minDistance?, not? } ) = closest( …, { direction } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>size</b> value</li><li><b>text style</b> font size</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Spacing that knows its own scale.</em></p>
           <p class="fn-detail">Steps to the next member up or down, in px, rem, ms or whatever unit the scale uses. Add a step to the scale and every gap, padding and duration that referred to it moves along.</p>
@@ -432,7 +432,7 @@ hover.set('interaction', sibling(
         <code is:raw class="sig">mostVivid|leastVivid( scope, { readableOn?, readableContrast?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH chroma</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Your accent is probably already in your palette.</em></p>
           <p class="fn-detail">The two ends of the chroma axis. <code>mostVivid</code> finds the loudest member, usually the accent. <code>leastVivid</code> finds the most neutral one among your brand colors. Both can be limited to colors that read on a given surface.</p>
@@ -457,7 +457,7 @@ ui.set('surface', leastVivid(brand))</Code></Sheet>
         <code is:raw class="sig">lightest|darkest( scope, { readableOn?, readableContrast?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>color</b> OKLCH lightness</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>The ends of the scale,</em> wherever they end up.</p>
           <p class="fn-detail">The members with the highest and lowest OKLCH lightness. Make your surface <code>lightest</code> and your ink <code>darkest</code>, and they still land on the right colors after the palette is generated again. Add <code>readableOn</code> to only consider members that read on that surface.</p>
@@ -492,7 +492,7 @@ ui.set('soft-ink', lightest(brand, {
         <code is:raw class="sig">random( scope, { type, seed?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> filtered by type</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Random,</em> but it stays put.</p>
           <p class="fn-detail">Picks a member of a scope at random. Each token keeps its own seed, so the value stays the same across re-resolves and machines until you reshuffle on purpose: per release, per user or per environment. <code>type</code> limits the pool to colors, dimensions or strings.</p>
@@ -528,7 +528,7 @@ ui.set('promo-bg', random(brand, {
         <code is:raw class="sig">nth( scope, index, { not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> by position</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Pick by position</em> instead of by name.</p>
           <p class="fn-detail">When a ramp or scale generates your palette, the order carries the meaning: lightest first, darkest last. <code>nth</code> reads that order directly. Integers work like <code>Array.at()</code> (<code>-1</code> is the last member), and fractions between 0 and 1 pick a <em>relative</em> position, so <code>0.5</code> is the midtone however many stops there are. (<code>1.0</code> counts as the integer 1; use <code>-1</code> for the last member.)</p>
@@ -568,7 +568,7 @@ ui.set('subtle',  nth(ramp, 0.1)) // off-white</Code></Sheet>
         <code is:raw class="sig">sibling( ref, offset, { wrap?, not? } )</code>
         <ul class="fn-kinds" aria-label="Works on"><li><b>any</b> along the scale it comes from</li></ul>
       </header>
-      <div class="fn-body">
+      <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>One step lighter than whatever the surface is.</em></p>
           <p class="fn-detail">Steps through the scope a token lives in, relative to that token: <code>+1</code> is the next member, <code>-1</code> the previous one. Hover and pressed states follow the surface instead of hard-coding a second shade. Steps stop at the ends, or go round with <code>wrap</code>.</p>
@@ -602,7 +602,7 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
 
   <!-- ─── readableOn: contrast as a filter ─────────────────────────── -->
   <section class="readable-feature" aria-labelledby="readable-title">
-    <div class="readable-feature-body">
+    <div class="readable-feature-body split">
       <div class="readable-feature-text">
         <h2 id="readable-title">Only readable colors.</h2>
         <p>Every color selector except the two contrast ones takes
@@ -644,7 +644,7 @@ ui.set('surface-press', sibling(ref('gray.g100'), 2))</Code></Sheet>
 
   <!-- ─── ramp: single color → full tonal scale ────────────────────── -->
   <section class="ramp-feature" aria-labelledby="ramp-title">
-    <div class="ramp-feature-body">
+    <div class="ramp-feature-body split">
       <div class="ramp-feature-text">
         <h2 id="ramp-title">A full scale from one color.</h2>
         <p>Pick a brand color and <code>ramp()</code> returns the matching stop
@@ -676,7 +676,7 @@ for (const shade of ['50','100',...,'950']) {
       </Folder>
     </div>
 
-    <div class="names-feature-body feature-sub">
+    <div class="names-feature-body split feature-sub">
       <div class="names-feature-text">
         <h3 id="names-title">Naming the steps.</h3>
         <p>Generated colors still need keys. <code>scaleNames()</code> takes
@@ -717,7 +717,7 @@ for (const shade of ['50','100',...,'950']) {
       </Folder>
     </div>
 
-    <div class="order-feature-body feature-sub">
+    <div class="order-feature-body split feature-sub">
       <div class="order-feature-text">
         <h3 id="order-title">Sorted scopes.</h3>
         <p>Give a scope an <code>order</code> and it stays sorted by
@@ -777,7 +777,7 @@ palette.getAllKeys();  // one smooth order</Code></Sheet>
     </div>
 
     <div class="extends-panels">
-      <div class="extends-feature-body" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
+      <div class="extends-feature-body split" id="theme-layers" role="tabpanel" aria-labelledby="tab-theme-layers" tabindex="0">
         <div class="extends-feature-text">
           <p><strong>Across a whole system.</strong> Every shop in a chain shares
             the brand, but the old-town store has its own accent. Write the
@@ -856,7 +856,7 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
         </Folder>
       </div>
 
-      <div class="extends-feature-body is-active" id="theme-extends" role="tabpanel" aria-labelledby="tab-theme-extends" tabindex="0">
+      <div class="extends-feature-body split is-active" id="theme-extends" role="tabpanel" aria-labelledby="tab-theme-extends" tabindex="0">
         <div class="extends-feature-text">
           <p><strong>Inside one book.</strong> When two variants live side by
             side, one scope can extend another. Every token carries over unless
@@ -926,7 +926,7 @@ dark.set('text', color('#fffaed'));</Code></Sheet>
       </div>
     </div>
 
-    <div class="typo-feature-body feature-sub">
+    <div class="typo-feature-body split feature-sub">
       <div class="typo-feature-text">
         <h3 id="typo-title">Type styles as one token.</h3>
         <p>A type style is a set of properties: family, size, weight,
@@ -1061,7 +1061,7 @@ callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
       </li>
     </ul>
 
-    <div class="mix-feature-body feature-sub">
+    <div class="mix-feature-body split feature-sub">
       <div class="mix-feature-text">
         <h3 id="mix-title">Mixing two colors.</h3>
         <p><code>colorMix()</code> interpolates between two colors, and the color

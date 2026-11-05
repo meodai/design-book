@@ -53,7 +53,7 @@ code {
 .naming {
   display: grid;
   grid-template-columns: minmax(0, 28rem) minmax(0, 1fr);
-  gap: calc(var(--row) * 2);
+  gap: calc(var(--row) * 2) var(--split-gap);
   align-items: start;
   padding: 0 var(--naming-gutter) calc(var(--row) * 4);
 }

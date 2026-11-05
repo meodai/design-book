@@ -546,7 +546,9 @@ pre {
 
 .section {
   max-width: var(--measure);
-  margin: 0 auto calc(var(--row) * 4);
+  /* as much space above the next section's rule as under it (its head's
+     three rows) */
+  margin: 0 auto calc(var(--row) * 3);
   padding: 0 var(--gutter);
 }
 
@@ -555,7 +557,7 @@ pre {
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: calc(var(--row) * 2);
   align-items: start;
-  padding-top: calc(var(--row) * 2);
+  padding-top: calc(var(--row) * 3);
   position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
@@ -1564,7 +1566,9 @@ pre {
 
 .section {
   max-width: var(--measure);
-  margin: 0 auto calc(var(--row) * 4);
+  /* as much space above the next section's rule as under it (its head's
+     three rows) */
+  margin: 0 auto calc(var(--row) * 3);
   padding: 0 var(--gutter);
 }
 
@@ -1573,7 +1577,7 @@ pre {
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
   gap: calc(var(--row) * 2);
   align-items: start;
-  padding-top: calc(var(--row) * 2);
+  padding-top: calc(var(--row) * 3);
   position: relative;
   margin-bottom: calc(var(--row) * 2);
 }
