@@ -1,3 +1,9 @@
+/* The tour's base styles, from before shared.css and docs.css. They sit in
+   a layer of their own, so the sheets after them (shared.css, docs.css)
+   win against them in dev and in the build alike, whatever order the
+   build links the files in. The few rules after the layer have to keep
+   winning on their own (the hero's picker and heading, the naming switch). */
+@layer legacy {
 /* Design Book — marketing page.
    Same surface as the article: Libertinus + cream + blue accent. */
 
@@ -155,34 +161,7 @@ h1, h2, h3 {
   stroke-dasharray: 4 4;
   opacity: 0.55;
 }
-.hi-center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px #fff, 0 0 0 2px #000;
-  cursor: pointer;
-  z-index: 1;
-}
-.hi-center::part(trigger) {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-}
-.hi-center::part(chip) {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-}
-.hi-center::part(output) { display: none; }
-.hi-center::part(input) { display: none; }
-.hi-center::part(chip) { inline-size: 100%; block-size: 100%; border: 0; box-shadow: none; }
+
 .hi-pill {
   position: absolute;
   left: 50%;
@@ -232,13 +211,7 @@ h1, h2, h3 {
   margin: 0 0 1.5em;
 }
 
-.hero h1 {
-  font-size: clamp(44px, 6.5vw, 80px);
-  line-height: .9;
-  letter-spacing: -0.02em;
-  max-width: 16ch;
-  margin-bottom: 0.6em;
-}
+
 
 .hero .deck {
   max-width: 60ch;
@@ -2387,18 +2360,7 @@ color-input::part(gamut) { border-radius: 0; }
   font-size: 12px;
   color: var(--muted);
 }
-.names-schemes { display: inline-flex; border: 1px solid var(--rule); background: var(--surface); }
-.names-schemes button {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.names-schemes button + button { border-left: 1px solid var(--rule); }
-.names-schemes button.is-active { background: var(--accent); color: var(--surface); }
+
 .names-count {
   display: flex;
   align-items: center;
@@ -2423,3 +2385,55 @@ color-input::part(gamut) { border-radius: 0; }
   .names-schemes { flex-wrap: wrap; }
 }
 .names-more { margin: 16px 0 0; font-size: 16px; }
+.names-schemes { display: inline-flex; border: 1px solid var(--rule); background: var(--surface); }
+.names-schemes button {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.names-schemes button.is-active { background: var(--accent); color: var(--surface); }
+}
+
+.hi-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2px #000;
+  cursor: pointer;
+  z-index: 1;
+}
+.hi-center::part(trigger) {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+}
+.hi-center::part(chip) {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.hi-center::part(output) { display: none; }
+.hi-center::part(input) { display: none; }
+.hi-center::part(chip) { inline-size: 100%; block-size: 100%; border: 0; box-shadow: none; }
+
+.hero h1 {
+  font-size: clamp(44px, 6.5vw, 80px);
+  line-height: .9;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+  margin-bottom: 0.6em;
+}
+
+.names-schemes button + button { border-left: 1px solid var(--rule); }

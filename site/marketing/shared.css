@@ -162,13 +162,61 @@
   cursor: pointer;
 }
 
-.folder-sheet:not(.is-front) .folder-tab:hover {
+.folder-sheet:not(.is-front) .folder-tab:hover,
+.folder-tabs > .folder-tab:not(.is-front):hover {
   text-decoration: underline;
 }
 
 .folder-tab:focus-visible {
   outline: 1px solid currentColor;
   outline-offset: 2px;
+}
+
+/* The tab row (folder.js moves every paper's tab into it): a flex row on
+   top of the folder, one row tall where the folder kept that row free
+   for its tabs, so the folder's height and rhythm stay. Tabs stand side
+   by side at their own width, never overlapping; short of room they
+   shrink and cut their name rather than run into each other. A tab
+   behind rises half a row, as its paper does. */
+.folder.has-tab-row {
+  padding-top: 0;
+  grid-template-rows: var(--row) auto;
+}
+
+.folder.has-tab-row > .folder-sheet {
+  grid-area: 2 / 1;
+}
+
+.folder-tabs {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+  height: var(--row);
+}
+
+.folder > .folder-tabs > .folder-tab {
+  position: relative;
+  inset: auto;
+  left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  transition: translate 0.25s ease;
+}
+
+.folder > .folder-tabs > .folder-tab:not(.is-front) {
+  translate: 0 calc(var(--row) / -2);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-tabs > .folder-tab {
+    transition: none;
+  }
 }
 
 /* ─── Ledger ────────────────────────────────────────────────────────
@@ -951,12 +999,14 @@ color-input::part(controls) {
   pointer-events: none;
 }
 
-.folder-sheet:not(.is-front) .folder-tab:hover {
+.folder-sheet:not(.is-front) .folder-tab:hover,
+.folder-tabs > .folder-tab:not(.is-front):hover {
   text-decoration: none;
 }
 
 .folder-sheet:not(.is-front) .folder-tab:hover::after,
-.folder-sheet:not(.is-front) .folder-tab:focus-visible::after {
+.folder-sheet:not(.is-front) .folder-tab:focus-visible::after,
+.folder-tabs > .folder-tab:not(.is-front):is(:hover, :focus-visible)::after {
   transform: translate(-50%, 4px);
 }
 
@@ -967,7 +1017,8 @@ color-input::part(controls) {
 }
 
 /* The tab in front keeps its dot. */
-.folder-sheet.is-front > .folder-tab::after {
+.folder-sheet.is-front > .folder-tab::after,
+.folder-tabs > .folder-tab.is-front::after {
   transform: translate(-50%, 4px);
 }
 
@@ -979,7 +1030,9 @@ color-input::part(controls) {
 
 .folder-sheet:not(.is-front) .folder-tab:hover::after,
 .folder-sheet:not(.is-front) .folder-tab:focus-visible::after,
-.folder-sheet.is-front > .folder-tab::after {
+.folder-sheet.is-front > .folder-tab::after,
+.folder-tabs > .folder-tab:not(.is-front):is(:hover, :focus-visible)::after,
+.folder-tabs > .folder-tab.is-front::after {
   transform: translate(-50%, 3px);
 }
 
@@ -992,7 +1045,9 @@ color-input::part(controls) {
 
 .folder-sheet:not(.is-front) .folder-tab:hover::after,
 .folder-sheet:not(.is-front) .folder-tab:focus-visible::after,
-.folder-sheet.is-front > .folder-tab::after {
+.folder-sheet.is-front > .folder-tab::after,
+.folder-tabs > .folder-tab:not(.is-front):is(:hover, :focus-visible)::after,
+.folder-tabs > .folder-tab.is-front::after {
   transform: translateY(calc(var(--row) / 2 - 2px));
 }
 
@@ -1122,6 +1177,10 @@ h3.rule-title {
 .folder--inset .folder-tab {
   left: calc(var(--inset) + var(--tab-left, 0px));
   transition: translate 0.25s ease;
+}
+
+.folder--inset > .folder-tabs {
+  padding-left: var(--inset);
 }
 
 .folder--inset .folder-sheet:not(.is-front) > .folder-tab {

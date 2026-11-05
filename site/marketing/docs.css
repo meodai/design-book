@@ -319,6 +319,18 @@ body > section {
   }
 }
 
+/* On a phone the groups stack, so each name keeps its line. */
+@media (max-width: 640px) {
+  .fn-index {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--row) 0;
+  }
+
+  .fn-index a {
+    white-space: nowrap;
+  }
+}
+
 /* ── Highlights: what can be chosen is blue, solid ───────────────── */
 .hero h1 em,
 .graph-text em,
@@ -661,8 +673,11 @@ p em {
     align-items: start;
   }
 
-  .fn-head,
-  .fn-body {
+  /* .fn-body is also a .split (shared.css, display: grid): two classes,
+     so this wins whatever order the stylesheets load in. */
+  .fn > .fn-head,
+  .fn > .fn-body.split,
+  .fn > .fn-body {
     display: contents;
   }
 
@@ -3004,5 +3019,169 @@ main.sections {
 .fn-polar-stub b {
   min-width: 4ch;
   text-align: right;
+}
+
+/* On a phone the name takes the whole line; its kinds follow under the
+   rule, side by side, each tag on one line, wrapping as a group. */
+@media (max-width: 899px) {
+  .fn-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fn-head > .fn-kinds {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    margin: calc(var(--row) / 2) 0 0 var(--inset);
+  }
+
+  .fn-kinds li {
+    white-space: nowrap;
+  }
+
+  .fn-head > .sig {
+    grid-row: 3;
+    margin-top: var(--row);
+  }
+}
+
+/* ── On a phone ──────────────────────────────────────────────────────
+   Every demo laid out for a column about 330px wide: nothing cut, nothing
+   overlapping, nothing scrolling sideways, rows still whole rows. */
+@media (max-width: 640px) {
+  /* Ledgers: a narrower number column, smaller type, values whole. */
+  .folder-sheet--result [data-ledger] > :not([data-ledger-skip]) {
+    grid-template-columns: calc(var(--row) * 1.25) var(--ledger-cols, minmax(0, 1fr));
+  }
+
+  .folder-sheet--result [data-ledger] > :not([data-ledger-skip])::before {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+
+  .folder-sheet--result :is([data-ledger], .ledger, .extends-rows) {
+    font-size: 11px;
+  }
+
+  .folder-sheet--result .extends-rows--keys {
+    --ledger-cols: calc(12ch + 12px) 8px minmax(0, 1fr);
+  }
+
+  .folder-sheet--result .ledger :is(th, td) {
+    padding-inline: 6px;
+  }
+
+  /* minContrastWith: the cards one under another. */
+  .folder-sheet--result .folder-body .min-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .folder-sheet--result .min-card:nth-child(even) {
+    box-shadow: none;
+  }
+
+  .folder-sheet--result .min-card + .min-card {
+    border-top: 1px solid var(--strip-line);
+  }
+
+  /* nextLarger / nextSmaller: each answer its name over its value. */
+  .folder-sheet--result .step-cell {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    height: calc(var(--row) * 2);
+  }
+
+  /* Swatch rows: three across (four for sibling's seven), a row of paper
+     between the lines for the labels under the picks. */
+  .folder-sheet--result :is(.vivid-stage, .lightness-stage, .random-stage) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: var(--row);
+  }
+
+  .folder-sheet--result .folder-body .sibling-stage {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: var(--row);
+  }
+
+  .folder-sheet--result .sibling-stage > button.stile,
+  .folder-sheet--result :is(.vtile, .ltile, .rtile) {
+    height: calc(var(--row) * 3);
+  }
+
+  /* sibling: the note stays on its line. */
+  .sib-table td:last-child {
+    white-space: nowrap;
+  }
+
+  /* Only readable colors: the sample over its value, on two rows. */
+  .rdx-sample {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .rdx-text {
+    font-size: 1rem;
+    line-height: var(--row);
+    white-space: nowrap;
+  }
+
+  /* Cards side by side: one under another. */
+  .folder-sheet--result .folder-body :is(.ref-themes, .extends-cards) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--row) 0;
+  }
+
+  .folder-sheet--result :is(.ref-buttons, .ref-themes) span:not([class*="ui-card"]) {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* colorMix: the two ends and the space wrap onto the stub's rows. */
+  .folder-sheet--result .folder-body > * > .mix-stub,
+  .folder-sheet--result .mix-stage > .mix-stub {
+    flex-wrap: wrap;
+  }
+
+  .mix-stub color-input.mix-b {
+    margin-left: auto;
+  }
+
+  /* Poline: the call wraps instead of running off. */
+  .folder-sheet--result .extend-result-line {
+    flex-wrap: wrap;
+  }
+
+  .folder-sheet--result .extend-result .extend-result-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    height: auto;
+    min-height: var(--row);
+  }
+
+  .folder-sheet--result .extend-result .extend-result-line > .extend-result-label {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow: visible;
+    line-height: var(--row);
+  }
+
+  /* closest: only the picked step keeps its name over the ruler. */
+  .cr-mark:not(.is-pick) b {
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 640px) {
+  /* bestContrastWith: two surfaces across, so each tile's lines fit. */
+  .folder-sheet--result .contrast-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 

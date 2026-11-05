@@ -7,8 +7,12 @@ import Code from '../components/Code.astro';
 import Slider from '../components/Slider.astro';
 import Logo from '../components/Logo.astro';
 import Footer from '../components/Footer.astro';
-import '../marketing/style.css';
+// shared.css first: the build links the sheets in the order a page first
+// imports them, and puts style.css and docs.css in one file, so this is
+// the order in dev and in production alike. style.css is layered (it
+// loses to both); docs.css comes after shared.css and wins.
 import '../marketing/shared.css';
+import '../marketing/style.css';
 import '../marketing/docs.css';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
@@ -178,7 +182,7 @@ ui.set('text', mostVivid(ref('ink'), {
       <h2 class="rule-title" id="kinds-title">Kinds of decision</h2>
       <p>A selector takes a scope of candidates and returns the member that
         fits its rule, and picks again whenever a member changes, is added or
-        is removed. Thirteen are built in.</p>
+        is removed. These come built in.</p>
     </header>
 
     <nav class="fn-index" aria-label="Selectors">
