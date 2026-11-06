@@ -6,6 +6,18 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-06
+
+### Added
+
+- **`refersTo(ref)`** comes back down the value tree, the other way from
+  `source`: the members of the pool whose references lead to a token, at any
+  depth. A rule can name the role rather than the step that holds it —
+  `not: [refersTo(ref('brand.ink'))]` leaves out whichever step of the scale
+  refers to `brand.ink`. A `not` entry leaves out every member it finds; a
+  `sibling` anchor or `toward` target needs exactly one and throws with the
+  list otherwise. Composes with `source` and `inherited`.
+
 ## [0.21.0] - 2026-11-05
 
 ### Added
