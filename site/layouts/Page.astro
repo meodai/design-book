@@ -54,6 +54,11 @@ const imageAlt = 'Design Book: design tokens that keep their reasons. A sentence
   <body {...bodyAttrs}>
     <slot />
     <script>
+      // The wordmark in ASCII, for whoever opens the console.
+      import logo from '../components/logo/logo.txt?raw';
+      console.log(`\n${logo}\n`);
+    </script>
+    <script>
       // Safari's toolbar follows the rails' color, also when a page
       // recolors itself (the landing's palette).
       const meta = document.querySelector('meta[name="theme-color"]');

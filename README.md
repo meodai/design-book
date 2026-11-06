@@ -1520,3 +1520,15 @@ You can also read it as a plain migration guide — it doesn't require Claude Co
 [AGPL-3.0](LICENSE) — free for open-source projects. If you want to use Design Book in proprietary or closed-source software without open-sourcing your project, a commercial license is available. Contact [david@elastiq.ch](mailto:david@elastiq.ch).
 
 Clients who hired David Aerne (personally or through Elastiq GmbH) for work in which he used Design Book may use it within the scope of that engagement without the AGPL conditions — see the additional permission in [LICENSE](LICENSE).
+
+```
+         _______________________________ ______________________________
+        / ____  ___________ __________  V ______  ____  ____  __ __   /\
+       / / __ \/ ____/ ___//  _/ ____/ | / / __ )/ __ \/ __ \/ //_/  / /
+      / / / / / __/  \__ \ / // / __/  |/ / __  / / / / / / / ,<    / /
+     / / /_/ / /___ ___/ // // /_/ / /|  / /_/ / /_/ / /_/ / /| |  / /
+    / /_____/_____//____/___/\____/_/ |_/_____/\____/\____/_/ |_| / /
+   /_____________________________   _____________________________/ /
+   \_____________________________\ /______________________________/
+                                  V
+```
