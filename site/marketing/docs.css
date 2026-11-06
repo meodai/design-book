@@ -3418,10 +3418,14 @@ main.sections {
   padding: var(--row) 0;
 }
 
+/* Drawn at its own size, a row to 28 units, so its boxes sit on the
+   sheet's rules; only a column narrower than it scales it down. */
 .nav-schema {
   display: block;
-  width: 100%;
+  width: 540px;
+  max-width: 100%;
   height: auto;
+  margin-inline: auto;
   color: var(--pp-text, var(--black));
   font-family: var(--font-code);
   font-size: 12px;

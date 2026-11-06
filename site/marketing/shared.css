@@ -457,6 +457,21 @@
 }
 
 .rail .tick.minor { width: 4px; }
+
+/* A sub-section's tick is a link: in the rail's ink, not the links'
+   color, with a taller, wider hit area than the line. */
+.rail a.tick.minor {
+  color: inherit;
+}
+
+.rail a.tick.minor::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0 -4px -6px;
+}
+
+.rail a.tick.minor:hover,
+.rail a.tick.minor:focus-visible { width: 9px; }
 .rail .tick.major { width: 9px; }
 .rail-left .tick { right: 0; }
 .rail-right .tick { left: 0; }

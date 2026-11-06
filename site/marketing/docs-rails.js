@@ -1,7 +1,8 @@
 // The gutters of the docs and the article. Left: a map of the page, each
-// section numbered where it sits (select one to go there), with a needle
-// for where you are. Right: the edge of printer paper, a column of feed
-// holes that runs past as the page scrolls.
+// section numbered where it sits (select one to go there), its
+// sub-sections as short ticks between, with a needle for where you are.
+// Right: the edge of printer paper, a column of feed holes that runs past
+// as the page scrolls.
 
 const left = document.createElement("aside");
 left.className = "rail rail-left";
@@ -17,9 +18,16 @@ const sections = [...document.querySelectorAll(document.body.dataset.sections ??
     const heading = section.querySelector("h1, h2");
     if (!heading) return null;
     if (!section.id) section.id = heading.id ? `s-${heading.id}` : `section-${i + 1}`;
-    return { section, title: heading.textContent.trim() };
+    // Its sub-sections: the titles that start a part of it.
+    const subs = [...section.querySelectorAll("h3.rule-title")].map((title, j) => {
+      if (!title.id) title.id = `${section.id}-${j + 1}`;
+      return { title, label: title.textContent.trim() };
+    });
+    return { section, title: heading.textContent.trim(), subs };
   })
   .filter(Boolean);
+
+const attr = (text) => text.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
 function pageFraction(element) {
   const top = element.getBoundingClientRect().top + scrollY;
@@ -30,10 +38,13 @@ function pageFraction(element) {
 function build() {
   let l = `<span class="rail-legend">Sections, by position</span>` +
     `<div class="rail-scale">`;
-  sections.forEach(({ section, title }, i) => {
+  sections.forEach(({ section, title, subs }, i) => {
     const y = pageFraction(section) * 100;
     l += `<i class="tick major" style="top:${y}%"></i>` +
-      `<a class="num" href="#${section.id}" style="top:${y}%" title="${title.replace(/"/g, "&quot;")}">${i + 1}</a>`;
+      `<a class="num" href="#${section.id}" style="top:${y}%" title="${attr(title)}">${i + 1}</a>`;
+    subs.forEach(({ title: sub, label }, j) => {
+      l += `<a class="tick minor" href="#${sub.id}" style="top:${pageFraction(sub) * 100}%" title="${i + 1}.${j + 1} ${attr(label)}" aria-label="${i + 1}.${j + 1} ${attr(label)}"></a>`;
+    });
   });
   l += `<i class="needle" id="rail-here"></i></div>`;
   left.innerHTML = l;
@@ -51,11 +62,17 @@ function follow() {
   if (!here) return;
   // The section whose top has passed the middle of the window.
   let current = 0;
-  sections.forEach(({ section }, i) => {
-    if (section.getBoundingClientRect().top < innerHeight / 2) current = i;
+  let sub = 0;
+  sections.forEach(({ section, subs }, i) => {
+    if (section.getBoundingClientRect().top >= innerHeight / 2) return;
+    current = i;
+    sub = 0;
+    subs.forEach(({ title }, j) => {
+      if (title.getBoundingClientRect().top < innerHeight / 2) sub = j + 1;
+    });
   });
   here.style.top = `${read * 100}%`;
-  here.dataset.label = String(current + 1);
+  here.dataset.label = sub ? `${current + 1}.${sub}` : String(current + 1);
 }
 
 addEventListener("scroll", follow, { passive: true });

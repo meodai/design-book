@@ -20,6 +20,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   title="Tour · Design Book"
   description="Every rule in Design Book with a live example: references, selectors that pick from a palette, readable colors, scales, inheritance and the renderers."
   fonts={['https://fonts.googleapis.com/css2?family=Valley+Sans:ital,wght@0,100..900;1,100..900&display=swap']}
+  bodyAttrs={{ 'data-sections': 'body > section, body > main' }}
 >
 
   <section class="hero first-screen hero--centered">
@@ -1025,28 +1026,28 @@ ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), {
 }));</Code></Sheet>
         <Sheet name="result" label="Schema" front>
           <figure class="ref-stage nav-schema-stage">
-              <svg class="nav-schema" viewBox="0 0 640 260" role="img" aria-labelledby="nav-schema-title">
+              <svg class="nav-schema" viewBox="0 0 540 252" width="540" height="252" role="img" aria-labelledby="nav-schema-title">
               <title id="nav-schema-title">The scope tree: card, card-inverted extends card, callout extends card-inverted; inherited climbs it. The value tree: scale.900 refers to brand.ink, which refers to palette.navy; source climbs it, refersTo comes back down.</title>
-              <text class="nav-schema-head" x="165" y="16" text-anchor="middle">the scope tree</text>
-              <text class="nav-schema-head" x="475" y="16" text-anchor="middle">the value tree</text>
-              <rect x="90" y="42" width="150" height="28"/><text x="165" y="60" text-anchor="middle">card</text>
-              <rect x="90" y="126" width="150" height="28"/><text x="165" y="144" text-anchor="middle">card-inverted</text>
-              <rect x="90" y="210" width="150" height="28"/><text x="165" y="228" text-anchor="middle">callout</text>
-              <rect x="400" y="42" width="150" height="28"/><text x="475" y="60" text-anchor="middle">palette.navy</text>
-              <rect x="400" y="126" width="150" height="28"/><text x="475" y="144" text-anchor="middle">brand.ink</text>
-              <rect x="400" y="210" width="150" height="28"/><text x="475" y="228" text-anchor="middle">scale.900</text>
-              <path class="nav-schema-link" d="M165 70V126"/><text class="nav-schema-note" x="172" y="102">extends</text>
-              <path class="nav-schema-link" d="M475 70V126"/><text class="nav-schema-note" x="482" y="102">ref</text>
-              <path d="M76 122V74M72 80L76 74L80 80"/><text class="nav-schema-word" x="68" y="102" text-anchor="end">inherited</text>
-              <path d="M386 122V74M382 80L386 74L390 80"/><text class="nav-schema-word" x="378" y="102" text-anchor="end">source</text>
-              <path d="M564 74V122M560 116L564 122L568 116"/><text class="nav-schema-word" x="572" y="102" text-anchor="start">refersTo</text>
-              <path class="nav-schema-link" d="M165 154V210"/><text class="nav-schema-note" x="172" y="186">extends</text>
-              <path class="nav-schema-link" d="M475 154V210"/><text class="nav-schema-note" x="482" y="186">ref</text>
-              <path d="M76 206V158M72 164L76 158L80 164"/><text class="nav-schema-word" x="68" y="186" text-anchor="end">inherited</text>
-              <path d="M386 206V158M382 164L386 158L390 164"/><text class="nav-schema-word" x="378" y="186" text-anchor="end">source</text>
-              <path d="M564 158V206M560 200L564 206L568 200"/><text class="nav-schema-word" x="572" y="186" text-anchor="start">refersTo</text>
-              <text class="nav-schema-note" x="475" y="256" text-anchor="middle">the value is written at the top</text>
-              <text class="nav-schema-note" x="165" y="256" text-anchor="middle">a scope extends the one above</text>
+              <text class="nav-schema-head" x="165" y="18" text-anchor="middle">the scope tree</text>
+              <text class="nav-schema-head" x="374" y="18" text-anchor="middle">the value tree</text>
+              <rect x="101" y="28" width="128" height="28"/><text x="165" y="46" text-anchor="middle">card</text>
+              <rect x="101" y="112" width="128" height="28"/><text x="165" y="130" text-anchor="middle">card-inverted</text>
+              <rect x="101" y="196" width="128" height="28"/><text x="165" y="214" text-anchor="middle">callout</text>
+              <rect x="310" y="28" width="128" height="28"/><text x="374" y="46" text-anchor="middle">palette.navy</text>
+              <rect x="310" y="112" width="128" height="28"/><text x="374" y="130" text-anchor="middle">brand.ink</text>
+              <rect x="310" y="196" width="128" height="28"/><text x="374" y="214" text-anchor="middle">scale.900</text>
+              <path class="nav-schema-link" d="M165 56V112"/><text class="nav-schema-note" x="172" y="88">extends</text>
+              <path class="nav-schema-link" d="M374 56V112"/><text class="nav-schema-note" x="381" y="88">ref</text>
+              <path d="M93 106V62M89 68L93 62L97 68"/><text class="nav-schema-word" x="85" y="88" text-anchor="end">inherited</text>
+              <path d="M302 106V62M298 68L302 62L306 68"/><text class="nav-schema-word" x="294" y="88" text-anchor="end">source</text>
+              <path d="M452 62V106M448 100L452 106L456 100"/><text class="nav-schema-word" x="460" y="88" text-anchor="start">refersTo</text>
+              <path class="nav-schema-link" d="M165 140V196"/><text class="nav-schema-note" x="172" y="172">extends</text>
+              <path class="nav-schema-link" d="M374 140V196"/><text class="nav-schema-note" x="381" y="172">ref</text>
+              <path d="M93 190V146M89 152L93 146L97 152"/><text class="nav-schema-word" x="85" y="172" text-anchor="end">inherited</text>
+              <path d="M302 190V146M298 152L302 146L306 152"/><text class="nav-schema-word" x="294" y="172" text-anchor="end">source</text>
+              <path d="M452 146V190M448 184L452 190L456 184"/><text class="nav-schema-word" x="460" y="172" text-anchor="start">refersTo</text>
+              <text class="nav-schema-note" x="165" y="242" text-anchor="middle">a scope extends the one above</text>
+              <text class="nav-schema-note" x="374" y="242" text-anchor="middle">the value is written at the top</text>
               </svg>
           </figure>
         </Sheet>
