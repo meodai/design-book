@@ -27,6 +27,8 @@ export {
   inherited,
   source,
   isSourceReference,
+  refersTo,
+  isRefersToReference,
   px,
   rem,
   ms,

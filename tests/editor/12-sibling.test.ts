@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { DesignBook, color, ref, sibling, lighten } from '../../src/index';
+import { DesignBook, color, ref, sibling, lighten, lightest, source, refersTo } from '../../src/index';
 import { parseTokenInput } from '../../site/editor/editor-input-parser';
 import { loadEditorModule } from './load-editor';
 
@@ -55,5 +55,34 @@ describe('sibling in the editor', () => {
     const ui = book.addScope('ui-12-bad');
     expect(parseTokenInput("sibling(ref('ramp-12.a'))", book, ui)).toEqual(sibling(ref('ramp-12.a'), 1));
     expect(() => parseTokenInput("sibling(ref('ramp-12.a'), up)", book, ui)).toThrow(/step count/);
+  });
+});
+
+describe('refersTo in the editor', () => {
+  let getTokenDisplayValue: (scope: any, tokenName: string) => string;
+  let book: DesignBook;
+
+  beforeAll(async () => {
+    const mod = await loadEditorModule();
+    getTokenDisplayValue = mod.getTokenDisplayValue;
+    book = new DesignBook('test-12-refers');
+    book.addScope('brand-12').set('ink', color('#111111'));
+    const ramp = book.addScope('ramp-12r');
+    ramp.set('a', color('#eeeeee'));
+    ramp.set('b', color('#999999'));
+    ramp.set('c', ref('brand-12.ink'));
+  });
+
+  it.each([
+    ['anchor', () => sibling(refersTo(ref('brand-12.ink')), ref('ramp-12r'), -1), "sibling(refersTo(ref('brand-12.ink')), ref('ramp-12r'), -1)"],
+    ['with source', () => sibling(refersTo(source(ref('brand-12.ink'), 'root')), ref('ramp-12r'), -1), "sibling(refersTo(source(ref('brand-12.ink'), 'root')), ref('ramp-12r'), -1)"],
+    ['not', () => lightest(ref('ramp-12r'), { not: [refersTo(ref('brand-12.ink'))] }), "lightest(ref('ramp-12r'), { not: [refersTo(ref('brand-12.ink'))] })"],
+  ] as const)('serializes and re-parses (%s)', (name, make, expected) => {
+    const ui = book.addScope(`ui-12r-${name.replace(' ', '-')}`);
+    const original = make();
+    ui.set('pick', original);
+    const serialized = getTokenDisplayValue(ui, 'pick');
+    expect(serialized).toBe(expected);
+    expect(parseTokenInput(serialized, book, ui)).toEqual(original);
   });
 });

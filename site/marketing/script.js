@@ -63,6 +63,7 @@ import {
   sibling,
   inherited,
   source,
+  refersTo,
 } from "../../src/index";
 
 import { Poline, positionFunctions } from "poline/picker"; // also defines <poline-picker>
@@ -1817,6 +1818,56 @@ wireTabs(document.querySelector(".extends-modes"));
         <span class="ui-card-buttons">${chip(book.resolve(`${name}.interaction`))}${chip(book.resolve(`${name}.hover`))}</span>
       </div>
     </div>`).join("");
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  refersTo — body text by contrast, never the step that holds the ink;
+//  move the ink to another step and the rule follows it
+// ══════════════════════════════════════════════════════════════════════
+(function refersToSection () {
+  const rampEl = document.getElementById("ref-refers");
+  const stepEl = document.getElementById("ref-refers-step");
+  if (!rampEl || !stepEl) return;
+
+  const INK = "#182a59";
+  const RAMP = {
+    "50": "#e9eefb", "100": "#ccd8f6", "200": "#a8bdef", "300": "#81a0e7", "400": "#5a82dd",
+    "500": "#3965cf", "600": "#2c4fa8", "700": "#223c80", "800": "#1c3069", "900": "#0e1833",
+  };
+  const book = new DesignBook("refers-demo");
+  book.addScope("brand").set("ink", color(INK));
+  const scale = book.addScope("scale");
+  const ui = book.addScope("ui");
+
+  const ink = (bg) => (contrast(bg, "#fffaed") >= contrast(bg, "#0d0a03") ? "#fffaed" : "#0d0a03");
+
+  function paint () {
+    const inkStep = stepEl.value;
+    book.mode = "batch";
+    for (const [step, value] of Object.entries(RAMP)) {
+      scale.set(step, step === inkStep ? ref("brand.ink") : color(value));
+    }
+    ui.set("bg", ref("scale.50"));
+    ui.set("text", bestContrastWith(ref(".bg"), ref("scale"), { not: [refersTo(ref("brand.ink"))] }));
+    book.mode = "auto";
+    const text = book.resolve("ui.text");
+    let pickMarked = false;
+    rampEl.innerHTML = Object.keys(RAMP).map((step) => {
+      const value = book.resolve(`scale.${step}`);
+      const marks = [];
+      if (step === "50") marks.push("bg");
+      if (step === inkStep) marks.push("brand.ink · left out");
+      else if (!pickMarked && value === text) { marks.push("text"); pickMarked = true; }
+      return `
+      <div class="ref-ramp-step" style="background:${value};color:${ink(value)}">
+        ${marks.map((m) => `<b>${m}</b>`).join("")}
+        <span>${step}</span>
+      </div>`;
+    }).join("");
+  }
+
+  stepEl.addEventListener("change", paint);
+  paint();
 })();
 
 // ══════════════════════════════════════════════════════════════════════

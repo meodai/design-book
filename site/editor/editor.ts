@@ -492,7 +492,10 @@ function serializeFunctionToken(fn: any): string {
   const optionPairs = [
     ...(upTo ? [`upTo: ${upTo}`] : []),
     ...(readableOn ? [`readableOn: ${readableOn}`] : []),
-    ...optionKeys.map(k => `${k}: ${JSON.stringify(fn.options[k])}`),
+    ...optionKeys.map(k => k === 'not' && Array.isArray(fn.options.not)
+      // a `source(…)` / `refersTo(…)` entry is a reference, printed as the call
+      ? `not: [${fn.options.not.map((n: any) => (typeof n === 'string' ? JSON.stringify(n) : serializePlainToken(n))).join(', ')}]`
+      : `${k}: ${JSON.stringify(fn.options[k])}`),
     // The description lives on the token itself, not in fn.options.
     ...(fn.description ? [`description: ${JSON.stringify(fn.description)}`] : []),
   ];
@@ -532,11 +535,12 @@ function quote(value: string): string {
 
 function serializePlainToken(tv: any): string {
   if (tv.type === 'reference') {
-    // inherited(…) first, then source(…) around it: the order they are read in
+    // inherited(…) first, then source(…), then refersTo(…) around it: the order they are read in
     const distance = (d: number | 'root') => (d === 1 ? '' : d === 'root' ? ", 'root'" : `, ${d}`);
     let written = `ref('${tv.key}')`;
     if (tv.up !== undefined) written = `inherited(${written}${distance(tv.up)})`;
     if (tv.via !== undefined) written = `source(${written}${distance(tv.via)})`;
+    if (tv.referredBy) written = `refersTo(${written})`;
     return written;
   }
   if (tv.type === 'color') {

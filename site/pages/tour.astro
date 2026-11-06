@@ -51,12 +51,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
       <p>A book keeps its tokens in <em>scopes</em>, named groups like
         <code>brand</code> or <code>ui</code>; <code>brand.primary</code> is the
         token <code>primary</code> in <code>brand</code>.</p>
-      <p>Each token is a node and each reference an edge. The library tracks
-        references, computed values and selectors that read a whole scope, so
-        when an input changes it recomputes exactly what depends on it, either
-        right away or all at once with <code>flush()</code> in batch mode. A
-        change that would create a cycle is refused, and
-        <code>watch(key, fn)</code> calls you back when a value changes.</p>
+      <p>Each token is a node and each reference an edge. Change an input and
+        the book works out again exactly the tokens that depend on it, and
+        nothing else.</p>
       <p>The diagram on the right is a small demo book: a brand color, a ramp
         made from it, a spacing scale and the UI decisions on top, drawn by
         the built-in <code>SVGRenderer</code>. Change the brand color or flip
@@ -993,11 +990,72 @@ book.addScope('button-danger', {
     </div>
 
     <div class="ref-feature-body split feature-sub">
-      <h3 class="rule-title" id="ref-parent-title">Up the scope tree: inherited.</h3>
+      <h3 class="rule-title" id="ref-trees-title">Two trees, three words.</h3>
       <div class="ref-feature-text">
         <p>A token sits in two trees. Its <em>scope</em> may extend another
           scope, and its <em>value</em> may refer to another token. Design Book
-          never climbs either on its own; two words climb them on purpose.</p>
+          never moves through either on its own; three words do it on purpose.</p>
+        <p><code>inherited</code> climbs the scope tree: the same key, one
+          scope up. <code>source</code> climbs the value tree: the token a
+          reference refers to, up to where the value is written.
+          <code>refersTo</code> comes back down it: the steps of a scale that
+          refer to a token, so a rule can name the role, <code>brand.ink</code>,
+          rather than the step that holds it.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>// the scope tree
+const card = book.addScope('card');
+const inverted = book.addScope('card-inverted', { extends: 'card' });
+card.set('surface', ref('palette.white'));
+
+// up: card's surface, one scope up
+inverted.set('border', inherited(ref('.surface')));
+
+// the value tree
+brand.set('ink', ref('palette.navy'));
+scale.set('900', ref('brand.ink'));
+
+// up: the step after palette.navy, where ink is written
+ui.set('accent', sibling(source(ref('brand.ink'), 'root'), 1));
+
+// down: leave out scale.900, the step that holds ink
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), {
+  not: [refersTo(ref('brand.ink'))],
+}));</Code></Sheet>
+        <Sheet name="result" label="Schema" front>
+          <figure class="ref-stage nav-schema-stage">
+              <svg class="nav-schema" viewBox="0 0 640 260" role="img" aria-labelledby="nav-schema-title">
+              <title id="nav-schema-title">The scope tree: card, card-inverted extends card, callout extends card-inverted; inherited climbs it. The value tree: scale.900 refers to brand.ink, which refers to palette.navy; source climbs it, refersTo comes back down.</title>
+              <text class="nav-schema-head" x="165" y="16" text-anchor="middle">the scope tree</text>
+              <text class="nav-schema-head" x="475" y="16" text-anchor="middle">the value tree</text>
+              <rect x="90" y="42" width="150" height="28"/><text x="165" y="60" text-anchor="middle">card</text>
+              <rect x="90" y="126" width="150" height="28"/><text x="165" y="144" text-anchor="middle">card-inverted</text>
+              <rect x="90" y="210" width="150" height="28"/><text x="165" y="228" text-anchor="middle">callout</text>
+              <rect x="400" y="42" width="150" height="28"/><text x="475" y="60" text-anchor="middle">palette.navy</text>
+              <rect x="400" y="126" width="150" height="28"/><text x="475" y="144" text-anchor="middle">brand.ink</text>
+              <rect x="400" y="210" width="150" height="28"/><text x="475" y="228" text-anchor="middle">scale.900</text>
+              <path class="nav-schema-link" d="M165 70V126"/><text class="nav-schema-note" x="172" y="102">extends</text>
+              <path class="nav-schema-link" d="M475 70V126"/><text class="nav-schema-note" x="482" y="102">ref</text>
+              <path d="M76 122V74M72 80L76 74L80 80"/><text class="nav-schema-word" x="68" y="102" text-anchor="end">inherited</text>
+              <path d="M386 122V74M382 80L386 74L390 80"/><text class="nav-schema-word" x="378" y="102" text-anchor="end">source</text>
+              <path d="M564 74V122M560 116L564 122L568 116"/><text class="nav-schema-word" x="572" y="102" text-anchor="start">refersTo</text>
+              <path class="nav-schema-link" d="M165 154V210"/><text class="nav-schema-note" x="172" y="186">extends</text>
+              <path class="nav-schema-link" d="M475 154V210"/><text class="nav-schema-note" x="482" y="186">ref</text>
+              <path d="M76 206V158M72 164L76 158L80 164"/><text class="nav-schema-word" x="68" y="186" text-anchor="end">inherited</text>
+              <path d="M386 206V158M382 164L386 158L390 164"/><text class="nav-schema-word" x="378" y="186" text-anchor="end">source</text>
+              <path d="M564 158V206M560 200L564 206L568 200"/><text class="nav-schema-word" x="572" y="186" text-anchor="start">refersTo</text>
+              <text class="nav-schema-note" x="475" y="256" text-anchor="middle">the value is written at the top</text>
+              <text class="nav-schema-note" x="165" y="256" text-anchor="middle">a scope extends the one above</text>
+              </svg>
+          </figure>
+        </Sheet>
+      </Folder>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-parent-title">Up the scope tree: inherited.</h3>
+      <div class="ref-feature-text">
         <p><code>inherited</code> climbs the scope tree. A scope that overrides
           <code>interaction</code> cannot read <code>ref('.interaction')</code>
           to work out the new value: that is the token it is defining, and the
@@ -1009,7 +1067,13 @@ book.addScope('button-danger', {
       </div>
 
       <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>const base = book.addScope('base');
+        <Sheet name="result" label="Result">
+          <figure class="ref-stage">
+            <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
+            <div class="ref-buttons" id="ref-buttons"></div>
+          </figure>
+        </Sheet>
+        <Sheet name="code" label="Code" front><Code is:raw>const base = book.addScope('base');
 base.set('background', ref('blue.50'));
 base.set('interaction', ref('blue.600'));
 
@@ -1020,12 +1084,6 @@ const hover = book.addScope('base-hover', {
 hover.set('interaction', sibling(
   inherited(ref('.interaction')), ref('blue'), -2,
 ));</Code></Sheet>
-        <Sheet name="result" label="Result" front>
-          <figure class="ref-stage">
-            <div class="ref-ramp" id="ref-ramp" aria-label="The blue ramp, with the three tokens marked"></div>
-            <div class="ref-buttons" id="ref-buttons"></div>
-          </figure>
-        </Sheet>
       </Folder>
     </div>
 
@@ -1060,6 +1118,50 @@ book.addScope('button-green', { extends: 'button' })
         <Sheet name="result" label="Result" front>
           <figure class="ref-stage">
             <div class="ref-buttons ref-themes" id="ref-themes"></div>
+          </figure>
+        </Sheet>
+      </Folder>
+    </div>
+
+    <div class="ref-feature-body split feature-sub">
+      <h3 class="rule-title" id="ref-refers-title">Back down the value: refersTo.</h3>
+      <div class="ref-feature-text">
+        <p><code>refersTo</code> is <code>source</code> the other way round.
+          One of a scale's dark steps is often the brand's ink:
+          <code>scale.800 = ref('brand.ink')</code>. To keep body text off the
+          ink, a rule could leave out <code>scale.800</code>, but that names a
+          step, not what you mean. <code>refersTo(ref('brand.ink'))</code>
+          names whichever step of the pool refers to the ink.</p>
+        <p>In a <code>not</code> list it leaves out every step that does. As a
+          <code>sibling</code> anchor or <code>toward</code> it needs exactly
+          one, and says which steps it found when there are more. Move the ink
+          to another step and the rule follows it.</p>
+      </div>
+
+      <Folder>
+        <Sheet name="code" label="Code"><Code is:raw>const brand = book.addScope('brand');
+brand.set('ink', color('#182a59'));
+
+const scale = book.addScope('scale');
+// … 50 to 700, then the ink as a step
+scale.set('800', ref('brand.ink'));
+
+ui.set('bg', ref('scale.50'));
+// the most contrast, but never the ink
+ui.set('text', bestContrastWith(
+  ref('.bg'), ref('scale'),
+  { not: [refersTo(ref('brand.ink'))] },
+));</Code></Sheet>
+        <Sheet name="result" label="Result" front>
+          <figure class="ref-stage">
+            <div class="ref-ramp" id="ref-refers" aria-label="The scale, with the ink step and the text pick marked"></div>
+            <div class="stub">
+              <span class="ramp-seed-lbl">brand.ink is step</span>
+              <select class="stub-select" id="ref-refers-step" aria-label="The step that refers to brand.ink">
+                <option value="800" selected>800</option>
+                <option value="900">900</option>
+              </select>
+            </div>
           </figure>
         </Sheet>
       </Folder>

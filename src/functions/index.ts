@@ -20,7 +20,7 @@ import { randomImpl } from './generic/random';
 import type { RandomType } from './generic/random';
 import { nthImpl } from './generic/nth';
 import { siblingImpl, scopeOfKey } from './generic/sibling';
-import { excludedMembers, landIn, memberStart } from './members';
+import { excludedMembers, memberStart, oneMember } from './members';
 import type { Scope } from '../scope';
 import type { AnyTokenValue } from '../tokens';
 import { FunctionError } from '../errors';
@@ -196,24 +196,21 @@ export function registerBuiltinFunctions(book: {
 			if (start === undefined || !start.includes('.')) {
 				throw new FunctionError('sibling: a fully-qualified `from` key is required', 'sibling');
 			}
+			const readsDown = (options.from as { referredBy?: unknown }).referredBy === true;
+			if (readsDown && !pool) {
+				throw new FunctionError(`sibling: refersTo(ref('${start}')) needs the scale named: sibling(refersTo(ref('${start}')), ref('scale'), n)`, 'sibling');
+			}
 			// The scale: the scope argument (the anchor's references followed into
 			// it), or the anchor's own scope.
 			const scope = pool ?? book.getScope(scopeOfKey(start));
 			if (!scope) throw new FunctionError(`sibling: unknown scope "${scopeOfKey(start)}"`, 'sibling');
-			const anchor = landIn(book, start, scope.name);
-			if (anchor === undefined) {
-				throw new FunctionError(`sibling: "${start}" is not in "${scope.name}" and its references do not lead into it`, 'sibling');
-			}
+			const anchor = oneMember(book, 'sibling', 'the anchor', options.from, scope);
 			// The target is read against the same scale, like a `not` entry.
 			let toward: string | undefined;
 			if (options.toward !== undefined) {
 				const reason = (options.toward as { unresolvable?: string }).unresolvable;
 				if (reason) throw new FunctionError(`sibling: \`toward\` could not be read: ${reason}`, 'sibling');
-				const target = memberStart(book, 'sibling', options.toward);
-				toward = target === undefined ? undefined : landIn(book, target, scope.name);
-				if (toward === undefined) {
-					throw new FunctionError(`sibling: \`toward\` "${target}" is not in "${scope.name}" and its references do not lead into it`, 'sibling');
-				}
+				toward = oneMember(book, 'sibling', '`toward`', options.toward, scope);
 			}
 			return siblingImpl(scope, anchor, options.offset as number, options.wrap ?? false, ex('sibling', scope, options.not), toward);
 		},

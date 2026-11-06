@@ -3411,3 +3411,54 @@ main.sections {
   stroke-linejoin: miter;
 }
 
+
+/* The two trees and the three words that move through them: boxes in
+   paper, lines in ink, the words in the code face. */
+.folder-sheet--result .nav-schema-stage {
+  padding: var(--row) 0;
+}
+
+.nav-schema {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--pp-text, var(--black));
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+.nav-schema rect {
+  fill: var(--pp, var(--paper));
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.nav-schema text {
+  fill: currentColor;
+}
+
+.nav-schema path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+}
+
+.nav-schema .nav-schema-link {
+  stroke-dasharray: 2 3;
+}
+
+.nav-schema .nav-schema-word {
+  font-weight: 700;
+}
+
+.nav-schema .nav-schema-head {
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nav-schema .nav-schema-note {
+  opacity: 0.6;
+  font-size: 11px;
+}

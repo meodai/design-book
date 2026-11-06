@@ -33,6 +33,10 @@ export interface ReferenceValue {
    *  member-naming slot reads it: a `sibling` anchor or `toward` target, a
    *  `not` entry. */
   via?: number | 'root';
+  /** Name the members of the walked pool whose references lead to this
+   *  token (`refersTo`): down the value tree, where `via` goes up. Read
+   *  only where `via` is. */
+  referredBy?: true;
   description?: string;
 }
 
@@ -217,6 +221,9 @@ export function source(reference: ReferenceValue, hops: number | 'root' = 1): Re
   if (isScopeKey(reference.key)) {
     throw new Error(`source: "${reference.key}" is a scope; source follows a token's references`);
   }
+  if (reference.referredBy) {
+    throw new Error(`source: follow the references first, then come back down: refersTo(source(ref('${reference.key}')))`);
+  }
   if (hops === 'root') return { ...reference, via: 'root' };
   if (!Number.isInteger(hops) || hops < 1) {
     throw new Error(`source: hops must be a whole number of 1 or more, or 'root', got ${String(hops)}`);
@@ -228,6 +235,52 @@ export function source(reference: ReferenceValue, hops: number | 'root' = 1): Re
 /** True for a reference that `source` marked to be followed. */
 export function isSourceReference(arg: unknown): arg is ReferenceValue & { via: number | 'root' } {
   return isReferenceValue(arg) && arg.via !== undefined;
+}
+
+/**
+ * The members that refer to a token, **down** the value tree — `source`'s
+ * opposite: with `brand-scale.2000 = ref('brand-base.ink')`,
+ * `refersTo(ref('brand-base.ink'))` read against `brand-scale` names
+ * `brand-scale.2000`. A member counts when its references lead to the token,
+ * directly or through other references (selectors are not looked through).
+ *
+ * It is read where a member is named, against the scale walked there: a
+ * `not` entry leaves out every member it finds; a `sibling` anchor (with the
+ * scale named: `sibling(refersTo(ref('brand-base.ink')), ref('brand-scale'),
+ * -2)`) and a `toward` target need exactly one. Finding none throws. As a
+ * value it is refused. With `source`, the references are followed first:
+ * `refersTo(source(ref('.accent'), 'root'))` is every member that ends where
+ * the accent's value is written.
+ */
+export function refersTo(reference: ReferenceValue): ReferenceValue {
+  if (!isReferenceValue(reference)) {
+    throw new Error('refersTo: expects a ref(...)');
+  }
+  if (isScopeKey(reference.key)) {
+    throw new Error(`refersTo: "${reference.key}" is a scope; refersTo names the members that refer to a token`);
+  }
+  return reference.referredBy ? reference : { ...reference, referredBy: true };
+}
+
+/** True for a reference that `refersTo` marked. */
+export function isRefersToReference(arg: unknown): arg is ReferenceValue & { referredBy: true } {
+  return isReferenceValue(arg) && arg.referredBy === true;
+}
+
+/** A reference that names members (`source` / `refersTo`): stays a
+ *  reference until a function reads it against its pool. */
+export function isMemberReference(arg: unknown): boolean {
+  return isReferenceValue(arg) && (arg.via !== undefined || arg.referredBy === true);
+}
+
+/** The stored form of a member-naming reference: key plus its markers. */
+export function memberReference(r: ReferenceValue): ReferenceValue {
+  return {
+    type: 'reference',
+    key: r.key,
+    ...(r.via !== undefined ? { via: r.via } : {}),
+    ...(r.referredBy ? { referredBy: true as const } : {}),
+  };
 }
 
 export function dimension(value: number, unit: string, options?: { description?: string; [key: string]: any }): TokenValue {
@@ -452,12 +505,13 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
         else if (isReferenceValue(key)) {
           const bound = bindReference(key, scope, context);
           if (isUnresolvableReference(bound)) options[name] = bound;
-          else if (bound.via !== undefined) {
-            // a `source` anchor: stays a reference, followed when resolved;
-            // it reads its start key (a dependency the constructor already
-            // declared, unless `inherited` named it only now)
-            options[name] = { type: 'reference', key: bound.key, via: bound.via };
-            if (key.up !== undefined) landed[name] = bound.key;
+          else if (isMemberReference(bound)) {
+            // a `source` / `refersTo` anchor: stays a reference, read against
+            // the pool when resolved; a `source` one reads its start key (a
+            // dependency the constructor already declared, unless
+            // `inherited` named it only now)
+            options[name] = memberReference(bound);
+            if (key.up !== undefined && bound.via !== undefined) landed[name] = bound.key;
           } else {
             options[name] = bound.key;
             landed[name] = bound.key;
@@ -469,7 +523,7 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
           if (typeof n === 'string') return q(n);
           const r = bindToken(n, scope, context);
           if (isReferenceValue(r) && !isUnresolvableReference(r)) {
-            return r.via !== undefined ? { type: 'reference', key: r.key, via: r.via } : r.key;
+            return isMemberReference(r) ? memberReference(r) : r.key;
           }
           return r;
         });
@@ -502,6 +556,9 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
  *  or a value argument of a function), a message saying so; else
  *  `undefined`. `Scope.set` refuses such a token. */
 export function misplacedSource(token: unknown): string | undefined {
+  if (isRefersToReference(token)) {
+    return `refersTo(ref('${token.key}')) names members, for a sibling anchor, a toward target or a not entry; it is not a value`;
+  }
   if (isSourceReference(token)) {
     return `source(ref('${token.key}')) names a member, for a sibling anchor, a toward target or a not entry; as a value, write ref('${token.key}')`;
   }
@@ -573,7 +630,9 @@ function notDependencies(fn: FunctionTokenValue): string[] {
   const iterated = new Set(iteratedScopesOf(fn));
   const deps: string[] = [];
   for (const n of not) {
-    // a `source` entry is followed from its start key, so it reads it
+    // a `source` entry is followed from its start key, so it reads it; a
+    // bare `refersTo` reads only the pool, which the selector index covers
+    if (isRefersToReference(n) && n.via === undefined) continue;
     if (isSourceReference(n)) {
       if (!isRelativeKey(n.key)) deps.push(tokenKeyOf(n.key));
       continue;
@@ -593,7 +652,7 @@ export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): 
   // A navigated reference (`inherited(ref('.x'))`) stays a reference until a
   // scope binds it, a `source` one until it is followed; a plain one is
   // stored as its key.
-  return not.map((n) => (typeof n === 'string' ? n : n.up !== undefined || n.via !== undefined ? n : n.key));
+  return not.map((n) => (typeof n === 'string' ? n : n.up !== undefined || isMemberReference(n) ? n : n.key));
 }
 
 /** Names of the scopes a function token iterates — the scope arguments of

@@ -76,6 +76,7 @@ ref('.')                  // The scope that reads the token, as a pool
 inherited(ref('.token'))          // The same reference one `extends` level up (see Navigation)
 inherited(ref('.token'), 'root')  // … at the top of the chain
 source(ref('.token'), 'root')     // The token its references end at (a sibling anchor, toward or not entry)
+refersTo(ref('brand.ink'))        // The members of the pool that refer to it (a not entry, sibling anchor or toward)
 
 px(16)                    // Dimension shortcuts
 rem(1.5)
@@ -195,6 +196,9 @@ ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [ref('ui.accent
 
 // whatever the accent ends up being, in whichever ramp
 ui.set('muted', bestContrastWith(ref('.bg'), ref('scale'), { not: [source(ref('.accent'), 'root')] }));
+
+// scale.900 = ref('brand.ink'): leave out the step that holds the ink
+ui.set('body', bestContrastWith(ref('.bg'), ref('scale'), { not: [refersTo(ref('brand.ink'))] }));
 ```
 
 The rule reads the entry, so it follows it: re-point `ui.accent` to
@@ -226,13 +230,15 @@ you say:
 | a reference that leads into the scope (`ui.surface = ref('scale.0')`) | the member it leads to, its references followed until they land in the scope |
 | `source(ref('.surface'), 'root')` | the token the references end at (or `n` references on, with `source(ref, n)`), then read as above |
 | `inherited(ref('.surface'))` | the same key one scope up the `extends` chain, then read as above |
+| `refersTo(ref('brand.ink'))` | the members whose references lead to it (`scale.900 = ref('brand.ink')`). A `not` entry leaves out every one; a `sibling` anchor or `toward` needs exactly one and throws with the list otherwise |
 | a selector that picked a member of the scope (`ui.text = bestContrastWith(…, ref('scale'))`) | the member it picked — every built-in selector reports it exactly |
 | anything else — a computed value, a selector that picked from another scope, references that go elsewhere | nothing: it throws |
 
 A token sits in two trees: its **scope** may extend another scope, and its
 **value** may refer to another token. `inherited` climbs the first,
-`source` the second; neither is ever climbed on its own. A member that
-refers to the entry is not matched by it.
+`source` climbs the second and `refersTo` comes back down it; none of them
+is ever taken on its own. A member that refers to a plain entry is not
+matched by it: ask with `refersTo`.
 
 ### Keeping only readable candidates with `readableOn`
 
@@ -754,12 +760,13 @@ A reference is a path. The number of segments says what it names, and a leading 
 
 A token or field reference is a value. A scope reference is a pool, the argument a selector searches: `bestContrastWith(ref('.bg'), ref('palette'))`. Each is only accepted where it fits — `ui.set('x', ref('palette'))` and `lighten(ref('.'))` throw ("names a scope"), and so does `mostVivid(ref('palette.blue'))` ("needs a scope to search"). Passing the scope object itself, `mostVivid(palette)`, still works: the constructor stores it as `ref('palette')`, so a function token is always plain data.
 
-A token sits in **two trees**: its *scope* may extend another scope, and its *value* may refer to another token. Two words climb them, each only when you ask:
+A token sits in **two trees**: its *scope* may extend another scope, and its *value* may refer to another token. Three words move through them, each only when you ask:
 
-| | climbs | one step | `'root'` |
+| | moves | one step | `'root'` |
 |---|---|---|---|
-| `inherited(ref, n?)` | the scope tree (`extends`) | the parent scope's same key | the top scope's same key |
-| `source(ref, n?)` | the value tree (references) | the token it refers to | the token where the value is written |
+| `inherited(ref, n?)` | up the scope tree (`extends`) | the parent scope's same key | the top scope's same key |
+| `source(ref, n?)` | up the value tree (references) | the token it refers to | the token where the value is written |
+| `refersTo(ref)` | down the value tree | the pool's members that refer to it, at any depth | — |
 
 #### `inherited`: up the scope tree
 
@@ -803,6 +810,28 @@ ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [source(ref('.a
 - Following more references than there are throws.
 - With both, inheritance is read first: `source(inherited(ref('.interaction')), 'root')` is the inherited interaction, followed to its scale.
 - The rule re-reads its start: re-point a reference on the way and the result follows.
+
+#### `refersTo`: back down the references
+
+`refersTo` is `source` the other way round. With `scale.900 = ref('brand.ink')`, `refersTo(ref('brand.ink'))` names `scale.900`: the member of the pool whose references lead to `brand.ink`, directly or through other references. Use it when the role is the readable name and the step that holds it is not:
+
+```typescript
+// leave out the ink step, whichever step that is
+ui.set('text', bestContrastWith(ref('.bg'), ref('scale'), { not: [refersTo(ref('brand.ink'))] }));
+
+// two steps lighter than the ink step, on the scale named
+ui.set('ink-hover', sibling(refersTo(ref('brand.ink')), ref('scale'), -2));
+
+// every step that ends where the accent's value is written
+ui.set('muted', bestContrastWith(ref('.bg'), ref('scale'), { not: [refersTo(source(ref('.accent'), 'root'))] }));
+```
+
+- It is read against the scope the rule searches (the pool, or the scale a `sibling` walks), so a `sibling` anchor needs the scale named.
+- A `not` entry leaves out every member it finds. A `sibling` anchor or `toward` target needs exactly one, and throws with the list when several refer to it ("scale.900, scale.950 in "scale" all refer to "brand.ink"; name one").
+- Finding nothing throws, as any entry that names nothing does.
+- Plain references only: a selector that picked the token does not refer to it.
+- `source` and `inherited` are read first: `refersTo(source(…))`, `refersTo(inherited(…))`. `source(refersTo(…))` is refused.
+- Like `source`, it names members; as a value it is refused.
 
 ### Positions: `nth`, `sibling`
 
@@ -1436,7 +1465,7 @@ they fit together.
 
 **Token constructors.** `color`, `ref`, `px`, `rem`, `ms`, `dimension`, `string`, `val`, `createFunctionToken`.
 
-**Navigation.** `inherited(reference, levels? | 'root')`: the same reference further up the `extends` chain. `source(reference, hops? | 'root')`: the token a reference refers to, along its references — read as a `sibling` anchor, a `toward` target or a `not` entry.
+**Navigation.** `inherited(reference, levels? | 'root')`: the same reference further up the `extends` chain. `source(reference, hops? | 'root')`: the token a reference refers to, along its references. `refersTo(reference)`: the members of the pool that refer to it. Both are read as a `sibling` anchor, a `toward` target or a `not` entry.
 
 **Functions.**
 - Comparisons (any kind): `closest` with the aliases `nextLarger`, `nextSmaller`, `nextLighter`, `nextDarker`; `bestContrastWith`, `minContrastWith`, `furthestFrom`, `lightest`, `darkest`, `largest`, `smallest`

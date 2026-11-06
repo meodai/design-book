@@ -1,5 +1,5 @@
 import {
-  color, ref, inherited, source, px, rem, ms, dimension, string,
+  color, ref, inherited, source, refersTo, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
   lighten, darken, shade, relativeTo, ramp,
   closest, nextLighter, nextDarker, furthestFrom, mostVivid, leastVivid,
@@ -22,6 +22,7 @@ import { parse } from 'culori';
  *   ref('scope'), ref('.')           -> a scope, where a function takes one
  *   inherited(ref('.x'), 2 | 'root') -> the reference, further up the extends chain
  *   source(ref('.x'), 2 | 'root')    -> the token it refers to, along its references
+ *   refersTo(ref('.x'))              -> the pool members that refer to it
  *   px(16), rem(1.5), ms(200)        -> dimension tokens
  *   bestContrastWith(arg, scope)      -> function tokens
  *   colorMix(arg1, arg2, ...)        -> function tokens
@@ -223,11 +224,16 @@ function splitArgs(argsStr: string): string[] {
 }
 
 /** `ref('path')`, or one wrapped in `inherited(…, n | 'root')` /
- *  `source(…, n | 'root')`; `undefined` for anything else. */
+ *  `source(…, n | 'root')` / `refersTo(…)`; `undefined` for anything else. */
 function parseReference(text: string): ReferenceValue | undefined {
   const trimmed = text.trim();
   const plain = trimmed.match(/^ref\(\s*['"]([^'"]+)['"]\s*\)$/);
   if (plain) return ref(plain[1]);
+  const down = trimmed.match(/^refersTo\(\s*(.+?)\s*\)$/s);
+  if (down) {
+    const inner = parseReference(down[1]);
+    return inner ? refersTo(inner) : undefined;
+  }
   const wrapped = trimmed.match(/^(inherited|source)\(\s*(.+?)\s*(?:,\s*(\d+|['"]root['"])\s*)?\)$/s);
   if (wrapped) {
     const inner = parseReference(wrapped[2]);

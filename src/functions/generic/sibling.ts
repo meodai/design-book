@@ -2,7 +2,9 @@ import {
   createFunctionToken,
   isReferenceValue,
   isRelativeKey,
+  isMemberReference,
   isScopeKey,
+  memberReference,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
@@ -202,10 +204,19 @@ export function sibling(
   // only once a scope reads the token, a `source` one only once it is
   // followed: keep the reference (binding adds an inherited key as a
   // dependency). A plain key is stored as is.
-  const asStored = (r: ReferenceValue) => (r.up !== undefined || r.via !== undefined
-    ? { type: 'reference' as const, key: r.key, ...(r.up !== undefined ? { up: r.up } : {}), ...(r.via !== undefined ? { via: r.via } : {}) }
+  const asStored = (r: ReferenceValue) => (r.up !== undefined || isMemberReference(r)
+    ? { ...memberReference(r), ...(r.up !== undefined ? { up: r.up } : {}) }
     : r.key);
-  const keys = [anchor, ...(toward ? [toward] : [])].filter((r) => r.up === undefined).map((r) => r.key);
+  // `refersTo` reads only the scale (the selector index covers it), not its key's value.
+  const keys = [anchor, ...(toward ? [toward] : [])]
+    .filter((r) => r.up === undefined && !(r.referredBy && r.via === undefined))
+    .map((r) => r.key);
+  if (anchor.referredBy && !scale) {
+    throw new FunctionError(
+      `sibling: refersTo(ref('${anchor.key}')) needs the scale named: sibling(refersTo(ref('${anchor.key}')), ref('scale'), n)`,
+      'sibling',
+    );
+  }
   // The scope walked: the scope argument; else the anchor's own scope, known
   // now unless the anchor still has to be navigated or followed.
   const walks = scale ? [] : anchor.up !== undefined || anchor.via !== undefined ? [] : [scopeName];

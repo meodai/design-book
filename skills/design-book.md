@@ -255,7 +255,10 @@ ref('scale'), 2)` steps in `scale` from wherever `.text` lands there (a
 reference followed into it, or the member a selector picked from it). For a
 rule shared by themes on different ramps, `sibling(source(ref('.x'),
 'root'), 1)` steps in whichever scale the value is written in. `not`
-entries follow the same rule against the selector's pool.
+entries follow the same rule against the selector's pool. To go the other
+way — the step that refers to a role — use `refersTo`: with
+`scale.2000 = ref('brand.ink')`, `not: [refersTo(ref('brand.ink'))]` leaves
+out the ink step in `scale` and still reads as the role.
 
 **Pick from one curated pool.** Put one ordered scale of refs between the
 raw palette families and the contexts (light to dark, say `scale.0` …
