@@ -97,6 +97,7 @@
     <button data-s="ribbons" class="on">ribbons</button><button data-s="lines">lines</button>
   </div>
   <label><input type="checkbox" id="hideIso"> hide tokens nothing reads or writes</label>
+  <label><input type="checkbox" id="hidePrim"> hide primitives</label>
   <span class="legend">
     <span><svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" /></svg> ref / fn</span>
     <span><svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" stroke-dasharray="3 2"/></svg> selector pick</span>
@@ -655,12 +656,33 @@ function sankeyV(D, svg) {
   return `click a scope to open it · ${X.size} open · hover a row for its chain`;
 }
 
+// primitives: tokens that read nothing (plain values, or inherited copies of one). Hiding them
+// leaves the system: what reads a primitive becomes a starting point, scopes of only primitives go.
+function withoutPrimitives(D) {
+  const reads = new Set(D.edges.map(e => e.to));
+  const byKey = Object.fromEntries(D.tokens.map(t => [t.key, t]));
+  const isPrim = (t, seen = new Set()) => {
+    if (reads.has(t.key)) return false;
+    if (t.inherited && t.source && byKey[t.source] && !seen.has(t.source)) { seen.add(t.key); return isPrim(byKey[t.source], seen); }
+    return true;
+  };
+  const prim = new Set(D.tokens.filter(t => isPrim(t)).map(t => t.key));
+  const tokens = D.tokens.filter(t => !prim.has(t.key));
+  const kept = new Set(tokens.map(t => t.scope));
+  return {
+    scopes: D.scopes.filter(s => kept.has(s.name)).map(s => ({ ...s, extends: kept.has(s.extends) ? s.extends : null })),
+    tokens: tokens.map(t => ({ ...t, pools: (t.pools || []).filter(p => kept.has(p)) })),
+    edges: D.edges.filter(e => !prim.has(e.from) && !prim.has(e.to)),
+    hidden: prim.size,
+  };
+}
 function render() {
   const svg = $('#out'); svg.innerHTML = ''; svg.classList.remove('focus');
   const defs = el('defs', {}, svg);
   const mk = el('marker', { id: 'arrow', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, markerUnits: 'userSpaceOnUse', orient: 'auto' }, defs);
   el('path', { d: 'M0 0 L8 4 L0 8 Z', fill: '#23221f', stroke: '#f4f1ea', 'stroke-width': 1 }, mk);
-  $('#note').textContent = (state.dir === 'v' ? sankeyV : sankey)(DATASETS[state.data], svg);
+  const D = $('#hidePrim').checked ? withoutPrimitives(DATASETS[state.data]) : DATASETS[state.data];
+  $('#note').textContent = (state.dir === 'v' ? sankeyV : sankey)(D, svg) + (D.hidden ? ` · ${D.hidden} primitives hidden` : '');
 }
 const pick = (group, b) => [...group.children].forEach(x => x.classList.toggle('on', x === b));
 for (const name of Object.keys(DATASETS)) { const b = document.createElement('button'); b.textContent = name; b.dataset.d = name; $('#data').appendChild(b); }
@@ -669,6 +691,7 @@ pick($('#dir'), $(`#dir [data-o="${state.dir}"]`)); pick($('#style'), $(`#style 
 $('#data').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.data = b.dataset.d; pick($('#data'), b); render(); };
 $('#style').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.style = b.dataset.s; pick($('#style'), b); render(); };
 $('#hideIso').onchange = render;
+$('#hidePrim').onchange = render;
 $('#dir').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.dir = b.dataset.o; pick($('#dir'), b); render(); };
 $('#sk').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.expanded[state.data] = new Set(b.dataset.x === 'all' ? DATASETS[state.data].scopes.map(s => s.name) : []); render(); };
 render();
