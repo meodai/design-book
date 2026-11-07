@@ -470,10 +470,10 @@ function sankeyV(D, svg) {
   const sideB = (f) => layerOf[f.a] < layerOf[f.b] ? 'T' : 'B';
   const sideTotal = {};
   for (const f of F) { sideTotal[`${f.a}|${sideA(f)}`] = (sideTotal[`${f.a}|${sideA(f)}`] || 0) + f.edges.length; sideTotal[`${f.b}|${sideB(f)}`] = (sideTotal[`${f.b}|${sideB(f)}`] || 0) + f.edges.length; }
-  const U = 2.6, NW = 14, TW = 200, RH = 17, PY = 7, HEAD = 18, HGAP = 40, VGAP = 150, PAD = 60, SW = 8, LAB = 30;
+  const U = 2.6, NW = 14, TW = 200, RH = 17, PY = 7, HEAD = 18, HGAP = 40, VGAP = 75, PAD = 60, SW = 8, LAB = 30;
   const open = (s) => X.has(s);
   const barW = (s) => Math.max(A.tokensBy[s].length, sideTotal[`${s}|B`] || 0, sideTotal[`${s}|T`] || 0, 4) * U;
-  const labW = (s) => Math.max(s.length + (A.parent[s] ? A.parent[s].length + 3 : 0), `${A.tokensBy[s].length} tokens · ${(internal[s] || []).length} internal`.length * 0.85) * 6.3 + 8;
+  const labW = (s) => s.length * 6.3 + 8; // upright labels are just the name: they set each layer's height
   // an opened scope is the bar widened: one column per token, its name reading upward over its swatch
   const CW = 17;
   const nameLen = (s) => Math.min(22, Math.max(4, ...rows[s].map(t => t.name.length)));
@@ -629,8 +629,9 @@ function sankeyV(D, svg) {
     if (!open(s)) {
       el('rect', { x, y, width: barW(s), height: NW }, g);
       // labels read upward along the bar's left end, so they cost no width
-      el('text', { transform: `translate(${x - 17} ${y + NW}) rotate(-90)` }, g).textContent = `${s}${A.parent[s] ? ' ⊂ ' + A.parent[s] : ''}`;
-      el('text', { transform: `translate(${x - 5} ${y + NW}) rotate(-90)`, style: 'fill:#23221f88;font-size:10px' }, g).textContent = `${A.tokensBy[s].length} tokens${internal[s] ? ` · ${internal[s].length} internal` : ''}`;
+      el('text', { transform: `translate(${x - 17} ${y + NW}) rotate(-90)` }, g).textContent = s;
+      el('text', { transform: `translate(${x - 5} ${y + NW}) rotate(-90)`, style: 'fill:#23221f88;font-size:10px' }, g).textContent = A.tokensBy[s].length;
+      el('title', {}, g).textContent = `${s}${A.parent[s] ? ' ⊂ ' + A.parent[s] : ''}\n${A.tokensBy[s].length} tokens${internal[s] ? ` · ${internal[s].length} internal` : ''}`;
     } else {
       const W = blockW(s), H = hOf(s);
       el('rect', { class: 'frame', x, y, width: W, height: H }, g);
