@@ -51,6 +51,7 @@
   svg.focus :is(.band, .ribbon, .lane, .tline):not(.lit), svg.focus .lane-halo { visibility: hidden; }
   svg.focus .row { opacity: .3; }
   svg.focus .row.lit { opacity: 1; }
+  svg.focus .node:not(.lit) > text, svg.focus .node:not(.lit) > .head-rule { visibility: hidden; }
   .edge.ctx, .ctxline { fill: none; stroke: var(--ink) !important; stroke-width: 1.2; stroke-dasharray: 2 3; opacity: 1; }
   .ctx.pool { stroke-dasharray: 8 3; stroke-width: 1.6; }
   .flow, .flow-halo { fill: none; }
@@ -222,6 +223,14 @@ function wireHover(svg, A, D, rowEls, marks, scopeMarks = null) {
     svg.classList.add('focus');
     for (const k in rowEls) rowEls[k].classList.toggle('lit', litRows.has(k));
     for (const m of marks) m.classList.toggle('lit', litMarks.has(m));
+    // the scopes the highlighted chain touches keep their labels; every other scope hides its own
+    const involved = new Set([...litRows].map(scopeOf));
+    for (const m of litMarks) {
+      if (m._e) { involved.add(scopeOf(m._e.from)); involved.add(scopeOf(m._e.to)); }
+      if (m._f) { involved.add(m._f.a); involved.add(m._f.b); }
+      if (m._pool) { involved.add(m._pool.scope); involved.add(scopeOf(m._pool.to)); }
+    }
+    for (const n of svg.querySelectorAll('.node')) n.classList.toggle('lit', involved.has(n._scope));
     showLabels(svg, [...litMarks].map(m => ({ mark: m, text: labelOf(m, lit) })).filter(x => x.text));
   };
   svg.onmouseover = (ev) => {
