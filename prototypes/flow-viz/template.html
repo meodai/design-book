@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Design Book — graph layouts</title>
+<style>
+  :root { --paper: #f4f1ea; --ink: #23221f; --faint: #23221f22; --rule: #23221f55; --warn: #c2402a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 12px/1.3 ui-monospace, "SF Mono", Menlo, monospace; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; gap: 24px; align-items: center; padding: 10px 20px; background: var(--paper); border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+  header b { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .group { display: flex; gap: 0; }
+  .group button { font: inherit; background: none; border: 1px solid var(--ink); padding: 4px 10px; cursor: pointer; margin-right: -1px; color: var(--ink); }
+  .group button.on { background: var(--ink); color: var(--paper); }
+  label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  #note { color: #23221f99; max-width: 70ch; }
+  main { padding: 20px; overflow: auto; }
+  svg text { font: inherit; fill: var(--ink); }
+  .tbl rect.frame { fill: var(--paper); stroke: var(--ink); }
+  .tbl .head { fill: var(--ink); }
+  .tbl .head-t { fill: var(--paper); font-weight: 600; }
+  .row text { font-size: 10px; }
+  .row .hit { fill: transparent; }
+  .row:hover .hit { fill: #23221f14; }
+  .row .val { fill: #23221f88; }
+  .row.inh text { fill: #23221f66; font-style: italic; }
+  .row.iso text { fill: #23221f55; }
+  .edge { fill: none; stroke-width: 1.1; opacity: .55; }
+  .edge.pick { stroke-dasharray: 3 2; }
+  .edge.overrides { stroke-dasharray: 1 2; }
+  .edge.back { stroke: var(--warn) !important; opacity: .9; }
+  /* Sankey marks are opaque; a paper border keeps same-colored ones apart where they cross */
+  .band, .ribbon { stroke: var(--paper); stroke-width: 1; stroke-linejoin: round; }
+  .node > rect { fill: var(--ink); }
+  /* an opened scope in the Sankey is its bar, widened: ink ground, paper text */
+  .node.tbl > rect.frame { fill: var(--ink); stroke: var(--ink); }
+  .node.tbl text { stroke: none; fill: var(--paper); }
+  .node.tbl .head-rule { stroke: var(--paper); stroke-opacity: .25; }
+  .node.tbl .row .val { fill: var(--paper); fill-opacity: .55; }
+  .node.tbl .row.inh text { fill: var(--paper); fill-opacity: .45; }
+  .node.tbl .row:hover .hit { fill: #f4f1ea22; }
+  .node.tbl .sw { stroke: #f4f1ea55; }
+  .band.back { stroke: #c2402a; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .ribbon.back { stroke: #c2402a; stroke-dasharray: 3 2; }
+  .edgebar { fill: var(--ink); }
+  .edge-hit { fill: none; stroke: transparent; stroke-width: 8; pointer-events: stroke; }
+  .labels { pointer-events: none; }
+  .ctx { display: none; }
+  svg.focus .ctx.lit { display: inline; }
+  /* hovering: connections outside the chain are hidden, not faded; rows stay, dimmed */
+  svg.focus :is(.band, .ribbon, .lane, .tline):not(.lit), svg.focus .lane-halo { visibility: hidden; }
+  svg.focus .row { opacity: .3; }
+  svg.focus .row.lit { opacity: 1; }
+  .edge.ctx, .ctxline { fill: none; stroke: var(--ink) !important; stroke-width: 1.2; stroke-dasharray: 2 3; opacity: 1; }
+  .ctx.pool { stroke-dasharray: 8 3; stroke-width: 1.6; }
+  .flow, .flow-halo { fill: none; }
+  .flow-halo { stroke: var(--paper); stroke-width: 3; opacity: .7; }
+  .flow { stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 3 5; animation: flow .6s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -8; } }
+  @media (prefers-reduced-motion: reduce) { .flow { animation: none; } }
+  .elabel { font-size: 10px; fill: var(--ink); }
+  .elabel-bg { fill: var(--paper); stroke: var(--ink); stroke-width: .75; }
+  .lane { fill: none; stroke-width: 4; }
+  .lane-halo { fill: none; stroke: var(--paper); stroke-width: 6; }
+  .lane.thin { stroke-width: 1.4; opacity: .75; }
+  .tline { fill: none; stroke-width: 1.3; opacity: .7; }
+  .tline.pick { stroke-dasharray: 3 2; }
+  .tline.back { stroke-dasharray: 4 3; }
+  svg.focus .tline.lit, svg.focus .lane.thin.lit { opacity: 1; stroke-width: 2; }
+  .band.pale, .ribbon.pale { stroke: #23221f55; }
+  .lane-halo.pale { stroke: #23221f55; }
+  .lane.pick { stroke-dasharray: 4 2; }
+  .thread { fill: none; opacity: .5; }
+  .thread.pick { stroke-dasharray: 3 2; }
+  .thread.overrides { stroke-dasharray: 1 2; }
+  .tline.overrides, .lane.overrides { stroke-dasharray: 2 2; }
+  .ribbon.overrides, .band.overrides { stroke: var(--ink); stroke-dasharray: 2 2; }
+  svg.focus .row { opacity: .3; }
+  svg.focus .row.lit { opacity: 1; }
+  .node text { font-size: 11px; paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
+  .legend { display: flex; gap: 14px; align-items: center; }
+  .legend svg { vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <b>Design Book</b>
+  <div class="group" id="data"></div>
+  <div class="group" id="sk">
+    <button data-x="all">open all</button><button data-x="none">close all</button>
+  </div>
+  <div class="group" id="dir">
+    <button data-o="h" class="on">→ horizontal</button><button data-o="v">↓ vertical</button>
+  </div>
+  <div class="group" id="style">
+    <button data-s="ribbons" class="on">ribbons</button><button data-s="lines">lines</button>
+  </div>
+  <label><input type="checkbox" id="hideIso"> hide tokens nothing reads or writes</label>
+  <span class="legend">
+    <span><svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" /></svg> ref / fn</span>
+    <span><svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" stroke-dasharray="3 2"/></svg> selector pick</span>
+    <span><svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" stroke-dasharray="1 2"/></svg> overrides its parent</span>
+    <span><svg width="26" height="6"><path d="M0 3h26" stroke="#c2402a" /></svg> runs backwards</span>
+    <span>on hover: <svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" stroke-dasharray="2 3"/></svg> selector input <svg width="26" height="6"><path d="M0 3h26" stroke="#23221f" stroke-width="1.6" stroke-dasharray="8 3"/></svg> pool</span>
+  </span>
+  <span id="note"></span>
+</header>
+<main><svg id="out" xmlns="http://www.w3.org/2000/svg"></svg></main>
+<script>
+const DATASETS = /*DATA*/;
+const NS = 'http://www.w3.org/2000/svg';
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs = {}, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent?.appendChild(n); return n; };
+const scopeOf = (k) => k.slice(0, k.indexOf('.'));
+
+let state = { data: Object.keys(DATASETS)[0], expanded: {}, style: 'ribbons', dir: 'h' };
+
+// ---------- shared: rank scopes ----------
+function analyse(D) {
+  const scopes = D.scopes.map(s => s.name);
+  const parent = Object.fromEntries(D.scopes.map(s => [s.name, s.extends]));
+  const tokensBy = Object.fromEntries(scopes.map(s => [s, []]));
+  for (const t of D.tokens) tokensBy[t.scope]?.push(t);
+  const known = new Set(D.tokens.map(t => t.key));
+  const edges = D.edges.filter(e => known.has(e.from) && known.has(e.to) && e.from !== e.to);
+  // scope graph (extends counts as a dependency of the child on the parent)
+  const out = Object.fromEntries(scopes.map(s => [s, new Set()]));
+  for (const e of edges) { const a = scopeOf(e.from), b = scopeOf(e.to); if (a !== b) out[a].add(b); }
+  for (const s of scopes) if (parent[s]) out[parent[s]].add(s);
+  // Tarjan SCC
+  let idx = 0; const st = [], on = new Set(), ix = {}, low = {}, comp = {}; let nc = 0;
+  const strong = (v) => { ix[v] = low[v] = idx++; st.push(v); on.add(v);
+    for (const w of out[v]) { if (ix[w] === undefined) { strong(w); low[v] = Math.min(low[v], low[w]); } else if (on.has(w)) low[v] = Math.min(low[v], ix[w]); }
+    if (low[v] === ix[v]) { let w; do { w = st.pop(); on.delete(w); comp[w] = nc; } while (w !== v); nc++; } };
+  for (const s of scopes) if (ix[s] === undefined) strong(s);
+  // longest path rank over the condensation
+  const rank = Object.fromEntries(scopes.map(s => [s, 0]));
+  let changed = true, guard = 0;
+  while (changed && guard++ < 200) { changed = false;
+    for (const a of scopes) for (const b of out[a]) if (comp[a] !== comp[b] && rank[b] < rank[a] + 1) { rank[b] = rank[a] + 1; changed = true; } }
+  // a scope that extends another sits in its parent's column, stacked under it
+  for (const s of scopes) if (parent[s]) rank[s] = Math.max(rank[s] - 1, rank[parent[s]]);
+  // drawn by default: what a token resolves through; on hover also: a selector's other inputs
+  const primary = edges.filter(e => e.kind !== 'ctx'), ctx = edges.filter(e => e.kind === 'ctx');
+  const inherits = D.tokens.filter(t => t.inherited && t.source && known.has(t.source)).map(t => ({ from: t.source, to: t.key }));
+  return { scopes, parent, tokensBy, edges, primary, ctx, inherits, rank, comp };
+}
+
+
+// ---------- hover: chain highlight + a label naming the relation between two tokens ----------
+function relation(e, T) {
+  if (e.kind === 'overrides') return 'overrides';
+  const fn = T[e.to]?.fn;
+  if (e.kind === 'pick') return `${fn}: picked`;
+  if (e.kind === 'ctx') return `${fn}: ${e.role}`;
+  return fn || 'ref';
+}
+function bandSummary(edges) {
+  return String(edges.length);
+}
+// colors too close to the paper get a faint ink outline instead of a paper one
+function isPale(hex) {
+  if (!hex || hex[0] !== '#' || hex.length < 7) return false;
+  const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.72;
+}
+function centerline(x1, y1, x2, y2, r = null) {
+  if (r === null) { const m = (x2 - x1) / 2; return `M${x1} ${y1} C${x1 + m} ${y1} ${x2 - m} ${y2} ${x2} ${y2}`; }
+  return `M${x1} ${y1} C${x1 + r} ${y1} ${x2 + r} ${y2} ${x2} ${y2}`;
+}
+function showLabels(svg, list) {
+  const g = svg.querySelector('g.labels') || el('g', { class: 'labels' }, svg);
+  g.innerHTML = ''; svg.appendChild(g);
+  // direction: a dashed line flowing from the token read to the token reading it, ending in an arrow
+  for (const { mark } of list) {
+    const d = mark._flow || (mark.getAttribute('fill') === null || mark.getAttribute('fill') === 'none' ? mark.getAttribute('d') : null);
+    if (!d) continue;
+    el('path', { d, class: 'flow-halo' }, g);
+    el('path', { d, class: 'flow', 'marker-end': 'url(#arrow)' }, g);
+  }
+  const placed = [];
+  for (const { mark, text } of list) {
+    const L = mark.getTotalLength(); if (!L) continue;
+    let x, y;
+    if (mark.getAttribute('fill') && mark.getAttribute('fill') !== 'none') { // a band: the middle between its two edges
+      const p = mark.getPointAtLength(L * 0.25), q = mark.getPointAtLength(L * 0.75); x = (p.x + q.x) / 2; y = (p.y + q.y) / 2;
+    } else { const p = mark.getPointAtLength(L / 2); x = p.x; y = p.y; }
+    const t = el('text', { x, y: y + 3.5, 'text-anchor': 'middle', class: 'elabel' }, g); t.textContent = text;
+    const b = t.getBBox(), pad = 3, box = { x: b.x - pad, y: b.y - 1, w: b.width + pad * 2, h: b.height + 2 };
+    if (placed.some(r => box.x < r.x + r.w && r.x < box.x + box.w && box.y < r.y + r.h && r.y < box.y + box.h)) { t.remove(); continue; }
+    placed.push(box);
+    g.insertBefore(el('rect', { x: box.x, y: box.y, width: box.w, height: box.h, class: 'elabel-bg' }), t);
+  }
+}
+// hidden until hover: a selector's other inputs (by role) and a link from the pool it picks from
+function drawContext(parent, A, D, G, cls, push) {
+  const conn = (s1, y1, s2, y2) => {
+    if (G.col(s1) < G.col(s2)) return centerline(G.right(s1), y1, G.left(s2), y2);
+    if (G.col(s1) > G.col(s2)) return centerline(G.left(s1), y1, G.right(s2), y2);
+    return centerline(G.right(s1), y1, G.right(s2), y2, Math.min(70, 24 + Math.abs(y2 - y1) / 6));
+  };
+  const g = el('g', {}, parent);
+  for (const e of A.ctx) {
+    const y1 = G.rowY(e.from), y2 = G.rowY(e.to); if (y1 === undefined || y2 === undefined) continue;
+    const p = el('path', { d: conn(scopeOf(e.from), y1, scopeOf(e.to), y2), class: `${cls} ctx` }, g); p._e = e; push(p);
+  }
+  for (const t of D.tokens) for (const pool of t.pools || []) {
+    if (!G.has(pool) || !G.has(t.scope)) continue;
+    const y2 = G.rowY(t.key); if (y2 === undefined) continue;
+    const p = el('path', { d: conn(pool, G.headY(pool), t.scope, y2), class: `${cls} ctx pool` }, g);
+    p._pool = { scope: pool, to: t.key, fn: t.fn }; push(p);
+  }
+}
+function wireHover(svg, A, D, rowEls, marks, scopeMarks = null) {
+  const T = Object.fromEntries(D.tokens.map(t => [t.key, t]));
+  const up = {}, down = {};
+  for (const e of [...A.edges, ...A.inherits]) { (up[e.to] ??= []).push(e.from); (down[e.from] ??= []).push(e.to); }
+  const walk = (k, m, seen) => { for (const n of m[k] || []) if (!seen.has(n)) { seen.add(n); walk(n, m, seen); } return seen; };
+  const labelOf = (m, lit) => m._pool ? `${m._pool.fn} picks from ${m._pool.scope}` : m._e ? relation(m._e, T) : bandSummary(lit ? m._f.edges.filter(e => lit.has(e.from) && lit.has(e.to)) : m._f.edges, T);
+  const clear = () => { svg.classList.remove('focus'); svg.querySelector('g.labels')?.remove(); };
+  const focus = (litRows, litMarks, lit) => {
+    svg.classList.add('focus');
+    for (const k in rowEls) rowEls[k].classList.toggle('lit', litRows.has(k));
+    for (const m of marks) m.classList.toggle('lit', litMarks.has(m));
+    showLabels(svg, [...litMarks].map(m => ({ mark: m, text: labelOf(m, lit) })).filter(x => x.text));
+  };
+  svg.onmouseover = (ev) => {
+    const r = ev.target.closest?.('.row');
+    if (r) {
+      const lit = new Set([r._k, ...walk(r._k, up, new Set()), ...walk(r._k, down, new Set())]);
+      focus(lit, new Set(marks.filter(m => m._pool ? m._pool.to === r._k : m._e ? lit.has(m._e.from) && lit.has(m._e.to) : m._f.edges.some(e => lit.has(e.from) && lit.has(e.to)))), lit);
+      return;
+    }
+    const hit = ev.target._mark || (marks.includes(ev.target) ? ev.target : null);
+    if (hit) { const keys = hit._e ? [hit._e.from, hit._e.to] : []; focus(new Set(keys), new Set([hit]), null); return; }
+    const node = ev.target.closest?.('.node');
+    if (node && scopeMarks && node._scope && !node.classList.contains('tbl')) focus(new Set(), new Set(marks.filter(m => m._scopes?.includes(node._scope))), null);
+  };
+  svg.onmouseout = (ev) => {
+    const to = ev.relatedTarget;
+    if (to && (to.closest?.('.row') || to._mark || marks.includes(to) || (scopeMarks && to.closest?.('.node')))) return;
+    clear();
+  };
+}
+
+// one lane per referenced token in a table's margin, packed so short spans sit nearest the table;
+// each reader branches off its lane with a rounded corner
+function drawLaneSides(sides, parent, step, make, halo = false) {
+  for (const { x, dir, items } of sides.values()) {
+    const groups = new Map();
+    for (const it of items) (groups.get(it.g) ?? groups.set(it.g, []).get(it.g)).push(it);
+    const G = [...groups.values()].map(its => { const ys = its.flatMap(i => [i.y0, i.y1]); return { its, lo: Math.min(...ys), hi: Math.max(...ys) }; });
+    G.sort((p, q) => (p.hi - p.lo) - (q.hi - q.lo) || p.lo - q.lo);
+    const occ = [];
+    for (const grp of G) {
+      let k = 0; while ((occ[k] ||= []).some(([lo, hi]) => grp.lo < hi + 4 && lo < grp.hi + 4)) k++;
+      occ[k].push([grp.lo, grp.hi]);
+      const lx = x + dir * (8 + k * step);
+      const gg = el('g', { class: 'lanegroup' }, parent);
+      const ds = grp.its.map(it => { const sg = Math.sign(it.y1 - it.y0) || 1, c = Math.min(5, Math.abs(it.y1 - it.y0) / 2);
+        return `M${x} ${it.y0} H${lx - dir * c} Q${lx} ${it.y0} ${lx} ${it.y0 + sg * c} V${it.y1 - sg * c} Q${lx} ${it.y1} ${lx - dir * c} ${it.y1} H${x}`; });
+      if (halo) for (const d of ds) el('path', { d, class: 'lane-halo' + (isPale(grp.its[0].color) ? ' pale' : '') }, gg); // one border round the whole lane and its branches
+      grp.its.forEach((it, i) => make(it, ds[i], gg));
+    }
+  }
+}
+
+// a filled Sankey ribbon from (x1, y1) w1 tall to (x2, y2) w2 tall. r: null = forward S-curve,
+// a number = a loop bulging that far to the right (negative: to the left)
+function ribbon(x1, y1, w1, x2, y2, w2, r = null) {
+  const a1 = y1 - w1 / 2, b1 = y1 + w1 / 2, a2 = y2 - w2 / 2, b2 = y2 + w2 / 2;
+  if (r === null) { const m = (x2 - x1) / 2;
+    return `M${x1} ${a1} C${x1 + m} ${a1} ${x2 - m} ${a2} ${x2} ${a2} L${x2} ${b2} C${x2 - m} ${b2} ${x1 + m} ${b1} ${x1} ${b1} Z`; }
+  const down = y2 >= y1, ri = r - Math.sign(r) * Math.max(w1, w2);
+  // the outer edge runs round the far side, the inner edge hugs it
+  const [o1, i1, o2, i2] = down ? [a1, b1, b2, a2] : [b1, a1, a2, b2];
+  return `M${x1} ${o1} C${x1 + r} ${o1} ${x2 + r} ${o2} ${x2} ${o2} L${x2} ${i2} C${x2 + ri} ${i2} ${x1 + ri} ${i1} ${x1} ${i1} Z`;
+}
+
+// ---------- the view: a Sankey whose scopes open into tables ----------
+function sankey(D, svg) {
+  const A = analyse(D);
+  const X = (state.expanded[state.data] ??= new Set());
+  const hexOf = Object.fromEntries(D.tokens.map(t => [t.key, t.hex]));
+  const flows = new Map(), internal = {};
+  for (const e of A.primary) { const a = scopeOf(e.from), b = scopeOf(e.to);
+    if (a === b) { (internal[a] ??= []).push(e); continue; }
+    const k = a + '>' + b; const f = flows.get(k) || { a, b, edges: [] }; f.edges.push(e); flows.set(k, f); }
+  const F = [...flows.values()];
+  const cols = []; for (const s of A.scopes) (cols[A.rank[s]] ??= []).push(s);
+  const colList = cols.filter(Boolean); const colOf = {}; colList.forEach((c, i) => c.forEach(s => colOf[s] = i));
+  const inN = {}, outN = {}; for (const f of F) { outN[f.a] = (outN[f.a] || 0) + f.edges.length; inN[f.b] = (inN[f.b] || 0) + f.edges.length; }
+  const U = 2.6, NW = 14, TW = 180, RH = 17, PY = 7, HEAD = 18, GAP = 210, VGAP = 40, PAD = 90, SW = 8;
+  const open = (s) => X.has(s);
+  const lines = state.style === 'lines';
+  const touched = new Set([...A.edges, ...A.inherits].flatMap(e => [e.from, e.to]));
+  const rows = Object.fromEntries(A.scopes.map(s => [s, A.tokensBy[s].filter(t => !$('#hideIso').checked || touched.has(t.key))]));
+  // a closed bar is as tall as the busier of its two edges: forward bands leave on the right and
+  // arrive on the left; bands within a column use the left at both ends, backward ones the right
+  const edgeTotal = {};
+  const addEdge = (s, side, n) => edgeTotal[`${s}|${side}`] = (edgeTotal[`${s}|${side}`] || 0) + n;
+  for (const f of F) {
+    const same = colOf[f.a] === colOf[f.b], back = colOf[f.a] > colOf[f.b], n = f.edges.length;
+    addEdge(f.a, same ? 'L' : 'R', n); addEdge(f.b, same ? 'L' : back ? 'R' : 'L', n);
+  }
+  const hOf = (s) => open(s) ? HEAD + 2 * PY + rows[s].length * RH : Math.max(A.tokensBy[s].length, edgeTotal[`${s}|L`] || 0, edgeTotal[`${s}|R`] || 0, 4) * U;
+  const wOf = (s) => open(s) ? TW : NW;
+  const colW = colList.map(c => Math.max(...c.map(wOf)));
+  const colX = []; colList.forEach((c, i) => colX[i] = i ? colX[i - 1] + colW[i - 1] + GAP : PAD);
+  const xOf = (s) => colX[colOf[s]];
+  const ys = {}, idx = {};
+  const place = () => { for (const c of colList) { let y = PAD; for (const s of c) { ys[s] = y; y += hOf(s) + VGAP; } } };
+  const setIdx = () => { for (const s of A.scopes) rows[s].forEach((t, i) => idx[t.key] = i); };
+  const anchorY = (k) => { const s = scopeOf(k); return open(s) ? ys[s] + HEAD + PY + idx[k] * RH + RH / 2 : ys[s] + hOf(s) / 2; };
+  const nbrs = {}; for (const e of A.edges) { (nbrs[e.to] ??= []).push(e.from); (nbrs[e.from] ??= []).push(e.to); }
+  setIdx(); place();
+  for (let sweep = 0; sweep < 10; sweep++) {
+    for (const c of colList) { const bc = (s) => { const v = F.filter(f => f.a === s || f.b === s).map(f => { const o = f.a === s ? f.b : f.a; return ys[o] + hOf(o) / 2; }); return v.length ? v.reduce((x, y) => x + y) / v.length : ys[s]; }; c.sort((a, b) => bc(a) - bc(b)); }
+    place();
+    for (const s of A.scopes) if (open(s)) {
+      const bc = (t) => { const v = (nbrs[t.key] || []).filter(k => scopeOf(k) !== s).map(anchorY); return v.length ? v.reduce((a, b) => a + b) / v.length : anchorY(t.key) + 0.01; };
+      rows[s] = rows[s].map(t => [bc(t), t]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+    }
+    setIdx();
+  }
+  const H = Math.max(...A.scopes.map(s => ys[s] + hOf(s))) + PAD;
+  const Wd = colX[colList.length - 1] + colW[colList.length - 1] + 200;
+  svg.setAttribute('width', Wd); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${Wd} ${H}`);
+
+  // ports on closed bars: outgoing ordered by the other end's height, incoming likewise
+  const other = (f, s) => f.a === s ? f.b : f.a;
+  // every band gets its own slot on each side it touches: forward bands leave on the right and
+  // arrive on the left; bands within a column use the left side at both ends, backward ones the right
+  const slots = {}; // `${scope}|L` / `${scope}|R` -> [{ f, end: 'a' | 'b' }]
+  const take = (s, side, f, end) => (slots[`${s}|${side}`] ??= []).push({ f, end });
+  for (const f of F) {
+    const same = colOf[f.a] === colOf[f.b], back = colOf[f.a] > colOf[f.b];
+    take(f.a, same ? 'L' : 'R', f, 'a');
+    take(f.b, same ? 'L' : back ? 'R' : 'L', f, 'b');
+  }
+  const port = new Map(F.map(f => [f, {}]));
+  for (const list of Object.values(slots)) {
+    const otherMid = ({ f, end }) => { const o = end === 'a' ? f.b : f.a; return ys[o] + hOf(o) / 2; };
+    list.sort((p, q) => otherMid(p) - otherMid(q));
+    let off = 0;
+    for (const { f, end } of list) { port.get(f)[end === 'a' ? 'o' : 'i'] = off; off += f.edges.length * U; }
+  }
+
+  const gB = el('g', {}, svg); const marks = [];
+  const laneSides = new Map();
+  const lane = (id, x, dir) => { if (!laneSides.has(id)) laneSides.set(id, { x, dir, items: [] }); return laneSides.get(id).items; };
+  const drawLanes = () => drawLaneSides(laneSides, gB, lines ? 5 : 7, (it, d, gg) => {
+    const p = el('path', { d, class: `lane ${it.e.kind}${lines ? ' thin' : ''}`, stroke: it.color }, gg);
+    el('title', {}, p).textContent = `${it.e.from} → ${it.e.to} (${it.e.kind})`;
+    p._e = it.e; p._scopes = it.scopes; marks.push(p);
+    el('path', { d, class: 'edge-hit' }, gg)._mark = p; return p;
+  }, !lines);
+
+  const loopLeft = (x, y1, y2, r) => `M${x} ${y1} C${x - r} ${y1} ${x - r} ${y2} ${x} ${y2}`;
+  let back = 0;
+  for (const f of F) {
+    const { o, i } = port.get(f), n = f.edges.length;
+    const sameCol = colOf[f.a] === colOf[f.b], backwards = colOf[f.a] > colOf[f.b];
+    if (backwards) back++;
+    const x1 = sameCol ? xOf(f.a) : xOf(f.a) + wOf(f.a), x2 = sameCol ? xOf(f.b) : backwards ? xOf(f.b) + wOf(f.b) : xOf(f.b);
+    const tint = f.edges.map(e => hexOf[e.from]).find(Boolean) || '#8a8578';
+    const fill = sameCol || backwards ? '#8a8578' : tint;
+    if (!open(f.a) && !open(f.b)) { // a band
+      const w = n * U, y1 = ys[f.a] + o, y2 = ys[f.b] + i; let d;
+      if (sameCol) d = ribbon(x1, y1 + w / 2, w, x2, y2 + w / 2, w, -(40 + w));
+      else if (backwards) d = ribbon(x1, y1 + w / 2, w, x2, y2 + w / 2, w, 60 + w);
+      else d = ribbon(x1, y1 + w / 2, w, x2, y2 + w / 2, w);
+      const p = el('path', { d, class: 'band' + (backwards ? ' back' : '') + (isPale(fill) ? ' pale' : '') + (f.edges.every(e => e.kind === 'overrides') ? ' overrides' : ''), fill }, gB);
+      p._flow = centerline(x1, y1 + w / 2, x2, y2 + w / 2, sameCol ? -(40 + w / 2) : backwards ? 60 + w / 2 : null);
+      el('title', {}, p).textContent = `${f.a} → ${f.b}: ${n} reference${n > 1 ? 's' : ''} — click a bar to open it`;
+      p._f = f; p._scopes = [f.a, f.b]; marks.push(p);
+      continue;
+    }
+    // threads: one per reference; on a closed bar they stay stacked in the band's slot
+    const es = [...f.edges].sort((p, q) => (open(f.a) ? anchorY(p.from) - anchorY(q.from) : 0) || (anchorY(p.to) - anchorY(q.to)) || (anchorY(p.from) - anchorY(q.from)));
+    es.forEach((e, k) => {
+      // a ribbon: the swatch's height at an opened row, one thread's width in a closed bar's slot
+      const w1 = open(f.a) ? SW : U, w2 = open(f.b) ? SW : U;
+      const y1 = open(f.a) ? anchorY(e.from) : ys[f.a] + o + k * U + U / 2;
+      const y2 = open(f.b) ? anchorY(e.to) : ys[f.b] + i + k * U + U / 2;
+      if (sameCol) { lane(`L${colOf[f.a]}`, xOf(f.a), -1).push({ g: e.from, y0: y1, y1: y2, color: hexOf[e.from] || '#8a8578', e, scopes: [f.a, f.b] }); return; }
+      const r = backwards ? 80 : null;
+      const flow = centerline(x1, y1, x2, y2, r === null ? null : r - (lines ? 0 : Math.max(w1, w2) / 2));
+      const rf = sameCol || backwards ? '#8a8578' : (hexOf[e.from] || hexOf[e.to] || '#8a8578');
+      const p = lines
+        ? el('path', { d: flow, class: `tline ${e.kind}${backwards ? ' back' : ''}`, stroke: backwards ? '#c2402a' : rf }, gB)
+        : el('path', { d: ribbon(x1, y1, w1, x2, y2, w2, r), class: `ribbon ${e.kind}${backwards ? ' back' : ''}${isPale(rf) ? ' pale' : ''}`, fill: rf }, gB);
+      if (lines) el('path', { d: flow, class: 'edge-hit' }, gB)._mark = p;
+      el('title', {}, p).textContent = `${e.from} → ${e.to} (${e.kind})`;
+      p._e = e; p._flow = flow; p._scopes = [f.a, f.b]; marks.push(p);
+    });
+  }
+  // references to siblings: one lane per referenced token in the right margin, its readers branch off it
+  for (const s of A.scopes) if (open(s)) for (const e of internal[s] || [])
+    lane(`R${s}`, xOf(s) + TW, 1).push({ g: e.from, y0: anchorY(e.from), y1: anchorY(e.to), color: hexOf[e.from] || '#8a8578', e, scopes: [s] });
+  drawLanes();
+
+  const rowEls = {};
+  for (const s of A.scopes) {
+    const g = el('g', { class: 'node' + (open(s) ? ' tbl' : ''), style: 'cursor:pointer' }, svg);
+    const x = xOf(s), y = ys[s];
+    if (!open(s)) {
+      el('rect', { x, y, width: NW, height: hOf(s) }, g);
+      // the label sits above the bar, clear of the edges bands attach to
+      el('text', { x, y: y - 17 }, g).textContent = `${s}${A.parent[s] ? ' ⊂ ' + A.parent[s] : ''}`;
+      el('text', { x, y: y - 5, style: 'fill:#23221f88;font-size:10px' }, g).textContent = `${A.tokensBy[s].length} tokens${internal[s] ? ` · ${internal[s].length} internal` : ''}`;
+    } else {
+      el('rect', { class: 'frame', x, y, width: TW, height: hOf(s) }, g);
+      el('rect', { class: 'head', x, y, width: TW, height: HEAD }, g);
+      el('line', { class: 'head-rule', x1: x + 6, x2: x + TW - 6, y1: y + HEAD + 0.5, y2: y + HEAD + 0.5 }, g);
+      el('text', { class: 'head-t', x: x + 6, y: y + 12.5 }, g).textContent = `${s}${A.parent[s] ? '  ⊂ ' + A.parent[s] : ''}  −`;
+      rows[s].forEach((tok, i) => {
+        const ry = y + HEAD + PY + i * RH;
+        const r = el('g', { class: `row${tok.inherited ? ' inh' : ''}` }, g);
+        el('rect', { class: 'hit', x: x + 4, y: ry + 1, width: TW - 8, height: RH - 2 }, r);
+        if (tok.hex) el('rect', { class: 'sw', x: x + 7, y: ry + RH / 2 - 4, width: 8, height: 8, fill: tok.hex }, r);
+        el('text', { x: x + 22, y: ry + RH / 2 + 3.5 }, r).textContent = tok.name.length > 22 ? tok.name.slice(0, 21) + '…' : tok.name;
+        el('text', { class: 'val', x: x + TW - 7, y: ry + RH / 2 + 3.5, 'text-anchor': 'end' }, r).textContent = tok.hex ? '' : String(tok.value ?? '').slice(0, 8);
+        el('title', {}, r).textContent = `${tok.key}\n${tok.fn ?? 'value'} → ${tok.value}`;
+        r._k = tok.key; rowEls[tok.key] = r;
+      });
+    }
+    g.onclick = (ev) => { if (ev.target.closest('.row')) return; X.has(s) ? X.delete(s) : X.add(s); render(); };
+    g._scope = s;
+  }
+  drawContext(gB, A, D, {
+    left: xOf, right: (s) => xOf(s) + wOf(s), col: (s) => colOf[s], has: () => true,
+    rowY: anchorY, headY: (s) => open(s) ? ys[s] + HEAD / 2 : ys[s] + hOf(s) / 2,
+  }, 'ctxline', (p) => marks.push(p));
+  wireHover(svg, A, D, rowEls, marks, true);
+  return `click a scope to open it into its table and split its bands into one thread per reference · ${X.size} open · hover a row for its chain`;
+}
+
+// ---------- the same view, flowing top to bottom ----------
+// Layers stack downward, the scopes of a layer sit side by side. A closed scope is a horizontal
+// bar: bands leave its bottom edge and enter the top edge of the next. An opened scope stays a
+// table: references arrive at a row's left side and leave from its right side.
+function sankeyV(D, svg) {
+  const A = analyse(D);
+  const X = (state.expanded[state.data] ??= new Set());
+  const hexOf = Object.fromEntries(D.tokens.map(t => [t.key, t.hex]));
+  const lines = state.style === 'lines';
+  const touched = new Set([...A.edges, ...A.inherits].flatMap(e => [e.from, e.to]));
+  const rows = Object.fromEntries(A.scopes.map(s => [s, A.tokensBy[s].filter(t => !$('#hideIso').checked || touched.has(t.key))]));
+  const flows = new Map(), internal = {};
+  for (const e of A.primary) { const a = scopeOf(e.from), b = scopeOf(e.to);
+    if (a === b) { (internal[a] ??= []).push(e); continue; }
+    const k = a + '>' + b; const f = flows.get(k) || { a, b, edges: [] }; f.edges.push(e); flows.set(k, f); }
+  const F = [...flows.values()];
+  const L = []; for (const s of A.scopes) (L[A.rank[s]] ??= []).push(s);
+  const layers = L.filter(Boolean); const layerOf = {}; layers.forEach((l, i) => l.forEach(s => layerOf[s] = i));
+  const inN = {}, outN = {}; for (const f of F) { outN[f.a] = (outN[f.a] || 0) + f.edges.length; inN[f.b] = (inN[f.b] || 0) + f.edges.length; }
+  // which edge of a closed bar each end uses: down a layer leaves the bottom and enters the top;
+  // within a layer both ends use the bottom (a U below the bars); up a layer leaves the top and enters the bottom
+  const sideA = (f) => layerOf[f.a] > layerOf[f.b] ? 'T' : 'B';
+  const sideB = (f) => layerOf[f.a] < layerOf[f.b] ? 'T' : 'B';
+  const sideTotal = {};
+  for (const f of F) { sideTotal[`${f.a}|${sideA(f)}`] = (sideTotal[`${f.a}|${sideA(f)}`] || 0) + f.edges.length; sideTotal[`${f.b}|${sideB(f)}`] = (sideTotal[`${f.b}|${sideB(f)}`] || 0) + f.edges.length; }
+  const U = 2.6, NW = 14, TW = 200, RH = 17, PY = 7, HEAD = 18, HGAP = 40, VGAP = 150, PAD = 60, SW = 8, LAB = 30;
+  const open = (s) => X.has(s);
+  const barW = (s) => Math.max(A.tokensBy[s].length, sideTotal[`${s}|B`] || 0, sideTotal[`${s}|T`] || 0, 4) * U;
+  const labW = (s) => Math.max(s.length + (A.parent[s] ? A.parent[s].length + 3 : 0), `${A.tokensBy[s].length} tokens · ${(internal[s] || []).length} internal`.length * 0.85) * 6.3 + 8;
+  // an opened scope is the bar widened: one column per token, its name reading upward over its swatch
+  const CW = 17;
+  const nameLen = (s) => Math.min(22, Math.max(4, ...rows[s].map(t => t.name.length)));
+  const blockW = (s) => Math.max(rows[s].length * CW + 2 * PY, (s.length + 4 + (A.parent[s] ? A.parent[s].length + 3 : 0)) * 6.6 + 12);
+  const blockH = (s) => HEAD + PY + nameLen(s) * 6.1 + 8 + 8 + PY;
+  const wOf = (s) => open(s) ? blockW(s) : barW(s);
+  const LW = 28; // room left of a closed bar for its upright label
+  const slotW = (s) => open(s) ? blockW(s) : LW + barW(s);
+  const hOf = (s) => open(s) ? blockH(s) : NW;
+  // layer tops: room for the bars' labels above them
+  const labH = (l) => Math.max(LAB, ...l.filter(s => !open(s)).map(s => labW(s) - NW));
+  const ly = [], lab = []; { let y = PAD; layers.forEach((l, i) => { lab[i] = labH(l); ly[i] = y; y += lab[i] + Math.max(...l.map(hOf)) + VGAP; }); }
+  const xs = {}, ys = {}, idx = {};
+  for (const s of A.scopes) ys[s] = ly[layerOf[s]] + lab[layerOf[s]];
+  const place = () => { for (const l of layers) { let x = PAD; for (const s of l) { xs[s] = x + (open(s) ? 0 : LW); x += slotW(s) + HGAP; } } };
+  const setIdx = () => { for (const s of A.scopes) rows[s].forEach((t, i) => idx[t.key] = i); };
+  const colX = (k) => xs[scopeOf(k)] + PY + idx[k] * CW + CW / 2;
+  const cx = (s) => xs[s] + wOf(s) / 2;
+  const nbrs = {}; for (const e of A.edges) { (nbrs[e.to] ??= []).push(e.from); (nbrs[e.from] ??= []).push(e.to); }
+  setIdx(); place();
+  for (let sweep = 0; sweep < 10; sweep++) {
+    for (const l of layers) {
+      const bc = (s) => { const v = F.filter(f => f.a === s || f.b === s).map(f => cx(f.a === s ? f.b : f.a)); return v.length ? v.reduce((p, q) => p + q) / v.length : cx(s); };
+      // a scope that extends another stays right after it
+      const key = (s) => A.parent[s] && layerOf[A.parent[s]] === layerOf[s] ? bc(A.parent[s]) + 0.5 : bc(s);
+      l.sort((p, q) => key(p) - key(q));
+    }
+    place();
+    for (const s of A.scopes) if (open(s)) {
+      const bc = (t) => { const v = (nbrs[t.key] || []).filter(k => scopeOf(k) !== s).map(k => open(scopeOf(k)) ? colX(k) : cx(scopeOf(k))); return v.length ? v.reduce((p, q) => p + q) / v.length : 1e9 + idx[t.key]; };
+      rows[s] = rows[s].map(t => [bc(t), t]).sort((p, q) => p[0] - q[0]).map(x => x[1]);
+    }
+    setIdx();
+  }
+  const Wd = Math.max(...layers.map(l => { const s = l[l.length - 1]; return xs[s] - (open(s) ? 0 : LW) + slotW(s); })) + PAD + 60;
+  const H = ly[layers.length - 1] + lab[layers.length - 1] + Math.max(...layers[layers.length - 1].map(hOf)) + PAD + 80;
+  svg.setAttribute('width', Wd); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${Wd} ${H}`);
+
+  // slots on closed bars: incoming along the top edge ordered by source, outgoing along the bottom by target
+  const port = new Map(F.map(f => [f, {}]));
+  { const slots = {};
+    for (const f of F) { (slots[`${f.a}|${sideA(f)}`] ??= []).push({ f, end: 'a' }); (slots[`${f.b}|${sideB(f)}`] ??= []).push({ f, end: 'b' }); }
+    for (const list of Object.values(slots)) {
+      // a U to a neighbour in the same layer takes the end of the edge facing that neighbour,
+      // so the bands going on down never have to cross it
+      const key = ({ f, end }) => { const me = end === 'a' ? f.a : f.b, other = end === 'a' ? f.b : f.a;
+        return layerOf[other] !== layerOf[me] ? cx(other) : cx(other) < cx(me) ? -1e9 + cx(other) : 1e9 + cx(other); };
+      list.sort((p, q) => key(p) - key(q));
+      let off = 0;
+      for (const { f, end } of list) { port.get(f)[end === 'a' ? 'o' : 'i'] = off; off += f.edges.length * U; }
+    } }
+  // an end of a connection: two corner points, its centre and the direction pointing away from the scope
+  const end = (s, role, key, off, w) => {
+    const bottom = role === 'out' || role === 'B';
+    const y = bottom ? ys[s] + hOf(s) : ys[s], x0 = open(s) ? colX(key) - w / 2 : xs[s] + off;
+    return { a: [x0, y], b: [x0 + w, y], c: [x0 + w / 2, y], d: bottom ? [0, 1] : [0, -1] };
+  };
+  // the vertical end grows with the drop; a sideways end stays short, unless both ends face the
+  // same way (one table above the other), where the loop widens with the distance between them
+  const reach = (p, q, d) => d[1] !== 0 ? Math.max(30, Math.abs(q[1] - p[1]) * 0.5)
+    : Math.abs(q[0] - p[0]) < 4 ? Math.min(90, Math.max(30, Math.abs(q[1] - p[1]) * 0.2))
+    : Math.min(60, Math.max(24, Math.abs(q[0] - p[0]) * 0.4));
+  const seg = (p, dp, q, dq, kp, kq) => `C${p[0] + dp[0] * kp} ${p[1] + dp[1] * kp} ${q[0] + dq[0] * kq} ${q[1] + dq[1] * kq} ${q[0]} ${q[1]}`;
+  const loopReach = (S, T) => S.d[1] !== 0 && S.d[0] === T.d[0] && S.d[1] === T.d[1]
+    ? Math.min(140, Math.max(30, Math.abs(T.c[0] - S.c[0]) * 0.35 + Math.abs(T.c[1] - S.c[1]) * 0.5)) : null;
+  const crosses = (p1, p2, q1, q2) => { const o = (a, b, c) => Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])); return o(p1, p2, q1) !== o(p1, p2, q2) && o(q1, q2, p1) !== o(q1, q2, p2); };
+  const ribbonV = (S, T) => {
+    const lk = loopReach(S, T);
+    if (lk !== null) {
+      // both ends face the same way (a U between neighbours): the outer corners pair up on the
+      // deeper curve, the inner corners on a shallower one, so the band turns without twisting
+      const w = Math.max(Math.hypot(S.b[0] - S.a[0], S.b[1] - S.a[1]), Math.hypot(T.b[0] - T.a[0], T.b[1] - T.a[1]));
+      const rightward = T.c[0] >= S.c[0];
+      const [so, si] = rightward ? [S.a, S.b] : [S.b, S.a], [to, ti] = rightward ? [T.b, T.a] : [T.a, T.b];
+      const ki = Math.max(8, lk - w);
+      return `M${so[0]} ${so[1]} ${seg(so, S.d, to, T.d, lk, lk)} L${ti[0]} ${ti[1]} ${seg(ti, T.d, si, S.d, ki, ki)} Z`;
+    }
+    let [ta, tb] = [T.a, T.b];
+    if (crosses(S.a, ta, S.b, tb)) [ta, tb] = [tb, ta]; // pair the corners so the band never twists
+    const ks = reach(S.c, T.c, S.d), kt = reach(S.c, T.c, T.d);
+    return `M${S.a[0]} ${S.a[1]} ${seg(S.a, S.d, ta, T.d, ks, kt)} L${tb[0]} ${tb[1]} ${seg(tb, T.d, S.b, S.d, kt, ks)} Z`;
+  };
+  const lineV = (S, T) => { const lk = loopReach(S, T); return `M${S.c[0]} ${S.c[1]} ${seg(S.c, S.d, T.c, T.d, lk ?? reach(S.c, T.c, S.d), lk ?? reach(S.c, T.c, T.d))}`; };
+
+  const gB = el('g', {}, svg); const marks = [];
+  for (const f of F) {
+    const { o, i } = port.get(f), n = f.edges.length;
+    const back = layerOf[f.a] > layerOf[f.b], same = layerOf[f.a] === layerOf[f.b];
+    const tint = f.edges.map(e => hexOf[e.from]).find(Boolean) || '#8a8578';
+    if (!open(f.a) && !open(f.b)) {
+      const S = end(f.a, sideA(f), null, o, n * U), T = end(f.b, sideB(f), null, i, n * U), fill = same || back ? '#8a8578' : tint;
+      const p = el('path', { d: ribbonV(S, T), class: 'band' + (back ? ' back' : '') + (isPale(fill) ? ' pale' : '') + (f.edges.every(e => e.kind === 'overrides') ? ' overrides' : ''), fill }, gB);
+      el('title', {}, p).textContent = `${f.a} → ${f.b}: ${n} — click a bar to open it`;
+      p._f = f; p._flow = lineV(S, T); p._scopes = [f.a, f.b]; marks.push(p);
+      continue;
+    }
+    const es = [...f.edges].sort((p, q) => (open(f.b) ? colX(p.to) - colX(q.to) : 0) || (open(f.a) ? colX(p.from) - colX(q.from) : 0));
+    es.forEach((e, k) => {
+      const S = end(f.a, sideA(f), e.from, o + k * U, open(f.a) ? SW : U, cx(f.b)), T = end(f.b, sideB(f), e.to, i + k * U, open(f.b) ? SW : U, cx(f.a));
+      const rf = same || back ? '#8a8578' : (hexOf[e.from] || hexOf[e.to] || '#8a8578');
+      const flow = lineV(S, T);
+      const p = lines
+        ? el('path', { d: flow, class: `tline ${e.kind}${back ? ' back' : ''}`, stroke: back ? '#c2402a' : rf }, gB)
+        : el('path', { d: ribbonV(S, T), class: `ribbon ${e.kind}${back ? ' back' : ''}${isPale(rf) ? ' pale' : ''}`, fill: rf }, gB);
+      if (lines) el('path', { d: flow, class: 'edge-hit' }, gB)._mark = p;
+      el('title', {}, p).textContent = `${e.from} → ${e.to} (${e.kind})`;
+      p._e = e; p._flow = flow; p._scopes = [f.a, f.b]; marks.push(p);
+    });
+  }
+  // references between tokens of an opened scope: lanes below it, one per referenced token
+  for (const s of A.scopes) if (open(s) && internal[s]) {
+    const yE = ys[s] + hOf(s), groups = new Map();
+    for (const e of internal[s]) { if (idx[e.from] === undefined || idx[e.to] === undefined) continue; (groups.get(e.from) ?? groups.set(e.from, []).get(e.from)).push(e); }
+    const G = [...groups.values()].map(es => { const xs2 = es.flatMap(e => [colX(e.from), colX(e.to)]); return { es, lo: Math.min(...xs2), hi: Math.max(...xs2) }; });
+    G.sort((p, q) => (p.hi - p.lo) - (q.hi - q.lo) || p.lo - q.lo);
+    const occ = [];
+    for (const grp of G) {
+      let k = 0; while ((occ[k] ||= []).some(([lo, hi]) => grp.lo < hi + 4 && lo < grp.hi + 4)) k++;
+      occ[k].push([grp.lo, grp.hi]);
+      const ly2 = yE + 10 + k * (lines ? 5 : 7), gg = el('g', { class: 'lanegroup' }, gB);
+      const ds = grp.es.map(e => { const x0 = colX(e.from), x1 = colX(e.to), sg = Math.sign(x1 - x0) || 1, c = Math.min(5, Math.abs(x1 - x0) / 2);
+        return `M${x0} ${yE} V${ly2 - c} Q${x0} ${ly2} ${x0 + sg * c} ${ly2} H${x1 - sg * c} Q${x1} ${ly2} ${x1} ${ly2 - c} V${yE}`; });
+      const color = hexOf[grp.es[0].from] || '#8a8578';
+      if (!lines) for (const d of ds) el('path', { d, class: 'lane-halo' + (isPale(color) ? ' pale' : '') }, gg);
+      grp.es.forEach((e, i) => {
+        const p = el('path', { d: ds[i], class: `lane ${e.kind}${lines ? ' thin' : ''}`, stroke: color }, gg);
+        el('title', {}, p).textContent = `${e.from} → ${e.to} (${e.kind})`;
+        p._e = e; p._scopes = [s]; marks.push(p);
+        el('path', { d: ds[i], class: 'edge-hit' }, gg)._mark = p;
+      });
+    }
+  }
+  // on hover only: a selector's other inputs, and its pool
+  const gC = el('g', {}, gB);
+  for (const e of A.ctx) {
+    const a = scopeOf(e.from), b = scopeOf(e.to);
+    if ((open(a) && idx[e.from] === undefined) || (open(b) && idx[e.to] === undefined)) continue;
+    const S = end(a, 'out', e.from, wOf(a) / 2, 0), T = end(b, 'in', e.to, wOf(b) / 2, 0);
+    const p = el('path', { d: lineV(S, T), class: 'ctxline ctx' }, gC); p._e = e; marks.push(p);
+  }
+  for (const t of D.tokens) for (const pool of t.pools || []) {
+    if (!A.tokensBy[pool]) continue;
+    const S = open(pool) ? { c: [xs[pool] + blockW(pool) / 2, ys[pool] + hOf(pool)], d: [0, 1] } : end(pool, 'out', null, barW(pool) / 2, 0);
+    if (open(t.scope) && idx[t.key] === undefined) continue;
+    const T = end(t.scope, 'in', t.key, wOf(t.scope) / 2, 0);
+    const p = el('path', { d: lineV(S, T), class: 'ctxline ctx pool' }, gC); p._pool = { scope: pool, to: t.key, fn: t.fn }; marks.push(p);
+  }
+
+  const rowEls = {};
+  for (const s of A.scopes) {
+    const g = el('g', { class: 'node' + (open(s) ? ' tbl' : ''), style: 'cursor:pointer' }, svg);
+    const x = xs[s], y = ys[s];
+    if (!open(s)) {
+      el('rect', { x, y, width: barW(s), height: NW }, g);
+      // labels read upward along the bar's left end, so they cost no width
+      el('text', { transform: `translate(${x - 17} ${y + NW}) rotate(-90)` }, g).textContent = `${s}${A.parent[s] ? ' ⊂ ' + A.parent[s] : ''}`;
+      el('text', { transform: `translate(${x - 5} ${y + NW}) rotate(-90)`, style: 'fill:#23221f88;font-size:10px' }, g).textContent = `${A.tokensBy[s].length} tokens${internal[s] ? ` · ${internal[s].length} internal` : ''}`;
+    } else {
+      const W = blockW(s), H = hOf(s);
+      el('rect', { class: 'frame', x, y, width: W, height: H }, g);
+      el('line', { class: 'head-rule', x1: x + 6, x2: x + W - 6, y1: y + HEAD + 0.5, y2: y + HEAD + 0.5 }, g);
+      el('text', { class: 'head-t', x: x + 6, y: y + 12.5 }, g).textContent = `${s}${A.parent[s] ? '  ⊂ ' + A.parent[s] : ''}  −`;
+      rows[s].forEach((tok, i) => {
+        const cxl = x + PY + i * CW;
+        const r = el('g', { class: `row${tok.inherited ? ' inh' : ''}` }, g);
+        el('rect', { class: 'hit', x: cxl + 1, y: y + HEAD + 3, width: CW - 2, height: H - HEAD - 6 }, r);
+        if (tok.hex) el('rect', { class: 'sw', x: cxl + CW / 2 - 4, y: y + H - PY - 8, width: 8, height: 8, fill: tok.hex }, r);
+        const nm = tok.name.length > 22 ? tok.name.slice(0, 21) + '…' : tok.name;
+        el('text', { transform: `translate(${cxl + CW / 2 + 3.5} ${y + H - PY - 8 - 5}) rotate(-90)` }, r).textContent = nm;
+        el('title', {}, r).textContent = `${tok.key}\n${tok.fn ?? 'value'} → ${tok.value}`;
+        r._k = tok.key; rowEls[tok.key] = r;
+      });
+    }
+    g.onclick = (ev) => { if (ev.target.closest('.row')) return; X.has(s) ? X.delete(s) : X.add(s); render(); };
+    g._scope = s;
+  }
+  wireHover(svg, A, D, rowEls, marks, true);
+  return `click a scope to open it · ${X.size} open · hover a row for its chain`;
+}
+
+function render() {
+  const svg = $('#out'); svg.innerHTML = ''; svg.classList.remove('focus');
+  const defs = el('defs', {}, svg);
+  const mk = el('marker', { id: 'arrow', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 7, markerHeight: 7, markerUnits: 'userSpaceOnUse', orient: 'auto' }, defs);
+  el('path', { d: 'M0 0 L8 4 L0 8 Z', fill: '#23221f', stroke: '#f4f1ea', 'stroke-width': 1 }, mk);
+  $('#note').textContent = (state.dir === 'v' ? sankeyV : sankey)(DATASETS[state.data], svg);
+}
+const pick = (group, b) => [...group.children].forEach(x => x.classList.toggle('on', x === b));
+for (const name of Object.keys(DATASETS)) { const b = document.createElement('button'); b.textContent = name; b.dataset.d = name; $('#data').appendChild(b); }
+$('#data').firstChild.classList.add('on');
+pick($('#dir'), $(`#dir [data-o="${state.dir}"]`)); pick($('#style'), $(`#style [data-s="${state.style}"]`));
+$('#data').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.data = b.dataset.d; pick($('#data'), b); render(); };
+$('#style').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.style = b.dataset.s; pick($('#style'), b); render(); };
+$('#hideIso').onchange = render;
+$('#dir').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.dir = b.dataset.o; pick($('#dir'), b); render(); };
+$('#sk').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; state.expanded[state.data] = new Set(b.dataset.x === 'all' ? DATASETS[state.data].scopes.map(s => s.name) : []); render(); };
+render();
+</script>
+</body>
+</html>
