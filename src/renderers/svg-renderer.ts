@@ -35,6 +35,12 @@ export interface SVGRenderOptions {
    *  horizontal one bridges the vertical one (flattened while a token is
    *  hovered in an interactive graph). Default true. */
   bridges?: boolean;
+  /** Which connections to draw: called with the keys a connection's
+   *  `data-from` / `data-to` carry (`scope.token`, or `__header__scope`
+   *  for `extends`); return false to leave it out. Applied before the
+   *  routing, so the lines left out hold no lanes and get no bridges, as
+   *  removing them from the finished SVG would. */
+  filterConnections?: (from: string, to: string) => boolean;
 }
 
 interface TableInfo {
@@ -204,6 +210,7 @@ export class SVGRenderer {
       interactive: options?.interactive ?? false,
       routing: options?.routing ?? 'orthogonal',
       bridges: options?.bridges ?? true,
+      filterConnections: options?.filterConnections ?? (() => true),
     };
   }
 
@@ -516,6 +523,11 @@ export class SVGRenderer {
           // arrow lands at the owner (path start).
           connections.push({ from: fromDot, to: toDot, isDashed: isFunction, label, consumerAtStart: true });
         }
+      }
+
+      const keep = this.options.filterConnections;
+      for (let i = connections.length - 1; i >= 0; i--) {
+        if (!keep(connections[i].from.qualifiedKey, connections[i].to.qualifiedKey)) connections.splice(i, 1);
       }
 
       // Each connection becomes a <g class="connection"> grouping its

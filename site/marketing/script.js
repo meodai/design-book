@@ -484,9 +484,9 @@ book.registerRenderer("tailwind", tailwindRenderer);
       // every dependency, the ramp's and the transforms' too (the
       // renderer shows only refs and selector picks by default)
       linksOnly: false,
+      filterConnections: keepRampAnchor(),
     });
     viz.innerHTML = renderer.render();
-    keepRampAnchor();
     paintCard();
     // Renderers also feed the next section
     paintRenderers();
@@ -494,23 +494,20 @@ book.registerRenderer("tailwind", tailwindRenderer);
 
   // The ramp is built round the brand color, so of its edges from
   // brand.primary only the one to the step nearest that color (in OKLab)
-  // is drawn: the step the brand sits on. The others, and their labels,
-  // are taken out.
+  // is drawn: the step the brand sits on. The others are left out before
+  // the graph is routed, so they hold no lanes and get no bridges.
   const oklabDistance = differenceEuclidean("oklab");
   function keepRampAnchor () {
     const seed = book.resolve("brand.primary");
-    const edges = [...viz.querySelectorAll('g.connection[data-to="brand.primary"]')]
-      .filter((g) => g.dataset.from?.startsWith("values.shade-"));
-    if (edges.length < 2) return;
     let anchor = null;
     let nearest = Infinity;
-    for (const g of edges) {
-      const d = oklabDistance(seed, book.resolve(g.dataset.from));
-      if (d < nearest) { nearest = d; anchor = g.dataset.from; }
+    for (const key of book.getScope("values").getAllKeys()) {
+      if (!key.startsWith("shade-")) continue;
+      const d = oklabDistance(seed, book.resolve(`values.${key}`));
+      if (d < nearest) { nearest = d; anchor = `values.${key}`; }
     }
-    viz.querySelectorAll('[data-to="brand.primary"]').forEach((el) => {
-      if (el.dataset.from?.startsWith("values.shade-") && el.dataset.from !== anchor) el.remove();
-    });
+    return (from, to) =>
+      !(to === "brand.primary" && from.startsWith("values.shade-") && from !== anchor);
   }
 
   // The card on the blueprint: the book's ui decisions, applied.

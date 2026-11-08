@@ -77,6 +77,13 @@ describe('SVGRenderer', () => {
     expect(svg.match(/<circle[^>]*fill="#cc3300"/g)).toHaveLength(2);
   });
 
+  it('leaves out the connections filterConnections refuses', () => {
+    const svg = new SVGRenderer(createTestBook(), {
+      filterConnections: (from, to) => !(from === 'ui.bg' && to === 'brand.primary'),
+    }).render();
+    expect(svg).not.toContain('class="connection"');
+  });
+
   it('omits connection paths when showConnections is false', () => {
     const book = createTestBook();
     const renderer = new SVGRenderer(book, { showConnections: false });
