@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { OrthogonalRouter, roundedPath, bridges } from '../../src/renderers/orthogonal-router';
+import { OrthogonalRouter, roundedPath, bridges, junctions } from '../../src/renderers/orthogonal-router';
 
 describe('OrthogonalRouter', () => {
   const block = { x: 100, y: 0, width: 100, height: 200 };
@@ -40,5 +40,29 @@ describe('OrthogonalRouter', () => {
     const a = [{ x: 0, y: 50 }, { x: 100, y: 50 }];
     const b = [{ x: 50, y: 50 }, { x: 50, y: 100 }];
     expect(bridges([a, b], () => true, 5).hops[0]).toEqual([]);
+  });
+
+  it('marks where related lines split, not where they leave their own dot', () => {
+    // Both leave the dot at (0, 0) together, one turns down at x = 50.
+    const a = [{ x: 0, y: 0 }, { x: 100, y: 0 }];
+    const b = [{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 80 }];
+    expect(junctions([a, b], () => true)).toEqual([[], [{ x: 50, y: 0 }]]);
+    expect(junctions([a, b], () => false)).toEqual([[], []]);
+    expect(junctions([a, b], () => true, 60)).toEqual([[], []]);
+  });
+
+  it('spreads unrelated lines sharing a run into their own lanes', () => {
+    const left = { x: 0, y: 0, width: 40, height: 200 };
+    const right = { x: 200, y: 0, width: 40, height: 200 };
+    const pairs = [0, 1, 2].map(i => [
+      { x: 40, y: 20 + i * 30, dir: 1 as const, id: `a${i}` },
+      { x: 200, y: 180 - i * 30, dir: -1 as const, id: `b${i}` },
+    ] as [any, any]);
+    const router = new OrthogonalRouter([left, right], pairs.flat(), { laneGap: 6 });
+    const routes = router.routeAll(pairs);
+    const verticalXs = routes.map(r => r!.find((p, k) => k > 0 && Math.abs(r![k - 1].x - p.x) < 0.01)!.x);
+    const sorted = [...verticalXs].sort((x, y) => x - y);
+    expect(sorted[1] - sorted[0]).toBeGreaterThanOrEqual(5.99);
+    expect(sorted[2] - sorted[1]).toBeGreaterThanOrEqual(5.99);
   });
 });

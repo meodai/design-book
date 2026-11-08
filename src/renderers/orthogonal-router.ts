@@ -1,18 +1,23 @@
 /** Orthogonal connector routing: paths made of horizontal and vertical runs
- *  that go round the tables instead of across them.
+ *  that go round the tables instead of across them, in two passes (the
+ *  way libavoid does it).
  *
- *  The routes run on a grid made of the lines that matter (the tables'
- *  edges pushed out by `margin`, every port's row and the end of its stub)
- *  with each gap between two of them filled with evenly spaced lanes, no
- *  closer than `laneGap`.
- *  A grid segment that lies inside a (pushed-out) table is closed. Each
- *  connection is the cheapest walk over that grid, where a bend costs
- *  extra, so routes keep few corners. Routes that meet at a port (one
+ *  Routing: each connection is the cheapest walk over a sparse grid made
+ *  only of the lines that matter: the tables' edges pushed out by
+ *  `margin`, the middle of each gap between two of those, every port's
+ *  row and the end of its stub. A grid segment inside a (pushed-out)
+ *  table is closed; a bend costs extra. Routes that meet at a port (one
  *  data source fanning out, or one token reading several) are one line
- *  near it: a segment used only by routes sharing a port with this one is
- *  cheap, so they run together and split only where they have to. Any
- *  other used segment is very dear, so unrelated lines take their own
- *  lanes and only cross. */
+ *  near it, so a segment used only by routes sharing a port with this one
+ *  is cheap; each unrelated route already on a segment makes it a little
+ *  dearer, so busy channels fill evenly.
+ *
+ *  Nudging: routes sharing a run are then spread into lanes `laneGap`
+ *  apart, round the run's line. Routes sharing a port keep one lane; the
+ *  lanes are ordered so lines cross no more than they must (a line whose
+ *  ends both turn one way runs on that side, longer brackets outside
+ *  shorter ones); a run on a port's row stays on it; lanes stay out of
+ *  the tables, closing up when a gap is narrow. */
 
 export interface Point {
   x: number;
@@ -39,34 +44,37 @@ export interface RouterOptions {
   /** Clearance kept round every table. */
   margin?: number;
   /** Straight run out of a port before the first bend. At least
-   *  `margin`, and best exactly that (the default): a lane between the
-   *  clearance and a longer stub's end is only reached by turning back. */
+   *  `margin`, and best exactly that (the default). */
   stub?: number;
   /** A bend costs as much as this much length. */
   bendCost?: number;
-  /** Distance between two parallel lanes. */
+  /** Distance between two lanes of a shared run. */
   laneGap?: number;
 }
 
 /** Length factor on a segment used only by routes sharing a port with this one. */
 const SHARED = 0.15;
-/** Length factor on a segment an unrelated route uses: only taken when there
- *  is no other way (a token reading two sources leaves by one stub). */
-const TAKEN = 40;
-/** Length factor on a segment running beside an unrelated route, closer
- *  than two lanes: lines keep their distance where there is room. */
-const NEAR = 4;
-/** Weight on the search guide's distance (1 = only ever the cheapest
- *  route; more = faster, a little less tidy). */
-const GREED = 1.2;
+/** Extra length factor on a segment for each unrelated route on it, up
+ *  to `CROWD_MAX`: just enough to fill busy channels evenly; the nudging
+ *  spreads the lines in one, so crowding must not send routes round the
+ *  outside. */
+const CROWD = 0.05;
+const CROWD_MAX = 0.5;
+/** Length factor on a run along a table's side (within two margins of
+ *  it): lines leave on their own port's row and turn in the open, rather
+ *  than drop down beside the table past its other ports. */
+const HUG = 1.5;
+/** How far into a table's margin a lane may be pushed, as a share of it:
+ *  none, or a lane passing a table's dots looks as if it met them. */
+const INTO_MARGIN = 0;
 
 // Steps: 0 +x, 1 -x, 2 +y, 3 -y
 const DX = [1, -1, 0, 0];
 const DY = [0, 0, 1, -1];
 
 class MinHeap {
-  private keys = new Float64Array(1024);
-  private vals = new Int32Array(1024);
+  private keys = new Float64Array(256);
+  private vals = new Int32Array(256);
   size = 0;
   /** The key of the entry `pop` last returned. */
   lastKey = 0;
@@ -97,7 +105,8 @@ class MinHeap {
   }
 
   /** Removes the entry with the smallest key and returns its value (its
-   *  key is left in `lastKey`). */
+   *  key is left in `lastKey`). A 4-ary heap: half the levels of a binary
+   *  one, the children side by side. */
   pop(): number {
     const keys = this.keys, vals = this.vals;
     const topVal = vals[0];
@@ -106,8 +115,6 @@ class MinHeap {
     const lastKey = keys[n], lastVal = vals[n];
     let i = 0;
     for (;;) {
-      // Four children per entry: half the levels of a binary heap, and
-      // the children side by side in memory.
       const first = 4 * i + 1;
       if (first >= n) break;
       let c = first, ck = keys[first];
@@ -129,11 +136,6 @@ class MinHeap {
   }
 }
 
-function allRelated(users: number[], related: Uint8Array): boolean {
-  for (const r of users) if (!related[r]) return false;
-  return true;
-}
-
 /** The first index whose value is at least `value`. */
 function lowerBound(list: number[], value: number): number {
   let lo = 0, hi = list.length;
@@ -153,76 +155,86 @@ function uniqueSorted(values: number[]): number[] {
 }
 
 function indexOf(list: number[], value: number): number {
-  const v = Math.round(value * 100) / 100;
-  let lo = 0, hi = list.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (Math.abs(list[mid] - v) <= 0.01) return mid;
-    if (list[mid] < v) lo = mid + 1;
-    else hi = mid - 1;
-  }
-  return -1;
+  const i = lowerBound(list, Math.round(value * 100) / 100 - 0.01);
+  return i < list.length && Math.abs(list[i] - value) <= 0.02 ? i : -1;
+}
+
+interface Box { x0: number; y0: number; x1: number; y1: number }
+
+/** One straight run of a route, for nudging. */
+interface Run {
+  route: number;
+  /** Index of the run's first point in the route. */
+  k: number;
+  vertical: boolean;
+  /** Its line: x of a vertical run, y of a horizontal one. */
+  pos: number;
+  lo: number;
+  hi: number;
+  /** Where the route turns at each end, across the run: -1 toward lower
+   *  coordinates, 1 toward higher, 0 at a port. */
+  turnLo: number;
+  turnHi: number;
+  /** On a port's row: stays where it is. */
+  fixed: boolean;
+}
+
+/** Runs sharing a lane. */
+interface Lane {
+  runs: Run[];
+  vertical: boolean;
+  /** The grid line its runs lie on, and where the nudging puts it. */
+  pos: number;
+  at?: number;
+  lo: number;
+  hi: number;
+  turnLo: number;
+  turnHi: number;
+  fixed: boolean;
 }
 
 export class OrthogonalRouter {
   private xs: number[];
   private ys: number[];
+  private boxes: Box[];
+  private margin: number;
+  private stub: number;
+  private bendCost: number;
+  private laneGap: number;
   /** Closed segment from node (xi, yi) to (xi + 1, yi). */
   private hBlocked: Uint8Array;
   /** Closed segment from node (xi, yi) to (xi, yi + 1). */
   private vBlocked: Uint8Array;
-  /** Routes on each segment so far (indices into `ends`), horizontal
-   *  segments by their left node, vertical ones by their top node. */
-  private usedH: (number[] | undefined)[] = [];
-  private usedV: (number[] | undefined)[] = [];
-  /** Routes running less than two lanes beside each segment. */
-  private nearH: (number[] | undefined)[] = [];
-  private nearV: (number[] | undefined)[] = [];
+  /** Segments running along a table's side. */
+  private hHug: Uint8Array;
+  private vHug: Uint8Array;
+  /** Routes on each segment so far (indices into `ends`). */
+  private usedH: (number[] | undefined)[];
+  private usedV: (number[] | undefined)[];
   /** Each routed connection's port ids. */
   private ends: [string, string][] = [];
   /** The routes at each port id. */
   private routesAt = new Map<string, number[]>();
   /** Search state, reused between routes (`seen` marks the entries
    *  written in the current search). */
-  private cost?: Float64Array;
-  private prev?: Int32Array;
-  private seen?: Uint32Array;
+  private cost: Float64Array;
+  private prev: Int32Array;
+  private seen: Uint32Array;
   private generation = 0;
   private heap = new MinHeap();
-  /** Coarse raster for the search guide: cells of `cellSize`, a cell
-   *  closed when it lies wholly inside a table (plus margin); the fine
-   *  grid's lines map to cells through `cellOfX` / `cellOfY`. */
-  private cellSize = 20;
-  private gx = 0;
-  private gy = 0;
-  private cellClosed = new Uint8Array(0);
-  private cellOfX = new Int32Array(0);
-  private cellOfY = new Int32Array(0);
-  /** Steps from the current target's cell to each cell (-1: unreached). */
-  private field: Int32Array = new Int32Array(0);
-  /** Fields already filled, by target cell: lines sharing a target share
-   *  one. */
-  private fields = new Map<number, Int32Array>();
-  private queue = new Int32Array(0);
-  private stub: number;
-  private bendCost: number;
-  private laneGap: number;
 
   constructor(obstacles: Rect[], ports: Port[], options: RouterOptions = {}) {
-    const margin = options.margin ?? 10;
+    const margin = (this.margin = options.margin ?? 10);
     this.stub = Math.max(margin, options.stub ?? margin);
     this.bendCost = options.bendCost ?? 24;
+    this.laneGap = options.laneGap ?? 6;
 
-    const boxes = obstacles.map(o => ({
+    const boxes = (this.boxes = obstacles.map(o => ({
       x0: o.x - margin,
       y0: o.y - margin,
       x1: o.x + o.width + margin,
       y1: o.y + o.height + margin,
-    }));
-
-    const edgeXs = uniqueSorted(boxes.flatMap(b => [b.x0, b.x1]));
-    const edgeYs = uniqueSorted(boxes.flatMap(b => [b.y0, b.y1]));
-    const laneGap = (this.laneGap = options.laneGap ?? 6);
+    })));
     const out = margin * 2;
     const frame = boxes.length
       ? {
@@ -232,43 +244,49 @@ export class OrthogonalRouter {
         y1: Math.max(...boxes.map(b => b.y1)) + out,
       }
       : { x0: 0, x1: 0, y0: 0, y1: 0 };
-    // Fill every gap between two lines that matter with evenly spaced
-    // lanes, at least laneGap apart: a regular raster laid over them
-    // would add a line beside nearly every port row.
-    const withLanes = (lines: number[]) => {
+
+    // The lines that matter, and the middle of each gap between them:
+    // the channels the nudging spreads lanes round.
+    const withMiddles = (lines: number[]) => {
       const out: number[] = [];
       for (let i = 0; i < lines.length; i++) {
         out.push(lines[i]);
-        const next = lines[i + 1];
-        if (next === undefined) break;
-        const n = Math.floor((next - lines[i]) / laneGap);
-        for (let k = 1; k < n; k++) out.push(lines[i] + ((next - lines[i]) * k) / n);
+        if (i + 1 < lines.length) out.push((lines[i] + lines[i + 1]) / 2);
       }
       return out;
     };
+    const edgeXs = uniqueSorted([...boxes.flatMap(b => [b.x0, b.x1]), frame.x0, frame.x1]);
+    const edgeYs = uniqueSorted([...boxes.flatMap(b => [b.y0, b.y1]), frame.y0, frame.y1]);
+    const xs = (this.xs = uniqueSorted([...withMiddles(edgeXs), ...ports.map(p => p.x + p.dir * this.stub)]));
+    const ys = (this.ys = uniqueSorted([...withMiddles(edgeYs), ...ports.map(p => p.y)]));
 
-    this.xs = withLanes(uniqueSorted([
-      ...edgeXs, frame.x0, frame.x1,
-      ...ports.map(p => p.x + p.dir * this.stub),
-    ]));
-    this.ys = withLanes(uniqueSorted([
-      ...edgeYs, frame.y0, frame.y1,
-      ...ports.map(p => p.y),
-    ]));
-
-    const nx = this.xs.length, ny = this.ys.length;
-    // Preallocated: written at scattered indices, a growing array would
-    // fall back to slow dictionary storage.
-    this.usedH = new Array(nx * ny).fill(undefined);
-    this.usedV = new Array(nx * ny).fill(undefined);
-    this.nearH = new Array(nx * ny).fill(undefined);
-    this.nearV = new Array(nx * ny).fill(undefined);
+    const nx = xs.length, ny = ys.length;
     this.hBlocked = new Uint8Array(nx * ny);
     this.vBlocked = new Uint8Array(nx * ny);
-    // Close the segments inside each table (plus margin): a horizontal one
-    // on a row strictly inside it, both ends within its sides; a vertical
-    // one likewise. The box edges are grid lines, so each is an index range.
-    const xs = this.xs, ys = this.ys;
+    this.hHug = new Uint8Array(nx * ny);
+    this.vHug = new Uint8Array(nx * ny);
+    // Runs along a table's side: within two margins of it, beside it.
+    const near = margin * 2;
+    for (const box of boxes) {
+      const xa = lowerBound(xs, box.x0 - near - 0.01), xb = lowerBound(xs, box.x1 + near + 0.01) - 1;
+      const ya = lowerBound(ys, box.y0 - near - 0.01), yb = lowerBound(ys, box.y1 + near + 0.01) - 1;
+      for (let xi = xa; xi <= xb; xi++) {
+        const besideX = xs[xi] <= box.x0 + 0.01 || xs[xi] >= box.x1 - 0.01;
+        for (let yi = ya; yi <= yb; yi++) {
+          const id = xi * ny + yi;
+          const besideY = ys[yi] <= box.y0 + 0.01 || ys[yi] >= box.y1 - 0.01;
+          if (besideX && yi < yb && ys[yi] >= box.y0 - 0.01 && ys[yi + 1] <= box.y1 + 0.01) this.vHug[id] = 1;
+          if (besideY && xi < xb && xs[xi] >= box.x0 - 0.01 && xs[xi + 1] <= box.x1 + 0.01) this.hHug[id] = 1;
+        }
+      }
+    }
+    this.usedH = new Array(nx * ny).fill(undefined);
+    this.usedV = new Array(nx * ny).fill(undefined);
+    this.cost = new Float64Array(nx * ny * 2);
+    this.prev = new Int32Array(nx * ny * 2);
+    this.seen = new Uint32Array(nx * ny * 2);
+    // Close the segments inside each table (plus margin): the box edges
+    // are grid lines, so each is an index range.
     for (const box of boxes) {
       const xa = lowerBound(xs, box.x0 - 0.01), xb = lowerBound(xs, box.x1 + 0.01) - 1;
       const ya = lowerBound(ys, box.y0 - 0.01), yb = lowerBound(ys, box.y1 + 0.01) - 1;
@@ -281,72 +299,19 @@ export class OrthogonalRouter {
         }
       }
     }
-
-    // The coarse raster behind the search guide.
-    const cell = (this.cellSize = Math.max(laneGap * 6, 24));
-    const gx = (this.gx = Math.max(1, Math.ceil((frame.x1 - frame.x0) / cell) + 1));
-    const gy = (this.gy = Math.max(1, Math.ceil((frame.y1 - frame.y0) / cell) + 1));
-    this.cellClosed = new Uint8Array(gx * gy);
-    for (const box of boxes) {
-      // Only cells wholly inside: a gap between two tables stays open.
-      const cx0 = Math.ceil((box.x0 - frame.x0) / cell), cx1 = Math.floor((box.x1 - frame.x0) / cell) - 1;
-      const cy0 = Math.ceil((box.y0 - frame.y0) / cell), cy1 = Math.floor((box.y1 - frame.y0) / cell) - 1;
-      for (let cx = Math.max(0, cx0); cx <= Math.min(gx - 1, cx1); cx++) {
-        for (let cy = Math.max(0, cy0); cy <= Math.min(gy - 1, cy1); cy++) this.cellClosed[cx * gy + cy] = 1;
-      }
-    }
-    const clampCell = (v: number, n: number) => Math.min(n - 1, Math.max(0, Math.floor(v / cell)));
-    this.cellOfX = Int32Array.from(xs, x => clampCell(x - frame.x0, gx));
-    this.cellOfY = Int32Array.from(ys, y => clampCell(y - frame.y0, gy));
-    this.fields.clear();
-    this.queue = new Int32Array(gx * gy);
   }
 
-  /** Guide for the search: the Manhattan distance to the target, plus a
-   *  bend when it is not in line, a little overweighted so the search
-   *  heads for the target rather than widening round crowded lanes. */
-  private estimate(xi: number, yi: number, tx: number, ty: number): number {
-    const dx = Math.abs(this.xs[xi] - this.xs[tx]), dy = Math.abs(this.ys[yi] - this.ys[ty]);
-    // Round the tables: the coarse steps to the target, less two cells
-    // for where in its cell the node sits; never below the straight way.
-    const steps = this.field[this.cellOfX[xi] * this.gy + this.cellOfY[yi]];
-    const around = steps < 0 ? 0 : (steps - 2) * this.cellSize;
-    return Math.max(dx + dy, around) * GREED + (dx > 0.01 && dy > 0.01 ? this.bendCost : 0);
+  /** Routes every connection, then spreads the runs they share into
+   *  lanes. Null for a connection with no route. */
+  routeAll(pairs: [Port, Port][]): (Point[] | null)[] {
+    const routes = pairs.map(([from, to]) => this.route(from, to));
+    this.nudge(routes, pairs.map(([from, to]) => [from.id ?? `${from.x},${from.y}`, to.id ?? `${to.x},${to.y}`]));
+    return routes.map(r => (r ? simplify(r) : null));
   }
 
-  /** Points `field` at the coarse steps from the target's cell, going
-   *  round closed cells (filled once per target cell). */
-  private flood(tx: number, ty: number): void {
-    const { gx, gy, queue, cellClosed } = this;
-    const goal = this.cellOfX[tx] * gy + this.cellOfY[ty];
-    const known = this.fields.get(goal);
-    if (known) {
-      this.field = known;
-      return;
-    }
-    const field = (this.field = new Int32Array(gx * gy).fill(-1));
-    this.fields.set(goal, field);
-    let head = 0, tail = 0;
-    field[goal] = 0;
-    queue[tail++] = goal;
-    while (head < tail) {
-      const c = queue[head++];
-      const cx = (c / gy) | 0, cy = c - cx * gy, next = field[c] + 1;
-      if (cx > 0 && field[c - gy] < 0 && !cellClosed[c - gy]) { field[c - gy] = next; queue[tail++] = c - gy; }
-      if (cx < gx - 1 && field[c + gy] < 0 && !cellClosed[c + gy]) { field[c + gy] = next; queue[tail++] = c + gy; }
-      if (cy > 0 && field[c - 1] < 0 && !cellClosed[c - 1]) { field[c - 1] = next; queue[tail++] = c - 1; }
-      if (cy < gy - 1 && field[c + 1] < 0 && !cellClosed[c + 1]) { field[c + 1] = next; queue[tail++] = c + 1; }
-    }
-  }
-
-  /** The route's corner points, from `from` to `to`, or null when no
-   *  route exists (a port's stub ends inside another table).
-   *
-   *  A* over (node, heading) states, guided by the Manhattan distance to
-   *  the target. The guide can overestimate where a shared run is cheaper
-   *  than its length, so the route found is a good one, not always the
-   *  cheapest; in exchange the search stays near the straight path instead
-   *  of flooding the whole grid. */
+  /** The route's corner points on the sparse grid, from `from` to `to`,
+   *  or null when no route exists (a port's stub ends inside another
+   *  table). Not yet spread into lanes: see `routeAll`. */
   route(from: Port, to: Port): Point[] | null {
     const { xs, ys, stub, bendCost } = this;
     const nx = xs.length, ny = ys.length;
@@ -361,30 +326,25 @@ export class OrthogonalRouter {
     for (const r of this.routesAt.get(fromId) ?? []) related[r] = 1;
     for (const r of this.routesAt.get(toId) ?? []) related[r] = 1;
 
-    // A state is a node and the axis the route moves along there
-    // (0 horizontal, 1 vertical); the heading itself is not needed: going
-    // back the way it came only adds length, and a stub's end can't be
-    // reached from its table's side, which lies in the closed margin. So
-    // a route leaves its start, and enters its goal, moving horizontally.
+    // A state is a node and the axis the route moves along there (0
+    // horizontal, 1 vertical): going back the way it came only adds
+    // length, and a stub's end can't be reached from its table's side.
+    // So a route leaves its start, and enters its goal, horizontally.
     const start = (sx * ny + sy) * 2;
     const goal = tx * ny + ty;
+    const goalX = xs[tx], goalY = ys[ty];
+    const estimate = (xi: number, yi: number) => {
+      const dx = Math.abs(xs[xi] - goalX), dy = Math.abs(ys[yi] - goalY);
+      return dx + dy + (dx > 0.01 && dy > 0.01 ? bendCost : 0);
+    };
 
-    const size = nx * ny * 2;
-    if (!this.cost || this.cost.length !== size) {
-      this.cost = new Float64Array(size);
-      this.prev = new Int32Array(size);
-      this.seen = new Uint32Array(size);
-      this.generation = 0;
-    }
-    const cost = this.cost, prev = this.prev!, seen = this.seen!;
+    const { cost, prev, seen, heap } = this;
     const gen = ++this.generation;
-    this.flood(tx, ty);
-    const heap = this.heap;
     heap.clear();
     cost[start] = 0;
     prev[start] = -1;
     seen[start] = gen;
-    heap.push(this.estimate(sx, sy, tx, ty), start);
+    heap.push(estimate(sx, sy), start);
 
     let best = -1, bestCost = Infinity;
     while (heap.size > 0) {
@@ -394,7 +354,7 @@ export class OrthogonalRouter {
       const c = cost[state];
       const node = state >> 1, axis = state & 1;
       const xi = (node / ny) | 0, yi = node - xi * ny;
-      if (f > c + this.estimate(xi, yi, tx, ty) + 1e-9) continue; // stale
+      if (f > c + estimate(xi, yi) + 1e-9) continue; // stale
       if (node === goal) {
         const total = c + (axis === 0 ? 0 : bendCost);
         if (total < bestCost) {
@@ -412,11 +372,12 @@ export class OrthogonalRouter {
         const len = Math.abs(xs[nxi] - xs[xi]) + Math.abs(ys[nyi] - ys[yi]);
         const users = (horizontal ? this.usedH : this.usedV)[segId];
         let share = 1;
-        if (users) share = allRelated(users, related) ? SHARED : TAKEN;
-        else {
-          const near = (horizontal ? this.nearH : this.nearV)[segId];
-          if (near && !allRelated(near, related)) share = NEAR;
+        if (users) {
+          let unrelated = 0;
+          for (const r of users) if (!related[r]) unrelated++;
+          share = unrelated === 0 ? SHARED : 1 + Math.min(CROWD_MAX, CROWD * unrelated);
         }
+        if (horizontal ? this.hHug[segId] : this.vHug[segId]) share *= HUG;
         const nextAxis = horizontal ? 0 : 1;
         const next = (nxi * ny + nyi) * 2 + nextAxis;
         const nc = c + len * share + (nextAxis === axis ? 0 : bendCost);
@@ -424,7 +385,7 @@ export class OrthogonalRouter {
           seen[next] = gen;
           cost[next] = nc;
           prev[next] = state;
-          heap.push(nc + this.estimate(nxi, nyi, tx, ty), next);
+          heap.push(nc + estimate(nxi, nyi), next);
         }
       }
     }
@@ -446,26 +407,185 @@ export class OrthogonalRouter {
       const store = ay === by ? this.usedH : this.usedV;
       const id = ay === by ? Math.min(ax, bx) * ny + ay : ax * ny + Math.min(ay, by);
       (store[id] ??= []).push(routeIndex);
-      // Mark the lanes beside it, up to two lanes away.
-      const horizontal = ay === by;
-      const across = horizontal ? ys : xs;
-      const at = horizontal ? ay : ax;
-      const along = horizontal ? Math.min(ax, bx) : Math.min(ay, by);
-      const near = horizontal ? this.nearH : this.nearV;
-      for (let step = -1; step <= 1; step += 2) {
-        for (let k = at + step; k >= 0 && k < across.length && Math.abs(across[k] - across[at]) < this.laneGap * 2; k += step) {
-          const list = (near[horizontal ? along * ny + k : k * ny + along] ??= []);
-          if (list[list.length - 1] !== routeIndex) list.push(routeIndex);
+    }
+
+    return simplify([
+      { x: from.x, y: from.y },
+      ...nodes.map(n => ({ x: xs[(n / ny) | 0], y: ys[n % ny] })),
+      { x: to.x, y: to.y },
+    ]);
+  }
+
+  /** Spreads the runs routes share into lanes, moving the routes' points
+   *  in place. `ids` are each route's port ids. */
+  private nudge(routes: (Point[] | null)[], ids: [string, string][]): void {
+    const related = (a: number, b: number) =>
+      a === b || ids[a][0] === ids[b][0] || ids[a][0] === ids[b][1] || ids[a][1] === ids[b][0] || ids[a][1] === ids[b][1];
+
+    // Every run, with where its route turns at each end.
+    const channels = new Map<string, Run[]>();
+    routes.forEach((pts, route) => {
+      if (!pts) return;
+      const last = pts.length - 2;
+      for (let k = 0; k <= last; k++) {
+        const a = pts[k], b = pts[k + 1];
+        const vertical = Math.abs(a.x - b.x) < 0.01;
+        if (vertical && Math.abs(a.y - b.y) < 0.01) continue;
+        const pos = vertical ? a.x : a.y;
+        const along = (p: Point) => (vertical ? p.y : p.x);
+        const across = (p: Point) => (vertical ? p.x : p.y);
+        // The turn at a's end goes to pts[k - 1], at b's to pts[k + 2].
+        const turnA = k > 0 ? Math.sign(across(pts[k - 1]) - pos) : 0;
+        const turnB = k + 2 < pts.length ? Math.sign(across(pts[k + 2]) - pos) : 0;
+        const aLow = along(a) <= along(b);
+        const run: Run = {
+          route, k, vertical, pos,
+          lo: Math.min(along(a), along(b)),
+          hi: Math.max(along(a), along(b)),
+          turnLo: aLow ? turnA : turnB,
+          turnHi: aLow ? turnB : turnA,
+          fixed: !vertical && (k === 0 || k === last),
+        };
+        const key = `${vertical ? 'v' : 'h'}${pos.toFixed(2)}`;
+        const list = channels.get(key);
+        if (list) list.push(run);
+        else channels.set(key, [run]);
+      }
+    });
+
+    // Lanes: in each line, a run joins a lane it overlaps whose runs all
+    // share a port with it.
+    const lanes: Lane[] = [];
+    for (const runs of channels.values()) {
+      runs.sort((a, b) => a.lo - b.lo);
+      const here: Lane[] = [];
+      for (const run of runs) {
+        const lane = here.find(l =>
+          run.lo < l.hi - 0.01 && run.hi > l.lo + 0.01 && l.runs.every(o => related(o.route, run.route)));
+        if (lane) {
+          lane.runs.push(run);
+          if (run.lo < lane.lo) { lane.lo = run.lo; lane.turnLo = run.turnLo; }
+          if (run.hi > lane.hi) { lane.hi = run.hi; lane.turnHi = run.turnHi; }
+          lane.fixed ||= run.fixed;
+        } else {
+          here.push({
+            runs: [run], vertical: run.vertical, pos: run.pos, lo: run.lo, hi: run.hi,
+            turnLo: run.turnLo, turnHi: run.turnHi, fixed: run.fixed,
+          });
+        }
+      }
+      lanes.push(...here);
+    }
+
+    // Lanes of one axis that overlap and lie within a few lane gaps of
+    // each other are spread together: lines a few pixels apart would
+    // otherwise spread into each other.
+    const reach = this.laneGap * 3;
+    for (const vertical of [true, false]) {
+      const axis = lanes.filter(l => l.vertical === vertical).sort((a, b) => a.pos - b.pos);
+      const parent = axis.map((_, i) => i);
+      const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+      for (let i = 0; i < axis.length; i++) {
+        for (let j = i + 1; j < axis.length && axis[j].pos - axis[i].pos < reach; j++) {
+          if (axis[i].lo < axis[j].hi - 0.01 && axis[j].lo < axis[i].hi - 0.01) parent[find(j)] = find(i);
+        }
+      }
+      const groups = new Map<number, Lane[]>();
+      axis.forEach((lane, i) => {
+        const root = find(i);
+        const list = groups.get(root);
+        if (list) list.push(lane);
+        else groups.set(root, [lane]);
+      });
+      for (const group of groups.values()) if (group.length > 1) this.spread(group);
+    }
+
+    // Move every run's two points onto its lane.
+    for (const lane of lanes) {
+      if (lane.at === undefined) continue;
+      for (const run of lane.runs) {
+        if (run.fixed) continue;
+        const pts = routes[run.route]!;
+        for (const p of [pts[run.k], pts[run.k + 1]]) {
+          if (run.vertical) p.x = lane.at;
+          else p.y = lane.at;
         }
       }
     }
+  }
 
-    const points: Point[] = [
-      { x: from.x, y: from.y },
-      ...nodes.map(n => ({ x: xs[Math.floor(n / ny)], y: ys[n % ny] })),
-      { x: to.x, y: to.y },
-    ];
-    return simplify(points);
+  /** Places a group of lanes `laneGap` apart, in order, each as near its
+   *  line as the spacing allows, inside the free space beside it. */
+  private spread(lanes: Lane[]): void {
+    // Order: by line; lanes on one line by how they turn. A lane whose
+    // ends both turn to the lower side runs there (its turns then cross no
+    // other lane), both to the higher side the other way, the rest
+    // between; brackets nest, the longer outside.
+    const rank = (l: Lane) => {
+      const t = l.turnLo + l.turnHi;
+      return t < 0 ? 0 : t > 0 ? 2 : 1;
+    };
+    const span = (l: Lane) => l.hi - l.lo;
+    lanes.sort((a, b) => {
+      if (Math.abs(a.pos - b.pos) > 0.01) return a.pos - b.pos;
+      const ra = rank(a), rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 0) return span(a) - span(b);
+      if (ra === 2) return span(b) - span(a);
+      // Crossing over: coming from the lower side at the low end and
+      // leaving to the higher side, the lane that starts later sits lower.
+      if (a.turnLo !== b.turnLo) return a.turnLo - b.turnLo;
+      return a.turnLo < 0 ? b.lo - a.lo : a.lo - b.lo;
+    });
+
+    // Nearest placement keeping the order and the gap: with y = x - i·gap
+    // the gap becomes "y never decreases", fitted by pooling adjacent
+    // violators (a lane on a port's row weighs so much it stays put).
+    const gap = this.laneGap;
+    const blocks: { sum: number; weight: number; count: number }[] = [];
+    lanes.forEach((lane, i) => {
+      const weight = lane.fixed ? 1e6 : 1;
+      blocks.push({ sum: (lane.pos - i * gap) * weight, weight, count: 1 });
+      while (blocks.length > 1) {
+        const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
+        if (a.sum / a.weight <= b.sum / b.weight) break;
+        a.sum += b.sum;
+        a.weight += b.weight;
+        a.count += b.count;
+        blocks.pop();
+      }
+    });
+    let i = 0;
+    for (const block of blocks) {
+      const y = block.sum / block.weight;
+      for (let k = 0; k < block.count; k++, i++) lanes[i].at = y + i * gap;
+    }
+
+    // Keep each lane in the free space beside its line, closing up the
+    // gap where it must.
+    const allowance = this.margin * INTO_MARGIN;
+    const limits = lanes.map(lane => {
+      let min = -Infinity, max = Infinity;
+      for (const b of this.boxes) {
+        const [a0, a1, c0, c1] = lane.vertical ? [b.y0, b.y1, b.x0, b.x1] : [b.x0, b.x1, b.y0, b.y1];
+        if (a1 <= lane.lo + 0.01 || a0 >= lane.hi - 0.01) continue;
+        if (c1 <= lane.pos + 0.01) min = Math.max(min, c1 - allowance);
+        else if (c0 >= lane.pos - 0.01) max = Math.min(max, c0 + allowance);
+      }
+      return [min, max];
+    });
+    const clamp = (k: number) => {
+      lanes[k].at = Math.min(limits[k][1], Math.max(limits[k][0], lanes[k].at!));
+    };
+    for (let k = 0; k < lanes.length; k++) {
+      if (k > 0) lanes[k].at = Math.max(lanes[k].at!, lanes[k - 1].at! + gap);
+      clamp(k);
+    }
+    for (let k = lanes.length - 2; k >= 0; k--) {
+      lanes[k].at = Math.min(lanes[k].at!, lanes[k + 1].at! - gap);
+      clamp(k);
+    }
+    for (const lane of lanes) if (lane.fixed) lane.at = lane.pos;
   }
 }
 
@@ -585,4 +705,52 @@ export function midpoint(points: Point[]): Point {
     half -= lens[i];
   }
   return points[points.length - 1];
+}
+
+/** Where related routes join or split: a corner of one route where a
+ *  related route (`related(i, j)`) runs along exactly one of the corner's
+ *  two runs, the other going its own way. Returns each route's junctions
+ *  (each spot once, on the first route found turning there); a junction
+ *  closer than `clear` to the route's own ends is left out (the port's dot
+ *  already marks it). */
+export function junctions(routes: (Point[] | null)[], related: (i: number, j: number) => boolean, clear = 0): Point[][] {
+  const out: Point[][] = routes.map(() => []);
+  const seen = new Set<string>();
+  const covers = (pts: Point[], q: Point) => {
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k];
+      if (Math.abs(a.x - b.x) < 0.05 && Math.abs(q.x - a.x) < 0.05
+        && q.y >= Math.min(a.y, b.y) - 0.05 && q.y <= Math.max(a.y, b.y) + 0.05) return true;
+      if (Math.abs(a.y - b.y) < 0.05 && Math.abs(q.y - a.y) < 0.05
+        && q.x >= Math.min(a.x, b.x) - 0.05 && q.x <= Math.max(a.x, b.x) + 0.05) return true;
+    }
+    return false;
+  };
+  routes.forEach((pts, i) => {
+    if (!pts) return;
+    for (let k = 1; k < pts.length - 1; k++) {
+      const p = pts[k], before = pts[k - 1], after = pts[k + 1];
+      const first = pts[0], last = pts[pts.length - 1];
+      if (Math.abs(p.x - first.x) + Math.abs(p.y - first.y) < clear) continue;
+      if (Math.abs(p.x - last.x) + Math.abs(p.y - last.y) < clear) continue;
+      const step = (from: Point, to: Point) => {
+        const len = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+        return { x: p.x + ((to.x - from.x) / len) * 1, y: p.y + ((to.y - from.y) / len) * 1 };
+      };
+      // A point just before and just after the corner, on this route.
+      const inQ = step(p, before), outQ = step(p, after);
+      const key = `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      if (seen.has(key)) continue;
+      for (let j = 0; j < routes.length; j++) {
+        const other = routes[j];
+        if (j === i || !other || !related(i, j) || !covers(other, p)) continue;
+        if (covers(other, inQ) !== covers(other, outQ)) {
+          seen.add(key);
+          out[i].push(p);
+          break;
+        }
+      }
+    }
+  });
+  return out;
 }

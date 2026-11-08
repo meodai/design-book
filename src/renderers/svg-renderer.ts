@@ -2,7 +2,7 @@ import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import { detectValueType } from '../scope';
 import { isFieldKey, isScopeReference, tokenKeyOf } from '../tokens';
-import { OrthogonalRouter, roundedPath, midpoint, bridges } from './orthogonal-router';
+import { OrthogonalRouter, roundedPath, midpoint, bridges, junctions } from './orthogonal-router';
 import type { Point } from './orthogonal-router';
 import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 
@@ -547,7 +547,9 @@ export class SVGRenderer {
 
       // Lines meeting at a dot share their run near it. Routed in the
       // connections' order (each route sees the ones before it).
-      const routes: (Point[] | null)[] = connections.map(c => router?.route(portOf(c.from), portOf(c.to)) ?? null);
+      const routes: (Point[] | null)[] = router
+        ? router.routeAll(connections.map(c => [portOf(c.from), portOf(c.to)]))
+        : connections.map(() => null);
       // Two lines of one color crossing are hard to tell apart: the
       // horizontal one bridges the vertical one.
       const cornerRadius = 2; // the tables' corner (rx)
@@ -557,6 +559,12 @@ export class SVGRenderer {
         (i, j) => this.options.bridges && connections[i].from.color === connections[j].from.color,
         cornerRadius + hopRadius + 1,
       );
+
+      // Where lines sharing a dot join or split: a small dot.
+      const joins = junctions(routes, (i, j) => {
+        const a = connections[i], b = connections[j];
+        return a.from === b.from || a.from === b.to || a.to === b.from || a.to === b.to;
+      }, dotSize * 3);
 
       lines.push('<g class="connections-group">');
       for (const index of order) {
@@ -596,6 +604,9 @@ export class SVGRenderer {
           drawPath(roundedPath(route, cornerRadius), ' conn-flat');
         } else {
           drawPath(pathD, '');
+        }
+        for (const p of joins[index]) {
+          lines.push(`    <circle class="conn-junction" cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${(dotSize * 0.6).toFixed(2)}" fill="${from.color}" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}"/>`);
         }
         lines.push('  </g>');
 
