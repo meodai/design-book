@@ -64,6 +64,9 @@ const CROWD_MAX = 0.5;
  *  it): lines leave on their own port's row and turn in the open, rather
  *  than drop down beside the table past its other ports. */
 const HUG = 1.5;
+/** Lanes spread with the room they have, up to this many lane gaps
+ *  apart. */
+const SPREAD = 3;
 /** How far into a table's margin a lane may be pushed, as a share of it:
  *  none, or a lane passing a table's dots looks as if it met them. */
 const INTO_MARGIN = 0;
@@ -477,10 +480,10 @@ export class OrthogonalRouter {
       lanes.push(...here);
     }
 
-    // Lanes of one axis that overlap and lie within a few lane gaps of
-    // each other are spread together: lines a few pixels apart would
-    // otherwise spread into each other.
-    const reach = this.laneGap * 3;
+    // Lanes of one axis that overlap and lie closer than a lane gap and a
+    // half are spread together; each group may spread up to halfway to
+    // the lines running alongside it.
+    const reach = this.laneGap * 1.5;
     for (const vertical of [true, false]) {
       const axis = lanes.filter(l => l.vertical === vertical).sort((a, b) => a.pos - b.pos);
       const parent = axis.map((_, i) => i);
@@ -497,7 +500,22 @@ export class OrthogonalRouter {
         if (list) list.push(lane);
         else groups.set(root, [lane]);
       });
-      for (const group of groups.values()) if (group.length > 1) this.spread(group);
+      const list = [...groups.values()];
+      const extent = list.map(g => ({
+        lo: Math.min(...g.map(l => l.lo)), hi: Math.max(...g.map(l => l.hi)),
+        min: Math.min(...g.map(l => l.pos)), max: Math.max(...g.map(l => l.pos)),
+      }));
+      list.forEach((group, gi) => {
+        if (group.length < 2) return;
+        const e = extent[gi];
+        let lower = -Infinity, upper = Infinity;
+        extent.forEach((o, oi) => {
+          if (oi === gi || o.hi <= e.lo + 0.01 || o.lo >= e.hi - 0.01) return;
+          if (o.max <= e.min) lower = Math.max(lower, (o.max + e.min) / 2);
+          else if (o.min >= e.max) upper = Math.min(upper, (o.min + e.max) / 2);
+        });
+        this.spread(group, lower, upper);
+      });
     }
 
     // Move every run's two points onto its lane.
@@ -516,7 +534,7 @@ export class OrthogonalRouter {
 
   /** Places a group of lanes `laneGap` apart, in order, each as near its
    *  line as the spacing allows, inside the free space beside it. */
-  private spread(lanes: Lane[]): void {
+  private spread(lanes: Lane[], lower = -Infinity, upper = Infinity): void {
     // Order: by line; lanes on one line by how they turn. A lane whose
     // ends both turn to the lower side runs there (its turns then cross no
     // other lane), both to the higher side the other way, the rest
@@ -538,10 +556,27 @@ export class OrthogonalRouter {
       return a.turnLo < 0 ? b.lo - a.lo : a.lo - b.lo;
     });
 
+    // Keep each lane in the free space beside its line, closing up the
+    // gap where it must.
+    const allowance = this.margin * INTO_MARGIN;
+    const limits = lanes.map(lane => {
+      let min = -Infinity, max = Infinity;
+      for (const b of this.boxes) {
+        const [a0, a1, c0, c1] = lane.vertical ? [b.y0, b.y1, b.x0, b.x1] : [b.x0, b.x1, b.y0, b.y1];
+        if (a1 <= lane.lo + 0.01 || a0 >= lane.hi - 0.01) continue;
+        if (c1 <= lane.pos + 0.01) min = Math.max(min, c1 - allowance);
+        else if (c0 >= lane.pos - 0.01) max = Math.min(max, c0 + allowance);
+      }
+      return [Math.max(min, lower), Math.min(max, upper)];
+    });
+    // Spread with the room there is: the free width shared by the whole
+    // group, shared out evenly, from one lane gap up to SPREAD of them.
+    const width = Math.min(...limits.map(l => l[1])) - Math.max(...limits.map(l => l[0]));
+    const gap = Math.min(this.laneGap * SPREAD, Math.max(this.laneGap, width / (lanes.length + 1)));
+
     // Nearest placement keeping the order and the gap: with y = x - i·gap
     // the gap becomes "y never decreases", fitted by pooling adjacent
     // violators (a lane on a port's row weighs so much it stays put).
-    const gap = this.laneGap;
     const blocks: { sum: number; weight: number; count: number }[] = [];
     lanes.forEach((lane, i) => {
       const weight = lane.fixed ? 1e6 : 1;
@@ -561,19 +596,6 @@ export class OrthogonalRouter {
       for (let k = 0; k < block.count; k++, i++) lanes[i].at = y + i * gap;
     }
 
-    // Keep each lane in the free space beside its line, closing up the
-    // gap where it must.
-    const allowance = this.margin * INTO_MARGIN;
-    const limits = lanes.map(lane => {
-      let min = -Infinity, max = Infinity;
-      for (const b of this.boxes) {
-        const [a0, a1, c0, c1] = lane.vertical ? [b.y0, b.y1, b.x0, b.x1] : [b.x0, b.x1, b.y0, b.y1];
-        if (a1 <= lane.lo + 0.01 || a0 >= lane.hi - 0.01) continue;
-        if (c1 <= lane.pos + 0.01) min = Math.max(min, c1 - allowance);
-        else if (c0 >= lane.pos - 0.01) max = Math.min(max, c0 + allowance);
-      }
-      return [min, max];
-    });
     const clamp = (k: number) => {
       lanes[k].at = Math.min(limits[k][1], Math.max(limits[k][0], lanes[k].at!));
     };
