@@ -154,7 +154,7 @@ function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
   return candidates;
 }
 
-function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {
+export function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {
   return paletteCandidates(book, token).length > 0;
 }
 
@@ -163,7 +163,7 @@ function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {
  *  the token that was actually picked. Returns null if no match. Handles
  *  both color outputs (matched via normalized hex) and non-color outputs
  *  like dimensions (matched via raw resolved string). */
-function findResolvedSource(
+export function findResolvedSource(
   book: DesignBook,
   qualifiedKey: string,
   token: AnyTokenValue,
