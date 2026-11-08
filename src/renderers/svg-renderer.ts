@@ -201,15 +201,23 @@ function findResolvedSource(
 }
 
 /** How much each scope feeds each other: `flow.get(p).get(s)` counts the
- *  lines drawn from a token of `p` to a token of `s` (by the renderer's own
- *  rules: a selector's pick, references, function arguments unless
- *  `linksOnly`, what `keep` lets through), plus one when `s` extends `p`. */
+ *  rows of `p` with a line drawn to `s` (by the renderer's own rules: a
+ *  selector's pick, references, function arguments unless `linksOnly`,
+ *  what `keep` lets through), plus one when `s` extends `p`. Rows, not
+ *  lines: the lines from one row bundle into one lane. */
 function scopeFlow(
   book: DesignBook,
   linksOnly: boolean,
   keep: (from: string, to: string) => boolean,
 ): Map<string, Map<string, number>> {
   const flow = new Map<string, Map<string, number>>();
+  const counted = new Set<string>();
+  const addRow = (row: string, to: string) => {
+    const key = `${row}>${to}`;
+    if (counted.has(key)) return;
+    counted.add(key);
+    add(scopeOf(row), to);
+  };
   const add = (from: string, to: string) => {
     if (from === to) return;
     let row = flow.get(from);
@@ -226,7 +234,7 @@ function scopeFlow(
       const token = book.getTokenByKey(key);
       const picked = token && isPaletteLinker(book, token) ? findResolvedSource(book, key, token) : null;
       if (picked) {
-        if (keep(picked, key)) add(scopeOf(picked), scope.name);
+        if (keep(picked, key)) addRow(picked, scope.name);
         continue;
       }
       if (linksOnly && token?.type === 'function') continue;
@@ -235,7 +243,7 @@ function scopeFlow(
         for (const d of deps) {
           if (!d.includes('.')) continue;
           const dep = isFieldKey(d) ? tokenKeyOf(d) : d;
-          if (keep(key, dep)) add(scopeOf(dep), scope.name);
+          if (keep(key, dep)) addRow(dep, scope.name);
         }
       }
     }
@@ -559,7 +567,9 @@ function layOutInLayers(
     const lo = Math.min(nodes[a].layer, nodes[b].layer), hi = Math.max(nodes[a].layer, nodes[b].layer);
     for (let g = lo; g < hi; g++) crossing[g] += w;
   }
-  const gapAfter2 = (c: number) => Math.max(minGap, margin * 2 + crossing[c] * laneGap * 1.2);
+  // Lanes at different heights share a track: about three in four rows
+  // need one, and no gap needs more than 16.
+  const gapAfter2 = (c: number) => Math.max(minGap, margin * 2 + Math.min(16, Math.ceil(crossing[c] * 0.75)) * laneGap * 1.2);
 
   // The flow's size, then where the blocks standing apart go: in a row
   // above it or in columns beside it, whichever is nearer the shape.
