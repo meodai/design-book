@@ -60,6 +60,11 @@ interface TableInfo {
   y: number;
   angle: number;
   onLeft: boolean;
+  /** Layered: the scope it extends, when that is drawn too; the table is
+   *  then joined under it, its inherited rows collapsed into one. */
+  parent?: string;
+  /** Inherited rows left out (summed up in one row). */
+  collapsed: number;
 }
 
 interface DotInfo {
@@ -224,68 +229,219 @@ function scopeFlow(book: DesignBook): Map<string, Map<string, number>> {
   return flow;
 }
 
+/** The label of the row summing up a joined table's inherited rows. */
+function collapsedLabel(count: number, parent: string): string {
+  return `+${count} from ${parent}`;
+}
+
+/** The rows a scope joined under its parent shows: what differs from
+ *  the parent. Its own rows; a re-bound row (relative refs) whose value
+ *  differs from the parent's; a row something outside the family reads or
+ *  picks; and, repeated until nothing changes, a row a shown row of the
+ *  family reads. Rows of scopes not joined (no drawn parent) are all in. */
+function differingRows(book: DesignBook, shown: Set<string>): Set<string> {
+  const graph = book.getDependencyGraph();
+  const scopes = book.getAllScopes();
+  const joined = (name: string) => {
+    const parent = book.getScope(name)?.extendsScope;
+    return !!parent && shown.has(parent);
+  };
+  const family = (name: string): string => {
+    const parent = book.getScope(name)?.extendsScope;
+    return parent && shown.has(parent) ? family(parent) : name;
+  };
+  const scopeOf = (key: string) => key.slice(0, key.indexOf('.'));
+  const resolved = (key: string) => {
+    try { return book.resolve(key); } catch { return undefined; }
+  };
+
+  // Who reads each row: graph dependents, and selectors' picks.
+  const readers = new Map<string, string[]>();
+  const addReader = (key: string, reader: string) => {
+    const list = readers.get(key);
+    if (list) list.push(reader);
+    else readers.set(key, [reader]);
+  };
+  for (const scope of scopes) {
+    for (const name of scope.getAllKeys()) {
+      const key = `${scope.name}.${name}`;
+      for (const r of graph.getOutgoing(key)) if (r.includes('.')) addReader(key, isFieldKey(r) ? tokenKeyOf(r) : r);
+      const token = book.getTokenByKey(key);
+      if (token && isPaletteLinker(book, token)) {
+        const picked = findResolvedSource(book, key, token);
+        if (picked) addReader(picked, key);
+      }
+    }
+  }
+
+  const keep = new Set<string>();
+  const pending: string[] = [];
+  for (const scope of scopes) {
+    const parent = scope.extendsScope;
+    for (const name of scope.getAllKeys()) {
+      const key = `${scope.name}.${name}`;
+      const differs = !joined(scope.name)
+        || !book.isInherited(key)
+        || (book.isRebound(key) && resolved(key) !== resolved(`${parent}.${name}`))
+        || (readers.get(key) ?? []).some(r => family(scopeOf(r)) !== family(scope.name));
+      if (differs) { keep.add(key); pending.push(key); }
+    }
+  }
+  // A shown row's reads within its family stay too.
+  const reads = new Map<string, string[]>();
+  for (const [key, list] of readers) for (const r of list) {
+    const l = reads.get(r);
+    if (l) l.push(key);
+    else reads.set(r, [key]);
+  }
+  while (pending.length) {
+    const key = pending.pop()!;
+    for (const read of reads.get(key) ?? []) {
+      if (keep.has(read)) continue;
+      keep.add(read);
+      pending.push(read);
+    }
+  }
+  return keep;
+}
+
+/** A block of the layered layout: a family of joined tables (a scope and
+ *  the scopes extending it, stacked), or a placeholder holding a gap in a
+ *  column for the lines passing through it. */
+interface LayoutNode {
+  tables: number[];
+  width: number;
+  height: number;
+  layer: number;
+  y: number;
+}
+
 /** Places the tables in columns by data flow (a layered, Sugiyama-style
- *  layout): a scope one column right of the furthest scope it reads
- *  (cycles broken), the tables in a column ordered by the mean place of
- *  the tables they connect to, columns as far apart as the lines between
- *  them need, each column centred on the tallest. */
+ *  layout). A scope extending a drawn scope is joined under it and the
+ *  family placed as one block. A block sits one column right of the
+ *  furthest block it reads (cycles broken); a line skipping columns gets a
+ *  placeholder in each, so a gap is kept for it between the tables there.
+ *  Columns are ordered by the mean place of each block's neighbours, then
+ *  every block is moved level with the blocks it connects to, as near as
+ *  the column's order and gaps allow. Columns are as far apart as the
+ *  lines crossing between them need. */
 function layOutInLayers(
   tables: TableInfo[],
   flow: Map<string, Map<string, number>>,
   { tableGap, laneGap }: { tableGap: number; laneGap: number },
 ): void {
-  const names = tables.map(t => t.scopeName);
-  const index = new Map(names.map((n, i) => [n, i]));
-  const weight = (a: string, b: string) => flow.get(a)?.get(b) ?? 0;
+  // Families: each table joined under its parent, the root heading it.
+  const byName = new Map(tables.map((t, i) => [t.scopeName, i]));
+  const root = (i: number): number => {
+    const parent = tables[i].parent;
+    return parent !== undefined && byName.has(parent) ? root(byName.get(parent)!) : i;
+  };
+  const nodes: LayoutNode[] = [];
+  const nodeOf = new Map<number, number>();
+  const visitFamily = (i: number, members: number[]) => {
+    members.push(i);
+    tables.forEach((t, j) => { if (t.parent === tables[i].scopeName) visitFamily(j, members); });
+  };
+  tables.forEach((_, i) => {
+    if (root(i) !== i) return;
+    const members: number[] = [];
+    visitFamily(i, members);
+    const width = Math.max(...members.map(m => tables[m].width));
+    for (const m of members) {
+      tables[m].width = width; // joined: one width
+      nodeOf.set(m, nodes.length);
+    }
+    nodes.push({ tables: members, width, height: members.reduce((h, m) => h + tables[m].height, 0), layer: 0, y: 0 });
+  });
+
+  // Edges between blocks, weighted by the lines they carry.
+  const weights = new Map<string, number>();
+  for (const [from, row] of flow) {
+    for (const [to, w] of row) {
+      const a = nodeOf.get(byName.get(from) ?? -1), b = nodeOf.get(byName.get(to) ?? -1);
+      if (a === undefined || b === undefined || a === b) continue;
+      weights.set(`${a}>${b}`, (weights.get(`${a}>${b}`) ?? 0) + w);
+    }
+  }
+  const edges = [...weights].map(([k, w]) => {
+    const [a, b] = k.split('>').map(Number);
+    return { from: a, to: b, w };
+  });
 
   // Break cycles: drop the edges a depth-first walk finds going back.
-  const out = names.map(() => [] as number[]);
-  const state = names.map(() => 0); // 0 new, 1 on the path, 2 done
+  const outOf = nodes.map(() => [] as { to: number; w: number }[]);
+  for (const e of edges) outOf[e.from].push({ to: e.to, w: e.w });
+  const state = nodes.map(() => 0);
+  const forward: { from: number; to: number; w: number }[] = [];
   const visit = (i: number) => {
     state[i] = 1;
-    for (const [to] of flow.get(names[i]) ?? []) {
-      const j = index.get(to);
-      if (j === undefined) continue;
-      if (state[j] === 1) continue; // back edge
-      out[i].push(j);
-      if (state[j] === 0) visit(j);
+    for (const { to, w } of outOf[i]) {
+      if (state[to] === 1) {
+        forward.push({ from: to, to: i, w }); // turned round
+        continue;
+      }
+      forward.push({ from: i, to, w });
+      if (state[to] === 0) visit(to);
     }
     state[i] = 2;
   };
-  names.forEach((_, i) => { if (state[i] === 0) visit(i); });
+  nodes.forEach((_, i) => { if (state[i] === 0) visit(i); });
 
-  // Layers: the longest path from a scope that reads nothing.
-  const layer = names.map(() => 0);
-  const indegree = names.map(() => 0);
-  out.forEach(list => list.forEach(j => indegree[j]++));
-  const queue = names.map((_, i) => i).filter(i => indegree[i] === 0);
+  // Layers: the longest path from a block that reads nothing.
+  const indegree = nodes.map(() => 0);
+  const next = nodes.map(() => [] as number[]);
+  for (const e of forward) { next[e.from].push(e.to); indegree[e.to]++; }
+  const queue = nodes.map((_, i) => i).filter(i => indegree[i] === 0);
   for (let q = 0; q < queue.length; q++) {
     const i = queue[q];
-    for (const j of out[i]) {
-      layer[j] = Math.max(layer[j], layer[i] + 1);
+    for (const j of next[i]) {
+      nodes[j].layer = Math.max(nodes[j].layer, nodes[i].layer + 1);
       if (--indegree[j] === 0) queue.push(j);
     }
   }
+
+  // Placeholders: a line skipping columns keeps a gap in each.
+  const links: { a: number; b: number; w: number }[] = [];
+  for (const e of forward) {
+    let prev = e.from;
+    for (let l = nodes[e.from].layer + 1; l < nodes[e.to].layer; l++) {
+      nodes.push({ tables: [], width: 0, height: e.w * laneGap + laneGap, layer: l, y: 0 });
+      links.push({ a: prev, b: nodes.length - 1, w: e.w });
+      prev = nodes.length - 1;
+    }
+    links.push({ a: prev, b: e.to, w: e.w });
+  }
+  const neighbours = nodes.map(() => [] as { n: number; w: number }[]);
+  for (const { a, b, w } of links) {
+    neighbours[a].push({ n: b, w });
+    neighbours[b].push({ n: a, w });
+  }
+
+  // Blocks with no line to any other stand outside the flow: each in a
+  // column of its own after the last, instead of stacked into the first.
+  const lastLayer = Math.max(0, ...nodes.map((n, i) => (neighbours[i].length ? n.layer : 0)));
+  let extra = lastLayer;
+  nodes.forEach((n, i) => {
+    if (n.tables.length && neighbours[i].length === 0 && nodes.some((_, j) => j !== i && neighbours[j].length)) n.layer = ++extra;
+  });
+
   const columns: number[][] = [];
-  names.forEach((_, i) => (columns[layer[i]] ??= []).push(i));
+  nodes.forEach((n, i) => (columns[n.layer] ??= []).push(i));
   for (let c = 0; c < columns.length; c++) columns[c] ??= [];
 
-  // Order each column by the mean place of its tables' neighbours,
-  // sweeping right then left a few times.
-  const place = names.map(() => 0);
+  // Order each column by the mean place of its blocks' neighbours,
+  // sweeping right then left.
+  const place = nodes.map(() => 0);
   const setPlaces = () => columns.forEach(col => col.forEach((i, k) => (place[i] = (k + 0.5) / col.length)));
   setPlaces();
-  const linked = (i: number, j: number) => weight(names[i], names[j]) + weight(names[j], names[i]);
-  for (let pass = 0; pass < 6; pass++) {
-    const order = pass % 2 === 0 ? columns.map((_, c) => c) : columns.map((_, c) => columns.length - 1 - c);
+  for (let pass = 0; pass < 8; pass++) {
+    const rightward = pass % 2 === 0;
+    const order = columns.map((_, c) => (rightward ? c : columns.length - 1 - c));
     for (const c of order) {
-      const towards = pass % 2 === 0 ? (l: number) => l < c : (l: number) => l > c;
+      const side = rightward ? c - 1 : c + 1;
       const mean = (i: number) => {
         let sum = 0, total = 0;
-        names.forEach((_, j) => {
-          const w = linked(i, j);
-          if (w > 0 && towards(layer[j])) { sum += w * place[j]; total += w; }
-        });
+        for (const { n, w } of neighbours[i]) if (nodes[n].layer === side) { sum += w * place[n]; total += w; }
         return total > 0 ? sum / total : place[i];
       };
       const means = new Map(columns[c].map(i => [i, mean(i)]));
@@ -294,27 +450,66 @@ function layOutInLayers(
     }
   }
 
+  // Heights: stacked first, then each block moved level with its
+  // neighbours (their centres, weighted by the lines), keeping the
+  // column's order and gaps (pool-adjacent violators, as the nudging).
+  const gapAfter = (i: number) => (nodes[i].tables.length ? tableGap : laneGap);
+  for (const col of columns) {
+    let y = 0;
+    for (const i of col) { nodes[i].y = y; y += nodes[i].height + gapAfter(i); }
+  }
+  const settle = (col: number[], side: (n: number) => boolean) => {
+    const want = col.map(i => {
+      let sum = 0, total = 0;
+      for (const { n, w } of neighbours[i]) {
+        if (!side(nodes[n].layer)) continue;
+        sum += w * (nodes[n].y + nodes[n].height / 2);
+        total += w;
+      }
+      return total > 0 ? sum / total - nodes[i].height / 2 : nodes[i].y;
+    });
+    // y_k = start_k - offset_k, offsets the stacked heights before k.
+    const offsets: number[] = [];
+    let o = 0;
+    for (const i of col) { offsets.push(o); o += nodes[i].height + gapAfter(i); }
+    const blocks: { sum: number; weight: number; count: number }[] = [];
+    col.forEach((i, k) => {
+      const weight = nodes[i].tables.length ? 1 : 0.2;
+      blocks.push({ sum: (want[k] - offsets[k]) * weight, weight, count: 1 });
+      while (blocks.length > 1) {
+        const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
+        if (a.sum / a.weight <= b.sum / b.weight) break;
+        a.sum += b.sum; a.weight += b.weight; a.count += b.count;
+        blocks.pop();
+      }
+    });
+    let k = 0;
+    for (const b of blocks) {
+      const base = b.sum / b.weight;
+      for (let m = 0; m < b.count; m++, k++) nodes[col[k]].y = base + offsets[k];
+    }
+  };
+  for (let pass = 0; pass < 4; pass++) {
+    for (let c = 1; c < columns.length; c++) settle(columns[c], l => l === c - 1);
+    for (let c = columns.length - 2; c >= 0; c--) settle(columns[c], l => l === c + 1);
+  }
+
   // Columns as far apart as the lines crossing between them need.
   const crossing = columns.map(() => 0);
-  names.forEach((a, i) => names.forEach((b, j) => {
-    const w = weight(a, b);
-    if (!w) return;
-    const lo = Math.min(layer[i], layer[j]), hi = Math.max(layer[i], layer[j]);
-    for (let c = lo; c < Math.max(hi, lo + 1); c++) crossing[c] += w;
-  }));
+  for (const { a, b, w } of links) crossing[Math.min(nodes[a].layer, nodes[b].layer)] += w;
   let x = 0;
-  const heights = columns.map(col =>
-    col.reduce((sum, i) => sum + tables[i].height, 0) + tableGap * Math.max(0, col.length - 1));
-  const tallest = Math.max(...heights);
+  const top = Math.min(...nodes.map(n => n.y));
   columns.forEach((col, c) => {
-    const width = Math.max(0, ...col.map(i => tables[i].width));
-    let y = (tallest - heights[c]) / 2;
+    const width = Math.max(0, ...col.map(i => nodes[i].width));
     for (const i of col) {
-      const t = tables[i];
-      t.x = x;
-      t.y = y;
-      t.onLeft = true; // its dots on the right edge, where it is read
-      y += t.height + tableGap;
+      let y = nodes[i].y - top;
+      for (const m of nodes[i].tables) {
+        const t = tables[m];
+        t.x = x;
+        t.y = y;
+        t.onLeft = true; // its dots on the right edge, where it is read
+        y += t.height; // joined: no gap
+      }
     }
     x += width + Math.min(tableGap * 8, tableGap * 1.5 + crossing[c] * laneGap * 1.5);
   });
@@ -368,13 +563,20 @@ export class SVGRenderer {
 
     // 1. Calculate table dimensions for each scope
     const tables: TableInfo[] = [];
+    const layered = this.options.layout === 'layered';
+    const shown = new Set(scopes.map(s => s.name));
+    // Layered: a scope extending a drawn scope shows only what differs.
+    const keep = layered ? differingRows(this.book, shown) : null;
 
     for (const scope of scopes) {
-      const keys = scope.getAllKeys();
-      const allLabels = [scope.name, ...keys];
+      const parent = layered && scope.extendsScope && shown.has(scope.extendsScope) ? scope.extendsScope : undefined;
+      const all = scope.getAllKeys();
+      const keys = parent ? all.filter(k => keep!.has(`${scope.name}.${k}`)) : all;
+      const collapsed = all.length - keys.length;
+      const allLabels = [scope.name, ...keys, ...(collapsed ? [collapsedLabel(collapsed, parent!)] : [])];
       const maxLabelLen = Math.max(...allLabels.map(l => l.length));
       const width = maxLabelLen * widthPerLetter + tablePadding * 2 + dotSize * 4;
-      const height = (1 + keys.length) * rowHeight;
+      const height = (1 + keys.length + (collapsed ? 1 : 0)) * rowHeight;
 
       const diagonal = Math.sqrt(width * width + height * height);
 
@@ -388,11 +590,20 @@ export class SVGRenderer {
         y: 0,
         angle: 0,
         onLeft: false,
+        parent,
+        collapsed,
       });
     }
 
+    // A joined family (a scope and the scopes joined under it) counts as
+    // one table for which side its lines use.
+    const parentOf = new Map(tables.map(t => [t.scopeName, t.parent]));
+    const familyOf = (name: string): string => {
+      const parent = parentOf.get(name);
+      return parent ? familyOf(parent) : name;
+    };
+
     // 2. Layout
-    const layered = this.options.layout === 'layered';
     if (layered) layOutInLayers(tables, scopeFlow(this.book), { tableGap, laneGap: Math.max(5, strokeWidth * 3) });
     else {
     const totalCircumference = tables.reduce((sum, t) => sum + t.diagonal, 0) + tableGap * tables.length;
@@ -561,7 +772,8 @@ export class SVGRenderer {
     for (const table of tables) {
       const scope = this.book.getScope(table.scopeName);
       const parentName = scope?.extendsScope;
-      if (!parentName) continue;
+      // Joined under its parent: the join shows it, no line.
+      if (!parentName || table.parent) continue;
       if (!dots.has(`__header__${parentName}`)) continue;
       inheritingScopes.add(table.scopeName);
       inheritingScopes.add(parentName);
@@ -598,7 +810,7 @@ export class SVGRenderer {
       for (const table of tables) {
         const scope = this.book.getScope(table.scopeName);
         const parentName = scope?.extendsScope;
-        if (!parentName) continue;
+        if (!parentName || table.parent) continue;
         const fromKey = `__header__${table.scopeName}`;
         const toKey = `__header__${parentName}`;
         const fromDot = dots.get(fromKey);
@@ -691,12 +903,12 @@ export class SVGRenderer {
       // A row reading a row of its own table: both ends on the right edge,
       // a short bracket instead of a frame round the table.
       const ports = connections.map(c => {
-        const own = c.from.scopeName === c.to.scopeName;
+        const own = familyOf(c.from.scopeName) === familyOf(c.to.scopeName);
         return [portOf(c.from, c.consumerAtStart && !own), portOf(c.to, !c.consumerAtStart && !own)] as const;
       });
       if (layered) {
         for (const c of connections) {
-          if (c.from.scopeName !== c.to.scopeName) readers.add((c.consumerAtStart ? c.from : c.to).qualifiedKey);
+          if (familyOf(c.from.scopeName) !== familyOf(c.to.scopeName)) readers.add((c.consumerAtStart ? c.from : c.to).qualifiedKey);
         }
       }
       const router = this.options.routing === 'orthogonal'
@@ -827,6 +1039,12 @@ export class SVGRenderer {
           ? 'palette-table__label palette-table__label--inherited'
           : 'palette-table__label';
         lines.push(`  <text class="${labelClass}" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(tokenName)}</text>`);
+      }
+      // The inherited rows left out, in one row.
+      if (table.collapsed) {
+        const ry = ty + (table.keys.length + 1) * rowHeight;
+        lines.push(`  <rect class="palette-table__row palette-table__row--collapsed" x="${tx}" y="${ry}" width="${table.width}" height="${rowHeight}"/>`);
+        lines.push(`  <text class="palette-table__label palette-table__label--inherited" x="${tx + tablePadding}" y="${ry + rowHeight / 2 + fontSize / 3}" font-size="${fontSize}">${escapeXml(collapsedLabel(table.collapsed, table.parent!))}</text>`);
       }
 
       lines.push('</g>');
