@@ -1208,15 +1208,18 @@ if (extendDemo) {
 // Dependency graph (under the live example panel)
 // ---------------------------------------------------------------------------
 //
-// SVGRenderer draws a circular layout of every scope + the edges between
-// them, including the dashed function-token edges. We re-render on every
-// `change` so the reader sees the graph reorganise as tokens get added,
-// removed, or rewired (e.g. on §3 onSurface rewire, on §6 Poline activation).
+// SVGRenderer draws every scope in columns by data flow, with the edges
+// between them, including the dashed function-token edges. We re-render on
+// every `change` so the reader sees the graph reorganise as tokens get
+// added, removed, or rewired (e.g. on §3 onSurface rewire, on §6 Poline
+// activation). The graph is laid out for the sheet's shape: it sits in a
+// narrow, tall paper (portrait until the sheet can be measured).
 const depGraphContainer = document.getElementById('dep-graph');
 if (depGraphContainer) {
-  const svgRenderer = new SVGRenderer(book, { linksOnly: true, interactive: true });
   const renderDepGraph = () => {
-    depGraphContainer.innerHTML = svgRenderer.render();
+    const sheet = depGraphContainer.parentElement?.getBoundingClientRect();
+    const aspect = sheet && sheet.width > 0 && sheet.height > 0 ? sheet.width / sheet.height : 0.75;
+    depGraphContainer.innerHTML = new SVGRenderer(book, { linksOnly: true, interactive: true, aspect }).render();
   };
   book.on('change', renderDepGraph);
   renderDepGraph();

@@ -48,6 +48,10 @@ export interface SVGRenderOptions {
    *  edge and is read on its right one. `'circle'`: round a ring, every
    *  dot facing the middle. */
   layout?: 'layered' | 'circle';
+  /** The shape the graph is shown at (width / height): where the layered
+   *  layout has a choice, it takes the arrangement nearest to it, the way
+   *  parts are packed to fill a board. Default 1.5. */
+  aspect?: number;
 }
 
 interface TableInfo {
@@ -197,9 +201,14 @@ function findResolvedSource(
 }
 
 /** How much each scope feeds each other: `flow.get(p).get(s)` counts the
- *  tokens of `s` reading a token of `p` (references, function arguments,
- *  a selector's pick) plus one when `s` extends `p`. */
-function scopeFlow(book: DesignBook): Map<string, Map<string, number>> {
+ *  lines drawn from a token of `p` to a token of `s` (by the renderer's own
+ *  rules: a selector's pick, references, function arguments unless
+ *  `linksOnly`, what `keep` lets through), plus one when `s` extends `p`. */
+function scopeFlow(
+  book: DesignBook,
+  linksOnly: boolean,
+  keep: (from: string, to: string) => boolean,
+): Map<string, Map<string, number>> {
   const flow = new Map<string, Map<string, number>>();
   const add = (from: string, to: string) => {
     if (from === to) return;
@@ -217,12 +226,17 @@ function scopeFlow(book: DesignBook): Map<string, Map<string, number>> {
       const token = book.getTokenByKey(key);
       const picked = token && isPaletteLinker(book, token) ? findResolvedSource(book, key, token) : null;
       if (picked) {
-        add(scopeOf(picked), scope.name);
+        if (keep(picked, key)) add(scopeOf(picked), scope.name);
         continue;
       }
+      if (linksOnly && token?.type === 'function') continue;
       for (const p of graph.getIncoming(key)) {
         const deps = isFieldKey(p) && tokenKeyOf(p) === key ? graph.getIncoming(p) : [p];
-        for (const d of deps) if (d.includes('.')) add(scopeOf(isFieldKey(d) ? tokenKeyOf(d) : d), scope.name);
+        for (const d of deps) {
+          if (!d.includes('.')) continue;
+          const dep = isFieldKey(d) ? tokenKeyOf(d) : d;
+          if (keep(key, dep)) add(scopeOf(dep), scope.name);
+        }
       }
     }
   }
@@ -328,7 +342,8 @@ interface LayoutNode {
 function layOutInLayers(
   tables: TableInfo[],
   flow: Map<string, Map<string, number>>,
-  { tableGap, laneGap }: { tableGap: number; laneGap: number },
+  { tableGap, laneGap, margin, minGap, aspect }:
+    { tableGap: number; laneGap: number; margin: number; minGap: number; aspect: number },
 ): void {
   // Families: each table joined under its parent, the root heading it.
   const byName = new Map(tables.map((t, i) => [t.scopeName, i]));
@@ -368,24 +383,25 @@ function layOutInLayers(
     return { from: a, to: b, w };
   });
 
-  // Break cycles: drop the edges a depth-first walk finds going back.
-  const outOf = nodes.map(() => [] as { to: number; w: number }[]);
-  for (const e of edges) outOf[e.from].push({ to: e.to, w: e.w });
-  const state = nodes.map(() => 0);
+  // Break cycles, heaviest edges first: an edge that would close a cycle
+  // is turned round, so the lines running against the flow are the fewest.
   const forward: { from: number; to: number; w: number }[] = [];
-  const visit = (i: number) => {
-    state[i] = 1;
-    for (const { to, w } of outOf[i]) {
-      if (state[to] === 1) {
-        forward.push({ from: to, to: i, w }); // turned round
-        continue;
-      }
-      forward.push({ from: i, to, w });
-      if (state[to] === 0) visit(to);
+  const accepted = nodes.map(() => [] as number[]);
+  const reaches = (from: number, to: number) => {
+    const seen = new Set([from]);
+    const stack = [from];
+    while (stack.length) {
+      const n = stack.pop()!;
+      if (n === to) return true;
+      for (const m of accepted[n]) if (!seen.has(m)) { seen.add(m); stack.push(m); }
     }
-    state[i] = 2;
+    return false;
   };
-  nodes.forEach((_, i) => { if (state[i] === 0) visit(i); });
+  for (const e of [...edges].sort((a, b) => b.w - a.w)) {
+    const [from, to] = reaches(e.to, e.from) ? [e.to, e.from] : [e.from, e.to];
+    accepted[from].push(to);
+    forward.push({ from, to, w: e.w });
+  }
 
   // Layers: the longest path from a block that reads nothing.
   const indegree = nodes.map(() => 0);
@@ -397,6 +413,47 @@ function layOutInLayers(
     for (const j of next[i]) {
       nodes[j].layer = Math.max(nodes[j].layer, nodes[i].layer + 1);
       if (--indegree[j] === 0) queue.push(j);
+    }
+  }
+
+  // Blocks with no line to any other stand outside the flow: in a row
+  // above it, or beside it, instead of stacked into the first column.
+  const linked = nodes.map((_, i) => forward.some(e => e.from === i || e.to === i));
+  const flowing = linked.some(Boolean);
+  const apart = nodes.map((_, i) => flowing && !linked[i]);
+
+  // Wrap: while the flow is much taller than the shape it is shown at,
+  // split its tallest column in two, side by side, balancing their
+  // heights; the blocks with the most lines to the right stay in the
+  // inner half, next to their readers, the others move out.
+  {
+    const real = nodes.map((n, i) => i).filter(i => !apart[i]);
+    const layersNow = () => {
+      const cols: number[][] = [];
+      for (const i of real) (cols[nodes[i].layer] ??= []).push(i);
+      for (let c = 0; c < cols.length; c++) cols[c] ??= [];
+      return cols;
+    };
+    const stackedH = (col: number[]) => col.reduce((h, i) => h + nodes[i].height, 0) + tableGap * Math.max(0, col.length - 1);
+    const outWeight = (i: number) => forward.reduce((w, e) => w + (e.from === i ? e.w : 0), 0);
+    for (let guard = 0; guard < 8; guard++) {
+      const cols = layersNow();
+      const w = cols.reduce((sum, col) => sum + Math.max(0, ...col.map(i => nodes[i].width)) + minGap, 0);
+      const h = Math.max(1, ...cols.map(stackedH));
+      if (w / h >= aspect / 1.4) break;
+      let tallest = -1;
+      cols.forEach((col, c) => { if (col.length > 1 && (tallest < 0 || stackedH(col) > stackedH(cols[tallest]))) tallest = c; });
+      if (tallest < 0) break;
+      const inner: number[] = [];
+      let innerH = 0;
+      const half = stackedH(cols[tallest]) / 2;
+      for (const i of [...cols[tallest]].sort((a, b) => outWeight(b) - outWeight(a))) {
+        if (inner.length === 0 || innerH + nodes[i].height <= half) { inner.push(i); innerH += nodes[i].height + tableGap; }
+      }
+      if (inner.length === cols[tallest].length) break;
+      // Everything from this column on moves one to the right; the outer
+      // half stays.
+      for (const i of real) if (nodes[i].layer > tallest || inner.includes(i)) nodes[i].layer += 1;
     }
   }
 
@@ -417,16 +474,9 @@ function layOutInLayers(
     neighbours[b].push({ n: a, w });
   }
 
-  // Blocks with no line to any other stand outside the flow: each in a
-  // column of its own after the last, instead of stacked into the first.
-  const lastLayer = Math.max(0, ...nodes.map((n, i) => (neighbours[i].length ? n.layer : 0)));
-  let extra = lastLayer;
-  nodes.forEach((n, i) => {
-    if (n.tables.length && neighbours[i].length === 0 && nodes.some((_, j) => j !== i && neighbours[j].length)) n.layer = ++extra;
-  });
 
   const columns: number[][] = [];
-  nodes.forEach((n, i) => (columns[n.layer] ??= []).push(i));
+  nodes.forEach((n, i) => { if (!apart[i]) (columns[n.layer] ??= []).push(i); });
   for (let c = 0; c < columns.length; c++) columns[c] ??= [];
 
   // Order each column by the mean place of its blocks' neighbours,
@@ -488,21 +538,61 @@ function layOutInLayers(
       const base = b.sum / b.weight;
       for (let m = 0; m < b.count; m++, k++) nodes[col[k]].y = base + offsets[k];
     }
+    // Inside the frame: no column reaches past the tallest stacked one;
+    // each block moves only as far as the blocks below it still fit.
+    const total = offsets.length ? offsets[offsets.length - 1] + nodes[col[col.length - 1]].height : 0;
+    col.forEach((i, k) => {
+      nodes[i].y = Math.min(frame - (total - offsets[k]), Math.max(offsets[k], nodes[i].y));
+    });
   };
+  const frame = Math.max(0, ...columns.map(col =>
+    col.reduce((h, i) => h + nodes[i].height + gapAfter(i), 0) - (col.length ? gapAfter(col[col.length - 1]) : 0)));
   for (let pass = 0; pass < 4; pass++) {
-    for (let c = 1; c < columns.length; c++) settle(columns[c], l => l === c - 1);
-    for (let c = columns.length - 2; c >= 0; c--) settle(columns[c], l => l === c + 1);
+    for (let c = 1; c < columns.length; c++) settle(columns[c], l => l < c);
+    for (let c = columns.length - 2; c >= 0; c--) settle(columns[c], l => l > c);
   }
 
-  // Columns as far apart as the lines crossing between them need.
+  // Columns as far apart as the lines crossing between them need: a
+  // margin each side and a lane per line, never closer than `minGap`.
   const crossing = columns.map(() => 0);
-  for (const { a, b, w } of links) crossing[Math.min(nodes[a].layer, nodes[b].layer)] += w;
+  for (const { a, b, w } of links) {
+    const lo = Math.min(nodes[a].layer, nodes[b].layer), hi = Math.max(nodes[a].layer, nodes[b].layer);
+    for (let g = lo; g < hi; g++) crossing[g] += w;
+  }
+  const gapAfter2 = (c: number) => Math.max(minGap, margin * 2 + crossing[c] * laneGap * 1.2);
+
+  // The flow's size, then where the blocks standing apart go: in a row
+  // above it or in columns beside it, whichever is nearer the shape.
+  const flowTop = Math.min(...nodes.filter((_, i) => !apart[i]).map(n => n.y));
+  const flowWidth = columns.reduce((w, col, c) =>
+    w + Math.max(0, ...col.map(i => nodes[i].width)) + (c < columns.length - 1 ? gapAfter2(c) : 0), 0);
+  const flowHeight = Math.max(0, ...nodes.filter((_, i) => !apart[i]).map(n => n.y + n.height)) - flowTop;
+  const aside = nodes.filter((_, i) => apart[i]);
+  const rowW = aside.reduce((w, n) => w + n.width, 0) + minGap * Math.max(0, aside.length - 1);
+  const rowH = Math.max(0, ...aside.map(n => n.height));
+  const off = (w: number, h: number) => Math.abs(Math.log(w / Math.max(h, 1) / aspect));
+  const onTop = aside.length > 0
+    && off(Math.max(flowWidth, rowW), flowHeight + rowH + tableGap) <= off(flowWidth + minGap + rowW, Math.max(flowHeight, rowH));
+  let asideX = onTop ? 0 : flowWidth + (flowWidth ? minGap : 0);
+  for (const n of aside) {
+    let y = 0;
+    for (const m of n.tables) {
+      const t = tables[m];
+      t.x = asideX;
+      t.y = y;
+      t.onLeft = true;
+      y += t.height;
+    }
+    asideX += n.width + minGap;
+  }
+  const below = onTop && rowH ? rowH + tableGap : 0;
+
   let x = 0;
-  const top = Math.min(...nodes.map(n => n.y));
+  const top = flowTop;
   columns.forEach((col, c) => {
     const width = Math.max(0, ...col.map(i => nodes[i].width));
     for (const i of col) {
-      let y = nodes[i].y - top;
+      let y = nodes[i].y - top + below;
       for (const m of nodes[i].tables) {
         const t = tables[m];
         t.x = x;
@@ -511,7 +601,7 @@ function layOutInLayers(
         y += t.height; // joined: no gap
       }
     }
-    x += width + Math.min(tableGap * 8, tableGap * 1.5 + crossing[c] * laneGap * 1.5);
+    x += width + gapAfter2(c);
   });
 }
 
@@ -545,6 +635,7 @@ export class SVGRenderer {
       bridges: options?.bridges ?? true,
       filterConnections: options?.filterConnections ?? (() => true),
       layout: options?.layout ?? 'layered',
+      aspect: options?.aspect ?? 1.5,
     };
   }
 
@@ -604,7 +695,12 @@ export class SVGRenderer {
     };
 
     // 2. Layout
-    if (layered) layOutInLayers(tables, scopeFlow(this.book), { tableGap, laneGap: Math.max(5, strokeWidth * 3) });
+    if (layered) {
+      layOutInLayers(tables, scopeFlow(this.book, this.options.linksOnly, this.options.filterConnections), {
+        tableGap, laneGap: Math.max(5, strokeWidth * 3), margin: dotSize * 2, minGap: Math.max(rowHeight * 2, 40),
+        aspect: this.options.aspect,
+      });
+    }
     else {
     const totalCircumference = tables.reduce((sum, t) => sum + t.diagonal, 0) + tableGap * tables.length;
     const radius = Math.max(totalCircumference / (Math.PI * 2), 100);
