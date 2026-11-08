@@ -1,10 +1,10 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import { detectValueType } from '../scope';
-import { isFieldKey, isScopeReference, tokenKeyOf } from '../tokens';
+import { isFieldKey, isReferenceValue, isScopeReference, tokenKeyOf } from '../tokens';
 import { OrthogonalRouter, roundedPath, midpoint, bridges, junctions } from './orthogonal-router';
 import type { Point } from './orthogonal-router';
-import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
+import type { AnyTokenValue, FunctionTokenValue, ReferenceValue } from '../tokens';
 
 export interface SVGRenderOptions {
   showConnections?: boolean;
@@ -52,6 +52,14 @@ export interface SVGRenderOptions {
    *  layout has a choice, it takes the arrangement nearest to it, the way
    *  parts are packed to fill a board. Default 1.5. */
   aspect?: number;
+  /** Rules as tables. Tokens that share a rule (the same function, pool,
+   *  arguments and options, relative refs left relative: four contexts'
+   *  `bestContrastWith(.surface, brand-scale)` are one rule) are wired
+   *  through one row of a rule table, one per function: a line in from
+   *  the pool (the scope's header) and from absolute arguments, a line out
+   *  to every token using it. A rule only one token uses stays a direct
+   *  line. Default true. */
+  rules?: boolean;
 }
 
 interface TableInfo {
@@ -69,6 +77,9 @@ interface TableInfo {
   parent?: string;
   /** Inherited rows left out (summed up in one row). */
   collapsed: number;
+  /** A rule table: its rows are rules, `labels` their text. */
+  rule?: boolean;
+  labels?: string[];
 }
 
 interface DotInfo {
@@ -249,6 +260,74 @@ function scopeFlow(
     }
   }
   return flow;
+}
+
+/** Tokens sharing one rule. */
+interface RuleGroup {
+  fn: string;
+  label: string;
+  /** The token keys using it. */
+  users: string[];
+  /** The scopes it picks from (its pool). */
+  pools: string[];
+  /** Absolute token references among its arguments. */
+  inputs: string[];
+  /** Its row key, once its table is made. */
+  row?: string;
+}
+
+/** A rule's text: its arguments and options, refs by key (relative ones
+ *  as written), nested functions by name. */
+function ruleLabel(fn: FunctionTokenValue): string {
+  const arg = (a: unknown): string => {
+    if (isReferenceValue(a)) return a.key;
+    if (a && typeof a === 'object' && (a as { type?: string }).type === 'function') return `${(a as FunctionTokenValue).name}(…)`;
+    if (a && typeof a === 'object' && 'rawValue' in (a as object)) return String((a as { rawValue: unknown }).rawValue);
+    if (typeof a === 'object') return '…';
+    return String(a);
+  };
+  const parts = fn.args.map(arg);
+  for (const [k, v] of Object.entries(fn.options ?? {})) {
+    if (v === undefined || k === 'upTo') continue;
+    parts.push(`${k}: ${arg(v)}`);
+  }
+  const text = parts.join(', ');
+  return text.length > 44 ? `${text.slice(0, 43)}…` : text;
+}
+
+/** The rules tokens share: tokens of the drawn rows whose function token,
+ *  as written (relative refs left relative), is the same as another's.
+ *  Under `linksOnly` only selectors count (the others draw no lines). */
+function ruleGroups(book: DesignBook, tables: TableInfo[], linksOnly: boolean): RuleGroup[] {
+  const bySignature = new Map<string, RuleGroup>();
+  for (const table of tables) {
+    const scope = book.getScope(table.scopeName);
+    if (!scope) continue;
+    for (const name of table.keys) {
+      const key = `${table.scopeName}.${name}`;
+      if (book.isInherited(key) && !book.isRebound(key)) continue;
+      const raw = scope.getRaw(name);
+      if (!raw || raw.type !== 'function') continue;
+      const bound = book.getTokenByKey(key);
+      if (!bound || (linksOnly && !isPaletteLinker(book, bound))) continue;
+      const fn = raw as FunctionTokenValue;
+      const signature = JSON.stringify([fn.name, fn.args, fn.options ?? null]);
+      let group = bySignature.get(signature);
+      if (!group) {
+        const pools = new Set<string>();
+        for (const a of fn.args) if (isScopeReference(a) && !a.key.startsWith('.')) pools.add(a.key);
+        for (const p of fn.metadata?.iteratedScopes ?? []) if (p && !p.startsWith('.')) pools.add(p);
+        const inputs = fn.args
+          .filter(a => isReferenceValue(a) && !isScopeReference(a))
+          .map(a => (a as ReferenceValue).key)
+          .filter(k => !k.startsWith('.'));
+        group = { fn: fn.name, label: ruleLabel(fn), users: [], pools: [...pools], inputs };
+        bySignature.set(signature, group);
+      }
+      group.users.push(key);
+    }
+  }
+  return [...bySignature.values()].filter(g => g.users.length > 1);
 }
 
 /** The label of the row summing up a joined table's inherited rows. */
@@ -646,6 +725,7 @@ export class SVGRenderer {
       filterConnections: options?.filterConnections ?? (() => true),
       layout: options?.layout ?? 'layered',
       aspect: options?.aspect ?? 1.5,
+      rules: options?.rules ?? true,
     };
   }
 
@@ -696,6 +776,31 @@ export class SVGRenderer {
       });
     }
 
+    // Rules shared by tokens: a table per function, a row per rule.
+    const groups = this.options.rules ? ruleGroups(this.book, tables, this.options.linksOnly) : [];
+    const ruleRowOf = new Map<string, string>(); // user key → rule row key
+    const byFn = new Map<string, RuleGroup[]>();
+    for (const g of groups) {
+      const list = byFn.get(g.fn);
+      if (list) list.push(g);
+      else byFn.set(g.fn, [g]);
+    }
+    for (const [fn, rows] of byFn) {
+      const scopeName = `ƒ ${fn}`;
+      rows.forEach((g, i) => {
+        g.row = `${scopeName}.${i}`;
+        for (const u of g.users) ruleRowOf.set(u, g.row);
+      });
+      const labels = rows.map(g => g.label);
+      const maxLabelLen = Math.max(scopeName.length, ...labels.map(l => l.length));
+      const width = maxLabelLen * widthPerLetter + tablePadding * 2 + dotSize * 4;
+      const height = (1 + rows.length) * rowHeight;
+      tables.push({
+        scopeName, keys: rows.map((_, i) => `${i}`), labels, rule: true, width, height,
+        diagonal: Math.sqrt(width * width + height * height), x: 0, y: 0, angle: 0, onLeft: false, collapsed: 0,
+      });
+    }
+
     // A joined family (a scope and the scopes joined under it) counts as
     // one table for which side its lines use.
     const parentOf = new Map(tables.map(t => [t.scopeName, t.parent]));
@@ -706,7 +811,21 @@ export class SVGRenderer {
 
     // 2. Layout
     if (layered) {
-      layOutInLayers(tables, scopeFlow(this.book, this.options.linksOnly, this.options.filterConnections), {
+      const filter = this.options.filterConnections;
+      const flow = scopeFlow(this.book, this.options.linksOnly,
+        (a, b) => filter(a, b) && !ruleRowOf.has(a) && !ruleRowOf.has(b));
+      const addFlow = (from: string, to: string) => {
+        let row = flow.get(from);
+        if (!row) flow.set(from, (row = new Map()));
+        row.set(to, (row.get(to) ?? 0) + 1);
+      };
+      for (const g of groups) {
+        const table = g.row!.slice(0, g.row!.lastIndexOf('.'));
+        for (const pool of g.pools) addFlow(pool, table);
+        for (const input of g.inputs) addFlow(input.slice(0, input.indexOf('.')), table);
+        for (const scope of new Set(g.users.map(u => u.slice(0, u.indexOf('.'))))) addFlow(table, scope);
+      }
+      layOutInLayers(tables, flow, {
         tableGap, laneGap: Math.max(5, strokeWidth * 3), margin: dotSize * 2, minGap: Math.max(rowHeight * 2, 40),
         aspect: this.options.aspect,
       });
@@ -748,7 +867,7 @@ export class SVGRenderer {
     const dots: Map<string, DotInfo> = new Map();
 
     for (const table of tables) {
-      const scope = this.book.getScope(table.scopeName)!;
+      const scope = this.book.getScope(table.scopeName);
       const dotX = table.onLeft
         ? table.x + offsetX + table.width
         : table.x + offsetX;
@@ -767,10 +886,23 @@ export class SVGRenderer {
         inX: table.x + offsetX,
       });
 
+      // Rule rows: a neutral dot each.
+      if (table.rule) {
+        table.keys.forEach((row, i) => {
+          const qualifiedKey = `${table.scopeName}.${row}`;
+          dots.set(qualifiedKey, {
+            qualifiedKey, scopeName: table.scopeName, tokenName: row,
+            x: dotX, y: table.y + offsetY + (i + 1) * rowHeight + rowHeight / 2,
+            color: '#888888', isHeader: false, isDimension: false, isLeft: table.onLeft, inX: table.x + offsetX,
+          });
+        });
+        continue;
+      }
+
       // Token dots
       for (let i = 0; i < table.keys.length; i++) {
         const tokenName = table.keys[i];
-        const token = scope.get(tokenName);
+        const token = scope!.get(tokenName);
         if (!token) continue;
 
         const baseType = getTokenBaseType(this.book, `${table.scopeName}.${tokenName}`);
@@ -811,6 +943,11 @@ export class SVGRenderer {
     lines.push('.palette-table__label { fill: var(--on-surface); pointer-events: none; }');
     lines.push('.palette-table__label--inherited { opacity: 0.4; }');
     lines.push('.palette-table__label--header { font-weight: 400; fill: var(--surface); }');
+    // Rule tables: a dashed frame and a light header, switchboards not scopes.
+    lines.push('.palette-table-group--rule .palette-table { stroke-dasharray: 4 3; }');
+    lines.push('.palette-table-group--rule .palette-table__row--header { fill: var(--surface); stroke-dasharray: 4 3; }');
+    lines.push('.palette-table-group--rule .palette-table__label--header { fill: var(--on-surface); font-style: italic; }');
+    lines.push('.palette-table-group--rule .palette-table__label:not(.palette-table__label--header) { opacity: 0.75; }');
     lines.push('.conn-bg { opacity: 0.6; }');
     lines.push('.conn-fg { opacity: 0.8; }');
     lines.push('.dots circle { transition: r 0.15s ease, stroke-width 0.15s ease; pointer-events: none; }');
@@ -892,6 +1029,8 @@ export class SVGRenderer {
 
     // Layered: rows with a line in on their left edge get a dot there too.
     const readers = new Set<string>();
+    // Scope headers a rule reads as its pool get a dot.
+    const usedHeaders = new Set<string>();
 
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
@@ -937,6 +1076,8 @@ export class SVGRenderer {
         // edge above — skip them here to avoid duplicating the relationship.
         // A re-bound one (relative refs) reads its own scope: draw its edges.
         if (this.book.isInherited(key) && !this.book.isRebound(key)) continue;
+        // Wired through its rule's row instead (below).
+        if (ruleRowOf.has(key)) continue;
 
         const token = this.book.getTokenByKey(key);
         const isFunction = token?.type === 'function';
@@ -988,6 +1129,27 @@ export class SVGRenderer {
           // Path goes owner → dep; data flows dep → owner, so the
           // arrow lands at the owner (path start).
           connections.push({ from: fromDot, to: toDot, isDashed: isFunction, label, consumerAtStart: true });
+        }
+      }
+
+      // Rules: a line in from each pool (its header) and absolute
+      // argument, a line out to every token using the rule.
+      for (const g of groups) {
+        const rowDot = dots.get(g.row!);
+        if (!rowDot) continue;
+        for (const pool of g.pools) {
+          const header = dots.get(`__header__${pool}`);
+          if (!header) continue;
+          usedHeaders.add(pool);
+          connections.push({ from: rowDot, to: header, isDashed: false, label: 'pool', consumerAtStart: true });
+        }
+        for (const input of g.inputs) {
+          const dot = dots.get(input);
+          if (dot) connections.push({ from: rowDot, to: dot, isDashed: false, label: 'ref', consumerAtStart: true });
+        }
+        for (const user of g.users) {
+          const dot = dots.get(user);
+          if (dot) connections.push({ from: dot, to: rowDot, isDashed: false, label: g.fn, consumerAtStart: true });
         }
       }
 
@@ -1113,7 +1275,7 @@ export class SVGRenderer {
       const tx = table.x + offsetX;
       const ty = table.y + offsetY;
 
-      lines.push(`<g class="palette-table-group">`);
+      lines.push(`<g class="palette-table-group${table.rule ? ' palette-table-group--rule' : ''}">`);
 
       // Table background
       lines.push(`  <rect class="palette-table" x="${tx}" y="${ty}" width="${table.width}" height="${table.height}" rx="2"/>`);
@@ -1144,7 +1306,7 @@ export class SVGRenderer {
         const labelClass = isInherited
           ? 'palette-table__label palette-table__label--inherited'
           : 'palette-table__label';
-        lines.push(`  <text class="${labelClass}" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(tokenName)}</text>`);
+        lines.push(`  <text class="${labelClass}" x="${textX}" y="${textY}" font-size="${fontSize}">${escapeXml(table.labels?.[i] ?? tokenName)}</text>`);
       }
       // The inherited rows left out, in one row.
       if (table.collapsed) {
@@ -1167,7 +1329,7 @@ export class SVGRenderer {
       if (dot.isHeader) {
         // Headers only render a dot when they participate in scope
         // inheritance — that's the anchor for the header-to-header edge.
-        if (!inheritingScopes.has(dot.scopeName)) continue;
+        if (!inheritingScopes.has(dot.scopeName) && !usedHeaders.has(dot.scopeName)) continue;
         lines.push(`  <circle cx="${dot.x}" cy="${dot.y}" r="${dotSize}" fill="var(--on-surface)" stroke="var(--on-surface)" stroke-width="${strokeWidth / 2}"/>`);
         continue;
       }
