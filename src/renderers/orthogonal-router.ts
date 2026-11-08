@@ -86,7 +86,7 @@ class MinHeap {
     const keys = this.keys, vals = this.vals;
     let i = this.size++;
     while (i > 0) {
-      const p = (i - 1) >> 1;
+      const p = (i - 1) >> 2;
       if (keys[p] <= key) break;
       keys[i] = keys[p];
       vals[i] = vals[p];
@@ -106,12 +106,20 @@ class MinHeap {
     const lastKey = keys[n], lastVal = vals[n];
     let i = 0;
     for (;;) {
-      const l = 2 * i + 1;
-      if (l >= n) break;
-      const r = l + 1;
-      const c = r < n && keys[r] < keys[l] ? r : l;
-      if (keys[c] >= lastKey) break;
-      keys[i] = keys[c];
+      // Four children per entry: half the levels of a binary heap, and
+      // the children side by side in memory.
+      const first = 4 * i + 1;
+      if (first >= n) break;
+      let c = first, ck = keys[first];
+      const end = first + 4 < n ? first + 4 : n;
+      for (let j = first + 1; j < end; j++) {
+        if (keys[j] < ck) {
+          ck = keys[j];
+          c = j;
+        }
+      }
+      if (ck >= lastKey) break;
+      keys[i] = ck;
       vals[i] = vals[c];
       i = c;
     }
@@ -172,6 +180,8 @@ export class OrthogonalRouter {
   private nearV: (number[] | undefined)[] = [];
   /** Each routed connection's port ids. */
   private ends: [string, string][] = [];
+  /** The routes at each port id. */
+  private routesAt = new Map<string, number[]>();
   /** Search state, reused between routes (`seen` marks the entries
    *  written in the current search). */
   private cost?: Float64Array;
@@ -179,6 +189,21 @@ export class OrthogonalRouter {
   private seen?: Uint32Array;
   private generation = 0;
   private heap = new MinHeap();
+  /** Coarse raster for the search guide: cells of `cellSize`, a cell
+   *  closed when it lies wholly inside a table (plus margin); the fine
+   *  grid's lines map to cells through `cellOfX` / `cellOfY`. */
+  private cellSize = 20;
+  private gx = 0;
+  private gy = 0;
+  private cellClosed = new Uint8Array(0);
+  private cellOfX = new Int32Array(0);
+  private cellOfY = new Int32Array(0);
+  /** Steps from the current target's cell to each cell (-1: unreached). */
+  private field: Int32Array = new Int32Array(0);
+  /** Fields already filled, by target cell: lines sharing a target share
+   *  one. */
+  private fields = new Map<number, Int32Array>();
+  private queue = new Int32Array(0);
   private stub: number;
   private bendCost: number;
   private laneGap: number;
@@ -256,6 +281,25 @@ export class OrthogonalRouter {
         }
       }
     }
+
+    // The coarse raster behind the search guide.
+    const cell = (this.cellSize = Math.max(laneGap * 6, 24));
+    const gx = (this.gx = Math.max(1, Math.ceil((frame.x1 - frame.x0) / cell) + 1));
+    const gy = (this.gy = Math.max(1, Math.ceil((frame.y1 - frame.y0) / cell) + 1));
+    this.cellClosed = new Uint8Array(gx * gy);
+    for (const box of boxes) {
+      // Only cells wholly inside: a gap between two tables stays open.
+      const cx0 = Math.ceil((box.x0 - frame.x0) / cell), cx1 = Math.floor((box.x1 - frame.x0) / cell) - 1;
+      const cy0 = Math.ceil((box.y0 - frame.y0) / cell), cy1 = Math.floor((box.y1 - frame.y0) / cell) - 1;
+      for (let cx = Math.max(0, cx0); cx <= Math.min(gx - 1, cx1); cx++) {
+        for (let cy = Math.max(0, cy0); cy <= Math.min(gy - 1, cy1); cy++) this.cellClosed[cx * gy + cy] = 1;
+      }
+    }
+    const clampCell = (v: number, n: number) => Math.min(n - 1, Math.max(0, Math.floor(v / cell)));
+    this.cellOfX = Int32Array.from(xs, x => clampCell(x - frame.x0, gx));
+    this.cellOfY = Int32Array.from(ys, y => clampCell(y - frame.y0, gy));
+    this.fields.clear();
+    this.queue = new Int32Array(gx * gy);
   }
 
   /** Guide for the search: the Manhattan distance to the target, plus a
@@ -263,7 +307,36 @@ export class OrthogonalRouter {
    *  heads for the target rather than widening round crowded lanes. */
   private estimate(xi: number, yi: number, tx: number, ty: number): number {
     const dx = Math.abs(this.xs[xi] - this.xs[tx]), dy = Math.abs(this.ys[yi] - this.ys[ty]);
-    return (dx + dy) * GREED + (dx > 0.01 && dy > 0.01 ? this.bendCost : 0);
+    // Round the tables: the coarse steps to the target, less two cells
+    // for where in its cell the node sits; never below the straight way.
+    const steps = this.field[this.cellOfX[xi] * this.gy + this.cellOfY[yi]];
+    const around = steps < 0 ? 0 : (steps - 2) * this.cellSize;
+    return Math.max(dx + dy, around) * GREED + (dx > 0.01 && dy > 0.01 ? this.bendCost : 0);
+  }
+
+  /** Points `field` at the coarse steps from the target's cell, going
+   *  round closed cells (filled once per target cell). */
+  private flood(tx: number, ty: number): void {
+    const { gx, gy, queue, cellClosed } = this;
+    const goal = this.cellOfX[tx] * gy + this.cellOfY[ty];
+    const known = this.fields.get(goal);
+    if (known) {
+      this.field = known;
+      return;
+    }
+    const field = (this.field = new Int32Array(gx * gy).fill(-1));
+    this.fields.set(goal, field);
+    let head = 0, tail = 0;
+    field[goal] = 0;
+    queue[tail++] = goal;
+    while (head < tail) {
+      const c = queue[head++];
+      const cx = (c / gy) | 0, cy = c - cx * gy, next = field[c] + 1;
+      if (cx > 0 && field[c - gy] < 0 && !cellClosed[c - gy]) { field[c - gy] = next; queue[tail++] = c - gy; }
+      if (cx < gx - 1 && field[c + gy] < 0 && !cellClosed[c + gy]) { field[c + gy] = next; queue[tail++] = c + gy; }
+      if (cy > 0 && field[c - 1] < 0 && !cellClosed[c - 1]) { field[c - 1] = next; queue[tail++] = c - 1; }
+      if (cy < gy - 1 && field[c + 1] < 0 && !cellClosed[c + 1]) { field[c + 1] = next; queue[tail++] = c + 1; }
+    }
   }
 
   /** The route's corner points, from `from` to `to`, or null when no
@@ -285,9 +358,8 @@ export class OrthogonalRouter {
     const toId = to.id ?? `${to.x},${to.y}`;
     // Which earlier routes share a port with this one.
     const related = new Uint8Array(this.ends.length);
-    this.ends.forEach(([a, b], r) => {
-      if (a === fromId || b === fromId || a === toId || b === toId) related[r] = 1;
-    });
+    for (const r of this.routesAt.get(fromId) ?? []) related[r] = 1;
+    for (const r of this.routesAt.get(toId) ?? []) related[r] = 1;
 
     // A state is a node and the axis the route moves along there
     // (0 horizontal, 1 vertical); the heading itself is not needed: going
@@ -306,6 +378,7 @@ export class OrthogonalRouter {
     }
     const cost = this.cost, prev = this.prev!, seen = this.seen!;
     const gen = ++this.generation;
+    this.flood(tx, ty);
     const heap = this.heap;
     heap.clear();
     cost[start] = 0;
@@ -362,6 +435,11 @@ export class OrthogonalRouter {
     nodes.reverse();
     const routeIndex = this.ends.length;
     this.ends.push([fromId, toId]);
+    for (const id of [fromId, toId]) {
+      const list = this.routesAt.get(id);
+      if (list) list.push(routeIndex);
+      else this.routesAt.set(id, [routeIndex]);
+    }
     for (let i = 1; i < nodes.length; i++) {
       const a = nodes[i - 1], b = nodes[i];
       const ax = (a / ny) | 0, ay = a % ny, bx = (b / ny) | 0, by = b % ny;
