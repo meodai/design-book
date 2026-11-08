@@ -1,8 +1,10 @@
 /** Orthogonal connector routing: paths made of horizontal and vertical runs
  *  that go round the tables instead of across them.
  *
- *  The routes run on a grid of lanes `laneGap` apart, plus the tables'
- *  edges pushed out by `margin`, every port's row and the end of its stub.
+ *  The routes run on a grid made of the lines that matter (the tables'
+ *  edges pushed out by `margin`, every port's row and the end of its stub)
+ *  with each gap between two of them filled with evenly spaced lanes, no
+ *  closer than `laneGap`.
  *  A grid segment that lies inside a (pushed-out) table is closed. Each
  *  connection is the cheapest walk over that grid, where a bend costs
  *  extra, so routes keep few corners. Routes that meet at a port (one
@@ -58,24 +60,31 @@ const NEAR = 4;
  *  route; more = faster, a little less tidy). */
 const GREED = 1.2;
 
-// Directions: 0 +x, 1 -x, 2 +y, 3 -y
+// Steps: 0 +x, 1 -x, 2 +y, 3 -y
 const DX = [1, -1, 0, 0];
 const DY = [0, 0, 1, -1];
-const OPPOSITE = [1, 0, 3, 2];
 
 class MinHeap {
-  private keys: number[] = [];
-  private vals: number[] = [];
+  private keys = new Float64Array(1024);
+  private vals = new Int32Array(1024);
+  size = 0;
+  /** The key of the entry `pop` last returned. */
+  lastKey = 0;
 
-  get size(): number {
-    return this.keys.length;
+  clear(): void {
+    this.size = 0;
   }
 
   push(key: number, val: number): void {
+    if (this.size === this.keys.length) {
+      const keys = new Float64Array(this.size * 2), vals = new Int32Array(this.size * 2);
+      keys.set(this.keys);
+      vals.set(this.vals);
+      this.keys = keys;
+      this.vals = vals;
+    }
     const keys = this.keys, vals = this.vals;
-    let i = keys.length;
-    keys.push(key);
-    vals.push(val);
+    let i = this.size++;
     while (i > 0) {
       const p = (i - 1) >> 1;
       if (keys[p] <= key) break;
@@ -87,33 +96,45 @@ class MinHeap {
     vals[i] = val;
   }
 
-  pop(): [number, number] {
+  /** Removes the entry with the smallest key and returns its value (its
+   *  key is left in `lastKey`). */
+  pop(): number {
     const keys = this.keys, vals = this.vals;
-    const topKey = keys[0], topVal = vals[0];
-    const lastKey = keys.pop()!, lastVal = vals.pop()!;
-    const n = keys.length;
-    if (n > 0) {
-      let i = 0;
-      for (;;) {
-        const l = 2 * i + 1;
-        if (l >= n) break;
-        const r = l + 1;
-        const c = r < n && keys[r] < keys[l] ? r : l;
-        if (keys[c] >= lastKey) break;
-        keys[i] = keys[c];
-        vals[i] = vals[c];
-        i = c;
-      }
-      keys[i] = lastKey;
-      vals[i] = lastVal;
+    const topVal = vals[0];
+    this.lastKey = keys[0];
+    const n = --this.size;
+    const lastKey = keys[n], lastVal = vals[n];
+    let i = 0;
+    for (;;) {
+      const l = 2 * i + 1;
+      if (l >= n) break;
+      const r = l + 1;
+      const c = r < n && keys[r] < keys[l] ? r : l;
+      if (keys[c] >= lastKey) break;
+      keys[i] = keys[c];
+      vals[i] = vals[c];
+      i = c;
     }
-    return [topKey, topVal];
+    keys[i] = lastKey;
+    vals[i] = lastVal;
+    return topVal;
   }
 }
 
 function allRelated(users: number[], related: Uint8Array): boolean {
   for (const r of users) if (!related[r]) return false;
   return true;
+}
+
+/** The first index whose value is at least `value`. */
+function lowerBound(list: number[], value: number): number {
+  let lo = 0, hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid] < value) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }
 
 function uniqueSorted(values: number[]): number[] {
@@ -157,6 +178,7 @@ export class OrthogonalRouter {
   private prev?: Int32Array;
   private seen?: Uint32Array;
   private generation = 0;
+  private heap = new MinHeap();
   private stub: number;
   private bendCost: number;
   private laneGap: number;
@@ -185,31 +207,53 @@ export class OrthogonalRouter {
         y1: Math.max(...boxes.map(b => b.y1)) + out,
       }
       : { x0: 0, x1: 0, y0: 0, y1: 0 };
-    const lanes = (lo: number, hi: number) => {
+    // Fill every gap between two lines that matter with evenly spaced
+    // lanes, at least laneGap apart: a regular raster laid over them
+    // would add a line beside nearly every port row.
+    const withLanes = (lines: number[]) => {
       const out: number[] = [];
-      for (let v = lo; v <= hi; v += laneGap) out.push(v);
+      for (let i = 0; i < lines.length; i++) {
+        out.push(lines[i]);
+        const next = lines[i + 1];
+        if (next === undefined) break;
+        const n = Math.floor((next - lines[i]) / laneGap);
+        for (let k = 1; k < n; k++) out.push(lines[i] + ((next - lines[i]) * k) / n);
+      }
       return out;
     };
 
-    this.xs = uniqueSorted([
-      ...edgeXs, ...lanes(frame.x0, frame.x1), frame.x1,
+    this.xs = withLanes(uniqueSorted([
+      ...edgeXs, frame.x0, frame.x1,
       ...ports.map(p => p.x + p.dir * this.stub),
-    ]);
-    this.ys = uniqueSorted([
-      ...edgeYs, ...lanes(frame.y0, frame.y1), frame.y1,
+    ]));
+    this.ys = withLanes(uniqueSorted([
+      ...edgeYs, frame.y0, frame.y1,
       ...ports.map(p => p.y),
-    ]);
+    ]));
 
     const nx = this.xs.length, ny = this.ys.length;
+    // Preallocated: written at scattered indices, a growing array would
+    // fall back to slow dictionary storage.
+    this.usedH = new Array(nx * ny).fill(undefined);
+    this.usedV = new Array(nx * ny).fill(undefined);
+    this.nearH = new Array(nx * ny).fill(undefined);
+    this.nearV = new Array(nx * ny).fill(undefined);
     this.hBlocked = new Uint8Array(nx * ny);
     this.vBlocked = new Uint8Array(nx * ny);
-    const inside = (x: number, y: number) =>
-      boxes.some(b => x > b.x0 + 0.01 && x < b.x1 - 0.01 && y > b.y0 + 0.01 && y < b.y1 - 0.01);
-    for (let xi = 0; xi < nx; xi++) {
-      for (let yi = 0; yi < ny; yi++) {
-        const id = xi * ny + yi;
-        if (xi + 1 < nx && inside((this.xs[xi] + this.xs[xi + 1]) / 2, this.ys[yi])) this.hBlocked[id] = 1;
-        if (yi + 1 < ny && inside(this.xs[xi], (this.ys[yi] + this.ys[yi + 1]) / 2)) this.vBlocked[id] = 1;
+    // Close the segments inside each table (plus margin): a horizontal one
+    // on a row strictly inside it, both ends within its sides; a vertical
+    // one likewise. The box edges are grid lines, so each is an index range.
+    const xs = this.xs, ys = this.ys;
+    for (const box of boxes) {
+      const xa = lowerBound(xs, box.x0 - 0.01), xb = lowerBound(xs, box.x1 + 0.01) - 1;
+      const ya = lowerBound(ys, box.y0 - 0.01), yb = lowerBound(ys, box.y1 + 0.01) - 1;
+      for (let xi = xa; xi <= xb; xi++) {
+        const inX = xs[xi] > box.x0 + 0.01 && xs[xi] < box.x1 - 0.01;
+        for (let yi = ya; yi <= yb; yi++) {
+          const id = xi * ny + yi;
+          if (xi < xb && ys[yi] > box.y0 + 0.01 && ys[yi] < box.y1 - 0.01) this.hBlocked[id] = 1;
+          if (yi < yb && inX) this.vBlocked[id] = 1;
+        }
       }
     }
   }
@@ -245,13 +289,15 @@ export class OrthogonalRouter {
       if (a === fromId || b === fromId || a === toId || b === toId) related[r] = 1;
     });
 
-    const startDir = from.dir === 1 ? 0 : 1;
-    // Arriving at the target stub we head into the dot: against its dir.
-    const endDir = to.dir === 1 ? 1 : 0;
-    const start = (sx * ny + sy) * 4 + startDir;
+    // A state is a node and the axis the route moves along there
+    // (0 horizontal, 1 vertical); the heading itself is not needed: going
+    // back the way it came only adds length, and a stub's end can't be
+    // reached from its table's side, which lies in the closed margin. So
+    // a route leaves its start, and enters its goal, moving horizontally.
+    const start = (sx * ny + sy) * 2;
     const goal = tx * ny + ty;
 
-    const size = nx * ny * 4;
+    const size = nx * ny * 2;
     if (!this.cost || this.cost.length !== size) {
       this.cost = new Float64Array(size);
       this.prev = new Int32Array(size);
@@ -260,7 +306,8 @@ export class OrthogonalRouter {
     }
     const cost = this.cost, prev = this.prev!, seen = this.seen!;
     const gen = ++this.generation;
-    const heap = new MinHeap();
+    const heap = this.heap;
+    heap.clear();
     cost[start] = 0;
     prev[start] = -1;
     seen[start] = gen;
@@ -268,14 +315,15 @@ export class OrthogonalRouter {
 
     let best = -1, bestCost = Infinity;
     while (heap.size > 0) {
-      const [f, state] = heap.pop();
+      const state = heap.pop();
+      const f = heap.lastKey;
       if (f >= bestCost) break;
       const c = cost[state];
-      const node = state >> 2, dir = state & 3;
+      const node = state >> 1, axis = state & 1;
       const xi = (node / ny) | 0, yi = node - xi * ny;
       if (f > c + this.estimate(xi, yi, tx, ty) + 1e-9) continue; // stale
       if (node === goal) {
-        const total = c + (dir === endDir ? 0 : bendCost * (dir === OPPOSITE[endDir] ? 2 : 1));
+        const total = c + (axis === 0 ? 0 : bendCost);
         if (total < bestCost) {
           bestCost = total;
           best = state;
@@ -283,7 +331,6 @@ export class OrthogonalRouter {
         continue;
       }
       for (let d = 0; d < 4; d++) {
-        if (d === OPPOSITE[dir]) continue;
         const nxi = xi + DX[d], nyi = yi + DY[d];
         if (nxi < 0 || nxi >= nx || nyi < 0 || nyi >= ny) continue;
         const horizontal = d < 2;
@@ -297,8 +344,9 @@ export class OrthogonalRouter {
           const near = (horizontal ? this.nearH : this.nearV)[segId];
           if (near && !allRelated(near, related)) share = NEAR;
         }
-        const next = (nxi * ny + nyi) * 4 + d;
-        const nc = c + len * share + (d === dir ? 0 : bendCost);
+        const nextAxis = horizontal ? 0 : 1;
+        const next = (nxi * ny + nyi) * 2 + nextAxis;
+        const nc = c + len * share + (nextAxis === axis ? 0 : bendCost);
         if (seen[next] !== gen || nc < cost[next]) {
           seen[next] = gen;
           cost[next] = nc;
@@ -310,7 +358,7 @@ export class OrthogonalRouter {
     if (best < 0) return null;
 
     const nodes: number[] = [];
-    for (let st = best; st >= 0; st = prev[st]) nodes.push(st >> 2);
+    for (let st = best; st >= 0; st = prev[st]) nodes.push(st >> 1);
     nodes.reverse();
     const routeIndex = this.ends.length;
     this.ends.push([fromId, toId]);
