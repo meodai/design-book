@@ -72,9 +72,22 @@ describe('SVGRenderer', () => {
     const book = new DesignBook('pick');
     book.addScope('brand').set('primary', color('#cc3300'));
     book.addScope('ui').set('pick', nth(ref('brand'), 0));
-    const svg = new SVGRenderer(book).render();
+    const svg = new SVGRenderer(book, { layout: 'circle' }).render();
     // the brand dot and the selector's dot
     expect(svg.match(/<circle[^>]*fill="#cc3300"/g)).toHaveLength(2);
+  });
+
+  it('lays scopes out in columns by data flow, reading on the left edge', () => {
+    const book = new DesignBook('flow');
+    book.addScope('ui').set('bg', ref('brand.primary'));
+    book.addScope('brand').set('primary', color('#0066cc'));
+    const svg = new SVGRenderer(book).render();
+    const xs = [...svg.matchAll(/<rect class="palette-table" x="([^"]+)"/g)].map(m => Number(m[1]));
+    // brand (read) left of ui (reading), whatever their order in the book
+    const order = [...svg.matchAll(/palette-table__label--header"[^>]*>([^<]+)</g)].map(m => m[1]);
+    expect(xs[order.indexOf('brand')]).toBeLessThan(xs[order.indexOf('ui')]);
+    // ui.bg reads on its left edge: a dot there, where the line ends
+    expect(svg.match(/<circle[^>]*fill="#0066cc"/g)!.length).toBe(3);
   });
 
   it('leaves out the connections filterConnections refuses', () => {

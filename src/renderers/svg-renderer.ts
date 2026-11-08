@@ -41,6 +41,13 @@ export interface SVGRenderOptions {
    *  routing, so the lines left out hold no lanes and get no bridges, as
    *  removing them from the finished SVG would. */
   filterConnections?: (from: string, to: string) => boolean;
+  /** Where the tables go. `'layered'` (default): in columns by data flow,
+   *  the way schematics are drawn: scopes that read nothing on the left,
+   *  each scope right of the scopes it reads, the tables in a column
+   *  ordered to cross as little as they can; a row reads on its left
+   *  edge and is read on its right one. `'circle'`: round a ring, every
+   *  dot facing the middle. */
+  layout?: 'layered' | 'circle';
 }
 
 interface TableInfo {
@@ -65,6 +72,8 @@ interface DotInfo {
   isHeader: boolean;
   isDimension: boolean;
   isLeft: boolean; // true if table is on left half — dot faces inward (right edge)
+  /** Layered layout: the row's left edge, where it reads. */
+  inX: number;
 }
 
 function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string): string {
@@ -182,6 +191,135 @@ function findResolvedSource(
   return null;
 }
 
+/** How much each scope feeds each other: `flow.get(p).get(s)` counts the
+ *  tokens of `s` reading a token of `p` (references, function arguments,
+ *  a selector's pick) plus one when `s` extends `p`. */
+function scopeFlow(book: DesignBook): Map<string, Map<string, number>> {
+  const flow = new Map<string, Map<string, number>>();
+  const add = (from: string, to: string) => {
+    if (from === to) return;
+    let row = flow.get(from);
+    if (!row) flow.set(from, (row = new Map()));
+    row.set(to, (row.get(to) ?? 0) + 1);
+  };
+  const graph = book.getDependencyGraph();
+  const scopeOf = (key: string) => key.slice(0, key.indexOf('.'));
+  for (const scope of book.getAllScopes()) {
+    if (scope.extendsScope) add(scope.extendsScope, scope.name);
+    for (const name of scope.getAllKeys()) {
+      const key = `${scope.name}.${name}`;
+      if (book.isInherited(key) && !book.isRebound(key)) continue;
+      const token = book.getTokenByKey(key);
+      const picked = token && isPaletteLinker(book, token) ? findResolvedSource(book, key, token) : null;
+      if (picked) {
+        add(scopeOf(picked), scope.name);
+        continue;
+      }
+      for (const p of graph.getIncoming(key)) {
+        const deps = isFieldKey(p) && tokenKeyOf(p) === key ? graph.getIncoming(p) : [p];
+        for (const d of deps) if (d.includes('.')) add(scopeOf(isFieldKey(d) ? tokenKeyOf(d) : d), scope.name);
+      }
+    }
+  }
+  return flow;
+}
+
+/** Places the tables in columns by data flow (a layered, Sugiyama-style
+ *  layout): a scope one column right of the furthest scope it reads
+ *  (cycles broken), the tables in a column ordered by the mean place of
+ *  the tables they connect to, columns as far apart as the lines between
+ *  them need, each column centred on the tallest. */
+function layOutInLayers(
+  tables: TableInfo[],
+  flow: Map<string, Map<string, number>>,
+  { tableGap, laneGap }: { tableGap: number; laneGap: number },
+): void {
+  const names = tables.map(t => t.scopeName);
+  const index = new Map(names.map((n, i) => [n, i]));
+  const weight = (a: string, b: string) => flow.get(a)?.get(b) ?? 0;
+
+  // Break cycles: drop the edges a depth-first walk finds going back.
+  const out = names.map(() => [] as number[]);
+  const state = names.map(() => 0); // 0 new, 1 on the path, 2 done
+  const visit = (i: number) => {
+    state[i] = 1;
+    for (const [to] of flow.get(names[i]) ?? []) {
+      const j = index.get(to);
+      if (j === undefined) continue;
+      if (state[j] === 1) continue; // back edge
+      out[i].push(j);
+      if (state[j] === 0) visit(j);
+    }
+    state[i] = 2;
+  };
+  names.forEach((_, i) => { if (state[i] === 0) visit(i); });
+
+  // Layers: the longest path from a scope that reads nothing.
+  const layer = names.map(() => 0);
+  const indegree = names.map(() => 0);
+  out.forEach(list => list.forEach(j => indegree[j]++));
+  const queue = names.map((_, i) => i).filter(i => indegree[i] === 0);
+  for (let q = 0; q < queue.length; q++) {
+    const i = queue[q];
+    for (const j of out[i]) {
+      layer[j] = Math.max(layer[j], layer[i] + 1);
+      if (--indegree[j] === 0) queue.push(j);
+    }
+  }
+  const columns: number[][] = [];
+  names.forEach((_, i) => (columns[layer[i]] ??= []).push(i));
+  for (let c = 0; c < columns.length; c++) columns[c] ??= [];
+
+  // Order each column by the mean place of its tables' neighbours,
+  // sweeping right then left a few times.
+  const place = names.map(() => 0);
+  const setPlaces = () => columns.forEach(col => col.forEach((i, k) => (place[i] = (k + 0.5) / col.length)));
+  setPlaces();
+  const linked = (i: number, j: number) => weight(names[i], names[j]) + weight(names[j], names[i]);
+  for (let pass = 0; pass < 6; pass++) {
+    const order = pass % 2 === 0 ? columns.map((_, c) => c) : columns.map((_, c) => columns.length - 1 - c);
+    for (const c of order) {
+      const towards = pass % 2 === 0 ? (l: number) => l < c : (l: number) => l > c;
+      const mean = (i: number) => {
+        let sum = 0, total = 0;
+        names.forEach((_, j) => {
+          const w = linked(i, j);
+          if (w > 0 && towards(layer[j])) { sum += w * place[j]; total += w; }
+        });
+        return total > 0 ? sum / total : place[i];
+      };
+      const means = new Map(columns[c].map(i => [i, mean(i)]));
+      columns[c].sort((a, b) => means.get(a)! - means.get(b)!);
+      setPlaces();
+    }
+  }
+
+  // Columns as far apart as the lines crossing between them need.
+  const crossing = columns.map(() => 0);
+  names.forEach((a, i) => names.forEach((b, j) => {
+    const w = weight(a, b);
+    if (!w) return;
+    const lo = Math.min(layer[i], layer[j]), hi = Math.max(layer[i], layer[j]);
+    for (let c = lo; c < Math.max(hi, lo + 1); c++) crossing[c] += w;
+  }));
+  let x = 0;
+  const heights = columns.map(col =>
+    col.reduce((sum, i) => sum + tables[i].height, 0) + tableGap * Math.max(0, col.length - 1));
+  const tallest = Math.max(...heights);
+  columns.forEach((col, c) => {
+    const width = Math.max(0, ...col.map(i => tables[i].width));
+    let y = (tallest - heights[c]) / 2;
+    for (const i of col) {
+      const t = tables[i];
+      t.x = x;
+      t.y = y;
+      t.onLeft = true; // its dots on the right edge, where it is read
+      y += t.height + tableGap;
+    }
+    x += width + Math.min(tableGap * 8, tableGap * 1.5 + crossing[c] * laneGap * 1.5);
+  });
+}
+
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -211,6 +349,7 @@ export class SVGRenderer {
       routing: options?.routing ?? 'orthogonal',
       bridges: options?.bridges ?? true,
       filterConnections: options?.filterConnections ?? (() => true),
+      layout: options?.layout ?? 'layered',
     };
   }
 
@@ -252,7 +391,10 @@ export class SVGRenderer {
       });
     }
 
-    // 2. Circular layout
+    // 2. Layout
+    const layered = this.options.layout === 'layered';
+    if (layered) layOutInLayers(tables, scopeFlow(this.book), { tableGap, laneGap: Math.max(5, strokeWidth * 3) });
+    else {
     const totalCircumference = tables.reduce((sum, t) => sum + t.diagonal, 0) + tableGap * tables.length;
     const radius = Math.max(totalCircumference / (Math.PI * 2), 100);
     const centerX = radius + padding + Math.max(...tables.map(t => t.width));
@@ -268,6 +410,7 @@ export class SVGRenderer {
       table.y = centerY + radius * Math.sin(angle) - table.height / 2;
       table.onLeft = Math.cos(angle) < 0;
       cumulative += table.diagonal / 2 + tableGap;
+    }
     }
 
     // Compute SVG bounds
@@ -304,6 +447,7 @@ export class SVGRenderer {
         isHeader: true,
         isDimension: false,
         isLeft: table.onLeft,
+        inX: table.x + offsetX,
       });
 
       // Token dots
@@ -330,6 +474,7 @@ export class SVGRenderer {
           isHeader: false,
           isDimension,
           isLeft: table.onLeft,
+          inX: table.x + offsetX,
         });
       }
     }
@@ -426,6 +571,9 @@ export class SVGRenderer {
     // so they always sit on top — see emission near the end of render().
     type PendingLabel = { x: number; y: number; text: string; from: string; to: string };
     const pendingLabels: PendingLabel[] = [];
+
+    // Layered: rows with a line in on their left edge get a dot there too.
+    const readers = new Set<string>();
 
     if (this.options.showConnections) {
       const graph = this.book.getDependencyGraph();
@@ -535,12 +683,26 @@ export class SVGRenderer {
       // pass after tables/dots so they always sit on top.
       // Orthogonal routing: every table is an obstacle, every dot a port
       // that leaves its table horizontally, away from it.
-      const portOf = (dot: DotInfo) =>
-        ({ x: dot.x, y: dot.y, dir: dot.isLeft ? 1 as const : -1 as const, id: dot.qualifiedKey });
+      // Layered: a connection leaves the row it reads on its right edge and
+      // enters the row reading it on its left one.
+      const portOf = (dot: DotInfo, reads = false) => layered && reads
+        ? { x: dot.inX, y: dot.y, dir: -1 as const, id: `${dot.qualifiedKey}:in` }
+        : { x: dot.x, y: dot.y, dir: dot.isLeft ? 1 as const : -1 as const, id: `${dot.qualifiedKey}:out` };
+      // A row reading a row of its own table: both ends on the right edge,
+      // a short bracket instead of a frame round the table.
+      const ports = connections.map(c => {
+        const own = c.from.scopeName === c.to.scopeName;
+        return [portOf(c.from, c.consumerAtStart && !own), portOf(c.to, !c.consumerAtStart && !own)] as const;
+      });
+      if (layered) {
+        for (const c of connections) {
+          if (c.from.scopeName !== c.to.scopeName) readers.add((c.consumerAtStart ? c.from : c.to).qualifiedKey);
+        }
+      }
       const router = this.options.routing === 'orthogonal'
         ? new OrthogonalRouter(
           tables.map(t => ({ x: t.x + offsetX, y: t.y + offsetY, width: t.width, height: t.height })),
-          connections.flatMap(c => [portOf(c.from), portOf(c.to)]),
+          ports.flatMap(p => [...p]),
           { margin: dotSize * 2, bendCost: rowHeight, laneGap: Math.max(5, strokeWidth * 3) },
         )
         : null;
@@ -548,7 +710,7 @@ export class SVGRenderer {
       // Lines meeting at a dot share their run near it. Routed in the
       // connections' order (each route sees the ones before it).
       const routes: (Point[] | null)[] = router
-        ? router.routeAll(connections.map(c => [portOf(c.from), portOf(c.to)]))
+        ? router.routeAll(ports.map(([a, b]) => [a, b]))
         : connections.map(() => null);
       // Two lines of one color crossing are hard to tell apart: the
       // horizontal one bridges the vertical one.
@@ -562,21 +724,21 @@ export class SVGRenderer {
 
       // Where lines sharing a dot join or split: a small dot.
       const joins = junctions(routes, (i, j) => {
-        const a = connections[i], b = connections[j];
-        return a.from === b.from || a.from === b.to || a.to === b.from || a.to === b.to;
+        const [a0, a1] = ports[i], [b0, b1] = ports[j];
+        return a0.id === b0.id || a0.id === b1.id || a1.id === b0.id || a1.id === b1.id;
       }, dotSize * 3);
 
       lines.push('<g class="connections-group">');
       for (const index of order) {
         const { from, to, isDashed, label, consumerAtStart } = connections[index];
         const route = routes[index];
+        const [start, end] = ports[index];
 
-        const yDiff = Math.abs(from.y - to.y);
+        const yDiff = Math.abs(start.y - end.y);
         const amp = 40 + yDiff * 0.3;
-        // isLeft = table on left half, dot on right edge → curve goes RIGHT (+amp)
-        // !isLeft = table on right half, dot on left edge → curve goes LEFT (-amp)
-        const cp1x = from.x + (from.isLeft ? amp : -amp);
-        const cp2x = to.x + (to.isLeft ? amp : -amp);
+        // Each end bends out the way its port faces.
+        const cp1x = start.x + start.dir * amp;
+        const cp2x = end.x + end.dir * amp;
 
         const dashAttr = isDashed ? ' stroke-dasharray="5,5"' : '';
         const fromAttr = ` data-from="${escapeXml(from.qualifiedKey)}"`;
@@ -590,7 +752,7 @@ export class SVGRenderer {
         const styleAttr = ` style="--active-outline: ${activeOutline}"`;
         const pathD = route
           ? roundedPath(route, cornerRadius, hops[index], hopRadius)
-          : `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;
+          : `M ${start.x} ${start.y} C ${cp1x} ${start.y}, ${cp2x} ${end.y}, ${end.x} ${end.y}`;
 
         lines.push(`  <g class="connection"${fromAttr}${toAttr}${flowAttr}${styleAttr}>`);
         const drawPath = (d: string, extra: string) => {
@@ -614,8 +776,8 @@ export class SVGRenderer {
           // Cubic-bezier midpoint (t=0.5) for label placement. y collapses
           // to a simple chord-midpoint since cp1/cp2 share endpoint y's.
           const mid = route ? midpoint(route) : null;
-          const labelX = mid ? mid.x : 0.125 * (from.x + to.x) + 0.375 * (cp1x + cp2x);
-          const labelY = mid ? mid.y - 4 : 0.5 * (from.y + to.y);
+          const labelX = mid ? mid.x : 0.125 * (start.x + end.x) + 0.375 * (cp1x + cp2x);
+          const labelY = mid ? mid.y - 4 : 0.5 * (start.y + end.y);
           pendingLabels.push({
             x: labelX,
             y: labelY,
@@ -672,7 +834,12 @@ export class SVGRenderer {
 
     // Render dots
     lines.push('<g class="dots">');
+    const dotsDrawn: DotInfo[] = [];
     for (const [, dot] of dots) {
+      dotsDrawn.push(dot);
+      if (readers.has(dot.qualifiedKey)) dotsDrawn.push({ ...dot, x: dot.inX });
+    }
+    for (const dot of dotsDrawn) {
       if (dot.isHeader) {
         // Headers only render a dot when they participate in scope
         // inheritance — that's the anchor for the header-to-header edge.
