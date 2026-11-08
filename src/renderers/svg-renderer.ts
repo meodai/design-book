@@ -1,13 +1,10 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
+import { detectValueType } from '../scope';
 import { isFieldKey, isScopeReference, tokenKeyOf } from '../tokens';
-import type {
-  AnyTokenValue,
-  TokenValue,
-  ReferenceValue,
-  FunctionTokenValue,
-  FunctionArg,
-} from '../tokens';
+import { OrthogonalRouter, roundedPath, midpoint, bridges } from './orthogonal-router';
+import type { Point } from './orthogonal-router';
+import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 
 export interface SVGRenderOptions {
   showConnections?: boolean;
@@ -29,6 +26,15 @@ export interface SVGRenderOptions {
    *  function name (or "ref"/"extends") that produced the edge. Driven
    *  entirely by inline CSS via `:has()` — no JavaScript needed. */
   interactive?: boolean;
+  /** How connections are drawn: `'orthogonal'` (default) routes them in
+   *  horizontal and vertical runs with rounded corners round the tables;
+   *  `'curved'` draws a single Bezier from dot to dot, across whatever
+   *  lies between. */
+  routing?: 'orthogonal' | 'curved';
+  /** With orthogonal routing: where two lines of one color cross, the
+   *  horizontal one bridges the vertical one (flattened while a token is
+   *  hovered in an interactive graph). Default true. */
+  bridges?: boolean;
 }
 
 interface TableInfo {
@@ -69,22 +75,16 @@ function getResolvedColor(book: DesignBook, scopeName: string, tokenName: string
   return '#888888';
 }
 
-function getTokenBaseType(book: DesignBook, token: AnyTokenValue): string {
-  if (token.type === 'reference') {
-    const ref = token as ReferenceValue;
-    const resolved = book.getTokenByKey(ref.key);
-    if (resolved) return getTokenBaseType(book, resolved);
+/** What a token's dot shows: decided by its resolved value, the way the
+ *  book types values (`detectValueType`), so a selector or any function
+ *  that declares no return type still gets its color. Unresolvable →
+ *  'unknown'. */
+function getTokenBaseType(book: DesignBook, key: string): string {
+  try {
+    return detectValueType(book.resolve(key));
+  } catch {
     return 'unknown';
   }
-  if (token.type === 'function') {
-    const fn = token as FunctionTokenValue;
-    return fn.metadata?.returnType ?? 'unknown';
-  }
-  return (token as TokenValue).type;
-}
-
-function isColorToken(book: DesignBook, token: AnyTokenValue): boolean {
-  return getTokenBaseType(book, token) === 'color';
 }
 
 function normalizeColor(value: string): string | null {
@@ -202,6 +202,8 @@ export class SVGRenderer {
       strokeWidth: options?.strokeWidth ?? 1.5,
       linksOnly: options?.linksOnly ?? true,
       interactive: options?.interactive ?? false,
+      routing: options?.routing ?? 'orthogonal',
+      bridges: options?.bridges ?? true,
     };
   }
 
@@ -303,7 +305,7 @@ export class SVGRenderer {
         const token = scope.get(tokenName);
         if (!token) continue;
 
-        const baseType = getTokenBaseType(this.book, token);
+        const baseType = getTokenBaseType(this.book, `${table.scopeName}.${tokenName}`);
         const isColor = baseType === 'color';
         const isDimension = baseType === 'dimension';
         const color = isColor
@@ -375,6 +377,11 @@ export class SVGRenderer {
       // only runs while a token is being hovered, so the chart is calm
       // when the user isn't probing. data-flow="end" means data flows
       // along the path's M→C direction; "start" means against it.
+      // While a token is hovered the other lines fade out: show the
+      // bridged lines flat.
+      lines.push('svg.interactive .conn-flat { display: none; }');
+      lines.push('svg.interactive:has([data-token-key]:hover) .conn-flat { display: inline; }');
+      lines.push('svg.interactive:has([data-token-key]:hover) .conn-hop { display: none; }');
       lines.push('@keyframes db-flow-fwd { to { stroke-dashoffset: -20; } }');
       lines.push('@keyframes db-flow-rev { to { stroke-dashoffset:  20; } }');
       lines.push('svg.interactive:has([data-token-key]:hover) .connection[data-flow="end"] .conn-fg { stroke-dasharray: 6 4; animation: db-flow-fwd 0.8s linear infinite; }');
@@ -514,8 +521,36 @@ export class SVGRenderer {
       // Each connection becomes a <g class="connection"> grouping its
       // background outline and colored path. Labels render in a separate
       // pass after tables/dots so they always sit on top.
+      // Orthogonal routing: every table is an obstacle, every dot a port
+      // that leaves its table horizontally, away from it.
+      const portOf = (dot: DotInfo) =>
+        ({ x: dot.x, y: dot.y, dir: dot.isLeft ? 1 as const : -1 as const, id: dot.qualifiedKey });
+      const router = this.options.routing === 'orthogonal'
+        ? new OrthogonalRouter(
+          tables.map(t => ({ x: t.x + offsetX, y: t.y + offsetY, width: t.width, height: t.height })),
+          connections.flatMap(c => [portOf(c.from), portOf(c.to)]),
+          { margin: dotSize * 2, bendCost: rowHeight, laneGap: Math.max(5, strokeWidth * 3) },
+        )
+        : null;
+
+      // Lines meeting at a dot share their run near it. Routed in the
+      // connections' order (each route sees the ones before it).
+      const routes: (Point[] | null)[] = connections.map(c => router?.route(portOf(c.from), portOf(c.to)) ?? null);
+      // Two lines of one color crossing are hard to tell apart: the
+      // horizontal one bridges the vertical one.
+      const cornerRadius = 2; // the tables' corner (rx)
+      const hopRadius = strokeWidth + 2.5;
+      const { hops, order } = bridges(
+        routes,
+        (i, j) => this.options.bridges && connections[i].from.color === connections[j].from.color,
+        cornerRadius + hopRadius + 1,
+      );
+
       lines.push('<g class="connections-group">');
-      for (const { from, to, isDashed, label, consumerAtStart } of connections) {
+      for (const index of order) {
+        const { from, to, isDashed, label, consumerAtStart } = connections[index];
+        const route = routes[index];
+
         const yDiff = Math.abs(from.y - to.y);
         const amp = 40 + yDiff * 0.3;
         // isLeft = table on left half, dot on right edge → curve goes RIGHT (+amp)
@@ -533,18 +568,31 @@ export class SVGRenderer {
         // colors get a light one.
         const activeOutline = pickActiveOutline(from.color);
         const styleAttr = ` style="--active-outline: ${activeOutline}"`;
-        const pathD = `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;
+        const pathD = route
+          ? roundedPath(route, cornerRadius, hops[index], hopRadius)
+          : `M ${from.x} ${from.y} C ${cp1x} ${from.y}, ${cp2x} ${to.y}, ${to.x} ${to.y}`;
 
         lines.push(`  <g class="connection"${fromAttr}${toAttr}${flowAttr}${styleAttr}>`);
-        lines.push(`    <path class="conn-bg" d="${pathD}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
-        lines.push(`    <path class="conn-fg" d="${pathD}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        const drawPath = (d: string, extra: string) => {
+          lines.push(`    <path class="conn-bg${extra}" d="${d}" fill="none" stroke="var(--on-surface)" stroke-width="${strokeWidth + 1}"${dashAttr}/>`);
+          lines.push(`    <path class="conn-fg${extra}" d="${d}" fill="none" stroke="${from.color}" stroke-width="${strokeWidth}"${dashAttr}/>`);
+        };
+        // A bridged line is drawn twice: with its bridges, and flat for
+        // hover, when the lines it bridges have faded out.
+        if (route && this.options.interactive && hops[index].some(h => h?.length)) {
+          drawPath(pathD, ' conn-hop');
+          drawPath(roundedPath(route, cornerRadius), ' conn-flat');
+        } else {
+          drawPath(pathD, '');
+        }
         lines.push('  </g>');
 
         if (label) {
           // Cubic-bezier midpoint (t=0.5) for label placement. y collapses
           // to a simple chord-midpoint since cp1/cp2 share endpoint y's.
-          const labelX = 0.125 * (from.x + to.x) + 0.375 * (cp1x + cp2x);
-          const labelY = 0.5 * (from.y + to.y);
+          const mid = route ? midpoint(route) : null;
+          const labelX = mid ? mid.x : 0.125 * (from.x + to.x) + 0.375 * (cp1x + cp2x);
+          const labelY = mid ? mid.y - 4 : 0.5 * (from.y + to.y);
           pendingLabels.push({
             x: labelX,
             y: labelY,

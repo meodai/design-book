@@ -4,6 +4,7 @@ import { color, ref } from '../../src/tokens';
 import { darken } from '../../src/functions/color/darken';
 import { bestContrastWith } from '../../src/functions/color/best-contrast';
 import { SVGRenderer } from '../../src/renderers/svg-renderer';
+import { nth } from '../../src/functions/generic/nth';
 
 function createTestBook() {
   const book = new DesignBook('test');
@@ -53,6 +54,27 @@ describe('SVGRenderer', () => {
     const renderer = new SVGRenderer(book, { showConnections: true });
     const svg = renderer.render();
     expect(svg).toContain('<path');
+  });
+
+  it('routes connections in straight runs round the tables by default', () => {
+    const svg = new SVGRenderer(createTestBook()).render();
+    const d = svg.match(/class="conn-fg" d="([^"]+)"/)![1];
+    expect(d).not.toContain(' C ');
+    expect(d).toContain(' L ');
+  });
+
+  it("draws one curve per connection with routing: 'curved'", () => {
+    const svg = new SVGRenderer(createTestBook(), { routing: 'curved' }).render();
+    expect(svg.match(/class="conn-fg" d="([^"]+)"/)![1]).toContain(' C ');
+  });
+
+  it("colors a selector's dot with the color it picked", () => {
+    const book = new DesignBook('pick');
+    book.addScope('brand').set('primary', color('#cc3300'));
+    book.addScope('ui').set('pick', nth(ref('brand'), 0));
+    const svg = new SVGRenderer(book).render();
+    // the brand dot and the selector's dot
+    expect(svg.match(/<circle[^>]*fill="#cc3300"/g)).toHaveLength(2);
   });
 
   it('omits connection paths when showConnections is false', () => {

@@ -977,6 +977,13 @@ book.render('css-variables');
 book.render('svg', { linksOnly: true });
 ```
 
+The `svg` renderer draws every scope as a table and every reference as a line. Lines run in horizontal and vertical lanes round the tables (`routing: 'orthogonal'`, the default; `'curved'` draws one curve from dot to dot). Lines that meet at a token run together and split where they have to; unrelated lines keep their own lanes and only cross. Where two lines of one color cross, the horizontal one bridges the other (`bridges: true`, the default).
+
+```typescript
+book.render('svg', { routing: 'curved' });
+book.render('svg', { bridges: false });
+```
+
 Custom renderers register under any name you choose. The book hands the renderer the live graph; the renderer decides what to emit.
 
 ```typescript
