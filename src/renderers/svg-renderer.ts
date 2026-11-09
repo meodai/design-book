@@ -8,9 +8,12 @@ import { isGroupValue, isPoolReference, anchorScopeOf } from '../tokens';
  *  table of its own. */
 const tableOf = (key: string) => key.slice(0, key.lastIndexOf('.'));
 
-/** What a prerequisite stands for in the drawing: a key is its row; a path
- *  read through a group (no table of its own) is what it reads. */
+/** What a prerequisite stands for in the drawing: a key is its row; a
+ *  scope held by reference (`typography.title = ref('typography-title')`)
+ *  its table's header; a path read through a group (no table of its own)
+ *  is what it reads. */
 function drawnKeys(book: DesignBook, key: string): string[] {
+  if (book.getScope(key)) return [`__header__${key}`];
   if (book.getScope(tableOf(key))) return [key];
   return book.getDependencyGraph().getIncoming(key).filter((k) => k.includes('.') && book.getScope(tableOf(k)));
 }
@@ -221,7 +224,8 @@ function scopeFlow(
       if (isGroupValue(token)) continue;
       for (const p of graph.getIncoming(key)) {
         for (const dep of drawnKeys(book, p)) {
-          if (keep(key, dep)) addRow(dep, scope.name);
+          if (dep.startsWith('__header__')) add(dep.slice('__header__'.length), scope.name);
+          else if (keep(key, dep)) addRow(dep, scope.name);
         }
       }
     }

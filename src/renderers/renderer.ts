@@ -323,11 +323,12 @@ export class Renderer {
       const group = this.groupOf(path);
       if (group) {
         for (const member of this.leafMembers(group)) {
-          out.push({
-            prop: `${prop}-${keyToHyphen(member)}`,
-            value: `var(--${keyToHyphen(`${group.name}.${member}`)})`,
-            owner: `${path}.${member}`,
-          });
+          const name = `${prop}-${keyToHyphen(member)}`;
+          const target = `--${keyToHyphen(`${group.name}.${member}`)}`;
+          // `typography.title` referring to `typography-title`: its variable
+          // would be an alias of itself — it already is that variable.
+          if (name === target) continue;
+          out.push({ prop: name, value: `var(${target})`, owner: `${path}.${member}` });
         }
         continue;
       }

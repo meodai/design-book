@@ -301,7 +301,7 @@ export class DesignBook {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; template?: boolean },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; template?: boolean; kind?: string },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._scopesChanged();

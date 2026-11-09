@@ -371,6 +371,41 @@ describe('templates, overrides and watching through', () => {
   });
 });
 
+describe('named tables listed in a table', () => {
+  function named() {
+    const book = new DesignBook('n');
+    const title = book.addScope('typography-title', { kind: 'typography' });
+    title.set('fontSize', rem(2.4));
+    title.set('fontWeight', string('700'));
+    const typography = book.addScope('typography');
+    typography.set('title', ref('typography-title'));
+    book.addScope('card').set('heading', ref('typography.title'));
+    book.addScope('modal').set('heading', ref('typography-title'));
+    return book;
+  }
+
+  it('an entry points at a table; it is reused through the list or directly', () => {
+    const book = named();
+    expect(book.resolve('card.heading.fontSize')).toBe('2.4rem');
+    expect(book.resolve('modal.heading.fontWeight')).toBe('700');
+    book.getScope('typography-title')!.set('fontSize', rem(3));
+    expect(book.resolve('card.heading.fontSize')).toBe('3rem');
+  });
+
+  it('css: a text style by kind; a list entry named like its table is that table', () => {
+    const css = named().render('css-variables');
+    expect(css).toContain('--typography-title-font-size: 2.4rem;');
+    expect(css).toContain('--card-heading-font-size: var(--typography-title-font-size);');
+    expect(css).toContain('.modal-heading {');
+    expect(css.match(/--typography-title-font-size:/g)).toHaveLength(1);
+  });
+
+  it('svg: an entry pointing at a table is a line to its header', () => {
+    const svg = new SVGRenderer(named(), { linksOnly: false }).render();
+    expect(svg).toContain('data-from="typography.title" data-to="__header__typography-title"');
+  });
+});
+
 describe('rendering groups', () => {
   it('css: a variable per member at its path, a class per text style', () => {
     const css = typeBook().book.render('css-variables');
