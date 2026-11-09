@@ -237,3 +237,35 @@ downstream color book (which has no groups) rendering exactly as before.
 
 Where the text above says `ref('..x')` or `group({ … })`, read
 `holder(ref('.x'))` and a plain object.
+
+## Implementation notes (step 2)
+
+Kept here so the build follows one plan.
+
+- **Key model.** A key is `<scope path>.<name>`: the owning scope is
+  everything before the last dot (`scopeOf`, `splitKey`). Top-level scope
+  names have no dots; a group's name is its path. Field keys, `isFieldKey`
+  and `tokenKeyOf` go: `type.title.fontSize` is the key `fontSize` of the
+  scope `type.title`.
+- **Three reference types for three roles**: a value (`reference`), a member
+  (`member`), and now a pool (`pool`), set by the selector constructors
+  (`poolArg`). Whether a path names a scope can no longer be told from its
+  dots, so "is this a pool" is a type check, and `isScopeKey` goes.
+- **Navigation starts at the owning scope** of the path: `inherited` moves
+  along `extends`, `holder` drops one path segment per level (a top-level
+  scope has no holder: unresolvable).
+- **A group is stored twice, cleanly**: the holding scope keeps a
+  `GroupValue` entry (`{ type: 'group', kind?, base?, omit? }`, no
+  members), the members live in the group's own `Scope`, registered under
+  its path. `getRaw` gives the entry; a group is serialised by walking its
+  scope (`groupValueOf`).
+- **Inherited groups are real scopes.** A scope that inherits a group key
+  gets an *implicit* group at that key, extending the one it inherits —
+  created when the group or the inheriting scope appears, removed when either
+  goes. Every rule about inheritance (eager wiring, re-binding of relative
+  refs) then applies to group members unchanged, and a group placed in a
+  context reads that context through `holder`.
+- **Resolving.** `Resolution` gains `group` (the path of the scope a key's
+  value is): a group key, a reference to a group, a selector that picked
+  one. `resolve` throws for it; `getScope(path)` follows it.
+
