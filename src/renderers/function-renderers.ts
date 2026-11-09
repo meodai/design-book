@@ -116,7 +116,15 @@ export function registerBuiltinFunctionRenderers(renderer: Renderer): void {
       return formatNumber(parseFloat(mod) * scales[i]);
     });
 
-    return `${colorSpace}(from ${color} ${channelExprs.join(' ')})`;
+    // The fourth slot is alpha, already a CSS fraction.
+    const alpha = modifications[3];
+    let alphaExpr = '';
+    if (alpha !== null && alpha !== undefined) {
+      if (typeof alpha === 'number') alphaExpr = ` / ${formatNumber(alpha)}`;
+      else if ('+-*/'.includes(alpha[0])) alphaExpr = ` / calc(alpha ${alpha[0]} ${alpha.slice(1)})`;
+      else alphaExpr = ` / ${formatNumber(parseFloat(alpha))}`;
+    }
+    return `${colorSpace}(from ${color} ${channelExprs.join(' ')}${alphaExpr})`;
   });
 
   // spacingScale(base, options?)

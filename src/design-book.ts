@@ -3,6 +3,7 @@ import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { ResolveCache } from './resolve-cache';
+import { capturePick } from './functions/picks';
 import { scopeOf, splitKey } from './keys';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
@@ -15,12 +16,22 @@ import { RampEngine, rampImpl, rampSet } from './functions/color/ramp';
 import type { RampSet, RampSetSource } from './functions/color/ramp';
 import { tailwindV3Ramps } from 'dittotones/ramps/tailwind-v3';
 import { FunctionError } from './errors';
-import { registerBuiltinRenderers } from './renderers/builtin';
 
 /** A renderer is any function from a book (and optional options) to a
  *  string. Register one with `book.registerRenderer(name, fn)` and invoke
  *  it with `book.render(name, options?)`. */
 export type RendererFn = (book: DesignBook, options?: unknown) => string;
+
+/** Renderers every book can use (`useRenderer`). The `design-book` entry
+ *  puts the built-in ones here when it is imported; `design-book/engine`
+ *  leaves it empty, so a bundle that never renders carries none of them. */
+const sharedRenderers = new Map<string, RendererFn>();
+
+/** Makes a renderer available to every book, under `name`. A book's own
+ *  `registerRenderer` of the same name takes precedence. */
+export function useRenderer(name: string, renderer: RendererFn): void {
+  sharedRenderers.set(name, renderer);
+}
 
 export interface DesignBookOptions {
   mode?: 'auto' | 'batch';
@@ -130,6 +141,12 @@ export interface TokenInspection {
   source?: string;
   /** Free-text description, when one was set on the token. */
   description?: string;
+  /** The member a selector picked, as a qualified key, when the value is
+   *  that member's: `mostVivid(ref('palette'))`, or a reference ending on
+   *  one. Two members with the same value are told apart. Absent when the
+   *  value is computed (`lighten(mostVivid(…))`), or the function does not
+   *  report its pick (`picked`). */
+  picked?: string;
 
   // Field-key specifics (`type.title.fontSize`, tokenType `field`)
   /** The typography the field belongs to. */
@@ -250,7 +267,6 @@ export class DesignBook {
     this.graph = new DependencyGraph();
     registerBuiltinFunctions(this);
     registerBuiltinOrderers(this);
-    registerBuiltinRenderers(this);
     const ramps = options?.colorRamps;
     if (ramps) {
       const named = isRampSetSource(ramps) ? { default: ramps } : (ramps as Record<string, RampSetSource>);
@@ -495,8 +511,11 @@ export class DesignBook {
     if (!token) return null;
 
     let value: string | undefined;
+    let pick: string | undefined;
     try {
-      value = this.resolve(key);
+      pick = capturePick(() => {
+        value = this.resolve(key);
+      });
     } catch {
       value = undefined;
     }
@@ -533,6 +552,7 @@ export class DesignBook {
 
     const description = (token as { description?: string }).description;
     if (description) inspection.description = description;
+    if (pick !== undefined) inspection.picked = pick;
 
     return inspection;
   }
@@ -580,21 +600,24 @@ export class DesignBook {
   /** Invoke a registered renderer by name. Throws if no renderer is
    *  registered under that name. */
   render(name: string, options?: unknown): string {
-    const renderer = this.renderers.get(name);
+    const renderer = this.getRenderer(name);
     if (!renderer) {
-      throw new TokenError(`Renderer "${name}" is not registered`, name);
+      throw new TokenError(
+        `Renderer "${name}" is not registered; the built-in ones come with the design-book entry, not design-book/engine`,
+        name,
+      );
     }
     return renderer(this, options);
   }
 
   /** Names of all currently registered renderers. */
   getRendererNames(): string[] {
-    return Array.from(this.renderers.keys());
+    return [...new Set([...sharedRenderers.keys(), ...this.renderers.keys()])];
   }
 
   /** Look up a registered renderer function by name. */
   getRenderer(name: string): RendererFn | undefined {
-    return this.renderers.get(name);
+    return this.renderers.get(name) ?? sharedRenderers.get(name);
   }
 
   /**

@@ -1,4 +1,4 @@
-import { valueArg } from '../args';
+import { valueArg, assertOptions } from '../args';
 import { converter } from 'culori';
 import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -53,6 +53,7 @@ export function shade(
   color: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { amount?: number; description?: string },
 ): FunctionTokenValue {
+  assertOptions('shade', options, ['amount']);
   valueArg('shade', color);
   const amount = options?.amount ?? 0.1;
   assertFraction('shade', 'amount', amount);

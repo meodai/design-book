@@ -28,7 +28,7 @@ export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
 export { colorMix } from './color/color-mix';
 export { lighten, darken } from './color/lighten-darken';
-export { relativeTo } from './color/relative-to';
+export { relativeTo, withAlpha } from './color/relative-to';
 export type { Modification } from './color/relative-to';
 export { closest, nextLarger, nextSmaller, nextLighter, nextDarker } from './generic/closest';
 export type { ClosestOptions, NextOptions } from './generic/closest';

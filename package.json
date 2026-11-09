@@ -14,6 +14,10 @@
       "import": "./dist/naming.js",
       "types": "./dist/naming/index.d.ts"
     },
+    "./engine": {
+      "import": "./dist/engine.js",
+      "types": "./dist/engine.d.ts"
+    },
     "./internals": {
       "import": "./dist/internals.js",
       "types": "./dist/internals.d.ts"

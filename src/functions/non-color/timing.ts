@@ -1,4 +1,4 @@
-import { assertNumber, valueArg } from '../args';
+import { assertNumber, valueArg, assertOptions } from '../args';
 import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
@@ -13,6 +13,7 @@ export function timing(
   easing: string,
   options?: { delay?: number; description?: string },
 ): FunctionTokenValue {
+  assertOptions('timing', options, ['delay']);
   valueArg('timing', duration);
   const delay = options?.delay ?? 0;
   // A negative delay is valid CSS: the transition starts partway through.

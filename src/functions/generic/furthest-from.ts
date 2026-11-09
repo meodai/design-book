@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
@@ -93,6 +93,7 @@ export function furthestFrom(
   pool: PoolArg,
   options?: FurthestFromOptions,
 ): FunctionTokenValue {
+  assertOptions('furthestFrom', options, ['maxDistance', 'not', ...READABLE_OPTIONS]);
   const fn = 'furthestFrom';
   const scope = poolArg(fn, pool);
   valueArg(fn, target);

@@ -1,6 +1,6 @@
 import { parseDimension } from '../../values';
 import { FunctionError } from '../../errors';
-import { assertNumber, valueArg } from '../args';
+import { assertNumber, valueArg, assertOptions } from '../args';
 import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
@@ -17,6 +17,7 @@ export function typographyScale(
   baseSize: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; step?: number; description?: string },
 ): FunctionTokenValue {
+  assertOptions('typographyScale', options, ['ratio', 'step']);
   valueArg('typographyScale', baseSize);
   const ratio = options?.ratio ?? 1.25;
   const step = options?.step ?? 0;

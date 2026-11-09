@@ -1,4 +1,4 @@
-import { valueArg } from '../args';
+import { valueArg, assertOptions } from '../args';
 import { parse, converter } from 'culori';
 import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -70,15 +70,18 @@ export function relativeToImpl(
   }
 
   const modified = { ...converted } as any;
-  // Culori leaves `h` undefined for achromatic colors; CSS relative-color
-  // syntax resolves the same case to 0, so match that.
+  // Culori leaves `h` undefined for achromatic colors, and `alpha` for
+  // opaque ones; CSS relative-color syntax resolves them to 0 and 1.
   for (const channel of channels) {
     if (modified[channel] === undefined) modified[channel] = 0;
   }
+  if (modified.alpha === undefined) modified.alpha = 1;
 
-  for (let i = 0; i < modifications.length && i < channels.length; i++) {
+  // The three channels of the space, then alpha.
+  const slots = [...channels, 'alpha'];
+  for (let i = 0; i < modifications.length && i < slots.length; i++) {
     const mod = modifications[i];
-    const channel = channels[i];
+    const channel = slots[i];
     if (mod === null || mod === undefined) continue;
 
     const currentValue = modified[channel] ?? 0;
@@ -104,10 +107,14 @@ export function relativeToImpl(
     }
   }
 
+  // Alpha is a fraction, as in CSS: changes past either end stop there.
+  modified.alpha = Math.min(1, Math.max(0, modified.alpha));
+  if (modified.alpha === 1) delete modified.alpha;
+
   // Out-of-sRGB results are gamut-mapped in OKLCH rather than clipped
   // channel-wise; a displayable one is left exactly as it is (see
   // gamutMapSrgb — the round trip costs 1/255 for the sRGB-based spaces).
-  // Alpha rides along untouched, as in CSS relative-color syntax, so a
+  // Alpha is kept unless changed, as in CSS relative-color syntax, so a
   // translucent input comes back as 8-digit hex.
   const result = formatColor(gamutMapSrgb(modified));
   if (!result) {
@@ -121,7 +128,8 @@ export function relativeToImpl(
 }
 
 /** A channel change: `null` keeps it, a number sets it, `'+0.1'` / `'-20'` /
- *  `'*1.5'` / `'/2'` changes it, a numeric string sets it. */
+ *  `'*1.5'` / `'/2'` changes it, a numeric string sets it. The fourth slot is
+ *  alpha, a fraction from 0 to 1. */
 export type Modification = null | number | string;
 const MODIFICATION = /^[+\-*/]?\s*-?(?:\d+\.?\d*|\.\d+)$/;
 
@@ -131,10 +139,11 @@ export function relativeTo(
   modifications: Modification[],
   options?: { description?: string }
 ): FunctionTokenValue {
+  assertOptions('relativeTo', options, []);
   valueArg('relativeTo', baseColor);
   relativeToChannels(colorSpace);
-  if (!Array.isArray(modifications) || modifications.length > 3) {
-    throw new FunctionError(`relativeTo: modifications are up to three channel changes, got ${JSON.stringify(modifications)}`, 'relativeTo');
+  if (!Array.isArray(modifications) || modifications.length > 4) {
+    throw new FunctionError(`relativeTo: modifications are up to three channel changes and alpha, got ${JSON.stringify(modifications)}`, 'relativeTo');
   }
   for (const mod of modifications) {
     const ok = mod === null || (typeof mod === 'number' && Number.isFinite(mod))
@@ -151,4 +160,34 @@ export function relativeTo(
     options: { colorSpace, modifications },
     metadata: { dependencies: [], returnType: 'color' },
   });
+}
+
+/**
+ * `color` with its opacity set to `alpha` (0 to 1), whatever it was: the
+ * hex keeps the color and takes the alpha, `#1a1a1a` at 0.5 is `#1a1a1a80`.
+ * It is `relativeTo(color, 'rgb', [null, null, null, alpha])`, so the color
+ * is untouched, and it renders to CSS as `rgb(from var(--color) r g b /
+ * 0.5)` — set, not multiplied: a color already half transparent comes out
+ * at `alpha` too.
+ */
+export function withAlpha(
+  color: TokenValue | ReferenceValue | FunctionTokenValue,
+  alpha: number,
+  options?: { description?: string },
+): FunctionTokenValue {
+  assertOptions('withAlpha', options, []);
+  if (typeof alpha !== 'number' || !Number.isFinite(alpha) || alpha < 0 || alpha > 1) {
+    throw new FunctionError(`withAlpha: \`alpha\` must be a number between 0 and 1, got ${String(alpha)}`, 'withAlpha');
+  }
+  return relativeTo(color, 'rgb', [null, null, null, alpha], options);
+}
+
+/** The alpha a `relativeTo` token is a `withAlpha` of, or `undefined` when
+ *  it changes anything else — so the editor can print it as written. */
+export function withAlphaOf(token: FunctionTokenValue): number | undefined {
+  if (token.name !== 'relativeTo') return undefined;
+  const { colorSpace, modifications } = (token.options ?? {}) as { colorSpace?: string; modifications?: Modification[] };
+  if (colorSpace !== 'rgb' || !Array.isArray(modifications) || modifications.length !== 4) return undefined;
+  const [r, g, b, a] = modifications;
+  return r === null && g === null && b === null && typeof a === 'number' ? a : undefined;
 }

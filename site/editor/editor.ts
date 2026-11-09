@@ -7,6 +7,7 @@ import {
   Renderer, SVGRenderer, TableViewRenderer,
 } from '../../src/index';
 import { qualifyKey } from '../../src/internals';
+import { withAlphaOf } from '../../src/functions/color/relative-to';
 import type { RenderFormat } from '../../src/index';
 import type { Scope, ScopeOrder } from '../../src/index';
 import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';
@@ -462,6 +463,13 @@ function serializeFunctionToken(fn: any): string {
     const options = serializeOptions(fn, new Set(['from', 'offset', ...(fn.options.wrap ? [] : ['wrap'])]));
     const scale = fn.args?.[0] ? `${serializePlainToken(fn.args[0])}, ` : '';
     return `sibling(${serializePlainToken(fn.options.from)}, ${scale}${fn.options.offset}${options ? `, ${options}` : ''})`;
+  }
+
+  // relativeTo changing alpha alone prints as withAlpha(…), as it is written.
+  const alpha = withAlphaOf(fn);
+  if (alpha !== undefined) {
+    const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
+    return `withAlpha(${serializeArg(fn.args[0])}, ${alpha}${tail})`;
   }
 
   // A closest with a plain direction prints as its alias: nextLarger(…), nextLighter(…).

@@ -1,4 +1,4 @@
-import { valueArg } from '../args';
+import { valueArg, assertOptions } from '../args';
 import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
@@ -39,6 +39,7 @@ function build(
   color: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { amount?: number; description?: string },
 ): FunctionTokenValue {
+  assertOptions(fn, options, ['amount']);
   valueArg(fn, color);
   const amount = options?.amount ?? 0.1;
   assertFraction(fn, 'amount', amount);

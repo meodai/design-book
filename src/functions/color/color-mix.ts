@@ -1,4 +1,4 @@
-import { valueArg } from '../args';
+import { valueArg, assertOptions } from '../args';
 import { getMode, parse, interpolate, interpolateWithPremultipliedAlpha } from 'culori';
 import { formatColor, gamutMapSrgb } from './color-math';
 import { createFunctionToken } from '../../tokens';
@@ -115,6 +115,7 @@ export function colorMix(
   color2: TokenValue | ReferenceValue | FunctionTokenValue,
   options?: { ratio?: number; colorSpace?: string; description?: string }
 ): FunctionTokenValue {
+  assertOptions('colorMix', options, ['ratio', 'colorSpace']);
   valueArg('colorMix', color1);
   valueArg('colorMix', color2);
   const ratio = options?.ratio ?? 0.5;

@@ -1,4 +1,4 @@
-import { poolArg } from '../args';
+import { poolArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, ReferenceValue } from '../../tokens';
@@ -50,6 +50,7 @@ export interface LightnessSelectorOptions extends ReadableOnOptions {
 }
 
 function build(fn: End, pool: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
+  assertOptions(fn, options, ['not', ...READABLE_OPTIONS]);
   const scope = poolArg(fn, pool);
   return createFunctionToken(fn, [scope], {
     description: options?.description,

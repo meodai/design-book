@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
@@ -54,6 +54,7 @@ export function bestContrastWith(
     description?: string;
   },
 ): FunctionTokenValue {
+  assertOptions('bestContrastWith', options, ['direction', 'not', ...READABLE_OPTIONS]);
   const fn = 'bestContrastWith';
   const scope = poolArg(fn, pool);
   valueArg(fn, targetValue);

@@ -186,14 +186,14 @@ describe('sibling', () => {
 
   it('tracks the anchor when nested inside another function', () => {
     const { book, ramp, ui } = setup();
-    ui.set('x', lighten(sibling(ref('ramp.s300'), 1), 0.1));
+    ui.set('x', lighten(sibling(ref('ramp.s300'), 1), { amount: 0.1 }));
     const before = book.resolve('ui.x');
 
     ramp.set('s400', color('#000000'));
     expect(book.resolve('ui.x')).not.toBe(before);
 
     // A loop through the nested anchor is a cycle, same as at top level.
-    expect(() => ramp.set('s300', lighten(ref('ui.x'), 0.1))).toThrow(/Circular dependency/);
+    expect(() => ramp.set('s300', lighten(ref('ui.x'), { amount: 0.1 }))).toThrow(/Circular dependency/);
   });
 });
 

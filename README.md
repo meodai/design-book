@@ -16,6 +16,8 @@ That makes Design Book feel less like a bag of transforms and more like a small 
 npm install design-book
 ```
 
+`design-book` is the whole library. Code that keeps a book but never renders it (a tool embedding one, a server computing values) can import `design-book/engine` instead: the same `DesignBook` and functions without the CSS / JSON / W3 / SVG renderers. A book from there renders only what you register (`registerRenderer`, or `useRenderer` for every book).
+
 ## Quick Start
 
 ```typescript
@@ -290,6 +292,7 @@ lighten(color, { amount })                          // Increase lightness
 darken(color, { amount })                           // Decrease lightness
 shade(color, { amount })                            // Tonal step that adapts: darkens if input is light, lightens if dark
 relativeTo(color, 'oklch', [null, null, '+180'])   // Per-channel modification
+withAlpha(color, 0.5)                               // The same color at that opacity
 ```
 
 `shade` is useful when you want a subtle variation that's *always* visible against the input — `darken(surface)` collapses to black when the surface is already dark, but `shade(surface)` flips direction and lightens instead. Picks based on OKLCH lightness: > 0.5 darkens, ≤ 0.5 lightens.
@@ -306,7 +309,11 @@ result is translucent; `shade` carries the input's alpha through unchanged,
 while `lighten`/`darken`/`colorMix` compute the mixed alpha the way the
 browser does.
 
-Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative).
+Channel modifications for `relativeTo`: `null` (keep), number (set), `"+N"` `"-N"` `"*N"` `"/N"` (relative). A fourth slot changes alpha, a fraction from 0 to 1: `[null, null, null, '*0.5']`.
+
+`withAlpha(color, alpha)` keeps the color and sets its opacity: `withAlpha(ref('brand.ink'), 0.5)` is `#1a1a1a80` for `#1a1a1a`. It *sets* alpha, whatever it was, like `rgb(from var(--brand-ink) r g b / 0.5)`, which is what the CSS renderer writes: it is `relativeTo(color, 'rgb', [null, null, null, alpha])`. Keep ramps opaque and make the overlays, hairlines and washes from them, so they follow the ramp.
+
+Every function's options object is checked when the token is written: an option the function does not read (a misspelling, a name from an older version) throws and lists the ones it takes, instead of being ignored while the token runs on the default.
 
 ### A whole scale from one color: `ramp`
 
@@ -1003,7 +1010,7 @@ book.registerRenderer('tailwind', tailwindRenderer);
 const config = book.render('tailwind');
 ```
 
-Other useful methods: `book.getRendererNames()`, `book.getRenderer(name)`. Registering the same name twice replaces the previous renderer.
+Other useful methods: `book.getRendererNames()`, `book.getRenderer(name)`. Registering the same name twice replaces the previous renderer. `useRenderer(name, fn)` registers one for every book; the built-in ones are registered that way when `design-book` is imported (not with `design-book/engine`).
 
 ### CSS Variables
 
@@ -1289,6 +1296,12 @@ Returns `null` if the key isn't registered. Reference and value tokens
 populate the corresponding extra fields (`refKey` for refs; `rawValue`
 and `unit` for value tokens).
 
+When the value *is* a member a selector picked, `picked` names it:
+`nth(ref('gray'), 1)` → `picked: 'gray.g100'`, also through a `ref()` to the
+selector. Two members with the same value are told apart, so a tool can link
+the exact token. It is absent when the value is computed from the pick
+(`lighten(mostVivid(…))`).
+
 ## Batch Mode
 
 ```typescript
@@ -1473,7 +1486,7 @@ they fit together.
 **Functions.**
 - Comparisons (any kind): `closest` with the aliases `nextLarger`, `nextSmaller`, `nextLighter`, `nextDarker`; `bestContrastWith`, `minContrastWith`, `furthestFrom`, `lightest`, `darkest`, `largest`, `smallest`
 - Color only: `mostVivid`, `leastVivid`
-- Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`
+- Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`, `withAlpha`
 - Positions: `nth`, `sibling`, `random`
 - Scales: `spacingScale`, `typographyScale`, `timing`
 - Typography: `typography`, `variant`
@@ -1488,7 +1501,7 @@ they fit together.
 
 **Naming** (also `design-book/naming`). `nameValues`, `scaleNames`, `nameBetween`, `namingScheme`, `schemes`.
 
-**Rendering.** `Renderer`, `SVGRenderer`, `TableViewRenderer`.
+**Rendering.** `Renderer`, `SVGRenderer`, `TableViewRenderer`, `useRenderer`. Not in `design-book/engine`, which has everything else.
 
 **Errors.** `TokenError` (bad keys or values, unknown tokens), `ScopeError` (bad scope names or inheritance), `CircularDependencyError` (with `path`), `FunctionError` (invalid function arguments), `LayerError` (`layerName`, `tokenKey`, `cause`).
 

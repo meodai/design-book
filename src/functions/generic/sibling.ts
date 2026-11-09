@@ -12,7 +12,7 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { parseKey } from '../../keys';
 import { poolKeys } from '../scope-members';
-import { poolArg } from '../args';
+import { assertOptions, poolArg } from '../args';
 import type { PoolArg } from '../args';
 import { picked } from '../picks';
 
@@ -187,6 +187,7 @@ export function sibling(
     throw new FunctionError('sibling: expects (anchor, scope?, steps?, options?)', 'sibling');
   }
   const opts = (rest[0] ?? {}) as SiblingOptions;
+  assertOptions('sibling', opts, ['toward', 'wrap', 'not']);
   if (!Number.isInteger(steps)) {
     throw new FunctionError(`sibling: the step count must be an integer, got ${String(steps)}`, 'sibling');
   }

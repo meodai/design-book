@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions } from '../args';
 import type { PoolArg } from '../args';
 import { detectValueType } from '../../values';
 import {
@@ -90,6 +90,7 @@ export function random(
   pool: PoolArg,
   options: RandomOptions,
 ): FunctionTokenValue {
+  assertOptions('random', options, ['type', 'seed', 'not']);
   const scope = poolArg('random', pool);
   const { type, seed, not, description } = options ?? ({} as RandomOptions);
   if (type !== 'color' && type !== 'dimension' && type !== 'string') {

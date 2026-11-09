@@ -1,4 +1,4 @@
-import { poolArg } from '../args';
+import { poolArg, assertOptions } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
@@ -40,6 +40,7 @@ export interface ExtremeOptions {
 }
 
 function build(name: Extreme, pool: PoolArg, options?: ExtremeOptions): FunctionTokenValue {
+  assertOptions(name, options, ['type', 'not']);
   const scope = poolArg(name, pool);
   const type = options?.type;
   if (type !== undefined && type !== 'size' && type !== 'text') {

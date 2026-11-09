@@ -66,7 +66,7 @@ describe('"not" option excludes keys from the candidate pool', () => {
     ui.set('low', minContrastWith(color('#ffffff'), ref('palette'), { minContrast: 4.5 }));
     // Excluding it forces the higher-contrast fallback.
     ui.set('lowNotJustOver', minContrastWith(color('#ffffff'), ref('palette'), {
-      ratio: 4.5,
+      minContrast: 4.5,
       not: [ref('palette.justOver')],
     }));
 

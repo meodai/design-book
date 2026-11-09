@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
@@ -60,6 +60,7 @@ export function minContrastWith(
   pool: PoolArg,
   options?: MinContrastOptions,
 ): FunctionTokenValue {
+  assertOptions('minContrastWith', options, ['minContrast', 'direction', 'not', ...READABLE_OPTIONS]);
   const fn = 'minContrastWith';
   const scope = poolArg(fn, pool);
   valueArg(fn, targetValue);

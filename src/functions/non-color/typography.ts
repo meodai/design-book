@@ -1,3 +1,4 @@
+import { assertOptions } from '../args';
 import { parseKey, VALID_TOKEN_KEY } from '../../keys';
 import { createFunctionToken, extractDependencies, isFunctionTokenValue, isMemberReference, isReferenceValue, isUnresolvable, toMember } from '../../tokens';
 import type { AnyTokenValue, FunctionTokenValue, MemberReference, TokenValue, ReferenceValue, UnresolvableValue } from '../../tokens';
@@ -69,6 +70,7 @@ export function typography(
   fields: TypographyFields,
   options?: { description?: string },
 ): FunctionTokenValue {
+  assertOptions('typography', options, []);
   const names = Object.keys(fields);
   if (names.length === 0) {
     throw new FunctionError('typography: needs at least one field', 'typography');

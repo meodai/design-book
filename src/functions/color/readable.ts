@@ -27,9 +27,6 @@ export interface ReadableOn {
 
 /** Constructor side: checks the options and returns the ones to store. */
 export function readableOnOptions(name: string, options?: ReadableOnOptions): ReadableOnOptions {
-  if (options && 'against' in (options as object)) {
-    throw new FunctionError(`${name}: \`against\` was renamed to \`readableOn\``, name);
-  }
   const on = options?.readableOn;
   const min = options?.readableContrast;
   if (!on) {

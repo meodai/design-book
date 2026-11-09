@@ -1,7 +1,7 @@
 import {
   color, ref, inherited, source, refersTo, px, rem, ms, dimension, string,
   bestContrastWith, minContrastWith, colorMix,
-  lighten, darken, shade, relativeTo, ramp,
+  lighten, darken, shade, relativeTo, withAlpha, ramp,
   closest, nextLighter, nextDarker, furthestFrom, mostVivid, leastVivid,
   lightest, darkest, largest, smallest,
   spacingScale, typographyScale, timing,
@@ -435,6 +435,19 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return shade(color, options);
   },
 
+  // withAlpha(color, alpha, { description }?)
+  withAlpha(argsStr, book) {
+    const args = splitArgs(argsStr);
+    if (args.length < 2) throw new Error('withAlpha requires a color and an alpha: withAlpha(ref(\'brand.ink\'), 0.5)');
+    const color = getTokenArg(parseArg(args[0], book));
+    const alpha = parseArg(args[1], book);
+    if (alpha.type !== 'raw' || typeof alpha.value !== 'number') {
+      throw new Error('withAlpha: the alpha is a number between 0 and 1');
+    }
+    const options = args.length > 2 ? parseOptionsArg(args.slice(2).join(',')) as { description?: string } : undefined;
+    return withAlpha(color, alpha.value, options);
+  },
+
   // typography({ fontFamily: ref('fonts.sans'), fontSize: rem(2), lineHeight: 1.5 }, { description }?)
   typography(argsStr, book) {
     const args = splitArgs(argsStr);
@@ -796,8 +809,6 @@ function parseSelectorTail(
       options.upTo = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'description') {
       options.description = parseQuotedString(valueStr);
-    } else if (key === 'against') {
-      throw new Error(`${name}: \`against\` was renamed to \`readableOn\``);
     } else {
       throw new Error(`${name}: unknown option \`${key}\` (expected not, readableOn, readableContrast${name === 'minContrastWith' ? ', minContrast' : ''} or description)`);
     }

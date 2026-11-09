@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
@@ -160,6 +160,7 @@ export function closest(
   pool: PoolArg,
   options?: ClosestOptions,
 ): FunctionTokenValue {
+  assertOptions('closest', options, ['direction', 'upTo', 'minDistance', 'not', ...READABLE_OPTIONS]);
   const scope = poolArg('closest', pool);
   valueArg('closest', target);
   const { direction, upTo, minDistance } = options ?? {};
@@ -196,23 +197,28 @@ export function closest(
 
 /** Options of the direction aliases: `closest`'s, without the direction. */
 export type NextOptions = Omit<ClosestOptions, 'direction' | 'upTo'>;
+const NEXT_OPTIONS = ['minDistance', 'not', ...READABLE_OPTIONS];
 
 /** The next larger size (or text style) in `pool`: `closest` with `direction: 'larger'`. */
 export function nextLarger(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {
+  assertOptions('nextLarger', options, NEXT_OPTIONS);
   return closest(target, pool, { ...options, direction: 'larger' });
 }
 
 /** The next smaller size (or text style) in `pool`: `closest` with `direction: 'smaller'`. */
 export function nextSmaller(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {
+  assertOptions('nextSmaller', options, NEXT_OPTIONS);
   return closest(target, pool, { ...options, direction: 'smaller' });
 }
 
 /** The nearest lighter color in `pool`: `closest` with `direction: 'lighter'`. */
 export function nextLighter(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {
+  assertOptions('nextLighter', options, NEXT_OPTIONS);
   return closest(target, pool, { ...options, direction: 'lighter' });
 }
 
 /** The nearest darker color in `pool`: `closest` with `direction: 'darker'`. */
 export function nextDarker(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {
+  assertOptions('nextDarker', options, NEXT_OPTIONS);
   return closest(target, pool, { ...options, direction: 'darker' });
 }

@@ -35,12 +35,17 @@ function config({ mode }: ConfigEnv): UserConfig {
           index: resolve(__dirname, 'src/index.ts'),
           naming: resolve(__dirname, 'src/naming/index.ts'),
           internals: resolve(__dirname, 'src/internals.ts'),
+          engine: resolve(__dirname, 'src/engine.ts'),
         },
         formats: ['es'],
         fileName: (_format, name) => `${name}.js`,
       },
       rollupOptions: {
-        external: ['culori'],
+        // The dependencies are installed with the package: bundling them
+        // would ship a second copy to everyone who uses them too. The
+        // orderer's trained data stays in: a bare JSON import needs an
+        // import attribute that not every consumer handles.
+        external: [/^culori(\/|$)/, /^dittotones(\/|$)/, /^colorsort-js$/],
       },
     },
   };

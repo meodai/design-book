@@ -1,4 +1,4 @@
-import { poolArg, valueArg } from '../args';
+import { poolArg, valueArg, assertOptions } from '../args';
 import type { PoolArg } from '../args';
 import {
   createFunctionToken,
@@ -76,6 +76,7 @@ export function nth(
   index: number,
   options?: NthOptions,
 ): FunctionTokenValue {
+  assertOptions('nth', options, ['not']);
   const scope = poolArg('nth', pool);
   if (typeof index !== 'number' || !Number.isFinite(index)) {
     throw new FunctionError(`nth: index must be a finite number, got ${String(index)}`, 'nth');

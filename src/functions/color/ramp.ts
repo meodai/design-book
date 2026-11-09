@@ -1,4 +1,4 @@
-import { valueArg } from '../args';
+import { valueArg, assertOptions } from '../args';
 import { DittoTones } from 'dittotones';
 import type { GenerateResult, Ramp } from 'dittotones';
 import { converter, formatHex, parse } from 'culori';
@@ -134,6 +134,7 @@ export function ramp(
   seed: TokenValue | ReferenceValue | FunctionTokenValue,
   options: { shade: string; from?: string; description?: string },
 ): FunctionTokenValue {
+  assertOptions('ramp', options, ['shade', 'from']);
   valueArg('ramp', seed);
   if (typeof options?.shade !== 'string' || options.shade.length === 0) {
     throw new FunctionError('ramp: "shade" option is required and must be a non-empty string', 'ramp');
@@ -161,6 +162,7 @@ export function rampStops(
   seed: TokenValue | ReferenceValue | FunctionTokenValue,
   options: { prefix: string; shades?: ReadonlyArray<string>; from?: string; description?: string },
 ): Record<string, FunctionTokenValue> {
+  assertOptions('rampStops', options, ['prefix', 'shades', 'from']);
   if (typeof options?.prefix !== 'string' || options.prefix.length === 0) {
     throw new FunctionError('rampStops: "prefix" option is required and must be a non-empty string', 'rampStops');
   }
