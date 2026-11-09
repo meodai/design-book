@@ -1,5 +1,6 @@
 import { Scope } from './scope';
 import { ScopeError } from './errors';
+import { scopeOf } from './keys';
 import { functionDependencies } from './tokens';
 import type { ReferenceValue, FunctionTokenValue } from './tokens';
 
@@ -146,7 +147,7 @@ export class ScopeManager {
     for (const token of Object.values(tokens)) {
       if (token.type === 'reference') {
         const refToken = token as ReferenceValue;
-        const refScope = refToken.key.split('.')[0];
+        const refScope = scopeOf(refToken.key);
         if (refScope !== name) {
           deps.push(refToken.key);
         }
@@ -154,7 +155,7 @@ export class ScopeManager {
         const fnToken = token as FunctionTokenValue;
         const fnDeps = functionDependencies(fnToken);
         for (const dep of fnDeps) {
-          const depScope = dep.split('.')[0];
+          const depScope = scopeOf(dep);
           if (depScope !== name) {
             deps.push(dep);
           }

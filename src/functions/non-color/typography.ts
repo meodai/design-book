@@ -1,3 +1,4 @@
+import { parseKey } from '../../keys';
 import { createFunctionToken, extractDependencies, isFunctionTokenValue, isReferenceValue } from '../../tokens';
 import type { AnyTokenValue, FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
@@ -28,7 +29,12 @@ interface TypographyOptions {
 /** fontSize → font-size */
 const toKebab = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
-const isTokenKey = (key: string) => key.split('.').length === 2;
+/** A token key, qualified (`type.title`) or relative (`.title`); not a
+ *  scope, not a field. */
+const isTokenKey = (key: string) => {
+  const parsed = parseKey(key);
+  return !!parsed && !!parsed.token && !parsed.field;
+};
 
 function assertFieldNames(names: string[], fn: string): void {
   for (const name of names) {

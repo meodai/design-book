@@ -3,7 +3,7 @@ import { DesignBook } from '../../../src/design-book';
 import { color, createFunctionToken, px, ref } from '../../../src/tokens';
 import { sibling, siblingImpl, scopeOfKey } from '../../../src/functions/generic/sibling';
 import { lighten } from '../../../src/functions/color/lighten';
-import { FunctionError } from '../../../src/errors';
+import { TokenError, FunctionError } from '../../../src/errors';
 import { Renderer } from '../../../src/renderers/renderer';
 import { nth } from '../../../src/functions/generic/nth';
 
@@ -243,7 +243,8 @@ describe('sibling anchor validation', () => {
   });
 
   it('rejects an anchor with an empty scope or token part', () => {
-    expect(() => sibling(ref('gray.'), 1)).toThrow(FunctionError);
+    // An empty part is refused by ref() itself, when it is written.
+    expect(() => ref('gray.')).toThrow(TokenError);
     expect(() => sibling(ref('.g100.x'), 1)).toThrow(FunctionError);
   });
 

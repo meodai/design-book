@@ -2,6 +2,7 @@ import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
+import { scopeOf, splitKey } from './keys';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
@@ -334,24 +335,24 @@ export class DesignBook {
     }
   }
 
-  getSourceKey(key: string): string | undefined {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return undefined;
+  /** The scope a key lives in and the name within it (`title.fontSize`
+   *  for a field key), or `undefined` for a key without a scope part or
+   *  whose scope does not exist. */
+  private _locate(key: string): { scope: Scope; name: string } | undefined {
+    const parts = splitKey(key);
+    if (!parts) return undefined;
+    const scope = this.scopeManager.getScope(parts[0]);
+    return scope ? { scope, name: parts[1] } : undefined;
+  }
 
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
-    const scope = this.scopeManager.getScope(scopeName);
-    return scope?.getSourceKey(tokenName);
+  getSourceKey(key: string): string | undefined {
+    const at = this._locate(key);
+    return at?.scope.getSourceKey(at.name);
   }
 
   isInherited(key: string): boolean {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return false;
-
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
-    const scope = this.scopeManager.getScope(scopeName);
-    return scope?.isInherited(tokenName) ?? false;
+    const at = this._locate(key);
+    return at?.scope.isInherited(at.name) ?? false;
   }
 
   /** True when `key` inherits a token that holds relative refs
@@ -359,13 +360,9 @@ export class DesignBook {
    *  it reads that scope's keys and gets graph edges of its own instead of
    *  one to its source. */
   isRebound(key: string): boolean {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return false;
-    const tokenName = key.substring(dotIndex + 1);
-    if (tokenName.includes('.')) return false;
-    const scope = this.scopeManager.getScope(key.substring(0, dotIndex));
-    if (!scope || scope.hasOwn(tokenName)) return false;
-    return hasRelativeKeys(scope.getRaw(tokenName));
+    const at = this._locate(key);
+    if (!at || at.name.includes('.') || at.scope.hasOwn(at.name)) return false;
+    return hasRelativeKeys(at.scope.getRaw(at.name));
   }
 
   /** True when `key` reads the token of another key through `extends` and
@@ -396,43 +393,32 @@ export class DesignBook {
         key,
       );
     }
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) {
+    const parts = splitKey(key);
+    if (!parts) {
       throw new TokenError(`Invalid key format "${key}": expected "scope.token"`, key);
     }
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
-    const scope = this.scopeManager.getScope(scopeName);
+    const scope = this.scopeManager.getScope(parts[0]);
     if (!scope) {
-      throw new TokenError(`Scope "${scopeName}" not found`, key);
+      throw new TokenError(`Scope "${parts[0]}" not found`, key);
     }
-    return scope.resolve(tokenName);
+    return scope.resolve(parts[1]);
   }
 
   has(key: string): boolean {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return false;
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
-    const scope = this.scopeManager.getScope(scopeName);
-    if (!scope) return false;
-    const fieldDot = tokenName.indexOf('.');
-    if (fieldDot !== -1) {
+    const at = this._locate(key);
+    if (!at) return false;
+    const field = splitKey(at.name);
+    if (field) {
       // `scope.token.field`: a field of the typography the token holds
-      const names = typographyFieldNames(this, scope.get(tokenName.slice(0, fieldDot)));
-      return names?.includes(tokenName.slice(fieldDot + 1)) ?? false;
+      const names = typographyFieldNames(this, at.scope.get(field[0]));
+      return names?.includes(field[1]) ?? false;
     }
-    return scope.has(tokenName);
+    return at.scope.has(at.name);
   }
 
   getTokenByKey(key: string): AnyTokenValue | undefined {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return undefined;
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
-    const scope = this.scopeManager.getScope(scopeName);
-    if (!scope) return undefined;
-    return scope.get(tokenName);
+    const at = this._locate(key);
+    return at?.scope.get(at.name);
   }
 
   /** A field key (`type.title.fontSize`) seen through `inspect`: its value,
@@ -502,9 +488,9 @@ export class DesignBook {
       value = undefined;
     }
 
-    const dotIndex = key.indexOf('.');
-    const scopeName = dotIndex === -1 ? '' : key.substring(0, dotIndex);
-    const tokenName = dotIndex === -1 ? key : key.substring(dotIndex + 1);
+    const parts = splitKey(key);
+    const scopeName = parts ? parts[0] : '';
+    const tokenName = parts ? parts[1] : key;
     const scope = scopeName ? this.scopeManager.getScope(scopeName) : undefined;
     const source = scope?.getSourceKey(tokenName);
 
@@ -691,7 +677,7 @@ export class DesignBook {
 
   /** The `ramp` tokens that copy a set whose masters include `node`'s scope. */
   private _rampsReadingMastersOf(node: string): string[] {
-    const scopeName = node.slice(0, node.indexOf('.'));
+    const scopeName = scopeOf(node);
     const sets: string[] = [];
     for (const [name, source] of this._rampSets) {
       if (!(source instanceof Map) && source.scopes.includes(scopeName)) sets.push(name);
@@ -723,7 +709,7 @@ export class DesignBook {
     const changed = new Set(keys);
     for (const key of keys) for (const dep of this._collectDependents(key)) changed.add(dep);
     const changedKeys = [...changed];
-    const scopes = new Set(changedKeys.map((k) => k.slice(0, k.indexOf('.'))));
+    const scopes = new Set(changedKeys.map(scopeOf));
     this.emit('change', { changedKeys, scopes: Array.from(scopes) });
   }
 
@@ -868,20 +854,15 @@ export class DesignBook {
 
   /** The token stored on the key's own scope, ignoring inheritance. */
   private _ownToken(qualifiedKey: string): AnyTokenValue | undefined {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return undefined;
-    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
-    const name = qualifiedKey.substring(dotIndex + 1);
-    return scope?.hasOwn(name) ? scope.getRaw(name) : undefined;
+    const at = this._locate(qualifiedKey);
+    return at?.scope.hasOwn(at.name) ? at.scope.getRaw(at.name) : undefined;
   }
 
   /** Store (or, for `undefined`, remove) a key's own token without
    *  notifying anyone. */
   private _putToken(qualifiedKey: string, value: AnyTokenValue | undefined): void {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return;
-    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
-    scope?._rollback(qualifiedKey.substring(dotIndex + 1), value);
+    const at = this._locate(qualifiedKey);
+    at?.scope._rollback(at.name, value);
   }
 
   /** Announce that an already-announced change has been undone.
@@ -914,10 +895,8 @@ export class DesignBook {
   }
 
   private _rollbackKey(qualifiedKey: string, oldValue: AnyTokenValue | undefined): void {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return;
-    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
-    scope?._rollback(qualifiedKey.substring(dotIndex + 1), oldValue);
+    if (!splitKey(qualifiedKey)) return;
+    this._putToken(qualifiedKey, oldValue);
     // The write may already have been indexed and wired into the graph (a
     // listener can throw after both); the index, the graph edges and the
     // live-key set must describe the token that is actually stored now.
@@ -988,10 +967,7 @@ export class DesignBook {
 
     const changedKeys: string[] = [qualifiedKey];
     const scopeSet = new Set<string>();
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex !== -1) {
-      scopeSet.add(qualifiedKey.substring(0, dotIndex));
-    }
+    if (splitKey(qualifiedKey)) scopeSet.add(scopeOf(qualifiedKey));
 
     // Fire tokenChanged for this key
     this._announced = true;
@@ -1002,10 +978,7 @@ export class DesignBook {
     for (const dep of dependents) {
       this._reindexDynamic(dep);
       changedKeys.push(dep);
-      const depDotIndex = dep.indexOf('.');
-      if (depDotIndex !== -1) {
-        scopeSet.add(dep.substring(0, depDotIndex));
-      }
+      if (splitKey(dep)) scopeSet.add(scopeOf(dep));
       // Bug 4 fix: try to resolve the dependent's new value
       let depNewValue: any;
       try {
@@ -1035,8 +1008,7 @@ export class DesignBook {
   }
 
   private _getEffectiveDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) {
+    if (!splitKey(qualifiedKey)) {
       return this._extractDepsFromValue(value);
     }
 
@@ -1214,7 +1186,7 @@ export class DesignBook {
     if (!from || typeof from.key !== 'string' || (from.via !== 'root' && typeof from.via !== 'number')) return [];
     try {
       const key = followSource(this, 'sibling', from.key, from.via as number | 'root');
-      return [key.slice(0, key.indexOf('.'))];
+      return [scopeOf(key)];
     } catch {
       return []; // not followable yet; the next notification indexes it
     }
@@ -1235,9 +1207,9 @@ export class DesignBook {
    *  A selector never reports its own key back to itself. */
   private _selectorsIterating(changedKey: string): string[] {
     if (this._selectorsByScope.size === 0) return [];
-    const dotIndex = changedKey.indexOf('.');
-    if (dotIndex === -1) return [];
-    const changedScope = changedKey.substring(0, dotIndex);
+    const parts = splitKey(changedKey);
+    if (!parts) return [];
+    const changedScope = parts[0];
 
     const selectors: string[] = [];
     for (const [iterated, keys] of this._selectorsByScope) {
@@ -1332,10 +1304,9 @@ export class DesignBook {
    *  themselves are skipped — `_linkInheritedDependency` only acts when the
    *  source differs from the key.) */
   private _linkInheritedShadowsOf(qualifiedKey: string): void {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return;
-    const scopeName = qualifiedKey.substring(0, dotIndex);
-    const tokenName = qualifiedKey.substring(dotIndex + 1);
+    const parts = splitKey(qualifiedKey);
+    if (!parts) return;
+    const [scopeName, tokenName] = parts;
 
     const shadows: string[] = [];
     for (const name of this._scopeAndDescendants(scopeName)) {
@@ -1370,10 +1341,9 @@ export class DesignBook {
    *  written in `brand`): then nothing is changed and the error is thrown,
    *  so the write that caused it is refused. */
   private _rebindShadows(key: string): string[] {
-    const dotIndex = key.indexOf('.');
-    if (dotIndex === -1) return [];
-    const scopeName = key.substring(0, dotIndex);
-    const tokenName = key.substring(dotIndex + 1);
+    const parts = splitKey(key);
+    if (!parts) return [];
+    const [scopeName, tokenName] = parts;
     if (tokenName.includes('.')) return [];
 
     const bind: string[] = [];
@@ -1746,8 +1716,7 @@ export class DesignBook {
 
     const scopes = new Set<string>();
     for (const key of changedKeys) {
-      const dotIndex = key.indexOf('.');
-      if (dotIndex !== -1) scopes.add(key.substring(0, dotIndex));
+      if (splitKey(key)) scopes.add(scopeOf(key));
 
       const entry = queued.get(key);
       let newValue = entry?.newValue;

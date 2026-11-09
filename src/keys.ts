@@ -25,3 +25,35 @@ export function scopeOf(key: string): string {
   const dot = key.indexOf('.');
   return dot === -1 ? key : key.slice(0, dot);
 }
+
+/** A key taken apart: `scope`, `scope.token`, `scope.token.field`, or the
+ *  relative forms `.`, `.token`, `.token.field` (scope `''`). */
+export interface ParsedKey {
+  scope: string;
+  token?: string;
+  field?: string;
+  relative: boolean;
+}
+
+/** Takes a key apart, or returns `null` when it is not one of the shapes
+ *  above (an empty segment, more than three segments). The one parser for
+ *  keys; everything else (`scopeOf`, `splitKey`) is a shortcut of it. */
+export function parseKey(key: string): ParsedKey | null {
+  if (typeof key !== 'string' || key === '') return null;
+  const relative = key.startsWith('.');
+  if (relative && key === '.') return { scope: '', relative };
+  const parts = (relative ? key.slice(1) : key).split('.');
+  if (parts.length > (relative ? 2 : 3) || parts.some((p) => p === '')) return null;
+  const [first, second, third] = parts;
+  return relative
+    ? { scope: '', token: first, field: second, relative }
+    : { scope: first, token: second, field: third, relative };
+}
+
+/** `scope.rest` split at the first dot: `['type', 'title.fontSize']` for
+ *  `type.title.fontSize`; `null` without a dot. Cheap: no allocation past
+ *  the two strings. */
+export function splitKey(key: string): [scope: string, rest: string] | null {
+  const dot = key.indexOf('.');
+  return dot <= 0 ? null : [key.slice(0, dot), key.slice(dot + 1)];
+}

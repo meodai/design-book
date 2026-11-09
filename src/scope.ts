@@ -37,7 +37,7 @@ type BookWithScope = {
 
 // The key check lives in ./keys so design-book/naming can use it alone.
 export { assertValidTokenKey } from './keys';
-import { assertValidTokenKey } from './keys';
+import { assertValidTokenKey, splitKey } from './keys';
 import { isTypographyToken, typographyBase, typographyFieldNames } from './functions/non-color/typography';
 
 /** See `Scope.metadata`. */
@@ -426,8 +426,8 @@ export class Scope {
   }
 
   resolve(name: string): string {
-    const fieldDot = name.indexOf('.');
-    if (fieldDot !== -1) return this.resolveField(name.slice(0, fieldDot), name.slice(fieldDot + 1));
+    const field = splitKey(name);
+    if (field) return this.resolveField(field[0], field[1]);
     const token = this.get(name);
     if (!token) {
       throw new Error(`Token "${name}" not found in scope "${this.name}"`);

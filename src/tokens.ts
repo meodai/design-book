@@ -1,5 +1,6 @@
 import { parse } from 'culori';
-import { scopeOf } from './keys';
+import { parseKey, scopeOf } from './keys';
+import { TokenError } from './errors';
 
 export interface TokenProcessor {
   name: string;
@@ -143,8 +144,11 @@ export function color(value: string, options?: { description?: string; [key: str
  * `extends` chain, in `source` to name what it refers to.
  */
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
-  if (typeof key !== 'string' || key === '' || key.startsWith('..')) {
-    throw new Error(`Invalid reference "${String(key)}": expected "scope", "scope.token" or a relative ".", ".token"`);
+  if (parseKey(key) === null) {
+    throw new TokenError(
+      `Invalid reference "${String(key)}": expected "scope", "scope.token", "scope.token.field" or a relative ".", ".token", ".token.field"`,
+      typeof key === 'string' ? key : undefined,
+    );
   }
   return val({
     type: 'reference' as const,
@@ -298,7 +302,8 @@ export function tokenKeyOf(key: string): string {
 /** `scope.token.field`: one field of a typography token. The graph keeps a
  *  node per field, so field refs depend on the field, not the whole token. */
 export function isFieldKey(key: string): boolean {
-  return key.split('.').length === 3;
+  const first = key.indexOf('.');
+  return first !== -1 && key.indexOf('.', first + 1) !== -1;
 }
 
 // --- Paths and binding ---
@@ -405,9 +410,8 @@ export function isUnresolvableReference(arg: unknown): arg is UnresolvableRefere
 
 /** Follow `up` from the scope a qualified path starts in. */
 function navigate(path: string, up: number | 'root', context: BindingContext): string | { error: string } {
-  const dot = path.indexOf('.');
-  const start = dot === -1 ? path : path.slice(0, dot);
-  const rest = dot === -1 ? '' : path.slice(dot);
+  const start = scopeOf(path);
+  const rest = path.slice(start.length);
   let scope = start;
   if (up === 'root') {
     const seen = new Set<string>();
@@ -518,7 +522,7 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
       // the scope an anchor walks, once it is known; a `source` anchor's is
       // only known when it is followed (the book indexes it then)
       if (landed.from !== undefined && typeof options?.from === 'string') {
-        metadata.iteratedScopes = [...(metadata.iteratedScopes ?? []), landed.from.slice(0, landed.from.indexOf('.'))];
+        metadata.iteratedScopes = [...(metadata.iteratedScopes ?? []), scopeOf(landed.from)];
       }
     }
     bound = { ...fn, args: fn.args.map((arg) => bindToken(arg, scope, context)), options, metadata };

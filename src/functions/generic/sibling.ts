@@ -10,6 +10,7 @@ import {
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
+import { parseKey } from '../../keys';
 import { poolKeys } from '../scope-members';
 import { poolArg } from '../args';
 import type { PoolArg } from '../args';
@@ -32,12 +33,12 @@ export interface SiblingOptions {
  *  when the token is bound. Throws on a key that is neither: an unqualified
  *  anchor would otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
 export function scopeOfKey(key: string): string {
-  if (isRelativeKey(key) && !key.includes('.', 1)) return '';
-  const dot = key.indexOf('.');
-  if (dot <= 0 || dot === key.length - 1) {
+  const parsed = parseKey(key);
+  if (parsed?.relative && parsed.token && !parsed.field) return '';
+  if (!parsed || parsed.relative || !parsed.token) {
     throw new FunctionError(`sibling: the anchor must be a fully-qualified 'scope.token' key, got "${key}"`, 'sibling');
   }
-  return key.slice(0, dot);
+  return parsed.scope;
 }
 
 /**
