@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   DesignBook, typography, variant, ref, rem, px, color, string, holder, inherited, composeBook, layer,
-  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest, sibling,
+  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest, sibling, minContrastWith,
 } from '../src/index';
 import { isGroupValue } from '../src/tokens';
 
@@ -495,6 +495,45 @@ describe('rendering groups', () => {
     expect(svg).toContain('>type.title</text>');
     expect(svg).toContain('data-from="type.title" data-to="__header__type.title"');
     expect(svg).toContain('data-from="callout.size" data-to="type.title.fontSize"');
+  });
+});
+
+describe('groups and flat keys give the same answers', () => {
+  it('a button placed in each context equals the same rules copied into each', () => {
+    const shades = Array.from({ length: 12 }, (_, i) => `hsl(220 70% ${Math.round(97 - i * 8)}%)`);
+    const withScale = () => {
+      const book = new DesignBook('t');
+      const scale = book.addScope('scale');
+      shades.forEach((c, i) => scale.set(`s${i}`, color(c)));
+      return book;
+    };
+    const grouped = withScale();
+    const t = grouped.addScope('button-major', { template: true });
+    t.set('bg', minContrastWith(holder(ref('.surface')), ref('scale'), { minContrast: 4.5 }));
+    t.set('text', bestContrastWith(ref('.bg'), ref('scale')));
+    t.set('hover', { bg: sibling(holder(ref('.bg')), ref('scale'), 1), text: bestContrastWith(ref('.bg'), ref('scale')) });
+    const flat = withScale();
+    for (let c = 0; c < 12; c++) {
+      const g = grouped.addScope(`ctx${c}`);
+      g.set('surface', ref(`scale.s${c}`));
+      g.set('major', variant(ref('button-major')));
+      const f = flat.addScope(`ctx${c}`);
+      f.set('surface', ref(`scale.s${c}`));
+      f.set('major-bg', minContrastWith(ref('.surface'), ref('scale'), { minContrast: 4.5 }));
+      f.set('major-text', bestContrastWith(ref('.major-bg'), ref('scale')));
+      f.set('major-hover-bg', sibling(ref('.major-bg'), ref('scale'), 1));
+      f.set('major-hover-text', bestContrastWith(ref('.major-hover-bg'), ref('scale')));
+    }
+    const answers = (book: DesignBook, path: (c: number, m: string) => string) =>
+      Array.from({ length: 12 }, (_, c) => ['bg', 'text', 'hover.bg', 'hover.text'].map((m) => {
+        try { return book.resolve(path(c, m)); } catch (e) { return (e as Error).constructor.name; }
+      }));
+    const before = answers(grouped, (c, m) => `ctx${c}.major.${m}`);
+    expect(before).toEqual(answers(flat, (c, m) => `ctx${c}.major-${m.replace('.', '-')}`));
+    // and they stay the same after a change upstream
+    grouped.getScope('scale')!.set('s5', color('hsl(220 70% 50%)'));
+    flat.getScope('scale')!.set('s5', color('hsl(220 70% 50%)'));
+    expect(answers(grouped, (c, m) => `ctx${c}.major.${m}`)).toEqual(answers(flat, (c, m) => `ctx${c}.major-${m.replace('.', '-')}`));
   });
 });
 

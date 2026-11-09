@@ -774,9 +774,12 @@ export class DesignBook {
   /** One `tokenChanged`: a written key with its tokens before and after, or
    *  a dependent (no `written`), whose token is unchanged. */
   private _emitTokenChanged(key: string, written?: { newValue: any; oldValue: any }): void {
+    // A key whose value is a group has no single value: `undefined`, asked
+    // without building the error `resolve` would throw.
     let value: string | undefined;
     try {
-      value = this.resolve(key);
+      const resolution = this._resolution(key);
+      value = resolution.group === undefined ? resolution.value : undefined;
     } catch {
       value = undefined;
     }
