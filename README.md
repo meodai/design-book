@@ -576,20 +576,17 @@ You can register your own functions and use them as procedural tokens the
 same way the built-ins work. Two pieces:
 
 1. **An implementation** — a plain function that receives the *already
-   resolved* arguments (strings for refs, scope objects for `ScopeFunctionArg`
-   inputs), plus an optional `options` object as the last argument, and
-   returns a string.
+   resolved* arguments (strings for values, the live `Scope` for a scope
+   reference), then the token's `options` object, and returns a string. An
+   option whose value is a reference, a token or a function token is
+   resolved like an argument before the implementation sees it.
 2. **A constructor that wraps it as a `FunctionTokenValue`** — call
-   `createFunctionToken('name', args, { options, metadata })`. The
-   `metadata.dependencies` array tells the graph which refs the token reads
-   from so changes propagate; `metadata.visualDependencies` lists scope keys
-   it iterates (for analysis functions like `bestContrastWith`).
+   `createFunctionToken('name', args, { options })`. The book reads the
+   token's dependencies from its arguments and options, so a change to
+   anything it reads re-resolves it.
 
 ```typescript
-import {
-  DesignBook, color, ref, px,
-  createFunctionToken, extractDependencies,
-} from 'design-book';
+import { DesignBook, color, ref, createFunctionToken } from 'design-book';
 import type { TokenValue, ReferenceValue, FunctionTokenValue } from 'design-book';
 
 // 1. Implementation. Receives the resolved color as a string and the options.
@@ -608,11 +605,7 @@ function multiplyAlpha(
 ): FunctionTokenValue {
   return createFunctionToken('multiplyAlpha', [baseColor], {
     options: { alpha: options?.alpha ?? 1 },
-    metadata: {
-      dependencies: extractDependencies([baseColor]),
-      visualDependencies: [],
-      returnType: 'color',
-    },
+    metadata: { returnType: 'color' },
   });
 }
 
@@ -652,6 +645,15 @@ book.registerFunction('secondOf', (scope: Scope) => {
 ```
 
 Without `picked` it still works as a value; it just cannot be stepped from or excluded by name, and the renderer finds its member by value.
+
+A function that reads whole scopes it is not handed as arguments — scopes named in its options, or worked out from the book — says so when it is registered, so a change in them reaches its tokens:
+
+```typescript
+book.registerFunction('firstOf', (options?: { scope: string }) => {
+  const scope = book.getScope(options!.scope)!;
+  return scope.resolve(scope.getAllKeys()[0]);
+}, { scopesRead: (token) => [token.options!.scope as string] });
+```
 
 If you want your custom function to render as native CSS (e.g. as a
 `color-mix` expression instead of the resolved hex), register a function
@@ -1224,21 +1226,29 @@ A token that must *not* follow a theme should point at a root that no theme over
 ## Events
 
 ```typescript
-const dispose = book.on('tokenChanged', (e) => { /* e.detail.key, e.detail.newValue */ });
+const dispose = book.on('tokenChanged', (e) => { /* e.detail.key, .cause, .value, .newValue, .oldValue */ });
 book.on('change', (e) => { /* e.detail.changedKeys, e.detail.scopes */ });
 book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
 book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors, e.detail.rejected */ });
 book.on('batch-complete', (e) => { /* e.detail.processed */ });
 book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase */ });
-book.watch('brand.primary', (newValue, detail) => {
-  // newValue is undefined when the token no longer resolves
-  // detail contains the underlying tokenChanged event payload
+book.watch('brand.primary', (value, detail) => {
+  // value is undefined when the token no longer resolves
+  // detail is the tokenChanged payload
 });
 dispose();
 ```
 
 `book.on()` and `book.watch()` both return unsubscribe functions.
+
+`tokenChanged` has one shape wherever it comes from — a `set`, a `delete`, a `flush`, a deleted scope, a re-registered ramp set:
+
+- `cause`: `'written'` when the token stored at `key` was set or deleted; `'dependent'` when it is unchanged but something it reads changed (a reference, a pool, a ramp set's masters).
+- `newValue` / `oldValue`: the stored token now and before (`undefined` when there is none). For a dependent both are the same token.
+- `value`: the resolved value now, `undefined` when it does not resolve.
+
+Deleting a scope announces its keys and their dependents as one `change`.
 
 `error` reports a failure that could not be thrown at anybody.
 `e.detail.phase` says which:
@@ -1496,14 +1506,13 @@ they fit together.
 
 **Errors.** `TokenError` (bad keys or values, unknown tokens), `ScopeError` (bad scope names or inheritance), `CircularDependencyError` (with `path`), `FunctionError` (invalid function arguments), `LayerError` (`layerName`, `tokenKey`, `cause`).
 
-**Low level**, for custom functions and tooling:
-- Type guards: `isReferenceValue`, `isTokenValue`
-- Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)` checks for a field key
-- Paths: `isScopeKey('palette')` / `isScopeReference(arg)` for a scope reference; `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`; `hasRelativeKeys(token)` (reads depend on the reading scope), `needsBinding(token)` (relative or navigated); `bindToken(token, scope, context)` returns the token as `scope` reads it
-- Dependency extraction: `extractDependencies(args)`, `extractIteratedScopes(args)`, `iteratedScopesOf(fn)`, `extractVisualDependencies(args)`
-- Caches: `getTokenProcessors(token)`, `getReferenceResolution(ref)`
-- `DependencyGraph`
-- `registerBuiltinFunctions`, `registerBuiltinFunctionRenderers`, `registerBuiltinRenderers`: called by the constructors, needed only when building a book or renderer by hand
+**For custom functions.** Type guards `isReferenceValue`, `isTokenValue`, `isScopeReference`, `isMemberReference`; `toMember(key | ref)` for a member slot; `picked(scope, key, value)`; `registerFunction(name, impl, { scopesRead })`.
+
+**Internals** (`design-book/internals`), for tools built on the book — the editor, renderers, inspectors. They follow the engine rather than a stable contract:
+- Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)`; `isScopeKey('palette')`; `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`
+- Binding: `hasRelativeKeys(token)` (reads depend on the reading scope), `needsBinding(token)` (relative or navigated); `bindToken(token, scope, context)` returns the token as `scope` reads it
+- Dependencies: `functionDependencies(fn)`, `extractDependencies(args)`, `extractIteratedScopes(args)`, `iteratedScopesOf(fn)`
+- `getTokenProcessors(token)`, `DependencyGraph`, `registerBuiltinFunctions`
 
 ## Using with Claude Code
 
