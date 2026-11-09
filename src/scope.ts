@@ -433,7 +433,7 @@ export class Scope {
       if (rt) return rt;
     }
     if (token.type === 'reference' || token.type === 'function') {
-      if (resolved !== null) return detectType(resolved);
+      if (resolved !== null) return detectValueType(resolved);
     }
     return token.type;
   }
@@ -557,22 +557,9 @@ export class Scope {
   }
 }
 
-/** A single number with an optional unit: `16px`, `-0.02em`, `.5rem`,
- *  `50%`, `200ms`, `1.5`. Group 1 is the number, group 2 the unit. */
-export const DIMENSION_VALUE_PATTERN = /^(-?(?:\d+\.?\d*|\.\d+))([a-z%]*)$/i;
+import { detectValueType } from './values';
+export { DIMENSION_VALUE_PATTERN, detectValueType } from './values';
 
-/** Best-effort type of a resolved value string, shared by Scope (ordering
- *  of references and untyped functions) and the renderers. A unitless
- *  number is a `dimension` with an empty unit — the same as
- *  `dimension(1.5, '')`; anything with more than one part (`16px solid`)
- *  is a `string`. */
-export function detectValueType(resolved: string): 'color' | 'dimension' | 'string' {
-  if (parse(resolved)) return 'color';
-  if (DIMENSION_VALUE_PATTERN.test(resolved.trim())) return 'dimension';
-  return 'string';
-}
-
-const detectType = detectValueType;
 
 const warnedOrdererTypes = new Set<string>();
 function warnMissingOrderer(type: string): void {

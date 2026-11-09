@@ -103,7 +103,9 @@ export function composeBook(name: string, layers: readonly Layer[], options?: De
       );
     }
 
-    const { errors } = book.flush();
+    // Any change the flush refused fails the layer, a cycle or not; a key
+    // that cannot resolve yet (a forward ref a later layer fills) does not.
+    const { errors, rejected } = book.flush();
     const cycle = errors.find((e): e is CircularDependencyError => e instanceof CircularDependencyError);
     if (cycle) {
       // updateEdges reports `[...dependencies, key]` — the rejected key is last.
@@ -111,6 +113,13 @@ export function composeBook(name: string, layers: readonly Layer[], options?: De
       throw new LayerError(`Layer "${l.name}" closes a cycle at "${key}": ${cycle.message}`, l.name, {
         tokenKey: key,
         cause: cycle,
+      });
+    }
+    if (rejected.length > 0) {
+      const first = errors.find(e => (e as { tokenKey?: string }).tokenKey === rejected[0]) ?? errors[0];
+      throw new LayerError(`Layer "${l.name}" failed: ${first.message}`, l.name, {
+        tokenKey: rejected[0],
+        cause: first,
       });
     }
 

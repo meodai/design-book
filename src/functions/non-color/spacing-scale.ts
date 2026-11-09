@@ -1,14 +1,13 @@
+import { parseDimension } from '../../values';
+import { FunctionError } from '../../errors';
 import { valueArg } from '../args';
 import { createFunctionToken, extractDependencies } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 
 export function spacingScaleImpl(baseValue: string, multiplier: number): string {
-  const match = baseValue.match(/^(-?[\d.]+)(.*)$/);
-  if (!match) {
-    throw new Error(`spacingScale: cannot parse value "${baseValue}"`);
-  }
-  const num = parseFloat(match[1]);
-  const unit = match[2];
+  const dim = parseDimension(baseValue);
+  if (!dim) throw new FunctionError(`spacingScale: cannot read "${baseValue}" as a number with a unit`, 'spacingScale');
+  const { num, unit } = dim;
   const result = num * multiplier;
   // Round to avoid floating point noise (keep up to 4 significant decimal digits)
   const rounded = Math.round(result * 10000) / 10000;

@@ -147,3 +147,16 @@ describe('random', () => {
     expect(inspection.returnType).toBe('color');
   });
 });
+
+describe('random: dimensions by the one rule', () => {
+  it('counts unitless numbers and leading-dot values as dimensions', () => {
+    const string = stringToken;
+    const book = new DesignBook('t');
+    const s = book.addScope('s');
+    s.set('a', string('.5rem'));
+    s.set('b', string('1.5'));
+    s.set('c', string('16px solid'));
+    book.addScope('ui').set('pick', random(ref('s'), { type: 'dimension', seed: 3 }));
+    expect(['.5rem', '1.5']).toContain(book.resolve('ui.pick'));
+  });
+});

@@ -2,6 +2,7 @@ import { converter, parse } from 'culori';
 import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
+import { parseDimension } from '../values';
 import { resolvePool } from './scope-members';
 import { picked } from './picks';
 
@@ -21,7 +22,6 @@ export interface Measure {
   unit: string;
 }
 
-const DIMENSION = /^(-?(?:\d+\.?\d*|\.\d+))([a-z%]*)$/i;
 /** A resolved `typography()` value: CSS declarations (`font-size: 2rem; …`). */
 const DECLARATIONS = /^[a-z-]+\s*:/i;
 const FONT_SIZE = /(?:^|;)\s*font-size\s*:\s*([^;]+)/i;
@@ -31,11 +31,11 @@ export function measureOf(value: string): Measure | null {
   const trimmed = value.trim();
   if (DECLARATIONS.test(trimmed)) {
     const fontSize = trimmed.match(FONT_SIZE)?.[1]?.trim();
-    const dim = fontSize?.match(DIMENSION);
-    return dim ? { kind: 'text', num: parseFloat(dim[1]), unit: dim[2] } : null;
+    const dim = fontSize ? parseDimension(fontSize) : null;
+    return dim ? { kind: 'text', ...dim } : null;
   }
-  const dim = trimmed.match(DIMENSION);
-  return dim ? { kind: 'size', num: parseFloat(dim[1]), unit: dim[2] } : null;
+  const dim = parseDimension(trimmed);
+  return dim ? { kind: 'size', ...dim } : null;
 }
 
 /** The kind of a resolved value, or `null` when it is none of them. */

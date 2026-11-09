@@ -1,6 +1,6 @@
 import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
-import { parse } from 'culori';
+import { detectValueType } from '../../values';
 import {
   createFunctionToken,
   extractVisualDependencies,
@@ -60,15 +60,6 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-const DIMENSION_RE = /^-?\d+(?:\.\d+)?[a-z%]+$/i;
-
-/** Detects the base type of a resolved string value. */
-function detectType(value: string): RandomType | 'unknown' {
-  if (parse(value)) return 'color';
-  if (DIMENSION_RE.test(value)) return 'dimension';
-  if (value.length > 0) return 'string';
-  return 'unknown';
-}
 
 export function randomImpl(
   scope: Scope,
@@ -76,7 +67,7 @@ export function randomImpl(
   seed: number | string,
   not: string[] = [],
 ): string {
-  const candidates = resolvePool(scope, not).filter((m) => detectType(m.value) === type);
+  const candidates = resolvePool(scope, not).filter((m) => m.value.length > 0 && detectValueType(m.value) === type);
 
   if (candidates.length === 0) {
     throw new FunctionError(

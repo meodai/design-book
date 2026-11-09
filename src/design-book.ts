@@ -58,6 +58,17 @@ export interface ScopeRemovedDetail {
 export interface BatchFailedDetail {
   processed: string[];
   errors: Error[];
+  /** Keys whose queued write or delete was refused and undone. */
+  rejected: string[];
+}
+
+/** What `flush()` did: the keys it processed, the errors it collected
+ *  (refusals, and keys that cannot resolve yet, such as a reference to a
+ *  token not written yet), and the keys whose change it refused and undid. */
+export interface FlushResult {
+  processed: string[];
+  errors: Error[];
+  rejected: string[];
 }
 
 export interface BatchCompleteDetail {
@@ -1581,7 +1592,7 @@ export class DesignBook {
 
   // --- Batch ---
 
-  flush(): { processed: string[]; errors: Error[] } {
+  flush(): FlushResult {
     const processed: string[] = [];
     const errors: Error[] = [];
     const failedKeys = new Set<string>();
@@ -1611,6 +1622,7 @@ export class DesignBook {
           shadowsOf(key, this._rebindShadows(key));
         } catch (e) {
           errors.push(e instanceof Error ? e : new Error(String(e)));
+          rejectedKeys.add(key);
         }
         continue;
       }
@@ -1735,12 +1747,12 @@ export class DesignBook {
     this._emitBatchChanges(notified, queued, previousDependents);
 
     if (errors.length > 0) {
-      this.emit('batch-failed', { processed, errors });
+      this.emit('batch-failed', { processed, errors, rejected: [...rejectedKeys] });
     } else {
       this.emit('batch-complete', { processed });
     }
 
-    return { processed, errors };
+    return { processed, errors, rejected: [...rejectedKeys] };
   }
 
   /** Batch counterpart of `_processAutoChange`'s notification half: one

@@ -3,6 +3,7 @@ export { DesignBook } from './design-book';
 export type {
   BatchCompleteDetail,
   BatchFailedDetail,
+  FlushResult,
   ChangeDetail,
   DesignBookEvent,
   DesignBookEventMap,

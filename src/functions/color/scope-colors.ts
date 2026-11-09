@@ -3,7 +3,7 @@ import type { Color } from 'culori';
 import { getTokenProcessors } from '../../tokens';
 import type { TokenValue } from '../../tokens';
 import type { Scope } from '../../scope';
-import { isExcluded } from '../scope-members';
+import { poolKeys } from '../scope-members';
 
 /** A candidate color drawn from a scope's token pool. */
 export interface ScopeColor {
@@ -118,12 +118,11 @@ export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): nu
  *   an inherited member's source key (`palette.black`) included.
  */
 export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []): ScopeColor[] {
-  const excluded = new Set(not);
   const colors: ScopeColor[] = [];
 
-  for (const key of scope.getAllKeys()) {
-    if (isExcluded(scope, key, excluded)) continue;
-
+  // The shared pool rule: members that walk this scope themselves are no
+  // candidates (each would resolve the others, recursively).
+  for (const key of poolKeys(scope, not)) {
     const token = scope.get(key);
     if (!token) continue;
 

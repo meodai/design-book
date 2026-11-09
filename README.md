@@ -1228,7 +1228,7 @@ const dispose = book.on('tokenChanged', (e) => { /* e.detail.key, e.detail.newVa
 book.on('change', (e) => { /* e.detail.changedKeys, e.detail.scopes */ });
 book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
-book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors */ });
+book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors, e.detail.rejected */ });
 book.on('batch-complete', (e) => { /* e.detail.processed */ });
 book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase */ });
 book.watch('brand.primary', (newValue, detail) => {
@@ -1299,7 +1299,7 @@ and `unit` for value tokens).
 book.mode = 'batch';
 brand.set('primary', color('#ff0000'));
 brand.set('secondary', color('#00ff00'));
-const result = book.flush(); // { processed: [...], errors: [...] }
+const result = book.flush(); // { processed: [...], errors: [...], rejected: [...] }
 book.mode = 'auto';
 ```
 
@@ -1307,7 +1307,7 @@ Switching out of batch mode with writes still queued flushes them: anything
 left in the queue would otherwise sit unpropagated until some later,
 unrelated `flush()`. Setting `mode = 'auto'` after the explicit `flush()`
 above is therefore a no-op; drop the `flush()` and the mode switch does it.
-`flush()` never throws — it collects errors and fires `batch-failed`.
+`flush()` never throws — it collects errors and fires `batch-failed`. `rejected` lists the keys whose queued change it refused and undid (a write closing a cycle); the other errors are keys that cannot resolve yet, such as a reference to a token not written yet, which stay queued.
 
 ## Dependency Graph
 

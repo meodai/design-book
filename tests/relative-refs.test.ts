@@ -269,6 +269,23 @@ describe('relative refs: cycles', () => {
     expect(book.resolve('acme.primary')).toBe('#ffffff');
   });
 
+  it('rejects a batched delete that would close a cycle, as auto mode does', () => {
+    const { book } = brandBook();
+    const acme = book.addScope('acme', { extends: 'brand' });
+    acme.set('button', color('#000000'));
+    acme.set('primary', ref('acme.button'));
+    book.mode = 'batch';
+    acme.delete('button');
+    const { errors, rejected } = book.flush();
+    expect(errors.some(e => e instanceof CircularDependencyError)).toBe(true);
+    expect(rejected).toContain('acme.button');
+    expect(acme.hasOwn('button')).toBe(true);
+    expect(book.resolve('acme.primary')).toBe('#000000');
+    acme.set('button', color('#ffffff'));
+    book.flush();
+    expect(book.resolve('acme.primary')).toBe('#ffffff');
+  });
+
   it('rejects an addScope whose inherited tokens close a cycle', () => {
     const book = new DesignBook('t');
     const base = book.addScope('base');
