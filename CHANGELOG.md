@@ -6,6 +6,37 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-09
+
+### Added
+
+- **`withAlpha(color, alpha)`**: the same color at that opacity. It sets
+  alpha rather than multiplying it, and renders to CSS as
+  `rgb(from var(--color) r g b / alpha)`. It is `relativeTo` with its new
+  fourth slot, alpha, which also takes operators (`'*0.5'`).
+- **`inspect(key).picked`**: the member a selector picked when the value
+  is that member's, through references too, so two members with the same
+  value are told apart.
+- **`design-book/engine`**: the library without the built-in renderers,
+  for code that keeps a book but never renders it. `useRenderer(name, fn)`
+  makes a renderer available to every book; the `design-book` entry
+  registers the built-in ones that way when it is imported, so
+  `book.render(…)` works as before.
+
+### Changed
+
+- **Function constructors refuse options they do not read**, naming the
+  ones they take. A misspelt or outdated option used to be ignored, and the
+  token ran on the default. Stored tokens are not checked again. The
+  message for `against` (renamed `readableOn`) is gone; the general one
+  covers it.
+- A pool is a `ref('scope')` or a scope of the book. An object that only
+  looks like a scope is refused, instead of being replaced by the scope it
+  is named after.
+- The package no longer bundles its dependencies (`dittotones`,
+  `colorsort-js`), which are installed with it anyway: the full entry went
+  from 568 to 409 KB.
+
 ## [0.23.0] - 2026-11-09
 
 ### Added
