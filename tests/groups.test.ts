@@ -329,6 +329,46 @@ describe('holding a top-level scope', () => {
   });
 });
 
+describe('templates, overrides and watching through', () => {
+  it('a template is a definition: left out of the output, rendered where it is placed', () => {
+    const book = new DesignBook('t');
+    const major = book.addScope('button-major', { template: true });
+    major.set('text', holder(ref('.surface')));
+    const card = book.addScope('card');
+    card.set('surface', color('#eeeeee'));
+    card.set('action', variant(ref('button-major')));
+    const css = book.render('css-variables');
+    expect(css).not.toContain('button-major');
+    expect(css).toContain('--card-action-text: var(--card-surface);');
+    expect(JSON.parse(book.render('json'))['button-major.text']).toBeUndefined();
+    expect(new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject()['button-major']).toBeUndefined();
+  });
+
+  it('a variant setting a nested group replaces it whole', () => {
+    const book = new DesignBook('t');
+    const b = book.addScope('button');
+    b.set('major', { hover: { bg: color('#12307f'), text: color('#ffffff') } });
+    b.set('minor', variant(ref('.major'), { hover: { bg: color('#d6e2ff') } }));
+    expect(book.getScope('button.minor.hover')!.getAllKeys()).toEqual(['bg']);
+    expect(book.has('button.minor.hover.text')).toBe(false);
+  });
+
+  it('watch follows a path read through a reference, and lets go', () => {
+    const book = new DesignBook('t');
+    const major = book.addScope('button-major');
+    major.set('bg', color('#1f4fd6'));
+    const card = book.addScope('card');
+    card.set('action', ref('button-major'));
+    const seen: Array<string | undefined> = [];
+    const stop = book.watch('card.action.bg', (value) => seen.push(value));
+    major.set('bg', color('#12307f'));
+    card.set('action', ref('button-minor-missing'));
+    expect(seen[0]).toBe('#12307f');
+    stop();
+    expect(book.getDependencyGraph().hasNode('card.action.bg')).toBe(false);
+  });
+});
+
 describe('rendering groups', () => {
   it('css: a variable per member at its path, a class per text style', () => {
     const css = typeBook().book.render('css-variables');

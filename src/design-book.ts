@@ -301,7 +301,7 @@ export class DesignBook {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; template?: boolean },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._scopesChanged();
@@ -805,10 +805,28 @@ export class DesignBook {
     key: string,
     callback: (newValue: string | undefined, detail: TokenChangedDetail) => void,
   ): () => void {
-    return this.on('tokenChanged', (event) => {
+    const off = this.on('tokenChanged', (event) => {
       if (event.detail.key === key) callback(event.detail.value, event.detail);
     });
+    // A path read through a group (`card.action.bg`) is no key of its own:
+    // while it is watched it keeps its node and is announced like one.
+    if (this._locate(key) || !this._through(key)) return off;
+    this._watchedPaths.set(key, (this._watchedPaths.get(key) ?? 0) + 1);
+    this._wireThrough([key]);
+    return () => {
+      off();
+      const count = (this._watchedPaths.get(key) ?? 1) - 1;
+      if (count > 0) {
+        this._watchedPaths.set(key, count);
+        return;
+      }
+      this._watchedPaths.delete(key);
+      this._pruneOrphans([key]);
+    };
   }
+
+  /** Watched paths read through a group, with how many watch each. */
+  private _watchedPaths: Map<string, number> = new Map();
 
   /** Calls every listener; one that throws does not stop the others. Its
    *  error is thrown when the operation emitting is done (`_operation`). */
@@ -1474,8 +1492,12 @@ export class DesignBook {
       for (const node of this.graph.dfsTraversal(start)) {
         if (seen.has(node)) continue;
         seen.add(node);
-        // A through path is a hop to its readers, never a key to report.
-        if (!this._locate(node)) continue;
+        // A through path is a hop to its readers, reported only while
+        // someone watches it.
+        if (!this._locate(node)) {
+          if (this._watchedPaths.has(node)) dependents.push(node);
+          continue;
+        }
         dependents.push(node);
         pending.push(node);
       }
@@ -1522,6 +1544,7 @@ export class DesignBook {
     for (const key of candidates) {
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length > 0) continue;
+      if (this._watchedPaths.has(key)) continue;
       if (!this._locate(key) && this._through(key)) {
         // An unread through path goes, and with it what only it read.
         const prerequisites = this.graph.getPrerequisitesFor(key);

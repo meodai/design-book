@@ -238,7 +238,7 @@ export class Renderer {
    *  emitting both means the last declaration wins, so fail loudly instead. */
   private assertNoVarNameCollisions(): void {
     const seen = new Map<string, string[]>();
-    for (const { prop, owner } of this.cssDeclarations(this.book.getAllScopes())) {
+    for (const { prop, owner } of this.cssDeclarations(this.renderable())) {
       const owners = seen.get(prop);
       if (owners) owners.push(owner ?? prop);
       else seen.set(prop, [owner ?? prop]);
@@ -281,8 +281,14 @@ export class Renderer {
   }
 
   /** The scopes to render: all, or the `scopes` option (unknown names throw). */
+  /** The top-level scopes that have output: templates are only
+   *  definitions, rendered where they are placed. */
+  private renderable(): Scope[] {
+    return this.book.getAllScopes().filter((scope) => !scope.template);
+  }
+
   private scopesToRender() {
-    const all = this.book.getAllScopes();
+    const all = this.renderable();
     const wanted = this.options.scopes;
     if (!wanted) return all;
     for (const name of wanted) {
@@ -504,7 +510,7 @@ export class Renderer {
 
   renderW3DesignTokensObject(): W3DesignTokensMap {
     const result: W3DesignTokensMap = {};
-    for (const scope of this.book.getAllScopes()) {
+    for (const scope of this.renderable()) {
       result[scope.name] = this.w3Scope(scope, new Set([scope.name]));
     }
     return result;

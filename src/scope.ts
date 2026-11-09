@@ -76,6 +76,10 @@ export class Scope {
    *  a group: it extends the inherited one and has no members of its own
    *  until something is written into it. */
   readonly implicit: boolean;
+  /** A definition meant to be placed elsewhere (`variant(ref(name))`): it
+   *  may read a holder it does not have, and renderers leave it out — only
+   *  the places it is put appear in the output. */
+  readonly template: boolean;
   private tokens: Map<string, AnyTokenValue>;
   private book: BookWithScope;
   /** Local order config. `undefined` = inherit from extends chain;
@@ -100,7 +104,7 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string; metadata?: ScopeMetadata; kind?: string; omit?: readonly string[]; implicit?: boolean }
+    options?: { extends?: string; description?: string; metadata?: ScopeMetadata; kind?: string; omit?: readonly string[]; implicit?: boolean; template?: boolean }
   ) {
     this.name = name;
     this.book = book;
@@ -110,6 +114,7 @@ export class Scope {
     this.kind = options?.kind;
     this.omitted = new Set(options?.omit ?? []);
     this.implicit = options?.implicit ?? false;
+    this.template = options?.template ?? false;
     this.tokens = new Map();
   }
 
