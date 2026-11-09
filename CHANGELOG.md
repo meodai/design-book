@@ -6,6 +6,34 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-09
+
+### Added
+
+- **`by`: the field a text style is compared by.** `closest` and its
+  aliases, `furthestFrom`, `largest` / `smallest` and the contrast pair
+  measure a text style by its font size unless `by` names another field:
+  `largest(ref('type'), { by: 'fontWeight' })` is the heaviest style. Any
+  numeric field works, inherited fields of a variant included; a style
+  without it is no candidate. Sizes and colors are measured as themselves.
+- **Color fields**: every color comparison (`bestContrastWith`,
+  `minContrastWith`, `closest`, `furthestFrom`, `mostVivid`, `leastVivid`,
+  `lightest`, `darkest`) takes `by` too. A text style is compared by that
+  color field and the pick is the whole style:
+  `bestContrastWith(ref('.surface'), ref('type'), { by: 'color' })` is the
+  style whose color stands out most. `readableOn` narrows the styles by
+  that color.
+- **`field` on a value order**: `{ by: 'value', field: 'fontWeight' }`
+  sorts text styles by that field, the way the field's kind sorts.
+
+### Fixed
+
+- Sorting text styles by value left them in insertion order, with a
+  warning; they now sort by font size unless `field` names another.
+- A whole text style handed to a color transform (`lighten(ref('type.title'))`)
+  throws and names the field to pass, `ref('type.title.color')`, instead of
+  failing to parse a color.
+
 ## [0.24.0] - 2026-11-09
 
 ### Added
