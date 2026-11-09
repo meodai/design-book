@@ -6,6 +6,86 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-09
+
+### Added
+
+- **The dependency graph is drawn like a schematic.** `SVGRenderer`'s new
+  default `layout: 'layered'` sets the tables in columns by data flow, each
+  row read on its left edge and read from on its right. Connections are
+  routed round the tables at right angles (`routing: 'orthogonal'`), lines
+  sharing a dot bundle into lanes, a hop marks where two lines of one color
+  cross (`bridges`), and a dot where lines join or split. A scope extending
+  a drawn scope is joined under it and shows only what differs, the rest in
+  one `+N from parent` row. `aspect` (width / height, default 1.5) shapes
+  the layout for the space it is shown in; `filterConnections(from, to)`
+  leaves lines out before routing. The ring (`layout: 'circle'`) and the
+  curved lines (`routing: 'curved'`) are still there.
+- **`registerFunction(name, impl, { scopesRead })`**: a function whose
+  tokens read whole scopes they are not handed as arguments names them, so
+  a change in those scopes reaches the tokens, like a selector's pool.
+- **`design-book/internals`**: binding, dependency extraction,
+  `DependencyGraph` and `registerBuiltinFunctions`, for tools built on the
+  book. They left the root entry.
+- `flush()` returns (and `batch-failed` carries) `rejected`: the writes it
+  refused and rolled back.
+- `NamingError` for the naming functions, from the root and from
+  `design-book/naming`.
+
+### Changed
+
+- **`tokenChanged` has one shape on every path**: `cause` (`'written'` or
+  `'dependent'`), `newValue` / `oldValue` (the stored tokens after and
+  before; the same token for a dependent) and `value` (the resolved value,
+  `undefined` when it does not resolve). `watch` passes `value`.
+- **A write is checked before anyone hears of it.** A write that would
+  close a cycle throws from `set()` / `delete()` and is never announced.
+  Writes a listener makes are checked when it makes them, so a refused one
+  throws to that listener; their announcements follow the current one.
+- **A listener that throws undoes nothing**: every listener still hears
+  the change, then the call that made it throws the first listener error.
+  The `error` event and the corrective announcements are gone.
+- `deleteScope` announces the scope's keys as one `change`, each with the
+  token it held.
+- Every inherited key is wired as soon as it exists (one edge to its
+  source, or its own dependencies when it re-binds relative refs), instead
+  of when something first reads it.
+- References in member slots (`not`, a `sibling` anchor and `toward`, a
+  variant's base) are `MemberReference`s (`type: 'member'`); `source` and
+  `refersTo` build them, `toMember` turns a key or ref into one. A
+  navigation that cannot be followed binds to an `UnresolvableValue`.
+- `readableOn` and `closest`'s `upTo` are stored in the options as
+  written, and resolved like arguments.
+- Built-in implementations share one contract: resolved arguments, then
+  the options. Constructors check every static option when the token is
+  written (color spaces, `relativeTo` modifications, the scales' numbers,
+  `nth`'s index, `random`'s type and seed, `shade`'s amount,
+  `minContrast`).
+- `ref()` refuses a malformed key (`'a..b'`, `'a.'`) when it is written.
+
+### Removed
+
+- `getReferenceResolution` and the reference-resolution cache,
+  `extractVisualDependencies` / `metadata.visualDependencies`,
+  `readableOnArgIndex`, and the unused graph helpers (`hasCycles`,
+  `findShortestPath`, …).
+
+### Fixed
+
+- A scope holding several color selectors over itself resolved them
+  through each other, in time that grew about fivefold per selector.
+- `random` over sizes treated `.5rem` and unitless numbers as strings.
+- `composeBook` dropped a layer's refused writes other than cycles.
+- `timing` refused a negative `delay`, which CSS allows.
+- `shade` gamut-maps like the other transforms instead of clipping.
+
+### Performance
+
+- Resolved values are kept until something changes, and colors are parsed
+  once per value. On a book of 22 scopes and 316 keys: building it 17.5 →
+  9.7 ms, a write 4.2 → 1.1 ms, a write then resolving every key 8.5 →
+  1.3 ms; drawing its graph 67 → 41 ms.
+
 ## [0.22.0] - 2026-11-06
 
 ### Added
