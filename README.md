@@ -108,7 +108,7 @@ lightest(ref('scope')) / darkest(ref('scope'))        // Extremes of lightness (
 largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes, text styles)
 ```
 
-**The target decides the kind.** A pool may hold colors, sizes and text styles side by side; a comparison only looks at the members of the target's kind and skips the rest. Sizes are compared within one unit (`px` with `px`, `rem` with `rem` — there is no root size to convert with), and `typography()` text styles with text styles, by their font size. Nothing of that kind in the pool throws and says so: *closest: scope "brand" has no text styles in rem*. Functions without a target take their kind from their name (`lightest` colors, `largest` sizes and text styles), and `largest` / `smallest` take `{ type: 'size' | 'text' }` when a pool holds more than one group.
+**The target decides the kind.** A pool may hold colors, sizes and text styles side by side; a comparison only looks at the members of the target's kind and skips the rest. Sizes are compared within one unit (`px` with `px`, `rem` with `rem` — there is no root size to convert with), and text styles with text styles, by their font size (or the member `by` names). Nothing of that kind in the pool throws and says so: *closest: scope "brand" has no text styles in rem*. Functions without a target take their kind from their name (`lightest` colors, `largest` sizes and text styles), and `largest` / `smallest` take `{ type: 'size' | 'text' }` when a pool holds more than one group.
 
 | | Colors | Sizes | Text styles |
 |---|---|---|---|
@@ -903,83 +903,100 @@ book.registerOrderer('string', (entries) =>
 // entries: { key, type, resolved, token }[]
 ```
 
-## Typography
+## Groups: a key that holds a scope
 
-A text style is a collection of properties (family, size, weight, line-height, …) that you want to address as one thing. `typography()` makes it **one token**, the W3 `typography` composite. Each field is an argument of the token, so the refs it holds are tracked in the graph like any function's, and a `ref()` to it carries the whole style:
+Some things are several values at once: a text style (family, size, weight, line height), a button (background, text, border, per state). A key can hold a whole scope, a **group**, so such a thing is one entry you can:
+
+- **offer as a set of variants** — a `typography` scope listing the text styles a design system has;
+- **use exactly, elsewhere** — a card's heading *is* `typography.title`, and follows every change to it;
+- **place in several contexts** — one button definition, giving each context it is placed in its own colors.
+
+A group is an ordinary scope. Its keys are ordinary keys (`typography.title.fontSize`), it can extend another scope, be a selector's pool, be sorted, and every scope extending one that holds it holds it too.
+
+### Named tables, listed and reused
 
 ```typescript
-const font = book.addScope('font');
-font.set('sans', string('"Inter", system-ui, sans-serif'));
+const title = book.addScope('typography-title', { kind: 'typography' });
+title.set('fontFamily', ref('font.sans'));
+title.set('fontSize', rem(2.4));
+title.set('fontWeight', string('700'));
 
-const size = book.addScope('font-size');
-size.set('md', rem(1.8));
-size.set('xl', rem(3.2));
+const typography = book.addScope('typography');     // a table listing the styles
+typography.set('title', ref('typography-title'));    // an entry holding a scope
 
-const type = book.addScope('type');
-type.set('body',  typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.md'), lineHeight: 1.5 }));
-type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700' }));
-
-const button = book.addScope('button');
-button.set('padding', ref('space.sm'));
-button.set('label', ref('type.body'));       // the whole text style
-
-book.inspect('font-size.xl').dependents;     // ['type.title']
-book.resolve('type.title');                  // 'font-family: "Inter", …; font-size: 3.2rem; font-weight: 700'
+card.set('heading', ref('typography.title'));        // used through the list…
+modal.set('heading', ref('typography-title'));       // …or directly
+book.resolve('card.heading.fontSize');               // '2.4rem'
+book.resolve('card.heading');                        // throws: a group has no single value; read a member
 ```
 
-Any field name is allowed (it must be a valid token key). The CSS renderer writes one variable per field and a class; a ref to a typography points each field at the target's variable:
+`kind: 'typography'` marks a scope as a text style. It changes nothing inside the book; outside it, a text style gets a CSS class next to its variables, is written as the W3 `typography` composite, and is measured by its `fontSize` in comparisons and sorts unless `by` / `field` names another member.
+
+### Written in place
+
+A group can also be written right at the key that holds it — the same thing, a scope, without a name of its own (its name is its path):
+
+```typescript
+button.set('hover', { bg: color('#12307f'), text: color('#ffffff') });   // a plain object is a group
+type.set('title', typography({ fontSize: rem(2.4), lineHeight: 1.2, fontWeight: '700' }));
+```
+
+`typography({ … })` is shorthand for such a group of kind `typography`, so these two are the same text style:
+
+```typescript
+type.set('title', typography({ fontSize: rem(2.4), lineHeight: 1.2 }));
+
+book.addScope('typography-title', { kind: 'typography' })   // named, then held by reference
+  .set('fontSize', rem(2.4));
+```
+
+It also takes plain numbers and strings for fields (`lineHeight: 1.2`, `fontWeight: '700'`) instead of `dimension(1.2, '')` and `string('700')`.
+
+### Variants and placing: `variant`
+
+`variant(ref, { … })` is a group extending another: the members it does not set read the base, live; `null` leaves one out.
+
+```typescript
+type.set('hero', variant(ref('.title'), { fontWeight: '800' }));
+```
+
+With no members it **places** a group: its relative references read where it is placed. Inside a group `.` is the group itself; `holder(ref('.x'))` is `x` of the scope holding it. So one button definition, placed in several contexts, reads each context's own surface:
+
+```typescript
+const major = book.addScope('button-major', { template: true });   // a definition: left out of the output
+major.set('bg', minContrastWith(holder(ref('.surface')), ref('scale')));
+major.set('text', bestContrastWith(ref('.bg'), ref('scale')));
+
+normal.set('major', variant(ref('button-major')));   // normal.major.bg reads normal.surface
+strong.set('major', variant(ref('button-major')));   // strong.major.bg reads strong.surface
+```
+
+A reference (`ref('button-major')`) shares the group as it is: it reads where it is defined. Place it with `variant` when each place should get its own answer from the same rules. A scope extending one that places a group holds its own placed copy, reading its own context.
+
+To change a group in place — what a theme layer does — set its members:
+
+```typescript
+const dense = layer('dense', (book) => book.getScope('typography-title').set('fontSize', rem(2)));
+```
+
+### Output
 
 ```css
 :root {
-  --type-title-font-family: var(--font-sans);
-  --type-title-font-size: var(--font-size-xl);
-  --type-title-font-weight: 700;
-  --button-label-font-family: var(--type-body-font-family);
+  --typography-title-font-family: var(--font-sans);
+  --typography-title-font-size: 2.4rem;
+  --card-heading-font-size: var(--typography-title-font-size);
+  --type-hero-font-size: var(--type-title-font-size);    /* a variant points at its base */
   /* … */
 }
-.type-title {
-  font-family: var(--type-title-font-family);
-  font-size: var(--type-title-font-size);
-  font-weight: var(--type-title-font-weight);
+.card-heading {
+  font-family: var(--card-heading-font-family);
+  font-size: var(--card-heading-font-size);
+  font-weight: var(--card-heading-font-weight);
 }
 ```
 
-W3 output is the native composite (`"type": { "title": { "$type": "typography", "$value": { … } } }`), and a ref to it an alias (`"$value": "{type.body}"`). JSON writes the resolved declarations.
-
-### One field: `ref('scope.token.field')`
-
-A third key segment reads one field. The graph tracks it per field — a line-height may read its own style's font size, two styles may read each other's other fields, and only a real loop is rejected. It follows refs to the typography and renders as the field's variable:
-
-```typescript
-callout.set('size', ref('type.title.fontSize'));   // --callout-size: var(--type-title-font-size);
-book.resolve('button.label.lineHeight');            // '1.5' (button.label is a ref to type.body)
-```
-
-W3 has no alias syntax for a value inside a composite, so W3 output writes the resolved field with its type.
-
-### Changing some fields: `variant`
-
-`variant(base, overrides)` changes some fields of a typography; `null` drops one.
-
-- Pass a **ref** for a live **variant**: the fields it doesn't set keep reading the base, so it follows every later change to it — including in breakpoint books. Inherited fields render as `var()` of the base's variables.
-- Pass the **token** for a **copy**: what a theme or breakpoint layer uses to change a style in place, since a token cannot `ref()` the value it replaces (trying to is rejected with a hint).
-
-```typescript
-type.set('hero', variant(ref('type.title'), { fontWeight: '800' }));
-// --type-hero-font-family: var(--type-title-font-family);
-// --type-hero-font-size: var(--type-title-font-size);
-// --type-hero-font-weight: 800;
-
-const phone = layer('phone', (book) => {
-  book.getScope('type').set('title', variant(book.getTokenByKey('type.title'), { lineHeight: 1.2 }));
-});
-```
-
-Pass `classPrefix` to prefix the emitted classes:
-
-```typescript
-book.render('css-variables', { classPrefix: 't-' }); // → .t-type-title { … }
-```
+Members render at their path (`--` and the path with dots as dashes); a group held by reference points at the original's variables, so the browser follows it. W3 nests groups; a text style is the `typography` composite, and a reference to one an alias. JSON writes each member at its path. Pass `classPrefix` to prefix the classes (`book.render('css-variables', { classPrefix: 't-' })` → `.t-card-heading`). In the SVG graph a group is a table like any scope, with a line from the key holding it.
 
 ## Rendering
 
@@ -1157,7 +1174,7 @@ Because the variation is a real book, computed tokens are recomputed for it: `ui
 | `changedFrom` | only declarations that differ from another book (also for `json`, by resolved value) |
 | `breakpoints` | name → media query, for scopes that carry `metadata.media` (below) |
 
-Breakpoints usually belong in their own books, as above: the same variables, new values inside `@media`. With `typography()` tokens built on a type scale, a breakpoint layer often only changes the scale (`layer('phone', { 'font-size': { xl: rem(2.4) } })`) and `changedFrom` writes just `--font-size-xl` — the text styles follow through `var()`.
+Breakpoints usually belong in their own books, as above: the same variables, new values inside `@media`. With text styles built on a type scale, a breakpoint layer often only changes the scale (`layer('phone', { 'font-size': { xl: rem(2.4) } })`) and `changedFrom` writes just `--font-size-xl` — the text styles follow through `var()`.
 
 The exception is a scope whose variables should *only* exist inside a media query. Give it `metadata.media` — a name from the `breakpoints` option, a media type (`print`) or a raw query — and the renderer writes it in its own `@media` block. Blocks follow the order of the `breakpoints` table, then raw queries in scope order; an unknown name throws.
 

@@ -91,8 +91,9 @@ is several values, so wherever one value is needed, one member stands for it.
 `by` and `field` already exist (0.25.0) and become the general answer to
 "which member stands for a group", rather than a text-style feature.
 
-A group can be marked with a *kind* (`typography()` is `group(…, { kind:
-'typography' })`). The kind decides only what a group means outside the book:
+A group can be marked with a *kind*: `addScope(name, { kind: 'typography' })`
+for a named scope, or `typography({ … })`, shorthand for a group of that kind
+written in place. The kind decides only what a group means outside the book:
 the CSS class, the W3 composite, the default member for `by` / `field`. Inside
 the book every group behaves the same.
 

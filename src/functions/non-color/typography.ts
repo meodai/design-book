@@ -33,12 +33,17 @@ function members(fields: Record<string, unknown>): Record<string, GroupInput> {
 }
 
 /**
- * A text style: a group of kind `typography` — the W3 `typography`
- * composite. Each field (`fontFamily`, `fontSize`, `lineHeight`, …; any key
- * is allowed) is a member, an ordinary key: `ref('type.title.fontSize')`
- * reads one, and what it reads is a dependency like any token's. Outside the
- * book the kind gives it a CSS class and the W3 composite, and makes
- * `fontSize` the member that stands for it in comparisons and sorts.
+ * A text style written in place: shorthand for a group of kind
+ * `typography`. `type.set('title', typography({ fontSize: rem(2) }))` is the
+ * same as a scope made with `addScope('…', { kind: 'typography' })` holding
+ * `fontSize`, held at `type.title` — only without a name of its own. On top,
+ * it takes plain numbers and strings for fields (`1.5`, `'700'`).
+ *
+ * Each field (`fontFamily`, `fontSize`, `lineHeight`, …; any key is allowed)
+ * is a member, an ordinary key: `ref('type.title.fontSize')` reads one. The
+ * kind changes nothing inside the book; outside it, a text style gets a CSS
+ * class and the W3 composite, and `fontSize` stands for it in comparisons and
+ * sorts.
  */
 export function typography(fields: TypographyFields, options?: { description?: string }): GroupValue {
   assertOptions('typography', options, []);
