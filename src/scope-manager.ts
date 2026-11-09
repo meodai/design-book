@@ -122,7 +122,6 @@ export class ScopeManager {
   _discard(name: string): void {
     const scope = this.scopes.get(name);
     if (!scope) return;
-    scope.dispose();
     this.unlink(scope);
     this.scopes.delete(name);
   }
@@ -135,9 +134,6 @@ export class ScopeManager {
       throw new ScopeError(`Scope "${name}" not found`, name);
     }
     const removed = scope.getAllKeys().map((k): [string, AnyTokenValue | undefined] => [`${name}.${k}`, scope.getRaw(k)]);
-    // Release the book-level change subscription, so the listener set does
-    // not keep a closure over a removed scope.
-    scope.dispose();
     // Unlinked before it is emptied: emptying forgets what it extends.
     this.unlink(scope);
     // Empty the scope but keep it registered while notifying: every key

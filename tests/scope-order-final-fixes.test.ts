@@ -70,7 +70,7 @@ describe('scope-order final fixes', () => {
   // I2: deleteScope must unsubscribe the deleted scope's change listener so the
   //     book's listener Set doesn't retain a stale closure forever.
   // ---------------------------------------------------------------------------
-  it('I2: deleteScope unsubscribes the scope change listener', () => {
+  it('I2: an ordered scope leaves no listener behind', () => {
     const book = new DesignBook('test');
 
     const ordered = book.addScope('ordered');
@@ -81,15 +81,12 @@ describe('scope-order final fixes', () => {
     // Warm the cache and trigger lazy subscription (if any)
     ordered.getAllKeys();
 
-    // Record listener count before deletion
-    const listenersBefore = (book as any).listeners.get('change')?.size ?? 0;
-    expect(listenersBefore).toBeGreaterThan(0); // the subscription must exist
+    // An ordered scope follows the book's resolve cache; it subscribes to
+    // nothing, so deleting it leaves nothing behind.
+    expect((book as any).listeners.get('change')?.size ?? 0).toBe(0);
 
     book.deleteScope('ordered');
-
-    // The subscription must have been removed
-    const listenersAfter = (book as any).listeners.get('change')?.size ?? 0;
-    expect(listenersAfter).toBe(listenersBefore - 1);
+    expect((book as any).listeners.get('change')?.size ?? 0).toBe(0);
 
     // Subsequent changes in unrelated scopes must not throw
     const other = book.addScope('other');

@@ -4,8 +4,9 @@ import {
   spacingScale, typographyScale, typography, variant,
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
-  Renderer, SVGRenderer, TableViewRenderer, qualifyKey,
+  Renderer, SVGRenderer, TableViewRenderer,
 } from '../../src/index';
+import { qualifyKey } from '../../src/internals';
 import type { RenderFormat } from '../../src/index';
 import type { Scope, ScopeOrder } from '../../src/index';
 import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';

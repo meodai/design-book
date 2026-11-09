@@ -34,7 +34,6 @@ export type BookWithScope = {
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
   on(event: 'change', callback: (e: { detail: { changedKeys: string[] } }) => void): () => void;
-  invalidateDescendantOrderCaches(name: string): void;
 };
 
 // The key check lives in ./keys so design-book/naming can use it alone.
@@ -60,9 +59,12 @@ export class Scope {
    *  `[]` = explicit insertion order (overrides an inherited order). */
   private _order?: ScopeOrder;
   /** Memoized sorted keys. Invalidated on any token set/delete/setOrder/clearOrder. */
-  private orderedKeysCache: string[] | null = null;
+  /** The sorted keys, valid while no value has changed since they were
+   *  sorted: an order reads the key set, the order config and resolved
+   *  values, and every change to any of them clears the book's resolve
+   *  cache, so its generation is the stamp. */
+  private orderedKeysCache: { keys: string[]; generation: number } | null = null;
   /** Unsubscribe handle for the book-level `change` event (subscribed lazily). */
-  private _changeUnsub?: () => void;
   /** Re-entrancy guard: while computing the ordered keys, getAllKeys returns
    *  insertion order to let scope-iterating functions resolve safely. */
   private _ordering = false;
@@ -152,8 +154,7 @@ export class Scope {
     const oldValue = this.tokens.get(name);
     const existed = this.tokens.has(name);
     this.tokens.set(name, value);
-    this.invalidateOrderCache();
-    this.book.invalidateDescendantOrderCaches(this.name);
+    this.changed();
     try {
       this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
     } catch (e) {
@@ -162,7 +163,7 @@ export class Scope {
       // the order caches stay invalidated and recompute from the restored map
       if (existed) this.tokens.set(name, oldValue as AnyTokenValue);
       else this.tokens.delete(name);
-      this.invalidateOrderCache();
+      this.changed();
       // The book may already have announced this change — handlers run
       // synchronously inside _notifyTokenChange — so announce the restored
       // state too rather than leave listeners holding a value that is gone.
@@ -189,16 +190,14 @@ export class Scope {
     const old = this.tokens.get(name);
     const had = this.tokens.delete(name);
     if (had) {
-      this.invalidateOrderCache();
-      this.book.invalidateDescendantOrderCaches(this.name);
+      this.changed();
       try {
         this.book._notifyTokenChange(`${this.name}.${name}`, undefined, old);
       } catch (e) {
         // The delete was rejected: with the own token gone the key inherits
         // one whose relative refs close a cycle in this scope. Put it back.
         this.tokens.set(name, old as AnyTokenValue);
-        this.invalidateOrderCache();
-        this.book.invalidateDescendantOrderCaches(this.name);
+        this.changed();
         this.book._restoreRejectedDelete(`${this.name}.${name}`, old as AnyTokenValue);
         throw e;
       }
@@ -212,8 +211,7 @@ export class Scope {
   _rollback(name: string, oldValue: AnyTokenValue | undefined): void {
     if (oldValue === undefined) this.tokens.delete(name);
     else this.tokens.set(name, oldValue);
-    this.invalidateOrderCache();
-    this.book.invalidateDescendantOrderCaches(this.name);
+    this.changed();
   }
 
 
@@ -246,34 +244,18 @@ export class Scope {
     // No ordering, empty criteria, or a re-entrant call during ordering:
     // hand back insertion order.
     if (!order || order.length === 0 || this._ordering) return base;
-    // I1-A fix: subscribe lazily so cross-scope ref changes in inherited-order
-    // scopes (which never call setOrder()) still invalidate the cache.
-    this.subscribeToChanges();
-    if (this.orderedKeysCache) return this.orderedKeysCache;
-    const sorted = this.computeOrderedKeys(base, order);
-    this.orderedKeysCache = sorted;
-    return sorted;
+    const generation = this.book._cache.generation;
+    if (this.orderedKeysCache?.generation === generation) return this.orderedKeysCache.keys;
+    const keys = this.computeOrderedKeys(base, order);
+    // Sorting resolves members without the cache; it must not have moved.
+    this.orderedKeysCache = { keys, generation: this.book._cache.generation };
+    return keys;
   }
 
-  /** Something in this scope changed (a token, the order, an inherited
-   *  key): its order and every resolved value may be stale. */
-  invalidateOrderCache(): void {
-    this.orderedKeysCache = null;
+  /** Something in this scope changed (a token, its order): every resolved
+   *  value may be stale, and with them every scope's sorted keys. */
+  private changed(): void {
     this.book._cache.clear();
-  }
-
-  private subscribeToChanges(): void {
-    if (this._changeUnsub) return;
-    const prefix = `${this.name}.`;
-    this._changeUnsub = this.book.on('change', (e: { detail: { changedKeys: string[] } }) => {
-      if (e.detail.changedKeys.some(k => k.startsWith(prefix))) {
-        this.invalidateOrderCache();
-        // I1-B fix: a change to one of this scope's keys (e.g. a cross-scope ref
-        // whose target changed) must also invalidate descendant ordered caches that
-        // merge or inherit this scope's keys.
-        this.book.invalidateDescendantOrderCaches(this.name);
-      }
-    });
   }
 
   /** Prepare for removal: drop the local tokens *and* the inheritance link,
@@ -285,28 +267,17 @@ export class Scope {
   _detachForDeletion(): void {
     this.tokens.clear();
     this.extendsName = undefined;
-    this.invalidateOrderCache();
-    this.book.invalidateDescendantOrderCaches(this.name);
-  }
-
-  /** Release the book-level change subscription. Call before discarding the
-   *  scope (e.g. in ScopeManager.deleteScope) to prevent memory leaks. */
-  dispose(): void {
-    this._changeUnsub?.();
-    this._changeUnsub = undefined;
+    this.changed();
   }
 
   setOrder(order: ScopeOrder): void {
     this._order = order;
-    this.invalidateOrderCache();
-    this.subscribeToChanges();
-    this.book.invalidateDescendantOrderCaches(this.name);
+    this.changed();
   }
 
   clearOrder(): void {
     this._order = undefined;
-    this.invalidateOrderCache();
-    this.book.invalidateDescendantOrderCaches(this.name);
+    this.changed();
   }
 
   /** This scope's *local* order config (undefined if unset). */

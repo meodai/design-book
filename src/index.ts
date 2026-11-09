@@ -9,6 +9,7 @@ export type {
   DesignBookEventMap,
   ErrorDetail,
   FunctionImplementation,
+  FunctionTraits,
   RendererFn,
   ScopeAddedDetail,
   ScopeRemovedDetail,
@@ -36,31 +37,17 @@ export {
   dimension,
   string,
   createFunctionToken,
-  extractDependencies,
-  tokenKeyOf,
-  isFieldKey,
-  extractIteratedScopes,
-  iteratedScopesOf,
-  getTokenProcessors,
   isReferenceValue,
   isTokenValue,
-  isRelativeKey,
-  qualifyKey,
-  hasRelativeKeys,
-  needsBinding,
-  bindToken,
-  isScopeKey,
   isScopeReference,
 } from './tokens';
 export type {
   AnyTokenValue,
   FunctionArg,
-  BindingContext,
   MemberReference,
   UnresolvableValue,
   FunctionTokenValue,
   ReferenceValue,
-  TokenProcessor,
   TokenValue,
 } from './tokens';
 
@@ -79,9 +66,6 @@ export type { Layer, LayerData } from './layers';
 export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming';
 export type { NamingScheme, NamingAnchor, BuiltinSchemeName, ScaleNamesOptions } from './naming';
 
-// Graph
-export { DependencyGraph } from './dependency-graph';
-
 // Functions
 export {
   bestContrastWith, minContrastWith,
@@ -97,7 +81,6 @@ export {
   nth,
   sibling,
   picked,
-  registerBuiltinFunctions,
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';

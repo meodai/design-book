@@ -34,6 +34,7 @@ function config({ mode }: ConfigEnv): UserConfig {
         entry: {
           index: resolve(__dirname, 'src/index.ts'),
           naming: resolve(__dirname, 'src/naming/index.ts'),
+          internals: resolve(__dirname, 'src/internals.ts'),
         },
         formats: ['es'],
         fileName: (_format, name) => `${name}.js`,

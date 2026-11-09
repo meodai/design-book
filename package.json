@@ -13,6 +13,10 @@
     "./naming": {
       "import": "./dist/naming.js",
       "types": "./dist/naming/index.d.ts"
+    },
+    "./internals": {
+      "import": "./dist/internals.js",
+      "types": "./dist/internals.d.ts"
     }
   },
   "files": [

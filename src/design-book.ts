@@ -346,19 +346,6 @@ export class DesignBook {
     return this.scopeManager.getScopeDependencies(name);
   }
 
-  /** Invalidate the ordered-keys cache of every scope that (transitively)
-   *  extends `name`, because they merge `name`'s keys / may inherit its order. */
-  invalidateDescendantOrderCaches(name: string): void {
-    for (const scope of this.scopeManager.getAllScopes()) {
-      if (scope.name === name) continue;
-      let cur: string | undefined = scope.extendsScope;
-      while (cur) {
-        if (cur === name) { scope.invalidateOrderCache(); break; }
-        cur = this.scopeManager.getScope(cur)?.extendsScope;
-      }
-    }
-  }
-
   /** The scope a key lives in and the name within it (`title.fontSize`
    *  for a field key), or `undefined` for a key without a scope part or
    *  whose scope does not exist. */

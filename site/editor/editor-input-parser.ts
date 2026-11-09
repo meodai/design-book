@@ -10,7 +10,7 @@ import {
   typography, variant,
 } from '../../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../../src/index';
-import { isScopeKey } from '../../src/tokens';
+import { isScopeKey } from '../../src/internals';
 import { parse } from 'culori';
 
 /**
