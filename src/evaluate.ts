@@ -43,9 +43,6 @@ export function evaluateArg(book: EvaluationBook, arg: FunctionArg): unknown {
     return scope;
   }
   if (isReferenceValue(arg)) {
-    if (isScopePath(arg.key)) {
-      throw new TokenError(`ref('${arg.key}') names a scope, which has no value; to search it, pass pool('${arg.key}')`, arg.key);
-    }
     const resolution = book._resolution(arg.key);
     if (resolution.group !== undefined) return book.getScope(resolution.group);
     return resolution.value;
@@ -63,7 +60,7 @@ export function valueOf(token: TokenValue): string {
 /** The key a bound reference reads as a value. Refuses a scope, which has
  *  no value of its own. */
 export function valueKey(reference: ReferenceValue, where: string): string {
-  if (isScopePath(reference.key)) {
+  if (reference.key === '.') {
     throw new TokenError(`${where}: ref('${reference.key}') names a scope; a value needs 'scope.token'`, where);
   }
   return reference.key;

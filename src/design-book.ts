@@ -480,6 +480,9 @@ export class DesignBook {
     }
     const parts = splitKey(key);
     if (!parts) {
+      // A top-level scope's path: as a value, the scope itself — held by
+      // the key referring to it.
+      if (this.scopeManager.getScope(key)) return { value: '', group: key };
       throw new TokenError(`Invalid key format "${key}": expected "scope.token"`, key);
     }
     const scope = this.scopeManager.getScope(parts[0]);
@@ -1258,6 +1261,7 @@ export class DesignBook {
       graph.addNode(key);
       graph.updateEdges(key, deps);
       this._wireThrough(deps);
+      this._wireScopeNodes(deps);
     } catch (e) {
       undo();
       throw e;
@@ -1269,8 +1273,19 @@ export class DesignBook {
    *  whose members just changed. */
   private _rewireGroupKey(scopePath: string): void {
     const scope = this.scopeManager.getScope(scopePath);
-    if (!scope || !scopePath.includes('.') || !this.graph.hasNode(scopePath)) return;
+    if (!scope || !this.graph.hasNode(scopePath)) return;
     this.graph.updateEdges(scopePath, this._memberKeys(scopePath));
+  }
+
+  /** A top-level scope held by reference (`a.x = ref('b')`) gets a node
+   *  depending on its keys, like a group key: a change in it reaches the
+   *  holder, and a scope that would come to hold itself closes a cycle. */
+  private _wireScopeNodes(deps: Iterable<string>): void {
+    for (const dep of deps) {
+      if (dep.includes('.') || !this.scopeManager.getScope(dep)) continue;
+      this.graph.addNode(dep);
+      this.graph.updateEdges(dep, this._memberKeys(dep));
+    }
   }
   /** Record (or forget) `qualifiedKey` as a selector over the scopes its
    *  function token iterates. Called for every write and every delete, so

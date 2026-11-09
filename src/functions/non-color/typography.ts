@@ -76,9 +76,9 @@ export function variant(
       : '';
     throw new FunctionError(`variant: the base is a ref(...) to a group${hint}`, 'variant');
   }
-  const parsed = parseKey(base.key);
-  if (!parsed?.token) {
-    throw new FunctionError(`variant: the base must name a group, got "${base.key}"`, 'variant');
+  // Any scope may be the base: a group (`type.title`) or a top-level one.
+  if (parseKey(base.key) === null || base.key === '.') {
+    throw new FunctionError(`variant: the base must name a group or a scope, got "${base.key}"`, 'variant');
   }
   const set: Record<string, unknown> = {};
   const omit: string[] = [];

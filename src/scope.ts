@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { bindToken, isGroupValue, isReferenceValue, isScopePath, isUnresolvable, misplacedSource, toGroupValue, unresolvableIn } from './tokens';
+import { bindToken, isGroupValue, isReferenceValue, isUnresolvable, misplacedSource, toGroupValue, unresolvableIn } from './tokens';
 import type { AnyTokenValue, BindingContext, GroupValue, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { CircularDependencyError, TokenError } from './errors';
@@ -199,11 +199,9 @@ export class Scope {
     const qualified = `${this.name}.${name}`;
     const bound = bindToken(token, this.name, this.book._bindingContext?.());
     // A top-level scope is a pool for a selector, never a value of its own.
-    if (isReferenceValue(bound) && isScopePath(bound.key)) {
-      throw new TokenError(
-        `${qualified}: ref('${(token as ReferenceValue).key}') names a scope; a token needs 'scope.token'`,
-        qualified,
-      );
+    // Holding the scope that holds this key would hold itself.
+    if (isReferenceValue(bound) && bound.key === this.name) {
+      throw new TokenError(`${qualified}: ref('${(token as ReferenceValue).key}') is the scope this key is in; a scope cannot hold itself`, qualified);
     }
     // inherited(...) past the top of the chain, as this scope reads it.
     const unresolvable = unresolvableIn(bound);

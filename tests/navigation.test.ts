@@ -145,9 +145,10 @@ describe('inherited', () => {
   });
 
   // 10
-  it('refuses a scope where a value is expected', () => {
-    const { card } = cards();
-    expect(() => card.set('x', ref('palette'))).toThrow(/names a scope/);
+  it('holds a scope referred to as a value; refuses one where a value must be one', () => {
+    const { book, card } = cards();
+    card.set('x', ref('palette'));
+    expect(() => book.resolve('card.x')).toThrow(/is a group/);
     expect(() => card.set('x', inherited(ref('.')))).toThrow();
     expect(() => lighten(ref('.'))).toThrow(FunctionError);
     expect(() => lighten(ref('palette'))).toThrow(/needs a value, got the scope 'palette'/);

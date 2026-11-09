@@ -68,6 +68,9 @@ export interface UnresolvableValue {
   type: 'unresolvable';
   key: string;
   message: string;
+  /** A `holder` read where nothing holds the scope yet — a group defined to
+   *  be placed elsewhere. It reads nothing until it is, but is no mistake. */
+  pending?: true;
 }
 
 /** What a function argument may hold. A scope is passed as a reference to
@@ -380,7 +383,14 @@ export function isUnresolvable(arg: unknown): arg is UnresolvableValue {
 export function toMember(entry: string | ReferenceValue | MemberReference): MemberReference {
   if (typeof entry === 'string') return { type: 'member', key: entry };
   if (isMemberReference(entry)) return entry;
-  if (isReferenceValue(entry)) return { type: 'member', key: entry.key, ...(entry.up !== undefined ? { up: entry.up } : {}) };
+  if (isReferenceValue(entry)) {
+    return {
+      type: 'member',
+      key: entry.key,
+      ...(entry.up !== undefined ? { up: entry.up } : {}),
+      ...(entry.out !== undefined ? { out: entry.out } : {}),
+    };
+  }
   throw new Error(`Expected a key, ref(...), source(...) or refersTo(...), got ${JSON.stringify(entry)}`);
 }
 
@@ -545,7 +555,7 @@ function navigate(
   isScope: boolean,
   move: { up?: number | 'root'; out?: number | 'root' },
   context: BindingContext,
-): string | { error: string } {
+): string | { error: string; pending?: true } {
   const start = isScope ? path : scopeOf(path);
   const rest = path.slice(start.length);
   let scope = start;
@@ -556,8 +566,9 @@ function navigate(
       if (!scope.includes('.')) {
         return {
           error: level === 0
-            ? `"${scope}" is a top-level scope: no scope holds it, so holder(...) cannot read "${path}" there`
+            ? `"${scope}" is a top-level scope: no scope holds it, so holder(...) cannot read "${path}" there — place it in one with variant(ref('${scope}'))`
             : `"${start}" is held only ${level} level${level === 1 ? '' : 's'} deep, so holder(...) cannot go ${out} out`,
+          pending: true,
         };
       }
       scope = scopeOf(scope);
@@ -596,7 +607,9 @@ function bindNode(node: RefNode, scope: string, context: BindingContext | undefi
   const navigated = context
     ? navigate(qualified, isPoolReference(node), { up, out }, context)
     : { error: `"${node.key}" needs a book to read inherited(...) or holder(...)` };
-  if (typeof navigated !== 'string') return { type: 'unresolvable', key: qualified, message: navigated.error };
+  if (typeof navigated !== 'string') {
+    return { type: 'unresolvable', key: qualified, message: navigated.error, ...(navigated.pending ? { pending: true as const } : {}) };
+  }
   return { ...plain, key: navigated } as RefNode;
 }
 
@@ -663,7 +676,7 @@ export function misplacedSource(token: unknown): string | undefined {
 export function unresolvableIn(token: unknown): string | undefined {
   let error: string | undefined;
   walkRefs(token, (node) => {
-    if (!error && isUnresolvable(node)) error = node.message;
+    if (!error && isUnresolvable(node) && !node.pending) error = node.message;
   });
   return error;
 }

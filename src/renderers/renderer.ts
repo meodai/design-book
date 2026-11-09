@@ -39,7 +39,7 @@ export interface RendererOptions {
 }
 
 /** One custom property: its name, its value, and the key it stands for. */
-interface CssDeclaration { prop: string; value: string; owner?: string }
+interface CssDeclaration { prop: string; value: string; owner?: string; unresolved?: string }
 
 export interface W3ColorValue {
   colorSpace: string;
@@ -333,14 +333,22 @@ export class Renderer {
       }
 
       let value: string;
-      if (token.type === 'reference') {
-        value = `var(--${keyToHyphen((token as ReferenceValue).key)})`;
-      } else if (token.type === 'function') {
-        const fn = token as FunctionTokenValue;
-        const funcRenderer = this.functionRenderers.get(fn.name);
-        value = funcRenderer ? funcRenderer(fn.args, fn.options) : resolveTokenValue(this.book, scope.name, key);
-      } else {
-        value = resolveTokenValue(this.book, scope.name, key);
+      try {
+        if (token.type === 'reference') {
+          value = `var(--${keyToHyphen((token as ReferenceValue).key)})`;
+        } else if (token.type === 'function') {
+          const fn = token as FunctionTokenValue;
+          const funcRenderer = this.functionRenderers.get(fn.name);
+          value = funcRenderer ? funcRenderer(fn.args, fn.options) : resolveTokenValue(this.book, scope.name, key);
+        } else {
+          value = resolveTokenValue(this.book, scope.name, key);
+        }
+      } catch (e) {
+        // A key that does not resolve here (a group defined to be placed
+        // elsewhere, reading a holder it does not have yet) is reported in
+        // place rather than aborting the whole output.
+        out.push({ prop, value: '', owner: path, unresolved: (e as Error).message });
+        continue;
       }
       out.push({ prop, value, owner: path });
     }
@@ -434,7 +442,9 @@ export class Renderer {
       if (declarations.length > 0 || (media === undefined && (scopes.length > 0 || !hasMediaGroups))) {
         blocks.push([
           `${this.options.selector ?? ':root'} {`,
-          ...declarations.map((d) => `  ${d.prop}: ${d.value};`),
+          ...declarations.map((d) => (d.unresolved !== undefined
+            ? `  /* ${d.prop}: ${d.unresolved.replace(/\*\//g, '* /')} */`
+            : `  ${d.prop}: ${d.value};`)),
           '}',
         ]);
       }

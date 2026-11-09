@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   DesignBook, typography, variant, ref, rem, px, color, string, holder, inherited, composeBook, layer,
-  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest,
+  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest, sibling,
 } from '../src/index';
 import { isGroupValue } from '../src/tokens';
 
@@ -227,9 +227,22 @@ describe('groups and extends: contexts', () => {
     expect(book.resolve('card.button.text')).toBe('#eeeeee');
   });
 
-  it('holder past the top is refused', () => {
+  it('holder works where a member is named too: a sibling anchor and target', () => {
     const book = new DesignBook('c');
-    expect(() => book.addScope('a').set('x', holder(ref('.y')))).toThrow(/top-level scope/);
+    const scale = book.addScope('scale');
+    ['#ffffff', '#cccccc', '#888888', '#444444', '#000000'].forEach((c, i) => scale.set(`s${i}`, color(c)));
+    book.addScope('button').set('major', {
+      bg: ref('scale.s1'),
+      hover: { bg: sibling(holder(ref('.bg')), ref('scale'), 1) },
+    });
+    expect(book.resolve('button.major.hover.bg')).toBe('#888888');
+  });
+
+  it('holder in a top-level scope waits to be placed: it reads nothing there', () => {
+    const book = new DesignBook('c');
+    book.addScope('a').set('x', holder(ref('.y')));
+    expect(() => book.resolve('a.x')).toThrow(/top-level scope: no scope holds it/);
+    expect(book.render('css-variables')).toContain('/* --a-x: ');
   });
 
   it('a breakpoint scope refines a style one level up without naming it', () => {
@@ -279,6 +292,40 @@ describe('reading a group through a key', () => {
     book.addScope('card').set('colors', { ink: color('#111111'), mist: color('#eeeeee') });
     book.addScope('ui').set('text', bestContrastWith(color('#ffffff'), ref('card.colors')));
     expect(book.pickOf('ui.text')).toBe('card.colors.ink');
+  });
+});
+
+describe('holding a top-level scope', () => {
+  it('a key may hold any scope by reference, and its members are read through it', () => {
+    const book = new DesignBook('t');
+    const major = book.addScope('button-major');
+    major.set('bg', color('#1f4fd6'));
+    book.addScope('card').set('action', ref('button-major'));
+    expect(book.resolve('card.action.bg')).toBe('#1f4fd6');
+    book.addScope('callout').set('bg', ref('card.action.bg'));
+    const watch = vi.fn();
+    book.watch('callout.bg', watch);
+    major.set('bg', color('#12307f'));
+    expect(watch).toHaveBeenCalledWith('#12307f', expect.anything());
+    expect(book.render('css-variables')).toContain('--card-action-bg: var(--button-major-bg);');
+  });
+
+  it('or place it, so it reads where it is placed', () => {
+    const book = new DesignBook('t');
+    book.addScope('button-major').set('text', holder(ref('.surface')));
+    const card = book.addScope('card');
+    card.set('surface', color('#eeeeee'));
+    card.set('action', variant(ref('button-major')));
+    expect(book.resolve('card.action.text')).toBe('#eeeeee');
+  });
+
+  it('a scope cannot come to hold itself', () => {
+    const book = new DesignBook('t');
+    const a = book.addScope('a');
+    const b = book.addScope('b');
+    a.set('x', ref('b'));
+    expect(() => b.set('y', ref('a'))).toThrow(CircularDependencyError);
+    expect(() => a.set('self', ref('a'))).toThrow(/cannot hold itself/);
   });
 });
 
