@@ -226,6 +226,7 @@ level up without naming the scope:
 
 ```typescript
 largest(ref('type'), { by: 'fontWeight' });                   // the heaviest style
+bestContrastWith(ref('.surface'), ref('type'), { by: 'color' }); // the style whose color stands out most
 nextLarger(ref('.body'), ref('type'), { by: 'lineHeight' });  // the next looser one
 type.setOrder([{ by: 'value', field: 'fontWeight' }]);         // light → heavy
 tablet.set('title', variant(inherited(ref('.title')), { fontSize: rem(2.4) }));

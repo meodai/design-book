@@ -6,7 +6,7 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide, byOption } from '../kinds';
 import type { Direction } from '../kinds';
-import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor } from '../pool';
+import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf } from '../pool';
 import { contrastAgainst } from './color-math';
 import { readableOnOptions } from './readable';
 import type { ReadableOn, ReadableOnOptions } from './readable';
@@ -32,16 +32,16 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, options:
   }
   if (measure) return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'best' });
   assertDirectionFits(fn, direction, 'color');
-  const target = parseColor(targetValue);
+  const target = parseColor(colorValueOf(targetValue, by) ?? targetValue);
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
   const top = best(
-    colorPool(fn, scope, not, readableOn, readableContrast).filter((c) => onLightnessSide(direction, targetL, c.l)),
+    colorPool(fn, scope, not, readableOn, readableContrast, by).filter((c) => onLightnessSide(direction, targetL, c.l)),
     (c) => contrastAgainst(target, c.color),
     'max',
   );
   if (!top) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  return picked(scope, top.key, top.hex);
+  return picked(scope, top.key, top.value);
 }
 
 export function bestContrastWith(

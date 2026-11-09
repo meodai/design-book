@@ -9,7 +9,7 @@ import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
 import { DIRECTION_KIND, assertDirection, assertDirectionFits, byOption } from '../kinds';
 import type { Direction } from '../kinds';
-import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor } from '../pool';
+import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
 import type { Measure } from '../pool';
 import { picked } from '../picks';
 
@@ -93,7 +93,9 @@ function closestMeasured(targetValue: string, target: Measure, scope: Scope, opt
  *  distance zero). A direction keeps the members on one side of the
  *  target's OKLCH lightness, strictly past it by `minDistance`; `upTo` no
  *  further than the other color's lightness. */
-function closestColor(targetValue: string, scope: Scope, options: ClosestInputs): string {
+function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs): string {
+  // A text style is compared by its color field `by`.
+  const targetValue = colorValueOf(styleOrColor, options.by) ?? styleOrColor;
   if (!parseColor(targetValue)) {
     throw new FunctionError(`closest: cannot parse target color "${targetValue}"`, 'closest');
   }
@@ -103,7 +105,7 @@ function closestColor(targetValue: string, scope: Scope, options: ClosestInputs)
   let sign = options.direction === 'lighter' ? 1 : options.direction === 'darker' ? -1 : 0;
   let limit = Infinity;
   if (options.upTo !== undefined) {
-    const upTo = parseColor(options.upTo);
+    const upTo = parseColor(colorValueOf(options.upTo, options.by) ?? options.upTo);
     if (!upTo) throw new FunctionError(`closest: cannot parse \`upTo\` color "${options.upTo}"`, 'closest');
     const upToL = lightnessOf(upTo);
     sign = Math.sign(upToL - target.l);
@@ -115,7 +117,7 @@ function closestColor(targetValue: string, scope: Scope, options: ClosestInputs)
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = options.readableOn === undefined ? null : parseColor(options.readableOn) ?? null;
   const pick = best(
-    colorPool('closest', scope, options.not, options.readableOn, options.readableContrast).filter((c) => onSide(c.l - target.l)),
+    colorPool('closest', scope, options.not, options.readableOn, options.readableContrast, options.by).filter((c) => onSide(c.l - target.l)),
     (c) => visibleDistance(target.color, c.color, backdrop),
     'min',
   );
@@ -123,7 +125,7 @@ function closestColor(targetValue: string, scope: Scope, options: ClosestInputs)
     if (sign !== 0) throw noneOnSide(scope, targetValue, options, ' in OKLCH lightness');
     throw new FunctionError('closest: no valid color candidates found in scope', 'closest');
   }
-  return picked(scope, pick.key, pick.hex);
+  return picked(scope, pick.key, pick.value);
 }
 
 export interface ClosestOptions extends ReadableOnOptions {

@@ -3,7 +3,7 @@ import { DesignBook } from '../../src/design-book';
 import { color, px, ref, rem } from '../../src/tokens';
 import { typography, variant } from '../../src/functions/non-color/typography';
 import {
-  bestContrastWith, closest, furthestFrom, largest, lighten, minContrastWith, nextLarger, smallest,
+  bestContrastWith, closest, darkest, furthestFrom, largest, lighten, lightest, minContrastWith, mostVivid, nextLarger, smallest,
 } from '../../src/functions';
 import { FunctionError } from '../../src/errors';
 import { parseTokenInput } from '../../site/editor/editor-input-parser';
@@ -130,5 +130,63 @@ describe('by in the editor', () => {
     ui.set('x', parseTokenInput(written, b, ui));
     expect(getTokenDisplayValue(ui, 'x')).toBe(written);
     expect(pick(b, 'ui.x')).toBe('type.caption');
+  });
+});
+
+describe('by a color field', () => {
+  function styles() {
+    const b = new DesignBook('t');
+    const type = b.addScope('type');
+    type.set('body', typography({ fontSize: rem(1), color: color('#333333') }));
+    type.set('muted', typography({ fontSize: rem(1), color: color('#8a8a8a') }));
+    type.set('accent', typography({ fontSize: rem(1), color: color('#e0218a') }));
+    type.set('plain', typography({ fontSize: rem(1) })); // no color
+    const ui = b.addScope('ui');
+    ui.set('surface', color('#ffffff'));
+    return { b, type, ui };
+  }
+
+  it('a color selector picks the text style, judged by its color', () => {
+    const { b, ui } = styles();
+    ui.set('loud', mostVivid(ref('type'), { by: 'color' }));
+    ui.set('dark', darkest(ref('type'), { by: 'color' }));
+    expect(pick(b, 'ui.loud')).toBe('type.accent');
+    expect(b.resolve('ui.loud')).toMatch(/^font-size: 1rem; color: #e0218a/);
+    expect(pick(b, 'ui.dark')).toBe('type.body');
+  });
+
+  it('the style whose color contrasts most with a surface, or just enough', () => {
+    const { b, ui } = styles();
+    ui.set('strong', bestContrastWith(ref('ui.surface'), ref('type'), { by: 'color' }));
+    ui.set('enough', minContrastWith(ref('ui.surface'), ref('type'), { by: 'color', minContrast: 3 }));
+    expect(pick(b, 'ui.strong')).toBe('type.body');
+    expect(pick(b, 'ui.enough')).toBe('type.muted'); // 3.4:1, the least that reaches 3
+  });
+
+  it('readableOn narrows the styles by their color', () => {
+    const { b, ui } = styles();
+    // At 4.5:1 on white only body is left; at 3:1 muted and accent are too.
+    ui.set('x', lightest(ref('type'), { by: 'color', readableOn: ref('ui.surface') }));
+    ui.set('y', lightest(ref('type'), { by: 'color', readableOn: ref('ui.surface'), readableContrast: 3 }));
+    expect(pick(b, 'ui.x')).toBe('type.body');
+    expect(pick(b, 'ui.y')).toBe('type.muted');
+  });
+
+  it('a text style as the target is measured by its color too', () => {
+    const { b, ui } = styles();
+    const palette = b.addScope('palette');
+    palette.set('ink', color('#111111'));
+    palette.set('pink', color('#ff3399'));
+    ui.set('like', closest(ref('type.accent'), ref('palette'), { by: 'color' }));
+    ui.set('unlike', furthestFrom(ref('type.accent'), ref('palette'), { by: 'color' }));
+    expect(b.resolve('ui.like')).toBe('#ff3399');
+    expect(b.resolve('ui.unlike')).toBe('#111111');
+  });
+
+  it('without by, text styles are no color candidates, as before', () => {
+    const { b, type, ui } = styles();
+    type.set('swatch', color('#00aa00'));
+    ui.set('x', mostVivid(ref('type')));
+    expect(b.resolve('ui.x')).toBe('#00aa00');
   });
 });

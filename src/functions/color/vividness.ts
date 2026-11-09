@@ -1,3 +1,4 @@
+import { byOption } from '../kinds';
 import { poolArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
@@ -27,13 +28,15 @@ export interface VividnessInputs extends ReadableOn {
   /** Qualified member keys left out (the registry has read `not`). */
   not: string[];
   lightness?: LightnessRange;
+  /** The color field text styles are compared by. */
+  by?: string;
 }
 
 function vividImpl(fn: Vividness, scope: Scope, options: VividnessInputs): string {
-  const pool = filterLightness(fn, colorPool(fn, scope, options.not, options.readableOn, options.readableContrast), options.lightness, scope.name);
+  const pool = filterLightness(fn, colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), options.lightness, scope.name);
   const pick = best(pool, (c) => c.c, fn === 'mostVivid' ? 'max' : 'min');
   if (!pick) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  return picked(scope, pick.key, pick.hex);
+  return picked(scope, pick.key, pick.value);
 }
 
 /** The most vivid color in `scope` (highest OKLCH chroma). */
@@ -53,17 +56,21 @@ export interface VividnessOptions extends ReadableOnOptions {
   not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   /** Only members whose OKLCH lightness lies in `[min, max]` (0 to 1). */
   lightness?: LightnessRange;
+  /** A text style's color field to compare it by (`'color'`); without it
+   *  text styles are no candidates. The pick is the whole style. */
+  by?: string;
   description?: string;
 }
 
 function build(fn: Vividness, pool: PoolArg, options?: VividnessOptions): FunctionTokenValue {
-  assertOptions(fn, options, ['not', 'lightness', ...READABLE_OPTIONS]);
+  assertOptions(fn, options, ['not', 'lightness', 'by', ...READABLE_OPTIONS]);
   const scope = poolArg(fn, pool);
   const lightness = lightnessOption(fn, options?.lightness);
   return createFunctionToken(fn, [scope], {
     description: options?.description,
-    options: { not: toMembers(options?.not), ...(lightness ? { lightness } : {}), ...readableOnOptions(fn, options) },
-    metadata: { dependencies: [], returnType: 'color' },
+    options: { not: toMembers(options?.not), ...(lightness ? { lightness } : {}), ...byOption(fn, options?.by), ...readableOnOptions(fn, options) },
+    // With `by`, the pick may be a text style.
+    metadata: { dependencies: [], returnType: options?.by === undefined ? 'color' : undefined },
   });
 }
 

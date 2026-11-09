@@ -33,9 +33,13 @@ export interface ColorForm {
   c: number;
 }
 
-/** A pool member that is a color. */
+/** A pool member compared as a color: a color, or a text style by a
+ *  color field (`by`). */
 export interface ColorMember extends ColorForm {
   key: string;
+  /** What a selector returns when it picks this member: the color's hex,
+   *  or the whole text style. */
+  value: string;
 }
 
 /** Memo of `colorForm` and `parseColor`, by the string; values never
@@ -88,11 +92,13 @@ export function colorPool(
   not: ReadonlyArray<string>,
   readableOn?: string | null,
   readableContrast: number = DEFAULT_READABLE_CONTRAST,
+  by?: string,
 ): ColorMember[] {
   const members: ColorMember[] = [];
   for (const { key, value } of resolvePool(scope, not)) {
-    const form = colorForm(value);
-    if (form) members.push({ key, ...form });
+    const color = colorValueOf(value, by);
+    const form = color === undefined ? null : colorForm(color);
+    if (form) members.push({ key, ...form, value: color === value ? form.hex : value });
   }
   if (readableOn === undefined || readableOn === null) return members;
   const backdrop = parseColor(readableOn);
@@ -161,6 +167,27 @@ function fieldPattern(field: string): RegExp {
   return pattern;
 }
 
+/** One field of a resolved text style (`fontWeight` → the value after
+ *  `font-weight:`), or `undefined`. */
+export function fieldOf(value: string, field: string): string | undefined {
+  return value.match(fieldPattern(field))?.[1]?.trim();
+}
+
+/** True for a resolved text style: CSS declarations. */
+export function isTextStyle(value: string): boolean {
+  return DECLARATIONS.test(value.trim());
+}
+
+/**
+ * The color a resolved value stands for when colors are compared: a color
+ * as itself; a text style by its field `by` (`'color'`), or not at all
+ * without one. The string may still not parse as a color.
+ */
+export function colorValueOf(value: string, by?: string): string | undefined {
+  if (!isTextStyle(value)) return value;
+  return by === undefined ? undefined : fieldOf(value, by);
+}
+
 /**
  * The size a resolved value stands for: a dimension as itself, a text style
  * by one of its fields — `by`, its font size unless told otherwise. A field
@@ -170,7 +197,7 @@ function fieldPattern(field: string): RegExp {
 export function measureOf(value: string, by: string = DEFAULT_MEASURE_FIELD): Measure | null {
   const trimmed = value.trim();
   if (DECLARATIONS.test(trimmed)) {
-    const field = trimmed.match(fieldPattern(by))?.[1]?.trim();
+    const field = fieldOf(trimmed, by);
     const dim = field ? parseDimension(field) : null;
     return dim ? { kind: 'text', ...dim } : null;
   }

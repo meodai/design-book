@@ -8,7 +8,7 @@ import { FunctionError } from '../../errors';
 import { visibleDistance } from '../color/color-math';
 import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
-import { best, colorForm, colorPool, describeKind, measureOf, measuredPool, ofKind, parseColor } from '../pool';
+import { best, colorForm, colorPool, describeKind, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
 import { picked } from '../picks';
 
 /** `furthestFrom`'s options as the implementation receives them. */
@@ -51,11 +51,13 @@ export function furthestFromImpl(targetValue: string, scope: Scope, options: Fur
     return picked(scope, pick.key, pick.value);
   }
 
-  if (!parseColor(targetValue)) throw new FunctionError(`${fn}: cannot parse target "${targetValue}"`, fn);
+  // A text style is compared by its color field `by`.
+  const targetColor = colorValueOf(targetValue, by) ?? targetValue;
+  if (!parseColor(targetColor)) throw new FunctionError(`${fn}: cannot parse target "${targetValue}"`, fn);
   // Compared in gamut-mapped sRGB, as the candidates are (see `closest`).
-  const target = colorForm(targetValue);
+  const target = colorForm(targetColor);
   if (!target) throw new FunctionError(`${fn}: cannot format target color "${targetValue}"`, fn);
-  const pool = colorPool(fn, scope, not, readableOn, readableContrast);
+  const pool = colorPool(fn, scope, not, readableOn, readableContrast, by);
   if (pool.length === 0) {
     throw new FunctionError(`${fn}: scope "${scope.name}" has no colors to compare with ${targetValue}`, fn);
   }
@@ -67,7 +69,7 @@ export function furthestFromImpl(targetValue: string, scope: Scope, options: Fur
   if (!pick) {
     throw new FunctionError(`${fn}: no member of scope "${scope.name}" is within ${maxDistance} (OKLab) of ${targetValue}`, fn);
   }
-  return picked(scope, pick.key, pick.hex);
+  return picked(scope, pick.key, pick.value);
 }
 
 export interface FurthestFromOptions extends ReadableOnOptions {
