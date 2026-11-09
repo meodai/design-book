@@ -130,7 +130,8 @@ describe('data layers', () => {
         b.addScope('type').set('heading', typography({ fontFamily: 'Inter', fontSize: rem(2), fontWeight: '700' }));
       }),
       layer('dense', (b) => {
-        b.getScope('type')!.set('heading', variant(b.getTokenByKey('type.heading'), { fontSize: rem(1.5) }));
+        // A theme changes a text style in place by setting its member.
+        b.getScope('type.heading')!.set('fontSize', rem(1.5));
       }),
     ]);
     expect(book.resolve('type.heading.fontSize')).toBe('1.5rem');

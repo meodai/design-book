@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { color, createFunctionToken, px, ref } from '../../src/tokens';
+import { color, createFunctionToken, pool, px, ref } from '../../src/tokens';
 import { FunctionError } from '../../src/errors';
 import {
   bestContrastWith, closest, colorMix, lighten, minContrastWith, mostVivid, nextLighter, nth, random, sibling, typographyScale,
@@ -39,7 +39,7 @@ describe('constructors refuse options they do not read', () => {
   it('a stored token is not checked again: old data still loads', () => {
     const book = new DesignBook('t');
     book.addScope('p').set('a', color('#ff0000'));
-    book.addScope('ui').set('x', createFunctionToken('mostVivid', [ref('p')], { options: { not: [], retired: true } }));
+    book.addScope('ui').set('x', createFunctionToken('mostVivid', [pool('p')], { options: { not: [], retired: true } }));
     expect(book.resolve('ui.x')).toBe('#ff0000');
   });
 });

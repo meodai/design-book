@@ -3,11 +3,11 @@ import {
   isReferenceValue,
   isRelativeKey,
   isMemberReference,
-  isScopeKey,
+  isScopePath,
   toMember,
   toMembers,
 } from '../../tokens';
-import type { FunctionTokenValue, MemberReference, ReferenceValue } from '../../tokens';
+import type { PoolReference, FunctionTokenValue, MemberReference, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { parseKey } from '../../keys';
@@ -29,13 +29,13 @@ export interface SiblingOptions {
   [key: string]: any;
 }
 
-/** Scope name of a fully-qualified key. Scope names cannot contain dots.
- *  A relative key (`.token`) gives `''` — the scope that reads it, filled in
- *  when the token is bound. Throws on a key that is neither: an unqualified
- *  anchor would otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
+/** The scope a key belongs to (everything before its last dot). A relative
+ *  key gives its relative scope part — `''` for `.token`, the scope that
+ *  reads it. Throws on a key that is neither: an unqualified anchor would
+ *  otherwise yield a nonsense scope name (`'g10'` from `'g100'`). */
 export function scopeOfKey(key: string): string {
   const parsed = parseKey(key);
-  if (parsed?.relative && parsed.token && !parsed.field) return '';
+  if (parsed?.relative && parsed.token) return parsed.scope;
   if (!parsed || parsed.relative || !parsed.token) {
     throw new FunctionError(`sibling: the anchor must be a fully-qualified 'scope.token' key, got "${key}"`, 'sibling');
   }
@@ -179,7 +179,7 @@ export function sibling(
   // sibling(anchor, pool?, steps?, options?): the pool and the count are
   // each optional, in that order.
   const rest: unknown[] = [pool, offset, options].filter((r) => r !== undefined);
-  let scale: ReferenceValue | undefined;
+  let scale: PoolReference | undefined;
   if (rest.length > 0 && typeof rest[0] !== 'number' && !isPlainOptions(rest[0])) {
     scale = poolArg('sibling', rest.shift());
   }
@@ -194,7 +194,7 @@ export function sibling(
   }
   const toward = opts.toward;
   if (toward !== undefined) {
-    if ((!isReferenceValue(toward) && !isMemberReference(toward)) || isScopeKey(toward.key)) {
+    if ((!isReferenceValue(toward) && !isMemberReference(toward)) || isScopePath(toward.key)) {
       throw new FunctionError('sibling: `toward` must be a ref(...) to a token', 'sibling');
     }
     if (opts.wrap) {

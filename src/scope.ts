@@ -1,12 +1,9 @@
 import { parse } from 'culori';
-import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvable, MEMBER_SLOTS, misplacedSource, unresolvableIn } from './tokens';
-import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import { bindToken, isGroupValue, isReferenceValue, isScopePath, isUnresolvable, misplacedSource, toGroupValue, unresolvableIn } from './tokens';
+import type { AnyTokenValue, BindingContext, GroupValue, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
-import { CircularDependencyError, FunctionError, TokenError } from './errors';
-
-/** A resolved text style: CSS declarations. */
-const TEXT_STYLE = /^[a-z-]+\s*:/i;
-import { evaluateArg, evaluateFunction, valueKey, valueOf } from './evaluate';
+import { CircularDependencyError, TokenError } from './errors';
+import { evaluateFunction, valueKey, valueOf } from './evaluate';
 import type { Resolution } from './functions/picks';
 import type { ComparableEntry, TokenOrderer } from './orderers';
 
@@ -21,6 +18,9 @@ export type ScopeOrder = SortCriterion[];
 
 /** An entry's place in one ordered group of a `value` criterion. */
 type Rank = { group: string; index: number };
+
+/** A key being sorted: its value, or the group it holds. */
+type SortEntry = { key: string; index: number; type: string; resolved: string | null; token: AnyTokenValue; group?: string };
 
 /** What a scope needs from its book. */
 export type BookWithScope = {
@@ -38,6 +38,10 @@ export type BookWithScope = {
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
   _accept(key: string, newValue: AnyTokenValue | undefined, oldValue: AnyTokenValue | undefined): void;
+  /** Writes a group at `name` of `scope`: its entry, its scope, its members. */
+  _setGroup(scope: Scope, name: string, group: GroupValue): void;
+  /** Removes the group at `name` of `scope`, its scope and everything in it. */
+  _deleteGroup(scope: Scope, name: string): void;
   _settle(): void;
   _restoreRejectedDelete(key: string, restored: AnyTokenValue): void;
   /** How this book's `extends` chains are read while binding a token. */
@@ -51,7 +55,6 @@ export type BookWithScope = {
 export { assertValidTokenKey } from './keys';
 import { assertValidTokenKey, splitKey } from './keys';
 import type { ResolveCache } from './resolve-cache';
-import { isTypographyToken, typographyBase, typographyFieldNames } from './functions/non-color/typography';
 
 /** See `Scope.metadata`. */
 export type ScopeMetadata = Record<string, unknown>;
@@ -64,6 +67,15 @@ export class Scope {
    *  reads one key, `media` (a breakpoint name or a media query). */
   readonly metadata: ScopeMetadata;
   private extendsName?: string;
+  /** What the scope is outside the book when it is a group (`'typography'`
+   *  for a text style); read through `getKind`, which follows `extends`. */
+  readonly kind?: string;
+  /** Inherited keys the scope leaves out (a variant's `null` members). */
+  private readonly omitted: ReadonlySet<string>;
+  /** True for a group the book made because the scope holding it inherits
+   *  a group: it extends the inherited one and has no members of its own
+   *  until something is written into it. */
+  readonly implicit: boolean;
   private tokens: Map<string, AnyTokenValue>;
   private book: BookWithScope;
   /** Local order config. `undefined` = inherit from extends chain;
@@ -88,14 +100,52 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string; metadata?: ScopeMetadata }
+    options?: { extends?: string; description?: string; metadata?: ScopeMetadata; kind?: string; omit?: readonly string[]; implicit?: boolean }
   ) {
     this.name = name;
     this.book = book;
     this.description = options?.description;
     this.metadata = { ...options?.metadata };
     this.extendsName = options?.extends;
+    this.kind = options?.kind;
+    this.omitted = new Set(options?.omit ?? []);
+    this.implicit = options?.implicit ?? false;
     this.tokens = new Map();
+  }
+
+  /** The scope that holds this one when it is a group (`type` for
+   *  `type.title`); `undefined` for a top-level scope. */
+  get holderName(): string | undefined {
+    const dot = this.name.lastIndexOf('.');
+    return dot === -1 ? undefined : this.name.slice(0, dot);
+  }
+
+  /** What the scope is outside the book — its own kind, or the kind of the
+   *  scope it extends (a variant of a text style is a text style). */
+  getKind(): string | undefined {
+    if (this.kind !== undefined) return this.kind;
+    return this.extendsName ? this.book.getScope(this.extendsName)?.getKind() : undefined;
+  }
+
+  /** Its path, so a group in a message reads as `type.title`. */
+  toString(): string {
+    return this.name;
+  }
+
+  /** Any scope of the same book by path (a group: `type.title`). */
+  scopeAt(path: string): Scope | undefined {
+    return this.book.getScope(path);
+  }
+
+  /** Inherited keys this scope leaves out. */
+  get omit(): string[] {
+    return [...this.omitted];
+  }
+
+  /** The scope keys are inherited from, unless this one leaves `name` out. */
+  private parentFor(name: string): Scope | undefined {
+    if (!this.extendsName || this.omitted.has(name)) return undefined;
+    return this.book.getScope(this.extendsName);
   }
 
   /** Name of the scope this one extends, or `undefined` if it doesn't
@@ -119,34 +169,39 @@ export class Scope {
     if (this.tokens.has(name)) {
       return this.tokens.get(name);
     }
-    if (this.extendsName) {
-      return this.book.getScope(this.extendsName)?.getRaw(name);
-    }
-    return undefined;
+    return this.parentFor(name)?.getRaw(name);
   }
 
   getSourceKey(name: string): string | undefined {
     if (this.tokens.has(name)) {
       return `${this.name}.${name}`;
     }
-    if (this.extendsName) {
-      return this.book.getScope(this.extendsName)?.getSourceKey(name);
-    }
-    return undefined;
+    return this.parentFor(name)?.getSourceKey(name);
   }
 
   isInherited(name: string): boolean {
     return this.has(name) && !this.hasOwn(name);
   }
 
-  set(name: string, value: AnyTokenValue): void {
+  /**
+   * Writes a token, or a group, at `name`. A group is written as a plain
+   * object of members (`{ bg: …, text: … }`), `typography({ … })` or
+   * `variant(ref, { … })`; nested objects are nested groups.
+   */
+  set(name: string, value: AnyTokenValue | Record<string, unknown>): void {
     assertValidTokenKey(this.name, name);
+    const group = toGroupValue(value);
+    if (group) {
+      this.book._setGroup(this, name, group);
+      return;
+    }
+    const token = value as AnyTokenValue;
     const qualified = `${this.name}.${name}`;
-    const bound = bindToken(value, this.name, this.book._bindingContext?.());
-    // A scope is a pool for a selector, never a value of its own.
-    if (isReferenceValue(bound) && isScopeKey(bound.key)) {
+    const bound = bindToken(token, this.name, this.book._bindingContext?.());
+    // A top-level scope is a pool for a selector, never a value of its own.
+    if (isReferenceValue(bound) && isScopePath(bound.key)) {
       throw new TokenError(
-        `${qualified}: ref('${(value as ReferenceValue).key}') names a scope; a token needs 'scope.token'`,
+        `${qualified}: ref('${(token as ReferenceValue).key}') names a scope; a token needs 'scope.token'`,
         qualified,
       );
     }
@@ -154,20 +209,16 @@ export class Scope {
     const unresolvable = unresolvableIn(bound);
     if (unresolvable) throw new TokenError(`${qualified}: ${unresolvable}`, qualified);
     // source(...) names a member; it is no value.
-    const misplaced = misplacedSource(value);
+    const misplaced = misplacedSource(token);
     if (misplaced) throw new TokenError(`${qualified}: ${misplaced}`, qualified);
-    if (isTypographyToken(value) && typographyBase(bound as FunctionTokenValue) === qualified) {
-      const error = new CircularDependencyError([qualified, qualified]);
-      error.message += ` — a variant cannot extend the token it replaces; to change "${qualified}" in place, ` +
-        `pass the token instead: variant(book.getTokenByKey("${qualified}"), …)`;
-      throw error;
-    }
+    // A token replacing a group: the group goes first, with its scope.
+    if (isGroupValue(this.tokens.get(name))) this.book._deleteGroup(this, name);
     const oldValue = this.tokens.get(name);
     const existed = this.tokens.has(name);
-    this.tokens.set(name, value);
+    this.tokens.set(name, token);
     this.changed();
     try {
-      this.book._accept(qualified, value, oldValue);
+      this.book._accept(qualified, token, oldValue);
     } catch (e) {
       // Refused (it would close a dependency cycle) before anyone heard of
       // it: put the old token back, and the book holds nothing it refused.
@@ -181,10 +232,7 @@ export class Scope {
 
   has(name: string): boolean {
     if (this.tokens.has(name)) return true;
-    if (this.extendsName) {
-      return this.book.getScope(this.extendsName)?.has(name) ?? false;
-    }
-    return false;
+    return this.parentFor(name)?.has(name) ?? false;
   }
 
   /** Check if a key is defined locally (not inherited) */
@@ -194,6 +242,10 @@ export class Scope {
 
   /** Delete a local token, reverting to inherited value if available */
   delete(name: string): boolean {
+    if (isGroupValue(this.tokens.get(name))) {
+      this.book._deleteGroup(this, name);
+      return true;
+    }
     const old = this.tokens.get(name);
     const had = this.tokens.delete(name);
     if (had) {
@@ -241,7 +293,7 @@ export class Scope {
     const localKeys = Array.from(this.tokens.keys());
     if (!this.extendsName) return localKeys;
 
-    const parentKeys = this.book.getScope(this.extendsName)?.getAllKeys() ?? [];
+    const parentKeys = (this.book.getScope(this.extendsName)?.getAllKeys() ?? []).filter((k) => !this.omitted.has(k));
     const combined = new Set([...parentKeys, ...localKeys]);
     return Array.from(combined);
   }
@@ -321,13 +373,17 @@ export class Scope {
   private sortKeys(keys: string[], order: ScopeOrder): string[] {
     this._ordering = true;
     try {
-      type Entry = { key: string; index: number; type: string; resolved: string | null; token: AnyTokenValue };
-      const entries: Entry[] = keys.map((key, index) => {
+      const entries: SortEntry[] = keys.map((key, index) => {
         const token = this.get(key)!;
         let resolved: string | null = null;
-        try { resolved = this.resolve(key); } catch { resolved = null; }
-        const type = this.effectiveType(token, resolved);
-        return { key, index, type, resolved, token };
+        let group: string | undefined;
+        try {
+          ({ value: resolved, group } = this.resolution(key));
+        } catch {
+          resolved = null;
+        }
+        const type = group !== undefined ? 'group' : this.effectiveType(token, resolved);
+        return { key, index, type, resolved, token, group };
       });
 
       // One ranking per value criterion: they may sort text styles by
@@ -367,33 +423,33 @@ export class Scope {
 
   /**
    * Ranks for a `value` criterion: entries grouped by effective type, each
-   * group put in order by that type's orderer. A text style is ranked by
-   * one field (`field`, its font size unless given) among the text styles,
-   * with the orderer of that field's kind — so they sort like the sizes or
-   * numbers they stand for. Entries of different groups are not compared.
+   * group put in order by that type's orderer. A key holding a group is
+   * ranked by one of its members — `field`, or the group's default member
+   * (`fontSize` for a text style) — among the other groups, with the orderer
+   * of that member's kind: text styles sort like the sizes they stand for.
+   * Entries of different groups are not compared.
    */
-  private valueRanks(
-    entries: Array<{ key: string; type: string; resolved: string | null; token: AnyTokenValue }>,
-    field: string = DEFAULT_MEASURE_FIELD,
-  ): Map<string, Rank> {
+  private valueRanks(entries: SortEntry[], field?: string): Map<string, Rank> {
     const groups = new Map<string, { type: string; list: ComparableEntry[] }>();
     for (const e of entries) {
       if (e.resolved === null) continue;
       let type = e.type;
       let resolved = e.resolved;
-      let group = type;
-      if (type === 'typography') {
+      let rankGroup = type;
+      if (e.group !== undefined) {
+        const member = field ?? this.book.getScope(e.group)?.defaultMember();
+        if (member === undefined) continue; // nothing stands for it: no rank
         try {
-          resolved = this.resolve(`${e.key}.${field}`);
+          resolved = this.book.resolve(`${e.group}.${member}`);
         } catch {
-          continue; // a style without the field has no rank
+          continue; // a group without the member has no rank
         }
         type = detectValueType(resolved);
-        group = `typography:${type}`;
+        rankGroup = `group:${type}`;
       }
-      const g = groups.get(group) ?? { type, list: [] };
+      const g = groups.get(rankGroup) ?? { type, list: [] };
       g.list.push({ key: e.key, type, resolved, token: e.token });
-      groups.set(group, g);
+      groups.set(rankGroup, g);
     }
 
     const ranks = new Map<string, Rank>();
@@ -406,6 +462,13 @@ export class Scope {
       orderer(list).forEach((entry, index) => ranks.set(entry.key, { group, index }));
     }
     return ranks;
+  }
+
+  /** The member that stands for this scope as a group when one value is
+   *  needed (a comparison without `by`, a sort without `field`): `fontSize`
+   *  for a text style, none for other groups. */
+  defaultMember(): string | undefined {
+    return this.getKind() === 'typography' ? DEFAULT_MEASURE_FIELD : undefined;
   }
 
   /** Rank of a type for the `type` criterion: listed types by priority index,
@@ -433,8 +496,12 @@ export class Scope {
     return token.type;
   }
 
+  /** The value of `name`; for a key whose value is a group, the book's
+   *  error (see `DesignBook.resolve`). */
   resolve(name: string): string {
-    return this.resolution(name).value;
+    const { value, group } = this.resolution(name);
+    if (group !== undefined) return this.book.resolve(`${this.name}.${name}`);
+    return value;
   }
 
   /** The value of `name` and, when it is a member a selector picked (also
@@ -445,8 +512,8 @@ export class Scope {
 
   /** `resolution` without the cache. */
   private compute(name: string): Resolution {
-    const field = splitKey(name);
-    if (field) return { value: this.resolveField(field[0], field[1]) };
+    // A path into a group (`title.fontSize`) is the book's to walk.
+    if (name.includes('.')) return this.book._resolution(`${this.name}.${name}`);
     const token = this.get(name);
     if (!token) {
       throw new Error(`Token "${name}" not found in scope "${this.name}"`);
@@ -461,6 +528,8 @@ export class Scope {
       this.book._cache.trip();
       throw new CircularDependencyError([qualified, qualified]);
     }
+    // A group's value is the group: the scope at its path.
+    if (isGroupValue(token)) return { value: '', group: qualified };
     this.resolving.add(name);
     try {
       // A reference passes on what it refers to, a pick included.
@@ -478,40 +547,6 @@ export class Scope {
     }
   }
 
-  /** One field of the typography `name` holds (`ref('type.title.fontSize')`):
-   *  follows a ref to the typography, and a variant's base for the fields
-   *  it doesn't set. */
-  private resolveField(name: string, field: string): string {
-    const token = this.get(name);
-    const qualified = `${this.name}.${name}`;
-    if (!token) throw new Error(`Token "${name}" not found in scope "${this.name}"`);
-    if (field.includes('.')) {
-      throw new TokenError(
-        `"${qualified}.${field}": a key has at most one field level — "scope.token.field"`,
-        `${qualified}.${field}`,
-      );
-    }
-    if (token.type === 'reference') {
-      return this.book.resolve(`${valueKey(token as ReferenceValue, qualified)}.${field}`);
-    }
-    if (!isTypographyToken(token)) {
-      throw new TokenError(`"${qualified}" is not a typography, so "${qualified}.${field}" names no field`, `${qualified}.${field}`);
-    }
-    if (!typographyFieldNames(this.book, token)?.includes(field)) {
-      throw new TokenError(`"${qualified}" has no field "${field}"`, `${qualified}.${field}`);
-    }
-    const own = (token.options?.fields as string[]).indexOf(field);
-    if (own === -1) return this.book.resolve(`${typographyBase(token)}.${field}`);
-
-    const guard = `${name}.${field}`;
-    if (this.resolving.has(guard)) throw new CircularDependencyError([`${qualified}.${field}`, `${qualified}.${field}`]);
-    this.resolving.add(guard);
-    try {
-      return String(evaluateArg(this.book, token.args[own]));
-    } finally {
-      this.resolving.delete(guard);
-    }
-  }
 }
 
 import { DEFAULT_MEASURE_FIELD, detectValueType } from './values';

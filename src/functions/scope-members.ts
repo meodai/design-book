@@ -44,10 +44,13 @@ export function poolKeys(scope: Scope, not: ReadonlyArray<string> = []): string[
   );
 }
 
-/** A candidate with its resolved value. */
+/** A candidate with its resolved value — or, for a member whose value is
+ *  a group (a text style held in the pool), that group, measured by one of
+ *  its members (`by`). */
 export interface PoolMember {
   key: string;
   value: string;
+  group?: Scope;
 }
 
 /**
@@ -58,7 +61,12 @@ export function resolvePool(scope: Scope, not: ReadonlyArray<string> = []): Pool
   const members: PoolMember[] = [];
   for (const key of poolKeys(scope, not)) {
     try {
-      members.push({ key, value: scope.resolve(key) });
+      const { value, group } = scope.resolution(key);
+      if (group === undefined) members.push({ key, value });
+      else {
+        const held = scope.scopeAt(group);
+        if (held) members.push({ key, value, group: held });
+      }
     } catch {
       // Unresolvable members are not candidates.
     }

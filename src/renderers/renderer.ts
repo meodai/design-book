@@ -1,9 +1,8 @@
 import { DesignBook } from '../design-book';
 import { evaluateArg, evaluateFunction } from '../evaluate';
-import { isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue } from '../tokens';
+import { isFunctionTokenValue, isGroupValue, isReferenceValue, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
-import { isTypographyToken, typographyBase, typographyFieldNames } from '../functions/non-color/typography';
 import { FunctionError } from '../errors';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/color-math';
@@ -39,7 +38,8 @@ export interface RendererOptions {
   changedFrom?: DesignBook;
 }
 
-interface CssDeclaration { prop: string; value: string }
+/** One custom property: its name, its value, and the key it stands for. */
+interface CssDeclaration { prop: string; value: string; owner?: string }
 
 export interface W3ColorValue {
   colorSpace: string;
@@ -238,21 +238,10 @@ export class Renderer {
    *  emitting both means the last declaration wins, so fail loudly instead. */
   private assertNoVarNameCollisions(): void {
     const seen = new Map<string, string[]>();
-
-    for (const scope of this.book.getAllScopes()) {
-      for (const key of scope.getAllKeys()) {
-        if (!scope.get(key)) continue;
-        const varName = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
-        const fields = this.typographyFieldsOf(scope.get(key)!);
-        const names = fields
-          ? fields.map((field) => [`${varName}-${keyToHyphen(field)}`, `${scope.name}.${key} (${field})`])
-          : [[varName, `${scope.name}.${key}`]];
-        for (const [name, owner] of names) {
-          const owners = seen.get(name);
-          if (owners) owners.push(owner);
-          else seen.set(name, [owner]);
-        }
-      }
+    for (const { prop, owner } of this.cssDeclarations(this.book.getAllScopes())) {
+      const owners = seen.get(prop);
+      if (owners) owners.push(owner ?? prop);
+      else seen.set(prop, [owner ?? prop]);
     }
 
     const collisions = [...seen.entries()].filter(([, owners]) => owners.length > 1);
@@ -267,10 +256,28 @@ export class Renderer {
     );
   }
 
-  /** The field names when `token` is a `typography()` token or a ref (chain)
-   *  that ends at one; `undefined` otherwise. */
-  private typographyFieldsOf(token: AnyTokenValue | undefined): string[] | undefined {
-    return typographyFieldNames(this.book, token);
+  /** The group a key's value is — the key holds one, refers to one or picked
+   *  one — or `undefined`. */
+  private groupOf(path: string): Scope | undefined {
+    try {
+      const group = this.book._resolution(path).group;
+      return group === undefined ? undefined : this.book.getScope(group);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** A group's members as paths relative to it, nested groups' members
+   *  included (`fontSize`, `hover.bg`). */
+  private leafMembers(group: Scope, prefix = '', seen: ReadonlySet<string> = new Set()): string[] {
+    const out: string[] = [];
+    const inside = new Set([...seen, group.name]);
+    for (const key of group.getAllKeys()) {
+      const nested = this.groupOf(`${group.name}.${key}`);
+      if (nested && !inside.has(nested.name)) out.push(...this.leafMembers(nested, `${prefix}${key}.`, inside));
+      else if (!nested) out.push(`${prefix}${key}`);
+    }
+    return out;
   }
 
   /** The scopes to render: all, or the `scopes` option (unknown names throw). */
@@ -284,68 +291,81 @@ export class Renderer {
     return all.filter((scope) => wanted.includes(scope.name));
   }
 
-  /** One `--scope-key: value` declaration per token, in book order. */
-  private cssDeclarations(scopes = this.scopesToRender()): CssDeclaration[] {
+  /** One `--path: value` declaration per token, in book order: a group's
+   *  members at their paths, at any depth. */
+  private cssDeclarations(scopes: Scope[] = this.scopesToRender()): CssDeclaration[] {
     const out: CssDeclaration[] = [];
-    for (const scope of scopes) {
-      for (const key of scope.getAllKeys()) {
-        const token = scope.get(key);
-        if (!token) continue;
+    for (const scope of scopes) this.declareScope(scope, out, new Set([scope.name]));
+    return out;
+  }
 
-        const prop = `--${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
+  private declareScope(scope: Scope, out: CssDeclaration[], inside: ReadonlySet<string>): void {
+    for (const key of scope.getAllKeys()) {
+      const token = scope.get(key);
+      if (!token) continue;
+      const path = `${scope.name}.${key}`;
+      const prop = `--${keyToHyphen(path)}`;
 
-        // A typography has no single CSS value: one variable per field. A
-        // ref to one points each field at the target's field variable.
-        // A variant's inherited fields point at its base's variables.
-        const typo = isTypographyToken(token) ? token : undefined;
-        if (typo) {
-          const own: string[] = typo.options?.fields ?? [];
-          const base = typographyBase(typo);
-          const fields = this.typographyFieldsOf(typo);
-          if (!fields) {
-            // A variant whose base is gone: fail like resolve, W3 and JSON
-            // rather than write half a style.
-            throw new FunctionError(`typography: the base "${base}" is not a typography`, 'typography');
-          }
-          for (const field of fields) {
-            const i = own.indexOf(field);
-            const value = i === -1
-              ? `var(--${keyToHyphen(base!)}-${keyToHyphen(field)})`
-              : argToCssValue(this, typo.args[i]);
-            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value });
-          }
-          continue;
+      // A group held here: its members, at their paths.
+      if (isGroupValue(token)) {
+        const group = this.book.getScope(path);
+        if (group && !inside.has(path)) this.declareScope(group, out, new Set([...inside, path]));
+        continue;
+      }
+      // A group referred to or picked: each member points at the original's.
+      const group = this.groupOf(path);
+      if (group) {
+        for (const member of this.leafMembers(group)) {
+          out.push({
+            prop: `${prop}-${keyToHyphen(member)}`,
+            value: `var(--${keyToHyphen(`${group.name}.${member}`)})`,
+            owner: `${path}.${member}`,
+          });
         }
-        const refFields = token.type === 'reference' ? this.typographyFieldsOf(token) : undefined;
-        if (refFields) {
-          const target = `--${keyToHyphen((token as ReferenceValue).key)}`;
-          for (const field of refFields) {
-            out.push({ prop: `${prop}-${keyToHyphen(field)}`, value: `var(${target}-${keyToHyphen(field)})` });
-          }
-          continue;
-        }
+        continue;
+      }
 
-        let value: string;
+      // Inherited as is: it is the key it comes from, so it points at it.
+      const source = scope.getSourceKey(key);
+      if (source !== undefined && source !== path && !this.book.isRebound(path)) {
+        out.push({ prop, value: `var(--${keyToHyphen(source)})`, owner: path });
+        continue;
+      }
 
-        if (token.type === 'reference') {
-          const ref = token as ReferenceValue;
-          value = `var(--${keyToHyphen(ref.key)})`;
-        } else if (token.type === 'function') {
-          const fn = token as FunctionTokenValue;
-          const funcRenderer = this.functionRenderers.get(fn.name);
-          if (funcRenderer) {
-            value = funcRenderer(fn.args, fn.options);
-          } else {
-            value = resolveTokenValue(this.book, scope.name, key);
-          }
-        } else {
-          value = resolveTokenValue(this.book, scope.name, key);
-        }
+      let value: string;
+      if (token.type === 'reference') {
+        value = `var(--${keyToHyphen((token as ReferenceValue).key)})`;
+      } else if (token.type === 'function') {
+        const fn = token as FunctionTokenValue;
+        const funcRenderer = this.functionRenderers.get(fn.name);
+        value = funcRenderer ? funcRenderer(fn.args, fn.options) : resolveTokenValue(this.book, scope.name, key);
+      } else {
+        value = resolveTokenValue(this.book, scope.name, key);
+      }
+      out.push({ prop, value, owner: path });
+    }
+  }
 
-        out.push({ prop, value });
+  /** A class per text style — held, referred to or picked — each property
+   *  pointing back at its member variable, so a variation (`changedFrom`)
+   *  never repeats them. */
+  private textStyleClasses(scope: Scope, blocks: string[][], inside: ReadonlySet<string>): void {
+    for (const key of scope.getAllKeys()) {
+      const path = `${scope.name}.${key}`;
+      const group = this.groupOf(path);
+      if (!group) continue;
+      if (group.getKind() === 'typography') {
+        const name = keyToHyphen(path);
+        blocks.push([
+          `.${this.options.classPrefix}${name} {`,
+          ...this.leafMembers(group).map((m) => `  ${camelToKebab(m)}: var(--${name}-${keyToHyphen(m)});`),
+          '}',
+        ]);
+      }
+      if (isGroupValue(scope.get(key)) && !inside.has(path)) {
+        this.textStyleClasses(group, blocks, new Set([...inside, path]));
       }
     }
-    return out;
   }
 
   /** A renderer for another book with this one's function renderers, so
@@ -423,18 +443,7 @@ export class Renderer {
       // back at its field variable, so a variation (changedFrom) never needs
       // to repeat them.
       if (!base) {
-        for (const scope of scopes) {
-          for (const key of scope.getAllKeys()) {
-            const fields = this.typographyFieldsOf(scope.get(key)!);
-            if (!fields) continue;
-            const name = `${keyToHyphen(scope.name)}-${keyToHyphen(key)}`;
-            blocks.push([
-              `.${this.options.classPrefix}${name} {`,
-              ...fields.map((field) => `  ${camelToKebab(field)}: var(--${name}-${keyToHyphen(field)});`),
-              '}',
-            ]);
-          }
-        }
+        for (const scope of scopes) this.textStyleClasses(scope, blocks, new Set([scope.name]));
       }
 
       if (blocks.length === 0) continue;
@@ -446,6 +455,21 @@ export class Renderer {
     return this.options.media ? wrapMedia(this.options.media, body) : body;
   }
 
+  /** Resolved values by key; a group's members at their paths. */
+  private jsonScope(scope: Scope, result: ResolvedTokenMap): void {
+    for (const key of scope.getAllKeys()) {
+      const path = `${scope.name}.${key}`;
+      const group = this.groupOf(path);
+      if (!group) {
+        result[path] = resolveTokenValue(this.book, scope.name, key);
+      } else if (isGroupValue(scope.get(key))) {
+        this.jsonScope(group, result);
+      } else {
+        for (const member of this.leafMembers(group)) result[`${path}.${member}`] = this.book.resolve(`${group.name}.${member}`);
+      }
+    }
+  }
+
   private renderJson(): string {
     return JSON.stringify(this.renderJsonObject(), null, 2);
   }
@@ -453,12 +477,7 @@ export class Renderer {
   renderJsonObject(): ResolvedTokenMap {
     const result: ResolvedTokenMap = {};
 
-    for (const scope of this.scopesToRender()) {
-      for (const key of scope.getAllKeys()) {
-        const qualifiedKey = `${scope.name}.${key}`;
-        result[qualifiedKey] = resolveTokenValue(this.book, scope.name, key);
-      }
-    }
+    for (const scope of this.scopesToRender()) this.jsonScope(scope, result);
 
     const base = this.options.changedFrom;
     if (base) {
@@ -475,61 +494,104 @@ export class Renderer {
 
   renderW3DesignTokensObject(): W3DesignTokensMap {
     const result: W3DesignTokensMap = {};
-
     for (const scope of this.book.getAllScopes()) {
-      if (!result[scope.name]) {
-        result[scope.name] = {};
+      result[scope.name] = this.w3Scope(scope, new Set([scope.name]));
+    }
+    return result;
+  }
+
+  /** A scope as a W3 group: its tokens, and its groups nested — a text
+   *  style as the native `typography` composite. */
+  private w3Scope(scope: Scope, inside: ReadonlySet<string>): Record<string, any> {
+    const out: Record<string, any> = {};
+    for (const key of scope.getAllKeys()) {
+      const token = scope.get(key);
+      if (!token) continue;
+      const path = `${scope.name}.${key}`;
+      const group = this.groupOf(path);
+      if (group) {
+        out[key] = isGroupValue(token)
+          ? this.w3Group(path, group, token.description, inside)
+          : this.w3GroupAlias(group);
+        continue;
       }
+      out[key] = this.w3Token(scope, key, token);
+    }
+    return out;
+  }
 
-      for (const key of scope.getAllKeys()) {
-        const token = scope.get(key);
-        if (!token) continue;
+  /** A group held at `path`: a text style as a composite token, any other
+   *  group as a nested W3 group. */
+  private w3Group(path: string, group: Scope, description: string | undefined, inside: ReadonlySet<string>): Record<string, any> {
+    const entry = group.getKind() === 'typography'
+      ? { $type: 'typography', $value: this.w3TextStyle(path, group) }
+      : inside.has(path) ? {} : this.w3Scope(group, new Set([...inside, path]));
+    return description ? { ...entry, $description: description } : entry;
+  }
 
-        const resolved = resolveTokenValue(this.book, scope.name, key);
-        // A function with no fixed return type (nth, random, sibling) is
-        // typed by what it resolved to, so it still gets a W3 type and a
-        // structured value instead of `"$type": "unknown"`.
-        const declaredType = getTokenType(token, this.book);
-        const internalType = declaredType === 'unknown' ? detectValueType(resolved) : declaredType;
-        const plain = token.type === 'reference' || token.type === 'function'
-          ? undefined
-          : token as TokenValue;
+  /** A group referred to or picked: a text style is a composite token, and a
+   *  composite may be aliased; any other group has no alias in W3, so each
+   *  member aliases the original's. */
+  private w3GroupAlias(group: Scope): Record<string, any> {
+    if (group.getKind() === 'typography') return { $type: 'typography', $value: `{${group.name}}` };
+    const out: Record<string, any> = {};
+    for (const key of group.getAllKeys()) {
+      const nested = this.groupOf(`${group.name}.${key}`);
+      out[key] = nested ? this.w3GroupAlias(nested) : { $value: `{${group.name}.${key}}` };
+    }
+    return out;
+  }
 
-        const entry: W3TokenEntry = { $value: '' };
-        const typographyTarget = token.type === 'reference'
-          ? this.typographyPropertyOf((token as ReferenceValue).key)
-          : undefined;
+  /** The W3 `typography` composite of a text style: its members resolved. */
+  private w3TextStyle(path: string, group: Scope): W3TypographyValue {
+    const composite: W3TypographyValue = {};
+    for (const member of this.leafMembers(group)) {
+      composite[member] = formatW3TypographyProperty(member, this.book.resolve(`${path}.${member}`)).value;
+    }
+    return composite;
+  }
 
-        if (typographyTarget !== undefined) {
-          // A typography field only exists inside its composite, so an
-          // alias would point at nothing. Emit the resolved field instead.
-          const formatted = formatW3TypographyProperty(typographyTarget, resolved);
-          entry.$value = formatted.value;
-          if (formatted.type) entry.$type = formatted.type;
-        } else if (token.type === 'reference') {
-          entry.$value = `{${(token as ReferenceValue).key}}`;
-        } else if (isTypographyToken(token as unknown)) {
-          entry.$value = this.formatW3TypographyToken(`${scope.name}.${key}`, this.typographyFieldsOf(token) ?? []);
-        } else if (token.type === 'function' && (token as FunctionTokenValue).name === 'timing') {
-          entry.$value = this.formatW3Transition(token as FunctionTokenValue);
-        } else {
-          entry.$value = this.formatW3Value(internalType, resolved, plain);
-        }
+  /** One token entry. */
+  private w3Token(scope: Scope, key: string, token: AnyTokenValue): W3TokenEntry {
+    const resolved = resolveTokenValue(this.book, scope.name, key);
+    // A function with no fixed return type (nth, random, sibling) is typed
+    // by what it resolved to, so it still gets a W3 type and a structured
+    // value instead of `"$type": "unknown"`.
+    const declaredType = getTokenType(token, this.book);
+    const internalType = declaredType === 'unknown' ? detectValueType(resolved) : declaredType;
+    const plain = token.type === 'reference' || token.type === 'function' ? undefined : token as TokenValue;
 
-        if (typographyTarget === undefined) {
-          const w3Type = this.w3TypeFor(internalType, resolved, plain);
-          if (w3Type) entry.$type = w3Type;
-        }
+    const entry: W3TokenEntry = { $value: '' };
+    // A member of a text style only exists inside its composite, so an
+    // alias would point at nothing: the resolved member, typed by its name.
+    const textStyleMember = token.type === 'reference' ? this.textStyleMemberOf((token as ReferenceValue).key) : undefined;
 
-        if (token.description) {
-          entry.$description = token.description;
-        }
-
-        result[scope.name][key] = entry;
-      }
+    if (textStyleMember !== undefined) {
+      const formatted = formatW3TypographyProperty(textStyleMember, resolved);
+      entry.$value = formatted.value;
+      if (formatted.type) entry.$type = formatted.type;
+    } else if (token.type === 'reference') {
+      entry.$value = `{${(token as ReferenceValue).key}}`;
+    } else if (token.type === 'function' && (token as FunctionTokenValue).name === 'timing') {
+      entry.$value = this.formatW3Transition(token as FunctionTokenValue);
+    } else {
+      entry.$value = this.formatW3Value(internalType, resolved, plain);
     }
 
-    return result;
+    if (textStyleMember === undefined) {
+      const w3Type = this.w3TypeFor(internalType, resolved, plain);
+      if (w3Type) entry.$type = w3Type;
+    }
+    if (token.description) entry.$description = token.description;
+    return entry;
+  }
+
+  /** The member's name when `path` is a member of a text style. */
+  private textStyleMemberOf(path: string): string | undefined {
+    const dot = path.lastIndexOf('.');
+    if (dot === -1) return undefined;
+    const owner = this.book.getScope(path.slice(0, dot)) ?? this.groupOf(path.slice(0, dot));
+    return owner?.getKind() === 'typography' ? path.slice(dot + 1) : undefined;
   }
 
   /** Pick the W3 `$type` for a token. The internal type alone is not
@@ -561,24 +623,6 @@ export class Renderer {
     if (internalType === 'string') return undefined;
 
     return internalType; // pass through for custom types
-  }
-
-  /** The field name when `qualifiedKey` is `scope.token.field`: a field of
-   *  a typography() token only exists inside its composite, and W3 has no
-   *  alias syntax for that. */
-  private typographyPropertyOf(qualifiedKey: string): string | undefined {
-    const dot = qualifiedKey.indexOf('.');
-    const fieldDot = dot === -1 ? -1 : qualifiedKey.indexOf('.', dot + 1);
-    return fieldDot === -1 ? undefined : qualifiedKey.slice(fieldDot + 1);
-  }
-
-  /** Build the W3 `typography` composite from a `typography()` token. */
-  private formatW3TypographyToken(qualifiedKey: string, fields: string[]): W3TypographyValue {
-    const composite: W3TypographyValue = {};
-    for (const field of fields) {
-      composite[field] = formatW3TypographyProperty(field, this.book.resolve(`${qualifiedKey}.${field}`)).value;
-    }
-    return composite;
   }
 
   /** Build the W3 `transition` composite from a `timing()` token. The

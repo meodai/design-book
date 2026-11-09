@@ -6,7 +6,8 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide, byOption } from '../kinds';
 import type { Direction } from '../kinds';
-import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf } from '../pool';
+import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf, colorTarget } from '../pool';
+import type { Measurable } from '../pool';
 import { contrastAgainst } from './color-math';
 import { readableOnOptions } from './readable';
 import type { ReadableOn, ReadableOnOptions } from './readable';
@@ -24,7 +25,7 @@ export interface ContrastInputs extends ReadableOn {
 
 /** The member of `scope` that contrasts most with the target: WCAG ratio
  *  for colors, the ratio of the two values for sizes and text styles. */
-export function bestContrastWithImpl(targetValue: string, scope: Scope, options: ContrastInputs): Pick {
+export function bestContrastWithImpl(targetValue: Measurable, scope: Scope, options: ContrastInputs): Pick {
   const fn = 'bestContrastWith';
   const { not, direction, readableOn, readableContrast, by } = options;
   const measure = measureOf(targetValue, by);
@@ -33,7 +34,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, options:
   }
   if (measure) return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'best' });
   assertDirectionFits(fn, direction, 'color');
-  const target = parseColor(colorValueOf(targetValue, by) ?? targetValue);
+  const target = parseColor(colorTarget(fn, targetValue, by));
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
   const top = best(

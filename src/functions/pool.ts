@@ -2,7 +2,7 @@ import { converter, parse } from 'culori';
 import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
-import { DEFAULT_MEASURE_FIELD, parseDimension } from '../values';
+import { parseDimension } from '../values';
 import { resolvePool } from './scope-members';
 import { contrastAgainst, formatColor, gamutMapSrgb } from './color/color-math';
 
@@ -33,13 +33,10 @@ export interface ColorForm {
   c: number;
 }
 
-/** A pool member compared as a color: a color, or a text style by a
- *  color field (`by`). */
+/** A pool member compared as a color: a color, or a group by a color
+ *  member (`by`). */
 export interface ColorMember extends ColorForm {
   key: string;
-  /** What a selector returns when it picks this member: the color's hex,
-   *  or the whole text style. */
-  value: string;
 }
 
 /** Memo of `colorForm` and `parseColor`, by the string; values never
@@ -95,10 +92,10 @@ export function colorPool(
   by?: string,
 ): ColorMember[] {
   const members: ColorMember[] = [];
-  for (const { key, value } of resolvePool(scope, not)) {
-    const color = colorValueOf(value, by);
+  for (const { key, value, group } of resolvePool(scope, not)) {
+    const color = colorValueOf(group ?? value, by);
     const form = color === undefined ? null : colorForm(color);
-    if (form) members.push({ key, ...form, value: color === value ? form.hex : value });
+    if (form) members.push({ key, ...form });
   }
   if (readableOn === undefined || readableOn === null) return members;
   const backdrop = parseColor(readableOn);
@@ -151,65 +148,66 @@ export interface MeasuredMember extends Measure {
   value: string;
 }
 
-/** A resolved `typography()` value: CSS declarations (`font-size: 2rem; …`). */
-const DECLARATIONS = /^[a-z-]+\s*:/i;
+/** What a comparison measures: a resolved value, or a group (a text
+ *  style) measured by one of its members. */
+export type Measurable = string | Scope;
 
-
-const fieldPatterns = new Map<string, RegExp>();
-/** The declaration of a field (`fontWeight` → `font-weight: …`). */
-function fieldPattern(field: string): RegExp {
-  let pattern = fieldPatterns.get(field);
-  if (!pattern) {
-    const kebab = field.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-    pattern = new RegExp(`(?:^|;)\\s*${kebab.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^;]+)`, 'i');
-    fieldPatterns.set(field, pattern);
+/** The value of the member that stands for a group: `by`, or the group's
+ *  default member (`fontSize` for a text style). */
+function memberValue(group: Scope, by?: string): string | undefined {
+  const member = by ?? group.defaultMember();
+  if (member === undefined || !group.has(member)) return undefined;
+  try {
+    return group.resolve(member);
+  } catch {
+    return undefined;
   }
-  return pattern;
-}
-
-/** One field of a resolved text style (`fontWeight` → the value after
- *  `font-weight:`), or `undefined`. */
-export function fieldOf(value: string, field: string): string | undefined {
-  return value.match(fieldPattern(field))?.[1]?.trim();
-}
-
-/** True for a resolved text style: CSS declarations. */
-export function isTextStyle(value: string): boolean {
-  return DECLARATIONS.test(value.trim());
 }
 
 /**
- * The color a resolved value stands for when colors are compared: a color
- * as itself; a text style by its field `by` (`'color'`), or not at all
- * without one. The string may still not parse as a color.
+ * The color a value stands for when colors are compared: a color as itself;
+ * a group by its member `by` (`'color'`), or not at all without one. The
+ * string may still not parse as a color.
  */
-export function colorValueOf(value: string, by?: string): string | undefined {
-  if (!isTextStyle(value)) return value;
-  return by === undefined ? undefined : fieldOf(value, by);
+export function colorValueOf(value: Measurable, by?: string): string | undefined {
+  if (typeof value === 'string') return value;
+  return by === undefined ? undefined : memberValue(value, by);
+}
+
+/** The color a target stands for, or a message saying which member to
+ *  name when the target is a group and `by` names none. */
+export function colorTarget(fn: string, value: Measurable, by?: string): string {
+  const color = colorValueOf(value, by);
+  if (color !== undefined) return color;
+  throw new FunctionError(
+    by === undefined
+      ? `${fn}: "${value}" is a group; name the member to compare with \`by\` (e.g. { by: 'color' })`
+      : `${fn}: "${value}" has no member "${by}" to compare`,
+    fn,
+  );
 }
 
 /**
- * The size a resolved value stands for: a dimension as itself, a text style
- * by one of its fields — `by`, its font size unless told otherwise. A field
- * that is a number with or without a unit measures (`2rem`, `900`, `1.5`);
- * a text style without it, or with a value that is no number, is no member.
+ * The size a value stands for: a dimension as itself; a group (a text
+ * style) by its member `by`, or its default member (`fontSize`). A member
+ * that is a number, with or without a unit, measures (`2rem`, `900`, `1.5`);
+ * a group without it is no candidate.
  */
-export function measureOf(value: string, by: string = DEFAULT_MEASURE_FIELD): Measure | null {
-  const trimmed = value.trim();
-  if (DECLARATIONS.test(trimmed)) {
-    const field = fieldOf(trimmed, by);
-    const dim = field ? parseDimension(field) : null;
+export function measureOf(value: Measurable, by?: string): Measure | null {
+  if (typeof value !== 'string') {
+    const member = memberValue(value, by);
+    const dim = member === undefined ? null : parseDimension(member);
     return dim ? { kind: 'text', ...dim } : null;
   }
-  const dim = parseDimension(trimmed);
+  const dim = parseDimension(value.trim());
   return dim ? { kind: 'size', ...dim } : null;
 }
 
 /** The pool's sizes and text styles, measured (text styles by `by`). */
 export function measuredPool(scope: Scope, not: ReadonlyArray<string>, by?: string): MeasuredMember[] {
   const members: MeasuredMember[] = [];
-  for (const { key, value } of resolvePool(scope, not)) {
-    const measure = measureOf(value, by);
+  for (const { key, value, group } of resolvePool(scope, not)) {
+    const measure = measureOf(group ?? value, by);
     if (measure) members.push({ key, value, ...measure });
   }
   return members;

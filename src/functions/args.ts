@@ -1,33 +1,32 @@
-import { isReferenceValue, isScopeKey, ref } from '../tokens';
-import type { FunctionArg, ReferenceValue } from '../tokens';
+import { isPoolReference, isReferenceValue, isScopePath, pool } from '../tokens';
+import type { FunctionArg, PoolReference, ReferenceValue } from '../tokens';
 import { Scope } from '../scope';
 import { FunctionError } from '../errors';
 
-/** What a selector accepts as its pool: `ref('palette')` or the scope itself. */
-export type PoolArg = ReferenceValue | Scope;
+/** What a selector accepts as its pool: `ref('palette')`, a group's path
+ *  (`ref('card.heading')`), or the scope itself. */
+export type PoolArg = ReferenceValue | PoolReference | Scope;
 
 /**
- * A selector's pool argument, as the token stores it: a reference to a scope.
- * Accepts `ref('palette')`, `ref('.')` (also inside `inherited`)
- * or a `Scope` of a book — `mostVivid(palette)` — which becomes
- * `ref('palette')` here, so the token holds data, not a live scope. The pool
- * is the scope's membership, read by name when the token resolves; an object
- * that merely looks like a scope (a filtered view, a wrapper) is refused
- * rather than silently replaced by the scope it is named after.
+ * A selector's pool argument, as the token stores it: a pool reference.
+ * Accepts `ref('palette')`, a group's path (`ref('card.heading')`), `ref('.')`
+ * (also inside `inherited` or `holder`) or a `Scope` of a book —
+ * `mostVivid(palette)` — so the token holds data, not a live scope. The pool
+ * is the scope's membership, read by path when the token resolves (a path
+ * naming no scope then throws); an object that merely looks like a scope (a
+ * filtered view, a wrapper) is refused rather than replaced by the scope it
+ * is named after.
  */
-export function poolArg(fn: string, arg: unknown): ReferenceValue {
-  if (isReferenceValue(arg)) {
-    if (isScopeKey(arg.key)) return arg;
-    throw new FunctionError(`${fn} needs a scope to search, got the token '${arg.key}'; pass ref('scope')`, fn);
-  }
-  if (arg instanceof Scope) return ref(arg.name);
+export function poolArg(fn: string, arg: unknown): PoolReference {
+  if (isPoolReference(arg) || isReferenceValue(arg)) return pool(arg);
+  if (arg instanceof Scope) return pool(arg.name);
   throw new FunctionError(`${fn} needs a scope to search: pass ref('scope') or a scope of the book`, fn);
 }
 
 /** Checks an argument that must be a value, not a pool: a scope reference
  *  there is refused, since a scope has no color or size of its own. */
 export function valueArg<T extends FunctionArg | undefined>(fn: string, arg: T): T {
-  if (isReferenceValue(arg) && isScopeKey(arg.key)) {
+  if (isReferenceValue(arg) && isScopePath(arg.key)) {
     const name = arg.key === '.' ? 'the reading scope' : `the scope '${arg.key}'`;
     throw new FunctionError(`${fn} needs a value, got ${name}; a token is 'scope.token'`, fn);
   }

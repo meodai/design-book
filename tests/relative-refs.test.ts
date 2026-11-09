@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import {
-  color, ref, rem, colorMix, lighten, sibling, nth, typography, variant,
+  color, ref, holder, rem, colorMix, lighten, sibling, nth, typography, variant,
   composeBook, layer, CircularDependencyError,
 } from '../src/index';
 import type { ReferenceValue } from '../src/tokens';
@@ -207,16 +207,20 @@ describe('relative refs: ref(".token")', () => {
     const book = new DesignBook('t');
     const type = book.addScope('type');
     type.set('size', rem(2));
-    type.set('title', typography({ fontSize: ref('.size'), lineHeight: 1.2 }));
+    // Inside the style `.` is the style; the scope holding it is its holder.
+    type.set('title', typography({ fontSize: holder(ref('.size')), lineHeight: 1.2 }));
     type.set('title-size', ref('.title.fontSize'));
     type.set('loose', variant(ref('.title'), { lineHeight: 1.6 }));
     const compact = book.addScope('compact', { extends: 'type' });
     compact.set('size', rem(1.5));
 
-    expect(book.resolve('type.title')).toBe('font-size: 2rem; line-height: 1.2');
-    expect(book.resolve('compact.title')).toBe('font-size: 1.5rem; line-height: 1.2');
+    expect(book.resolve('type.title.fontSize')).toBe('2rem');
+    // compact inherits the style, and the style reads the scope it is in.
+    expect(book.resolve('compact.title.fontSize')).toBe('1.5rem');
+    expect(book.resolve('compact.title.lineHeight')).toBe('1.2');
     expect(book.resolve('compact.title-size')).toBe('1.5rem');
-    expect(book.resolve('compact.loose')).toBe('font-size: 1.5rem; line-height: 1.6');
+    expect(book.resolve('compact.loose.fontSize')).toBe('1.5rem');
+    expect(book.resolve('compact.loose.lineHeight')).toBe('1.6');
 
     const watcher = vi.fn();
     book.watch('compact.title-size', watcher);

@@ -154,8 +154,12 @@ describe('inherited', () => {
   });
 
   // 11
-  it('refuses a token where a pool is expected', () => {
-    expect(() => mostVivid(ref('palette.blue'))).toThrow(/needs a scope to search, got the token 'palette.blue'/);
+  it('refuses a token where a pool is expected, when it is read', () => {
+    // A dotted path may name a group, so only the book can tell.
+    const { book } = cards();
+    book.getScope('palette')!.set('blue', color('#0000ff'));
+    book.addScope('pick').set('x', mostVivid(ref('palette.blue')));
+    expect(() => book.resolve('pick.x')).toThrow(/"palette.blue" names no scope to search/);
   });
 
   // 12
@@ -223,14 +227,17 @@ describe('inherited', () => {
     // a variant of the title it replaces: not a variant of itself
     article.set('title', variant(inherited(ref('.title')), { fontWeight: '700' }));
 
-    expect(book.resolve('article.title')).toBe('font-size: 2rem; font-weight: 700');
+    // A group has no single value: its members are read.
+    expect(() => book.resolve('article.title')).toThrow(/is a group/);
     expect(book.resolve('article.title.fontSize')).toBe('2rem');
+    expect(book.resolve('article.title.fontWeight')).toBe('700');
 
     const watcher = vi.fn();
-    book.watch('article.title', watcher);
+    book.watch('article.title.fontSize', watcher);
     type.set('title', typography({ fontSize: rem(2.5), fontWeight: '400' }));
-    expect(watcher).toHaveBeenCalledWith('font-size: 2.5rem; font-weight: 700', expect.anything());
+    expect(watcher).toHaveBeenCalledWith('2.5rem', expect.anything());
     expect(book.resolve('article.title.fontSize')).toBe('2.5rem');
+    expect(book.resolve('article.title.fontWeight')).toBe('700');
 
     expect(() => type.set('x', variant(inherited(ref('.title')), { fontWeight: '700' }))).toThrow(/"type" has no parent/);
   });

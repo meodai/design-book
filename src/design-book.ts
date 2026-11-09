@@ -7,10 +7,11 @@ import type { Pick, Resolution } from './functions/picks';
 import { scopeOf, splitKey } from './keys';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
-import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
+import type { AnyTokenValue, BindingContext, FunctionArg, GroupInput, GroupValue, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { functionDependencies, hasRelativeKeys, isRelativeKey, iteratedScopesOf, isFieldKey, isScopeReference, tokenKeyOf } from './tokens';
-import { isTypographyToken, typographyBase, typographyFieldDependencies, typographyFieldNames } from './functions/non-color/typography';
+import { bindToken, functionDependencies, hasRelativeKeys, isGroupValue, isPoolReference, isRelativeKey, isUnresolvable, iteratedScopesOf } from './tokens';
+import { assertValidTokenKey } from './keys';
+import { CircularDependencyError } from './errors';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl, rampSet } from './functions/color/ramp';
 import type { RampSet, RampSetSource } from './functions/color/ramp';
@@ -312,6 +313,8 @@ export class DesignBook {
       this._discardScope(name);
       throw e;
     }
+    // A scope extending one that holds groups holds them too.
+    this._change(() => this._syncInheritedGroups(scope));
     this.emit('scopeAdded', { scope: name });
     return scope;
   }
@@ -332,11 +335,38 @@ export class DesignBook {
   }
 
   deleteScope(name: string): string[] {
+    if (name.includes('.')) {
+      throw new ScopeError(`"${name}" is a group; delete the key that holds it`, name);
+    }
+    // The scope goes with every group in it, announced as one change; the
+    // scopes extending it then lose the groups they inherited from it.
+    const below = this.scopeManager.lineageBelow(name).slice(1);
+    const scopes = this._scopeTree(name);
     this._scopesChanged();
-    const keys = this.scopeManager.deleteScope(name, (removed) => this._notifyRemoved(removed));
+    const removed: Array<[string, AnyTokenValue | undefined]> = [];
+    for (const path of scopes) this.scopeManager.deleteScope(path, (keys) => removed.push(...keys));
     this._scopesChanged();
+    this._notifyRemoved(removed);
+    this._change(() => {
+      for (const scope of below) {
+        const live = this.scopeManager.getScope(scope);
+        if (live) this._syncInheritedGroups(live);
+      }
+    });
+    for (const path of scopes.slice(0, -1)) this.emit('scopeRemoved', { scope: path, removedKeys: removed.map(([k]) => k).filter((k) => scopeOf(k) === path) });
+    const keys = removed.map(([k]) => k).filter((k) => scopeOf(k) === name);
     this.emit('scopeRemoved', { scope: name, removedKeys: keys });
     return keys;
+  }
+
+  /** `path` and every group inside it, the deepest first. */
+  private _scopeTree(path: string): string[] {
+    const prefix = `${path}.`;
+    return this.scopeManager.getAllScopes()
+      .map((s) => s.name)
+      .filter((n) => n.startsWith(prefix))
+      .sort((a, b) => b.split('.').length - a.split('.').length)
+      .concat(path);
   }
 
   getScope(name: string): Scope | undefined {
@@ -347,8 +377,10 @@ export class DesignBook {
     return this.scopeManager.hasScope(name);
   }
 
+  /** The top-level scopes. A group is reached through the key that holds
+   *  it: `getScope('type.title')`. */
   getAllScopes(): Scope[] {
-    return this.scopeManager.getAllScopes();
+    return this.scopeManager.getAllScopes().filter((s) => !s.name.includes('.'));
   }
 
   getAllKeysForScope(name: string): string[] {
@@ -359,9 +391,9 @@ export class DesignBook {
     return this.scopeManager.getScopeDependencies(name);
   }
 
-  /** The scope a key lives in and the name within it (`title.fontSize`
-   *  for a field key), or `undefined` for a key without a scope part or
-   *  whose scope does not exist. */
+  /** The scope a key belongs to and its name in it (`type.title` and
+   *  `fontSize` for `type.title.fontSize`), or `undefined` for a key without
+   *  a scope part or whose scope does not exist. */
   private _locate(key: string): { scope: Scope; name: string } | undefined {
     const parts = splitKey(key);
     if (!parts) return undefined;
@@ -385,8 +417,9 @@ export class DesignBook {
    *  one to its source. */
   isRebound(key: string): boolean {
     const at = this._locate(key);
-    if (!at || at.name.includes('.') || at.scope.hasOwn(at.name)) return false;
-    return hasRelativeKeys(at.scope.getRaw(at.name));
+    if (!at || at.scope.hasOwn(at.name)) return false;
+    const raw = at.scope.getRaw(at.name);
+    return !isGroupValue(raw) && hasRelativeKeys(raw);
   }
 
   /** True when `key` reads the token of another key through `extends` and
@@ -417,8 +450,12 @@ export class DesignBook {
 
   // --- Token operations ---
 
+  /** The value of `key`. A key whose value is a group (it holds one,
+   *  refers to one or picked one) has no single value: read a member. */
   resolve(key: string): string {
-    return this._resolution(key).value;
+    const { value, group } = this._resolution(key);
+    if (group !== undefined) throw groupHasNoValue(key, this.scopeManager.getScope(group));
+    return value;
   }
 
   /** The member a key's value is, when it is one a selector picked (also
@@ -446,74 +483,44 @@ export class DesignBook {
       throw new TokenError(`Invalid key format "${key}": expected "scope.token"`, key);
     }
     const scope = this.scopeManager.getScope(parts[0]);
-    if (!scope) {
-      throw new TokenError(`Scope "${parts[0]}" not found`, key);
+    if (scope) return scope.resolution(parts[1]);
+    // A path through a key whose value is a group: `card.heading.fontSize`
+    // with `card.heading = ref('type.title')` reads `type.title.fontSize`.
+    const through = this._through(key);
+    if (through) return this._resolution(through.target);
+    throw new TokenError(`Scope "${parts[0]}" not found`, key);
+  }
+
+  /** The path a key is read through when it is not an ordinary key — its
+   *  scope part is a key whose value is a group (`card.heading`) rather than
+   *  a scope — and the path it reaches; `undefined` otherwise. */
+  private _through(key: string): { via: string; target: string } | undefined {
+    const parts = splitKey(key);
+    if (!parts || this.scopeManager.getScope(parts[0])) return undefined;
+    let group: string | undefined;
+    try {
+      group = this._resolution(parts[0]).group;
+    } catch {
+      return undefined;
     }
-    return scope.resolution(parts[1]);
+    // A key whose group is its own scope (being replaced, or gone) leads
+    // nowhere further: only a key holding another group is read through.
+    if (group === undefined || group === parts[0]) return undefined;
+    return { via: parts[0], target: `${group}.${parts[1]}` };
   }
 
   has(key: string): boolean {
     const at = this._locate(key);
-    if (!at) return false;
-    const field = splitKey(at.name);
-    if (field) {
-      // `scope.token.field`: a field of the typography the token holds
-      const names = typographyFieldNames(this, at.scope.get(field[0]));
-      return names?.includes(field[1]) ?? false;
-    }
-    return at.scope.has(at.name);
+    if (at) return at.scope.has(at.name);
+    const through = this._through(key);
+    return through ? this.has(through.target) : false;
   }
 
   getTokenByKey(key: string): AnyTokenValue | undefined {
     const at = this._locate(key);
-    return at?.scope.get(at.name);
-  }
-
-  /** A field key (`type.title.fontSize`) seen through `inspect`: its value,
-   *  what the field reads and who reads it. */
-  private _inspectField(key: string): TokenInspection | null {
-    if (!this.has(key)) return null;
-    const owner = tokenKeyOf(key);
-    let value: string | undefined;
-    try {
-      value = this.resolve(key);
-    } catch {
-      value = undefined;
-    }
-    const dependencies = this.graph.hasNode(key) ? this.graph.getIncoming(key) : this._fieldNodeDeps(key);
-    return {
-      key,
-      value,
-      tokenType: 'field',
-      owner,
-      field: key.slice(owner.length + 1),
-      dependencies,
-      dependents: this.graph.getOutgoing(key).filter((k) => k !== owner),
-      isInherited: false,
-    };
-  }
-
-  /** A token's prerequisites with its own field nodes looked through: a
-   *  typography lists what its fields read, not the fields themselves. */
-  private _visiblePrerequisites(key: string): string[] {
-    const out = new Set<string>();
-    for (const p of this.graph.getIncoming(key)) {
-      if (isFieldKey(p) && tokenKeyOf(p) === key) {
-        for (const q of this.graph.getIncoming(p)) out.add(q);
-      } else {
-        out.add(p);
-      }
-    }
-    return [...out];
-  }
-
-  /** A token's dependents plus whatever reads one of its fields. */
-  private _visibleDependents(key: string): string[] {
-    const out = new Set(this.graph.getOutgoing(key));
-    for (const fk of this._fieldNodesOf(key)) {
-      for (const d of this.graph.getOutgoing(fk)) if (d !== key) out.add(d);
-    }
-    return [...out];
+    if (at) return at.scope.get(at.name);
+    const through = this._through(key);
+    return through ? this.getTokenByKey(through.target) : undefined;
   }
 
   getDependencyGraph(): DependencyGraph {
@@ -525,7 +532,6 @@ export class DesignBook {
    *  three-step pattern of `resolve` + `getTokenByKey` + `graph.getIncoming`.
    *  Returns null when the key isn't registered. */
   inspect(key: string): TokenInspection | null {
-    if (isFieldKey(key)) return this._inspectField(key);
     const token = this.getTokenByKey(key);
     if (!token) return null;
 
@@ -547,8 +553,8 @@ export class DesignBook {
       key,
       value,
       tokenType: token.type,
-      dependencies: this._visiblePrerequisites(key),
-      dependents: this._visibleDependents(key),
+      dependencies: this.graph.getIncoming(key),
+      dependents: this.graph.getOutgoing(key),
       isInherited: source !== undefined && source !== key,
       source,
     };
@@ -658,7 +664,7 @@ export class DesignBook {
       const scopes = set.map((s) => {
         const scopeName = typeof s === 'string' ? s
           : s instanceof Scope ? s.name
-          : isScopeReference(s) ? s.key
+          : isPoolReference(s) || (s as { type?: string })?.type === 'reference' ? (s as ReferenceValue).key
           : null;
         if (!scopeName || scopeName.includes('.')) {
           throw new FunctionError(`registerRamps: "${name}" takes scopes (a Scope, ref('scope') or its name), got ${JSON.stringify(s)}`, 'ramp');
@@ -919,7 +925,6 @@ export class DesignBook {
       this._pruneOrphans(rejectedDeps);
     } else {
       this._detachNode(qualifiedKey);
-      this._rewireFieldNodesOf(qualifiedKey);
     }
     try {
       this._wireShadows(qualifiedKey);
@@ -928,6 +933,163 @@ export class DesignBook {
 
   /** `Scope.delete` was refused (see `_wireInherited`): the token is back
    *  in the scope; put the graph, index and caches back with it. */
+  // --- Groups ---
+
+  /** Runs one structural change: announced as it ends in auto mode, queued
+   *  in batch mode, part of the current announcement inside one. */
+  private _change(fn: () => void): void {
+    if (this._mode === 'batch' || this._announcing) fn();
+    else this._operation(() => this._announceWhile(fn));
+  }
+
+  /** Writes a group at `name` of `holder` (see `Scope.set`): the entry in
+   *  the holder, the group's scope, its members — replacing what was there.
+   *  A member the graph refuses undoes the whole write. */
+  _setGroup(holder: Scope, name: string, group: GroupValue): void {
+    const path = `${holder.name}.${name}`;
+    const members = group.members ?? {};
+    for (const member of Object.keys(members)) assertValidTokenKey(path, member);
+    for (const member of group.omit ?? []) assertValidTokenKey(path, member);
+    const base = this._groupBase(holder, path, group);
+    const entry: GroupValue = {
+      type: 'group',
+      ...(group.kind !== undefined ? { kind: group.kind } : {}),
+      ...(group.base !== undefined ? { base: group.base } : {}),
+      ...(group.omit?.length ? { omit: [...group.omit] } : {}),
+      ...(group.description !== undefined ? { description: group.description } : {}),
+    };
+    const previous = holder.hasOwn(name) ? holder.getRaw(name) : undefined;
+    const restore = isGroupValue(previous) ? this.groupValueOf(path) : previous;
+    this._change(() => {
+      try {
+        if (isGroupValue(previous)) this._deleteGroupNow(holder, name);
+        const old = holder.hasOwn(name) ? holder.getRaw(name) : undefined;
+        holder._rollback(name, entry);
+        const scope = this.scopeManager._addGroup(path, { extends: base, kind: group.kind, omit: group.omit, description: group.description });
+        this._scopesChanged();
+        this._wireInherited(scope.getAllKeys().map((k) => `${path}.${k}`));
+        this._syncInheritedGroups(scope);
+        this._accept(path, entry, old);
+        for (const [member, value] of Object.entries(members)) scope.set(member, value as AnyTokenValue);
+        this._syncBelow(holder.name);
+        this.emit('scopeAdded', { scope: path });
+      } catch (e) {
+        if (this.scopeManager.getScope(path)) this._deleteGroupNow(holder, name);
+        if (restore !== undefined) {
+          try { holder.set(name, restore as AnyTokenValue); } catch { /* it was accepted before */ }
+        }
+        throw e;
+      }
+    });
+  }
+
+  /** Removes the group at `name` of `holder` with everything in it. */
+  _deleteGroup(holder: Scope, name: string): void {
+    this._change(() => this._deleteGroupNow(holder, name));
+  }
+
+  private _deleteGroupNow(holder: Scope, name: string): void {
+    const path = `${holder.name}.${name}`;
+    const old = holder.getRaw(name);
+    const scopes = this._scopeTree(path);
+    const removed: Array<[string, AnyTokenValue | undefined]> = [];
+    for (const scope of scopes) this.scopeManager.deleteScope(scope, (keys) => removed.push(...keys));
+    this._scopesChanged();
+    this._notifyRemoved(removed);
+    holder._rollback(name, undefined);
+    this._accept(path, undefined, old);
+    this._syncBelow(holder.name);
+    for (const scope of scopes) this.emit('scopeRemoved', { scope, removedKeys: removed.map(([k]) => k).filter((k) => scopeOf(k) === scope) });
+  }
+
+  /** The path of the group a group extends (`variant`'s base), checked. */
+  private _groupBase(holder: Scope, path: string, group: GroupValue): string | undefined {
+    if (group.base === undefined) return undefined;
+    const bound = bindToken(group.base, holder.name, this._binding);
+    if (isUnresolvable(bound)) throw new TokenError(`${path}: ${bound.message}`, path);
+    const base = bound.key;
+    if (base === path) {
+      const error = new CircularDependencyError([path, path]);
+      error.message += ` — a variant cannot extend the group it replaces; to change "${path}" in place, set its members: book.getScope('${path}').set(…)`;
+      throw error;
+    }
+    if (!this.scopeManager.getScope(base)) {
+      throw new TokenError(`${path}: variant(…) needs a group to extend, and "${base}" is none`, path);
+    }
+    return base;
+  }
+
+  /** The group at `path` as it would be written: its entry with its own
+   *  members (nested groups included). What a copy or a serialiser wants. */
+  groupValueOf(path: string): GroupValue | undefined {
+    const at = this._locate(path);
+    const entry = at?.scope.getRaw(at.name);
+    const scope = this.scopeManager.getScope(path);
+    if (!isGroupValue(entry) || !scope) return undefined;
+    const members: Record<string, GroupInput> = {};
+    for (const key of scope.ownKeys()) {
+      const raw = scope.getRaw(key);
+      members[key] = (isGroupValue(raw) ? this.groupValueOf(`${path}.${key}`) : raw) as GroupInput;
+    }
+    return { ...entry, members };
+  }
+
+  /** Keeps every scope extending `holder` (at any depth) in step with the
+   *  groups it inherits. */
+  private _syncBelow(holder: string): void {
+    for (const name of this.scopeManager.lineageBelow(holder).slice(1)) {
+      const scope = this.scopeManager.getScope(name);
+      if (scope) this._syncInheritedGroups(scope);
+    }
+  }
+
+  /**
+   * A scope that inherits a group key holds a group there too: an implicit
+   * group extending the one it inherits, so its members are inherited keys
+   * of the scope's own — re-bound where they read relative to it — and a
+   * group placed in a context reads that context (`holder`). Makes the
+   * implicit groups `scope` needs, drops the ones it no longer does, and
+   * goes on into every group it holds.
+   */
+  private _syncInheritedGroups(scope: Scope): void {
+    const keys = new Set(scope.getAllKeys());
+    for (const key of keys) {
+      const path = `${scope.name}.${key}`;
+      const existing = this.scopeManager.getScope(path);
+      const raw = scope.getRaw(key);
+      if (scope.hasOwn(key) || !isGroupValue(raw)) {
+        if (existing?.implicit) this._dropImplicit(path);
+        else if (existing) this._syncInheritedGroups(existing);
+        continue;
+      }
+      const parent = `${scope.extendsScope}.${key}`;
+      if (existing?.implicit && existing.extendsScope === parent) {
+        this._syncInheritedGroups(existing);
+        continue;
+      }
+      if (existing) this._dropImplicit(path);
+      const created = this.scopeManager._addGroup(path, { extends: parent, implicit: true });
+      this._scopesChanged();
+      this._wireInherited([path, ...created.getAllKeys().map((k) => `${path}.${k}`)]);
+      this._syncInheritedGroups(created);
+    }
+    // Implicit groups at keys the scope no longer has.
+    const prefix = `${scope.name}.`;
+    for (const other of this.scopeManager.getAllScopes()) {
+      if (!other.implicit || !other.name.startsWith(prefix)) continue;
+      const rest = other.name.slice(prefix.length);
+      if (!rest.includes('.') && !keys.has(rest)) this._dropImplicit(other.name);
+    }
+  }
+
+  /** Removes an implicit group and everything in it. */
+  private _dropImplicit(path: string): void {
+    const removed: Array<[string, AnyTokenValue | undefined]> = [];
+    for (const scope of this._scopeTree(path)) this.scopeManager.deleteScope(scope, (keys) => removed.push(...keys));
+    this._scopesChanged();
+    this._notifyRemoved(removed);
+  }
+
   _restoreRejectedDelete(qualifiedKey: string, restored: AnyTokenValue): void {
     this._rollbackKey(qualifiedKey, restored);
   }
@@ -945,7 +1107,6 @@ export class DesignBook {
     if (!token) {
       this._indexSelector(key, undefined);
       this._detachNode(key);
-      this._rewireFieldNodesOf(key);
       return this._wireShadows(key);
     }
     const deps = this._getEffectiveDepsForKey(key, token);
@@ -967,6 +1128,8 @@ export class DesignBook {
     }
     this._pruneOrphans(previousDeps);
     this._indexSelector(key, token);
+    this._rewireGroupKey(scopeOf(key));
+    this._rewireThrough(key);
     return shadows;
   }
 
@@ -988,6 +1151,7 @@ export class DesignBook {
     for (const dep of dependents) {
       if (ownAnnouncement.has(dep)) continue;
       this._reindexDynamic(dep);
+      this._rewireThrough(dep);
       changedKeys.push(dep);
       if (splitKey(dep)) scopeSet.add(scopeOf(dep));
       this._emitTokenChanged(dep);
@@ -1012,116 +1176,88 @@ export class DesignBook {
   }
 
   private _getEffectiveDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
-    if (!splitKey(qualifiedKey)) {
-      return this._extractDepsFromValue(value);
-    }
-
-    if (this._readsSource(qualifiedKey)) {
+    // A key holding a group depends on the group's members, so a change in
+    // any of them reaches whoever reads the group.
+    if (isGroupValue(value)) return this._memberKeys(qualifiedKey);
+    if (splitKey(qualifiedKey) && this._readsSource(qualifiedKey)) {
       return [this.getSourceKey(qualifiedKey)!];
     }
-
-    // A typography depends on one node per field, so a ref to one field
-    // is not tied to the others (see `_setEdges`); a variant also on its base.
-    if (isTypographyToken(value)) {
-      const base = typographyBase(value);
-      return [...this._ownFieldKeys(qualifiedKey, value), ...(base ? [base] : [])];
-    }
-
     return this._extractDepsFromValue(value);
   }
 
-  // --- Field nodes ---
+  /** The keys of the group at `path`, own and inherited. */
+  private _memberKeys(path: string): string[] {
+    return this.scopeManager.getScope(path)?.getAllKeys().map((k) => `${path}.${k}`) ?? [];
+  }
+
+  // --- Paths read through a group ---
   //
-  // `scope.token.field` nodes give typography fields their own place in the
-  // graph. A typography's node depends on its own field nodes; each field
-  // node depends on what that field reads (`typographyFieldDependencies`);
-  // a field the token does not own — a variant's inherited field, a field
-  // read through a ref, a field of an inherited shadow — points at the
-  // field it actually reads, or at the token as a last resort. Field nodes
-  // are never tokens: no events, pruned once unread.
+  // `card.heading.fontSize`, where `card.heading` holds a group by
+  // reference (or a selector picked one), is no key of its own: it reads
+  // `type.title.fontSize` through `card.heading`. Such a path gets a node
+  // depending on the key it is read through and on the path it reaches,
+  // re-pointed whenever that key's value may have changed — the only nodes
+  // that stand for no key.
 
-  /** Field nodes in the graph, by owning token key. */
-  private _fieldNodes: Map<string, Set<string>> = new Map();
+  /** Through paths in the graph, by the key they are read through. */
+  private _throughNodes: Map<string, Set<string>> = new Map();
 
-  private _fieldNodesOf(key: string): string[] {
-    const nodes = this._fieldNodes.get(key);
-    if (!nodes) return [];
-    for (const fk of nodes) if (!this.graph.hasNode(fk)) nodes.delete(fk);
-    if (nodes.size === 0) this._fieldNodes.delete(key);
-    return [...nodes];
-  }
-
-  private _ownFieldKeys(key: string, token: AnyTokenValue | undefined): string[] {
-    if (!isTypographyToken(token)) return [];
-    if (this._readsSource(key)) return [];
-    return ((token.options?.fields ?? []) as string[]).map((f) => `${key}.${f}`);
-  }
-
-  private _fieldNodeDeps(fieldKey: string): string[] {
-    const owner = tokenKeyOf(fieldKey);
-    const field = fieldKey.slice(owner.length + 1);
-    if (this._readsSource(owner)) return [`${this.getSourceKey(owner)}.${field}`];
-    return typographyFieldDependencies(this.getTokenByKey(owner), field) ?? [owner];
-  }
-
-  /** Set the edges of `key` and of its field nodes as one step — clearing
-   *  the field nodes first, so a field that changes between owned and
-   *  inherited never forms a passing cycle — then wire every field node
-   *  the new edges reach that nobody has wired yet. A cycle anywhere puts
-   *  everything back and rethrows; the returned function does the same for
-   *  a caller whose later step fails. */
-  private _setEdges(key: string, deps: string[], token: AnyTokenValue | undefined): () => void {
-    const graph = this.graph;
-    // Nodes this call may create — the key, its field nodes, everything an
-    // edge points from — so `undo` can drop the new ones without copying
-    // the whole graph.
-    const created = new Set<string>();
-    const track = (keys: Iterable<string>) => {
-      for (const k of keys) if (!graph.hasNode(k)) created.add(k);
-    };
-    const snapshots = new Map<string, string[] | null>();
-    const snap = (k: string) => {
-      if (!snapshots.has(k)) snapshots.set(k, graph.hasNode(k) ? graph.getPrerequisitesFor(k) : null);
-    };
-    const isWired = (fk: string) => graph.hasNode(fk) && (this._fieldNodes.get(tokenKeyOf(fk))?.has(fk) ?? false);
-    const undo = () => {
-      for (const k of snapshots.keys()) if (graph.hasNode(k)) graph.updateEdges(k, []);
-      for (const [k, prev] of snapshots) {
-        if (prev === null) continue;
-        try { graph.updateEdges(k, prev); } catch { /* it was acyclic before */ }
-      }
-      for (const node of created) if (graph.hasNode(node)) graph.removeNode(node);
-    };
-
-    const fields = [...new Set([...this._ownFieldKeys(key, token), ...this._fieldNodesOf(key)])];
-    snap(key);
-    fields.forEach(snap);
-    const pending = [...fields];
-    for (const d of deps) {
-      if (isFieldKey(d) && !isWired(d)) { snap(d); pending.push(d); }
+  /** Wire the through paths among `keys` (and any they read through in turn). */
+  private _wireThrough(keys: Iterable<string>): void {
+    for (const key of keys) {
+      const through = this._through(key);
+      if (!through) continue;
+      let nodes = this._throughNodes.get(through.via);
+      if (!nodes) this._throughNodes.set(through.via, (nodes = new Set()));
+      nodes.add(key);
+      this.graph.addNode(key);
+      this.graph.updateEdges(key, [through.via, through.target]);
+      this._wireThrough([through.via, through.target]);
     }
+  }
 
+  /** Re-point the through paths read through `key`: its value may now be
+   *  another group (a re-pointed reference, a selector's new pick). */
+  private _rewireThrough(key: string): void {
+    const nodes = this._throughNodes.get(key);
+    if (!nodes) return;
+    for (const node of nodes) {
+      if (!this.graph.hasNode(node)) {
+        nodes.delete(node);
+        continue;
+      }
+      const through = this._through(node);
+      try {
+        this.graph.updateEdges(node, through ? [through.via, through.target] : [key]);
+        if (through) this._wireThrough([through.target]);
+      } catch { /* the path keeps the edges it had */ }
+    }
+    if (nodes.size === 0) this._throughNodes.delete(key);
+  }
+
+  /** Set the edges of `key` — and wire the through paths among its new
+   *  prerequisites — as one step: a cycle puts everything back and
+   *  rethrows; the returned function does the same for a caller whose later
+   *  step fails. */
+  private _setEdges(key: string, deps: string[], _token?: AnyTokenValue): () => void {
+    const graph = this.graph;
+    const previous = graph.hasNode(key) ? graph.getPrerequisitesFor(key) : null;
+    const created = deps.filter((d) => !graph.hasNode(d));
+    const hadKey = graph.hasNode(key);
+    const undo = () => {
+      if (graph.hasNode(key)) {
+        graph.updateEdges(key, []);
+        if (previous) {
+          try { graph.updateEdges(key, previous); } catch { /* it was acyclic before */ }
+        }
+      }
+      for (const node of created) if (graph.hasNode(node) && graph.getDependentsOf(node).length === 0) graph.removeNode(node);
+      if (!hadKey && graph.hasNode(key) && graph.getDependentsOf(key).length === 0) graph.removeNode(key);
+    };
     try {
-      for (const fk of fields) if (graph.hasNode(fk)) graph.updateEdges(fk, []);
-      track([key, ...deps]);
       graph.addNode(key);
       graph.updateEdges(key, deps);
-      const done = new Set<string>();
-      while (pending.length > 0) {
-        const fk = pending.shift()!;
-        if (done.has(fk)) continue;
-        done.add(fk);
-        const fieldDeps = this._fieldNodeDeps(fk);
-        for (const d of fieldDeps) {
-          if (isFieldKey(d) && !done.has(d) && !isWired(d)) { snap(d); pending.push(d); }
-        }
-        track([fk, ...fieldDeps]);
-        graph.addNode(fk);
-        graph.updateEdges(fk, fieldDeps);
-        const owner = tokenKeyOf(fk);
-        if (!this._fieldNodes.has(owner)) this._fieldNodes.set(owner, new Set());
-        this._fieldNodes.get(owner)!.add(fk);
-      }
+      this._wireThrough(deps);
     } catch (e) {
       undo();
       throw e;
@@ -1129,16 +1265,13 @@ export class DesignBook {
     return undo;
   }
 
-  /** After a token is deleted, its remaining field nodes (still read by
-   *  someone) fall back to the key, so re-adding it reaches their readers. */
-  private _rewireFieldNodesOf(key: string): void {
-    for (const fk of this._fieldNodesOf(key)) {
-      try {
-        this.graph.updateEdges(fk, this._fieldNodeDeps(fk));
-      } catch { /* the key has no edges of its own any more */ }
-    }
+  /** The key of the group `scope` is, re-wired to its members — for a group
+   *  whose members just changed. */
+  private _rewireGroupKey(scopePath: string): void {
+    const scope = this.scopeManager.getScope(scopePath);
+    if (!scope || !scopePath.includes('.') || !this.graph.hasNode(scopePath)) return;
+    this.graph.updateEdges(scopePath, this._memberKeys(scopePath));
   }
-
   /** Record (or forget) `qualifiedKey` as a selector over the scopes its
    *  function token iterates. Called for every write and every delete, so
    *  the index always mirrors the stored tokens. */
@@ -1289,7 +1422,6 @@ export class DesignBook {
       this._indexSelector(k, undefined);
       if (!this.graph.hasNode(k)) continue;
       this._detachNode(k);
-      this._rewireFieldNodesOf(k);
     }
     this._pruneOrphans(previous);
     return rebound;
@@ -1327,8 +1459,8 @@ export class DesignBook {
       for (const node of this.graph.dfsTraversal(start)) {
         if (seen.has(node)) continue;
         seen.add(node);
-        // A field node is a hop to its readers, never a token to report.
-        if (isFieldKey(node)) continue;
+        // A through path is a hop to its readers, never a key to report.
+        if (!this._locate(node)) continue;
         dependents.push(node);
         pending.push(node);
       }
@@ -1336,9 +1468,6 @@ export class DesignBook {
 
     walk(key);
     for (const previous of alsoFrom) walk(previous);
-    // A typography's fields are upstream of it: whoever reads one of them
-    // must hear that the token changed.
-    for (const fk of this._fieldNodesOf(key)) walk(fk);
 
     while (pending.length > 0) {
       const node = pending.shift()!;
@@ -1378,10 +1507,10 @@ export class DesignBook {
     for (const key of candidates) {
       if (!this.graph.hasNode(key)) continue;
       if (this.graph.getDependentsOf(key).length > 0) continue;
-      if (isFieldKey(key)) {
+      if (!this._locate(key) && this._through(key)) {
+        // An unread through path goes, and with it what only it read.
         const prerequisites = this.graph.getPrerequisitesFor(key);
         this.graph.removeNode(key);
-        this._fieldNodes.get(tokenKeyOf(key))?.delete(key);
         this._pruneOrphans(prerequisites);
         continue;
       }
@@ -1568,6 +1697,7 @@ export class DesignBook {
         if (seen.has(dep)) continue;
         seen.add(dep);
         this._reindexDynamic(dep);
+        this._rewireThrough(dep);
         changedKeys.push(dep);
       }
     }
@@ -1597,4 +1727,11 @@ function sameMembers(a: readonly string[], b: readonly string[]): boolean {
   if (a.length !== b.length) return false;
   const set = new Set(a);
   return b.every((k) => set.has(k));
+}
+
+/** The error for reading a group as one value. */
+function groupHasNoValue(key: string, group: Scope | undefined): TokenError {
+  const member = group?.getAllKeys()[0];
+  const hint = member === undefined ? '' : `, e.g. ${key}.${member}`;
+  return new TokenError(`"${key}" is a group; read one of its members${hint}`, key);
 }

@@ -6,7 +6,8 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide, byOption } from '../kinds';
 import type { Direction } from '../kinds';
-import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf } from '../pool';
+import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf, colorTarget } from '../pool';
+import type { Measurable } from '../pool';
 import { contrastAgainst } from './color-math';
 import { readableOnOptions } from './readable';
 import type { ReadableOnOptions } from './readable';
@@ -34,7 +35,7 @@ export interface MinContrastOptions extends ReadableOnOptions {
 /** The member that just reaches `minContrast` against the target — the
  *  lowest contrast at or above it — or, when none does, the highest. */
 export function minContrastWithImpl(
-  targetValue: string,
+  targetValue: Measurable,
   scope: Scope,
   options: ContrastInputs & { minContrast?: number },
 ): Pick {
@@ -48,7 +49,7 @@ export function minContrastWithImpl(
     return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'min', minContrast });
   }
   assertDirectionFits(fn, direction, 'color');
-  const target = parseColor(colorValueOf(targetValue, by) ?? targetValue);
+  const target = parseColor(colorTarget(fn, targetValue, by));
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
   const candidates = colorPool(fn, scope, not, readableOn, readableContrast, by)

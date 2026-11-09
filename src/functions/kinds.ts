@@ -1,6 +1,7 @@
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { best, describeKind, ofKind } from './pool';
+import type { Measurable } from './pool';
 import type { Kind, Measure, MeasuredMember } from './pool';
 import { pick } from './picks';
 import type { Pick } from './picks';
@@ -90,7 +91,7 @@ export function onlyMeasuredGroup(fn: string, scope: Scope, members: MeasuredMem
  */
 export function measuredContrast(
   fn: string,
-  targetValue: string,
+  targetValue: Measurable,
   target: Measure,
   scope: Scope,
   members: MeasuredMember[],

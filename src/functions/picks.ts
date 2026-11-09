@@ -24,6 +24,10 @@ export function isPick(value: unknown): value is Pick {
 
 /** A key's value and, when the value is a member's, which member. */
 export interface Resolution {
+  /** The value; empty when the key's value is a group. */
   value: string;
   pick?: string;
+  /** When the key's value is a group — the key holds one, refers to one,
+   *  or picked one — the path of that group's scope. */
+  group?: string;
 }

@@ -1,7 +1,7 @@
 import { FunctionError } from '../errors';
 import { scopeOf } from '../keys';
 import type { Scope } from '../scope';
-import { isFieldKey, isFunctionTokenValue, isMemberReference, isReferenceValue, isScopeKey } from '../tokens';
+import { isFunctionTokenValue, isMemberReference, isReferenceValue, isScopePath } from '../tokens';
 import type { AnyTokenValue } from '../tokens';
 
 /**
@@ -25,7 +25,7 @@ export interface MemberBook {
 /** The reference a token holds, when it is one to another token. */
 function referredKey(book: MemberBook, key: string): string | undefined {
   const token = book.getTokenByKey(key);
-  if (!isReferenceValue(token) || isScopeKey(token.key) || isFieldKey(token.key)) return undefined;
+  if (!isReferenceValue(token) || isScopePath(token.key)) return undefined;
   return token.key;
 }
 

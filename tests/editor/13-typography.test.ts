@@ -27,7 +27,7 @@ describe('typography in the editor', () => {
       "variant(ref('type-13.title'), { fontWeight: '800' })"],
     ['variant dropping a field',
       () => variant(ref('type-13.title'), { letterSpacing: string('-0.02em'), fontFamily: null }),
-      "variant(ref('type-13.title'), { letterSpacing: string('-0.02em'), fontFamily: null })"],
+      "variant(ref('type-13.title'), { letterSpacing: '-0.02em', fontFamily: null })"],
   ] as const)('serializes and re-parses (%s)', (name, make, expected) => {
     const scope = book.addScope(`ui-13-${name.replace(/\s+/g, '-')}`);
     const original = make();
@@ -38,9 +38,16 @@ describe('typography in the editor', () => {
     expect(parseTokenInput(serialized, book, scope)).toEqual(original);
   });
 
-  it('reads variant of a typography written inline as a copy', () => {
-    const parsed = parseTokenInput("variant(typography({ fontSize: rem(2) }), { fontWeight: '700' })", book);
-    expect(parsed).toEqual(typography({ fontSize: rem(2), fontWeight: '700' }));
+  it('refuses a variant of a style written inline: a variant extends a group by reference', () => {
+    expect(() => parseTokenInput("variant(typography({ fontSize: rem(2) }), { fontWeight: '700' })", book)).toThrow(/set its members/);
+  });
+
+  it('reads and prints a plain object as a group, nested objects nested', () => {
+    const scope = book.addScope('ui-13-group');
+    const written = "{ bg: color('#0055aa'), hover: { bg: color('#003366') } }";
+    scope.set('button', parseTokenInput(written, book, scope));
+    expect(book.resolve('ui-13-group.button.hover.bg')).toBe('#003366');
+    expect(getTokenDisplayValue(scope, 'button')).toBe(written);
   });
 
   it('offers typography and variant in autocomplete', () => {

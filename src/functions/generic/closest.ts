@@ -9,7 +9,8 @@ import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
 import { DIRECTION_KIND, assertDirection, assertDirectionFits, byOption } from '../kinds';
 import type { Direction } from '../kinds';
-import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
+import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor, colorValueOf, colorTarget } from '../pool';
+import type { Measurable } from '../pool';
 import type { Measure } from '../pool';
 import { pick } from '../picks';
 import type { Pick } from '../picks';
@@ -37,7 +38,7 @@ function sideOf(sign: number, limit: number, minDistance: number | undefined) {
 }
 
 /** The "no member is …" message of a directional pick that found none. */
-function noneOnSide(scope: Scope, targetValue: string, options: ClosestInputs, gapUnit: string): FunctionError {
+function noneOnSide(scope: Scope, targetValue: Measurable, options: ClosestInputs, gapUnit: string): FunctionError {
   const where = options.upTo !== undefined
     ? `between ${targetValue} and ${options.upTo}`
     : `${options.direction} than ${targetValue}`;
@@ -53,7 +54,7 @@ function noneOnSide(scope: Scope, targetValue: string, options: ClosestInputs, g
  * target's kind: colors by OKLab distance, sizes by value (same unit), text
  * styles by font size. See `closest`.
  */
-export function closestImpl(targetValue: string, scope: Scope, options: ClosestInputs): Pick {
+export function closestImpl(targetValue: Measurable, scope: Scope, options: ClosestInputs): Pick {
   const measure = measureOf(targetValue, options.by);
   if (measure) return closestMeasured(targetValue, measure, scope, options);
   assertDirectionFits('closest', options.direction, 'color');
@@ -64,7 +65,7 @@ export function closestImpl(targetValue: string, scope: Scope, options: ClosestI
 }
 
 /** Sizes and text styles: by value, in the target's unit. */
-function closestMeasured(targetValue: string, target: Measure, scope: Scope, options: ClosestInputs): Pick {
+function closestMeasured(targetValue: Measurable, target: Measure, scope: Scope, options: ClosestInputs): Pick {
   assertDirectionFits('closest', options.direction, target.kind);
   if (options.readableOn !== undefined) {
     throw new FunctionError(`closest: \`readableOn\` applies to colors, not ${describeKind(target.kind)}`, 'closest');
@@ -94,9 +95,9 @@ function closestMeasured(targetValue: string, target: Measure, scope: Scope, opt
  *  distance zero). A direction keeps the members on one side of the
  *  target's OKLCH lightness, strictly past it by `minDistance`; `upTo` no
  *  further than the other color's lightness. */
-function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs): Pick {
+function closestColor(styleOrColor: Measurable, scope: Scope, options: ClosestInputs): Pick {
   // A text style is compared by its color field `by`.
-  const targetValue = colorValueOf(styleOrColor, options.by) ?? styleOrColor;
+  const targetValue = colorTarget('closest', styleOrColor, options.by);
   if (!parseColor(targetValue)) {
     throw new FunctionError(`closest: cannot parse target color "${targetValue}"`, 'closest');
   }
@@ -106,7 +107,7 @@ function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs
   let sign = options.direction === 'lighter' ? 1 : options.direction === 'darker' ? -1 : 0;
   let limit = Infinity;
   if (options.upTo !== undefined) {
-    const upTo = parseColor(colorValueOf(options.upTo, options.by) ?? options.upTo);
+    const upTo = parseColor(colorTarget('closest', options.upTo, options.by));
     if (!upTo) throw new FunctionError(`closest: cannot parse \`upTo\` color "${options.upTo}"`, 'closest');
     const upToL = lightnessOf(upTo);
     sign = Math.sign(upToL - target.l);

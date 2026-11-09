@@ -10,7 +10,7 @@ import {
   typography, variant,
 } from '../../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../../src/index';
-import { isScopeKey } from '../../src/internals';
+import { isScopePath } from '../../src/internals';
 import { parse } from 'culori';
 
 /**
@@ -38,6 +38,11 @@ export function parseTokenInput(
   currentScope?: Scope,
 ): AnyTokenValue {
   const trimmed = input.trim();
+
+  // { member: value, … }: a group of members (nested objects nest).
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    return { type: 'group', members: groupMembers(parseFieldObject(trimmed, book, false)) } as AnyTokenValue;
+  }
 
   // A plain value constructor with a trailing `{ description: "..." }`, the
   // form the serializer writes for described tokens: color('#fff', { ... }),
@@ -254,7 +259,7 @@ function parseArg(
   // ref('...'), inherited(ref('...')), source(ref('...'))
   const reference = parseReference(trimmed);
   if (reference) {
-    return isScopeKey(reference.key) ? { type: 'scope', value: reference } : { type: 'ref', value: reference };
+    return isScopePath(reference.key) ? { type: 'scope', value: reference } : { type: 'ref', value: reference };
   }
 
   // color('...') — matching-quote form first, so values containing spaces,
@@ -345,8 +350,9 @@ function getTokenArg(parsed: ReturnType<typeof parseArg>): AnyTokenValue {
   throw new Error(`Expected token argument, got ${parsed.type}`);
 }
 
+/** A pool: a scope, or any reference — a group's path names one too. */
 function getScopeArg(parsed: ReturnType<typeof parseArg>): ReferenceValue {
-  if (parsed.type === 'scope') return parsed.value;
+  if (parsed.type === 'scope' || parsed.type === 'ref') return parsed.value;
   throw new Error(`Expected a scope (e.g. ref('brand')), got "${parsed.type === 'token' ? 'token value' : parsed.type}"`);
 }
 
@@ -364,6 +370,8 @@ function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: 
     if (value === 'null') {
       if (!allowNull) throw new Error(`Field "${name}" needs a value`);
       fields[name] = null;
+    } else if (value.startsWith('{') && value.endsWith('}')) {
+      fields[name] = { type: 'group', members: groupMembers(parseFieldObject(value, book, allowNull)) };
     } else if (/^(['"]).*\1$/s.test(value)) {
       fields[name] = parseQuotedString(value);
     } else if (/^[+-]?(\d+\.?\d*|\.\d+)$/.test(value)) {
@@ -373,6 +381,16 @@ function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: 
     }
   }
   return fields;
+}
+
+/** Members as a group takes them: a quoted string is a string token, a bare
+ *  number a unitless dimension (as `typography` reads them), the rest as
+ *  parsed. */
+function groupMembers(fields: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [
+    name,
+    typeof value === 'number' ? dimension(value, '') : typeof value === 'string' ? string(value) : value,
+  ]));
 }
 
 // --- Function parsers ---
@@ -462,11 +480,11 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
   // variant(ref('type.title'), { fontWeight: '800', letterSpacing: null })
   variant(argsStr, book) {
     const args = splitArgs(argsStr);
-    if (args.length < 2 || !args[1].startsWith('{')) {
-      throw new Error("variant requires a base and an object of fields: variant(ref('type.title'), { fontWeight: '800' })");
+    if (args.length < 1 || (args.length > 1 && !args[1].startsWith('{'))) {
+      throw new Error("variant requires a base and, optionally, an object of members: variant(ref('type.title'), { fontWeight: '800' })");
     }
     const base = getTokenArg(parseArg(args[0], book));
-    const token = variant(base, parseFieldObject(args[1], book, true));
+    const token = variant(base as ReferenceValue, args.length > 1 ? parseFieldObject(args[1], book, true) : {});
     const description = args.length > 2 ? parseOptionsArg(args.slice(2).join(','))?.description : undefined;
     return description ? { ...token, description } : token;
   },

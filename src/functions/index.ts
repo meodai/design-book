@@ -14,7 +14,6 @@ import type { RampEngine } from './color/ramp';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
-import { typographyImpl } from './non-color/typography';
 import { randomImpl } from './generic/random';
 import { nthImpl } from './generic/nth';
 import { siblingImpl, scopeOfKey } from './generic/sibling';
@@ -24,6 +23,7 @@ import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 import { isMemberReference, isUnresolvable } from '../tokens';
 import { FunctionError } from '../errors';
 import type { Pick } from './picks';
+import type { Measurable } from './pool';
 
 export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
@@ -48,7 +48,7 @@ export { ramp, rampStops, rampSet } from './color/ramp';
 export type { RampSet, RampSetSource } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
-export { typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase } from './non-color/typography';
+export { typography, variant } from './non-color/typography';
 export type { TypographyField, TypographyFields, TypographyOverrides } from './non-color/typography';
 export { timing } from './non-color/timing';
 export { random } from './generic/random';
@@ -95,14 +95,14 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
     ({ ...options, not: excludedMembers(book, fn, scope, (options?.not as unknown[] | undefined) ?? []) }) as O & { not: string[] };
 
   // Selectors with a target: (target, pool, options).
-  const targeted: Record<string, (target: string, scope: Scope, options: never) => Pick> = {
+  const targeted: Record<string, (target: Measurable, scope: Scope, options: never) => Pick> = {
     bestContrastWith: bestContrastWithImpl,
     minContrastWith: minContrastWithImpl,
     closest: closestImpl,
     furthestFrom: furthestFromImpl,
   };
   for (const [fn, impl] of Object.entries(targeted)) {
-    book.registerFunction(fn, (target: string, scope: Scope, options?: { not?: unknown }) =>
+    book.registerFunction(fn, (target: Measurable, scope: Scope, options?: { not?: unknown }) =>
       impl(target, scope, pooled(fn, scope, options) as never));
   }
 
@@ -130,7 +130,6 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
   book.registerFunction('spacingScale', spacingScaleImpl);
   book.registerFunction('typographyScale', typographyScaleImpl);
   book.registerFunction('timing', timingImpl);
-  book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
   // A ramp copying scope masters reads those scopes, like a pool.
   book.registerFunction('ramp', (seed: string, options?: { shade?: string; from?: string }) => {
     if (!options?.shade) throw new FunctionError('ramp: missing required "shade" option', 'ramp');

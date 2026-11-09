@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { parseKey, scopeOf } from './keys';
+import { parseKey, rootScopeOf, scopeOf } from './keys';
 import { TokenError } from './errors';
 
 export interface TokenProcessor {
@@ -16,13 +16,27 @@ export interface TokenValue {
 
 export interface ReferenceValue {
   type: 'reference';
-  /** A path: `scope`, `scope.token` or `scope.token.field`; relative to the
-   *  reading scope with a leading dot (`.`, `.token`, `.token.field`). */
+  /** A path: `scope.token`, any depth into groups (`type.title.fontSize`);
+   *  relative to the reading scope with a leading dot (`.token`,
+   *  `.title.fontSize`). */
   key: string;
   /** Read the path this many `extends` levels up, or at the top of the
    *  chain (`inherited`). Gone once a scope binds the reference. */
   up?: number | 'root';
+  /** Read the path this many holders out, or in the top-level scope
+   *  (`holder`). Gone once a scope binds the reference. */
+  out?: number | 'root';
   description?: string;
+}
+
+/** The scope a selector searches: `ref('palette')` written as a selector's
+ *  pool, `ref('.')` for the scope that reads it, any group by its path
+ *  (`ref('card.heading')`). Its key names a scope, never a token. */
+export interface PoolReference {
+  type: 'pool';
+  key: string;
+  up?: number | 'root';
+  out?: number | 'root';
 }
 
 /**
@@ -39,8 +53,9 @@ export interface ReferenceValue {
 export interface MemberReference {
   type: 'member';
   key: string;
-  /** As on a reference: `inherited`, until a scope binds it. */
+  /** As on a reference: `inherited` and `holder`, until a scope binds it. */
   up?: number | 'root';
+  out?: number | 'root';
   via?: number | 'root';
   referredBy?: true;
 }
@@ -60,6 +75,7 @@ export interface UnresolvableValue {
 export type FunctionArg =
   | TokenValue
   | ReferenceValue
+  | PoolReference
   | FunctionTokenValue
   | string
   | number;
@@ -93,7 +109,55 @@ export interface FunctionTokenValue {
   };
 }
 
-export type AnyTokenValue = TokenValue | ReferenceValue | FunctionTokenValue;
+export type AnyTokenValue = TokenValue | ReferenceValue | FunctionTokenValue | GroupValue;
+
+/**
+ * A scope held at a key: a group. The holding scope keeps this entry; the
+ * members live in the group's own scope, registered under its path
+ * (`type.title`), so they are ordinary keys (`type.title.fontSize`).
+ *
+ * Written as a plain object of members (`{ bg: …, text: … }`), with
+ * `typography({ … })` (a text style) or `variant(ref, { … })` (a group
+ * extending another). `members` is what was written; once set, the group's
+ * scope holds them and the stored entry has none.
+ */
+export interface GroupValue {
+  type: 'group';
+  /** What the group is outside the book: `'typography'` for a text style
+   *  (a CSS class, a W3 composite, `fontSize` as the member that stands for
+   *  it). Inherited from `base` when unset. */
+  kind?: string;
+  /** The group it extends (`variant`). */
+  base?: MemberReference | UnresolvableValue;
+  /** Members of `base` it leaves out. */
+  omit?: string[];
+  members?: Record<string, GroupInput>;
+  description?: string;
+}
+
+/** What may be written as a group member: a token, or a group. */
+export type GroupInput = TokenValue | ReferenceValue | FunctionTokenValue | GroupValue | { [member: string]: GroupInput };
+
+export function isGroupValue(value: unknown): value is GroupValue {
+  return typeof value === 'object' && value !== null && (value as { type?: unknown }).type === 'group';
+}
+
+/** True for a plain object of members: an object whose `type` is not a
+ *  string (a token's always is), so a member named `type` cannot be mistaken
+ *  for one. */
+export function isMemberObject(value: unknown): value is Record<string, GroupInput> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return (proto === Object.prototype || proto === null) && typeof (value as { type?: unknown }).type !== 'string';
+}
+
+/** A group as written — a `GroupValue` or a plain object of members — as a
+ *  `GroupValue`; `undefined` for anything else. */
+export function toGroupValue(value: unknown): GroupValue | undefined {
+  if (isGroupValue(value)) return value;
+  if (isMemberObject(value)) return { type: 'group', members: value };
+  return undefined;
+}
 
 const tokenProcessors = new WeakMap<TokenValue, TokenProcessor[]>();
 
@@ -167,7 +231,7 @@ export function color(value: string, options?: { description?: string; [key: str
 export function ref(key: string, options?: { description?: string; [key: string]: any }): ReferenceValue {
   if (parseKey(key) === null) {
     throw new TokenError(
-      `Invalid reference "${String(key)}": expected "scope", "scope.token", "scope.token.field" or a relative ".", ".token", ".token.field"`,
+      `Invalid reference "${String(key)}": expected a path such as "scope.token" or "type.title.fontSize", or a relative ".", ".token", ".title.fontSize"`,
       typeof key === 'string' ? key : undefined,
     );
   }
@@ -175,6 +239,23 @@ export function ref(key: string, options?: { description?: string; [key: string]
     type: 'reference' as const,
     key,
   }, options);
+}
+
+/**
+ * A scope, as a function's pool — what a selector searches:
+ * `pool('palette')`, a group's path (`pool('card.heading')`), `pool('.')`
+ * for the scope that reads it, or a navigated reference
+ * (`pool(inherited(ref('.')))`). The built-in selectors take `ref('palette')`
+ * and make it one; a custom function's token is built with it
+ * (`createFunctionToken('secondOf', [pool('palette')])`), so its
+ * implementation receives the live scope.
+ */
+export function pool(target: string | ReferenceValue | PoolReference): PoolReference {
+  if (isPoolReference(target)) return target;
+  const reference = typeof target === 'string' ? ref(target) : target;
+  if (!isReferenceValue(reference)) throw new Error('pool: expects a scope path or a ref(...)');
+  const { type: _type, description: _description, ...rest } = reference;
+  return { ...rest, type: 'pool' };
 }
 
 /**
@@ -203,6 +284,27 @@ export function inherited<R extends ReferenceValue | MemberReference>(reference:
 }
 
 /**
+ * The same path, read in the scope that **holds** the reading one: a group
+ * placed in a context reads that context. `holder(ref('.surface'))` in the
+ * group `context-normal.major` is `context-normal.surface`;
+ * `holder(ref('.surface'), 2)` two holders out; `holder(ref('.surface'),
+ * 'root')` in the top-level scope. A top-level scope has no holder: reading
+ * past it is refused. Its counterparts: `inherited` along `extends`, `source`
+ * along references.
+ */
+export function holder<R extends ReferenceValue | MemberReference>(reference: R, levels: number | 'root' = 1): R {
+  if (!isReferenceValue(reference) && !isMemberReference(reference)) {
+    throw new Error('holder: expects a ref(...)');
+  }
+  if (levels === 'root') return { ...reference, out: 'root' };
+  if (!Number.isInteger(levels) || levels < 1) {
+    throw new Error(`holder: levels must be a whole number of 1 or more, or 'root', got ${String(levels)}`);
+  }
+  if (reference.out === 'root') return reference;
+  return { ...reference, out: (reference.out ?? 0) + levels };
+}
+
+/**
  * The token a reference refers to, followed along its **references**:
  * `card.interaction = ref('blue.600')`, so `source(ref('card.interaction'))`
  * names `blue.600`. `source(ref, 2)` follows two references;
@@ -221,7 +323,7 @@ export function source(reference: ReferenceValue | MemberReference, hops: number
   if (!isReferenceValue(reference) && !isMemberReference(reference)) {
     throw new Error('source: expects a ref(...)');
   }
-  if (isScopeKey(reference.key)) {
+  if (isScopePath(reference.key)) {
     throw new Error(`source: "${reference.key}" is a scope; source follows a token's references`);
   }
   if (isMemberReference(reference) && reference.referredBy) {
@@ -255,7 +357,7 @@ export function refersTo(reference: ReferenceValue | MemberReference): MemberRef
   if (!isReferenceValue(reference) && !isMemberReference(reference)) {
     throw new Error('refersTo: expects a ref(...)');
   }
-  if (isScopeKey(reference.key)) {
+  if (isScopePath(reference.key)) {
     throw new Error(`refersTo: "${reference.key}" is a scope; refersTo names the members that refer to a token`);
   }
   const member = toMember(reference);
@@ -313,21 +415,6 @@ export function string(value: string, options?: { description?: string; [key: st
   return val({ type: 'string', rawValue: value }, options);
 }
 
-/** The `scope.token` part of a key — the token a field key
- *  (`type.title.fontSize`) belongs to; a token key comes back unchanged. */
-export function tokenKeyOf(key: string): string {
-  const first = key.indexOf('.');
-  const second = first === -1 ? -1 : key.indexOf('.', first + 1);
-  return second === -1 ? key : key.slice(0, second);
-}
-
-/** `scope.token.field`: one field of a typography token. The graph keeps a
- *  node per field, so field refs depend on the field, not the whole token. */
-export function isFieldKey(key: string): boolean {
-  const first = key.indexOf('.');
-  return first !== -1 && key.indexOf('.', first + 1) !== -1;
-}
-
 // --- Paths and binding ---
 //
 // A reference key is a path: `scope`, `scope.token`, `scope.token.field`.
@@ -341,17 +428,19 @@ export function isFieldKey(key: string): boolean {
 // `metadata.iteratedScopes` entry of `''` (what `sibling` records for a
 // relative anchor) is the reading scope.
 
-/** True for a path that names a scope: `brand`, or `.` for the reading scope. */
-export function isScopeKey(key: unknown): boolean {
+/** True for a path that certainly names a scope: `.` (the reading scope)
+ *  or a single segment (a top-level scope). A dotted path may name a group
+ *  too; only the book can tell. */
+export function isScopePath(key: unknown): boolean {
   return typeof key === 'string' && (key === '.' || (key.length > 0 && !key.includes('.')));
 }
 
-/** A reference to a scope — a pool argument. */
-export function isScopeReference(arg: unknown): arg is ReferenceValue {
-  return isReferenceValue(arg) && isScopeKey(arg.key);
+/** A pool: the scope a selector searches. */
+export function isPoolReference(arg: unknown): arg is PoolReference {
+  return typeof arg === 'object' && arg !== null && (arg as { type?: unknown }).type === 'pool';
 }
 
-/** `.`, `.token` or `.token.field` — a path relative to the reading scope. */
+/** `.`, `.token` or `.title.fontSize` — a path relative to the reading scope. */
 export function isRelativeKey(key: unknown): boolean {
   return typeof key === 'string' && (key === '.' || (key.length > 1 && key[0] === '.' && key[1] !== '.'));
 }
@@ -377,12 +466,13 @@ export interface BindingContext {
 export const MEMBER_SLOTS: ReadonlySet<string> = new Set(['not', 'from', 'toward', 'base']);
 
 /** A reference-like node of a token, and where it sits. */
-type RefNode = ReferenceValue | MemberReference | UnresolvableValue;
-/** `value`: an argument or input option; `member`: a member slot. */
-type Place = 'value' | 'member';
+type RefNode = ReferenceValue | PoolReference | MemberReference | UnresolvableValue;
+/** `value`: an argument or input option; `pool`: a selector's pool;
+ *  `member`: a member slot. */
+type Place = 'value' | 'pool' | 'member';
 
 function isRefNode(arg: unknown): arg is RefNode {
-  return isReferenceValue(arg) || isMemberReference(arg) || isUnresolvable(arg);
+  return isReferenceValue(arg) || isPoolReference(arg) || isMemberReference(arg) || isUnresolvable(arg);
 }
 
 /**
@@ -393,12 +483,12 @@ function isRefNode(arg: unknown): arg is RefNode {
  */
 function walkRefs(token: unknown, visit: (node: RefNode, place: Place, slot?: string) => void): void {
   if (isRefNode(token)) {
-    visit(token, 'value');
+    visit(token, isPoolReference(token) ? 'pool' : 'value');
     return;
   }
   if (!isFunctionTokenValue(token)) return;
   for (const arg of token.args) {
-    if (isRefNode(arg)) visit(arg, 'value');
+    if (isRefNode(arg)) visit(arg, isPoolReference(arg) ? 'pool' : 'value');
     else if (isFunctionTokenValue(arg)) walkRefs(arg, visit);
   }
   for (const [name, value] of Object.entries(token.options ?? {})) {
@@ -419,7 +509,7 @@ function traitsOf(token: unknown): TokenTraits {
   const traits: TokenTraits = { relative: false, navigates: false };
   walkRefs(token, (node) => {
     if (isRelativeKey(node.key)) traits.relative = true;
-    if (!isUnresolvable(node) && node.up !== undefined) traits.navigates = true;
+    if (!isUnresolvable(node) && (node.up !== undefined || node.out !== undefined)) traits.navigates = true;
   });
   if (isFunctionTokenValue(token)) {
     const metadata = token.metadata;
@@ -444,45 +534,70 @@ export function needsBinding(token: unknown): boolean {
   return traits.relative || traits.navigates;
 }
 
-/** Follow `up` from the scope a qualified path starts in. */
-function navigate(path: string, up: number | 'root', context: BindingContext): string | { error: string } {
-  const start = scopeOf(path);
+/**
+ * Follows `holder` (`out`) and `inherited` (`up`) from the scope a qualified
+ * path belongs to — the path itself for a pool, everything before its last
+ * dot for a token — and puts the rest of the path back. Holders first:
+ * `holder(inherited(ref('.x')))` is the holder's parent's `x`.
+ */
+function navigate(
+  path: string,
+  isScope: boolean,
+  move: { up?: number | 'root'; out?: number | 'root' },
+  context: BindingContext,
+): string | { error: string } {
+  const start = isScope ? path : scopeOf(path);
   const rest = path.slice(start.length);
   let scope = start;
+  const { up, out } = move;
+  if (out === 'root') scope = rootScopeOf(scope);
+  else if (out !== undefined) {
+    for (let level = 0; level < out; level++) {
+      if (!scope.includes('.')) {
+        return {
+          error: level === 0
+            ? `"${scope}" is a top-level scope: no scope holds it, so holder(...) cannot read "${path}" there`
+            : `"${start}" is held only ${level} level${level === 1 ? '' : 's'} deep, so holder(...) cannot go ${out} out`,
+        };
+      }
+      scope = scopeOf(scope);
+    }
+  }
   if (up === 'root') {
     const seen = new Set<string>();
     for (let parent = context.parentOf(scope); parent !== undefined && !seen.has(parent); parent = context.parentOf(scope)) {
       seen.add(scope);
       scope = parent;
     }
-    return scope + rest;
-  }
-  for (let level = 0; level < up; level++) {
-    const parent = context.parentOf(scope);
-    if (parent === undefined) {
-      return {
-        error: level === 0
-          ? `"${start}" has no parent: it extends no scope, so inherited(...) cannot read "${path}" there`
-          : `"${start}" has only ${level} level${level === 1 ? '' : 's'} above it, so inherited(...) cannot go ${up} up`,
-      };
+  } else if (up !== undefined) {
+    const from = scope;
+    for (let level = 0; level < up; level++) {
+      const parent = context.parentOf(scope);
+      if (parent === undefined) {
+        return {
+          error: level === 0
+            ? `"${from}" has no parent: it extends no scope, so inherited(...) cannot read "${path}" there`
+            : `"${from}" has only ${level} level${level === 1 ? '' : 's'} above it, so inherited(...) cannot go ${up} up`,
+        };
+      }
+      scope = parent;
     }
-    scope = parent;
   }
   return scope + rest;
 }
 
-/** A reference (or member reference) as `scope` reads it: qualified, then
- *  navigated — or, past the top of the chain, unresolvable. */
+/** A reference as `scope` reads it: qualified, then navigated — or, past
+ *  the top of a chain, unresolvable. */
 function bindNode(node: RefNode, scope: string, context: BindingContext | undefined): RefNode {
   if (isUnresolvable(node)) return node;
   const qualified = qualifyKey(node.key, scope);
-  const { up, ...plain } = node;
-  if (up === undefined) return { ...plain, key: qualified };
+  const { up, out, ...plain } = node;
+  if (up === undefined && out === undefined) return { ...plain, key: qualified };
   const navigated = context
-    ? navigate(qualified, up, context)
-    : { error: `"${node.key}" needs a book to read inherited(...)` };
+    ? navigate(qualified, isPoolReference(node), { up, out }, context)
+    : { error: `"${node.key}" needs a book to read inherited(...) or holder(...)` };
   if (typeof navigated !== 'string') return { type: 'unresolvable', key: qualified, message: navigated.error };
-  return { ...plain, key: navigated };
+  return { ...plain, key: navigated } as RefNode;
 }
 
 const boundTokens = new WeakMap<object, { version: number; byScope: Map<string, unknown> }>();
@@ -521,7 +636,7 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
     if (metadata) {
       metadata = { ...metadata };
       if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map((key) => qualifyKey(key, scope));
-      if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
+      if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : qualifyKey(n, scope)));
     }
     bound = { ...fn, args: fn.args.map(bindValue), options, metadata };
   }
@@ -557,16 +672,16 @@ export function unresolvableIn(token: unknown): string | undefined {
  *  through the selector index, not as a value), an unresolvable navigation
  *  reads nothing, and one not yet followed names no key yet. */
 function valueKey(node: RefNode): string | undefined {
-  if (!isReferenceValue(node) || isScopeKey(node.key) || node.up !== undefined) return undefined;
+  if (!isReferenceValue(node) || node.up !== undefined || node.out !== undefined) return undefined;
   return node.key;
 }
 
 /** The key a member reference reads to name its member, or `undefined`: a
  *  `source` reads its start key; a bare `refersTo` only the pool. */
 function memberReadKey(node: RefNode): string | undefined {
-  if (!isMemberReference(node) || node.up !== undefined) return undefined;
+  if (!isMemberReference(node) || node.up !== undefined || node.out !== undefined) return undefined;
   if (node.referredBy && node.via === undefined) return undefined;
-  return node.via !== undefined ? tokenKeyOf(node.key) : node.key;
+  return node.key;
 }
 
 /** Keys the args read as values, each listed once in first-seen order;
@@ -624,8 +739,8 @@ export function extractIteratedScopes(args: FunctionArg[]): string[] {
   for (const arg of args) {
     if (isFunctionTokenValue(arg)) {
       for (const name of iteratedScopesOf(arg)) names.push(name);
-    } else if (isScopeReference(arg)) {
-      // Bound, this is the scope's name; `.` before binding means the reading scope.
+    } else if (isPoolReference(arg)) {
+      // Bound, this is the scope's path; `.` before binding means the reading scope.
       names.push(arg.key === '.' ? '' : arg.key);
     }
   }
@@ -648,7 +763,7 @@ export function iteratedScopesOf(fn: FunctionTokenValue): string[] {
  *  (`source`, `refersTo`) or navigated (`inherited`, before binding). */
 export function anchorScopeOf(fn: FunctionTokenValue): string[] {
   const from = fn.options?.from;
-  if (fn.args.some(isScopeReference) || !isMemberReference(from)) return [];
-  if (from.up !== undefined || from.via !== undefined || from.referredBy) return [];
-  return [isRelativeKey(from.key) ? '' : scopeOf(from.key)];
+  if (fn.args.some(isPoolReference) || !isMemberReference(from)) return [];
+  if (from.up !== undefined || from.out !== undefined || from.via !== undefined || from.referredBy) return [];
+  return [scopeOf(from.key)];
 }

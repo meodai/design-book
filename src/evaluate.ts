@@ -1,4 +1,4 @@
-import { isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvable, MEMBER_SLOTS } from './tokens';
+import { isFunctionTokenValue, isPoolReference, isReferenceValue, isScopePath, isTokenValue, isUnresolvable, MEMBER_SLOTS } from './tokens';
 import type { FunctionArg, FunctionTokenValue, ReferenceValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import type { Scope } from './scope';
@@ -9,12 +9,10 @@ import type { Resolution } from './functions/picks';
 /** What evaluating a token needs from the book. */
 export interface EvaluationBook {
   resolve(key: string): string;
+  _resolution(key: string): Resolution;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
 }
-
-/** A resolved text style: CSS declarations. */
-const TEXT_STYLE = /^[a-z-]+\s*:/i;
 
 /**
  * Evaluates a function token — a key's own or one nested as an argument:
@@ -24,26 +22,33 @@ const TEXT_STYLE = /^[a-z-]+\s*:/i;
  */
 export function evaluateFunction(book: EvaluationBook, fn: FunctionTokenValue): Resolution {
   const args = fn.args.map((arg: FunctionArg) => evaluateArg(book, arg));
-  if (fn.metadata?.returnType === 'color') assertNoTextStyle(fn, args);
+  if (fn.metadata?.returnType === 'color') assertNoGroup(fn, args);
   const implementation = book.getFunction(fn.name);
   if (!implementation) throw new Error(`Function "${fn.name}" is not registered`);
   const result = implementation(...args, evaluateInputs(book, fn.options));
-  if (isPick(result)) return { value: book.resolve(result.picked), pick: result.picked };
+  // A pick passes on the member's value — or, when the member is a group,
+  // the group.
+  if (isPick(result)) return { ...book._resolution(result.picked), pick: result.picked };
   return { value: String(result) };
 }
 
-/** A function argument as the implementation receives it: a value, or the
- *  live scope for a pool. */
+/** A function argument as the implementation receives it: a value, or a
+ *  live scope — the pool a selector searches, or the group a reference's
+ *  value is (a text style a comparison measures by `by`). */
 export function evaluateArg(book: EvaluationBook, arg: FunctionArg): unknown {
   if (isUnresolvable(arg)) throw new TokenError(`${arg.key}: ${arg.message}`, arg.key);
+  if (isPoolReference(arg)) {
+    const scope = book.getScope(arg.key);
+    if (!scope) throw new TokenError(`"${arg.key}" names no scope to search`, arg.key);
+    return scope;
+  }
   if (isReferenceValue(arg)) {
-    // A scope reference is a pool: hand the function the scope itself.
-    if (isScopeKey(arg.key)) {
-      const scope = book.getScope(arg.key);
-      if (!scope) throw new TokenError(`Scope "${arg.key}" not found`, arg.key);
-      return scope;
+    if (isScopePath(arg.key)) {
+      throw new TokenError(`ref('${arg.key}') names a scope, which has no value; to search it, pass pool('${arg.key}')`, arg.key);
     }
-    return book.resolve(arg.key);
+    const resolution = book._resolution(arg.key);
+    if (resolution.group !== undefined) return book.getScope(resolution.group);
+    return resolution.value;
   }
   if (isFunctionTokenValue(arg)) return evaluateFunction(book, arg).value;
   if (isTokenValue(arg)) return valueOf(arg);
@@ -58,7 +63,7 @@ export function valueOf(token: TokenValue): string {
 /** The key a bound reference reads as a value. Refuses a scope, which has
  *  no value of its own. */
 export function valueKey(reference: ReferenceValue, where: string): string {
-  if (isScopeKey(reference.key)) {
+  if (isScopePath(reference.key)) {
     throw new TokenError(`${where}: ref('${reference.key}') names a scope; a value needs 'scope.token'`, where);
   }
   return reference.key;
@@ -81,15 +86,19 @@ function evaluateInputs(book: EvaluationBook, options: Record<string, unknown> |
   return resolved ?? options;
 }
 
-/** A color transform handed a whole text style gets a message that says
- *  how to pass one of its fields, instead of failing to parse a color. */
-function assertNoTextStyle(fn: FunctionTokenValue, args: unknown[]): void {
+/** A color transform handed a whole group (a text style, say) gets a
+ *  message that says how to pass one of its members, instead of failing to
+ *  parse a color. */
+function assertNoGroup(fn: FunctionTokenValue, args: unknown[]): void {
   args.forEach((value, i) => {
-    if (typeof value !== 'string' || !TEXT_STYLE.test(value)) return;
+    if (typeof value !== 'object' || value === null || !('getAllKeys' in value)) return;
     const arg = fn.args[i];
+    if (isPoolReference(arg)) return; // a pool is a scope on purpose
     const key = isReferenceValue(arg) ? arg.key : undefined;
-    const what = key ? `"${key}" is a text style` : 'that argument is a text style';
-    const hint = key ? `, e.g. ref('${key}.color')` : '';
-    throw new FunctionError(`${fn.name}: ${what}; pass one of its fields${hint}`, fn.name);
+    const group = value as Scope;
+    const what = group.getKind() === 'typography' ? 'a text style' : 'a group';
+    const member = group.getAllKeys().includes('color') ? 'color' : group.getAllKeys()[0];
+    const hint = key && member ? `, e.g. ref('${key}.${member}')` : '';
+    throw new FunctionError(`${fn.name}: ${key ? `"${key}"` : 'that argument'} is ${what}; pass one of its members${hint}`, fn.name);
   });
 }

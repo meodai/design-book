@@ -57,6 +57,19 @@ export class ScopeManager {
     return scope;
   }
 
+  /** Registers a group: a scope held at a key, named by its path
+   *  (`type.title`). Only the book makes them, for the keys that hold one. */
+  _addGroup(
+    path: string,
+    options: { extends?: string; description?: string; kind?: string; omit?: readonly string[]; implicit?: boolean },
+  ): Scope {
+    this.validateExtends(path, options.extends);
+    const scope = new Scope(path, this.book, options);
+    this.scopes.set(path, scope);
+    this.link(scope);
+    return scope;
+  }
+
   /** Token keys are `scope.token`, so a dotted scope name would produce keys
    *  nothing can address (`resolve('a.b.x')` splits at the first dot). */
   private validateScopeName(name: string): void {

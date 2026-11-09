@@ -410,24 +410,30 @@ function serializeArg(arg: any): string {
   return String(arg);
 }
 
-/** One typography field value, the way it is typed: quoted strings, bare
- *  numbers, constructors and refs. */
-function serializeField(value: any): string {
-  if (typeof value === 'string') return quote(value);
-  return serializeArg(value);
+/** A group member, the way it is typed inside a group: a string token as a
+ *  quoted string, a unitless number bare (the constructors read both back),
+ *  a nested group as an object, anything else as its call. */
+function serializeMember(group: Scope, name: string): string {
+  const raw = group.getRaw(name) as any;
+  if (raw?.type === 'group') return serializeGroup(group, name);
+  if (raw?.type === 'string' && !raw.description) return quote(String(raw.rawValue));
+  if (raw?.type === 'dimension' && raw.metadata?.unit === '' && !raw.description) return String(raw.rawValue);
+  return raw?.type === 'function' ? serializeFunctionToken(raw) : serializePlainToken(raw);
 }
 
-/** typography({ … }) and variant(ref('…'), { … }) keep their field names
- *  in fn.options; print them back as object literals. */
-function serializeTypography(fn: any): string {
-  const names: string[] = fn.options?.fields ?? [];
-  const pairs = names.map((name, i) => `${name}: ${serializeField(fn.args[i])}`);
-  for (const name of fn.options?.removed ?? []) pairs.push(`${name}: null`);
-  const fields = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
-  const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
-  const base = fn.options?.base;
-  if (!base) return `typography(${fields}${tail})`;
-  return `variant(${serializePlainToken(base)}, ${fields}${tail})`;
+/** A group as it is typed: `typography({ … })`, `variant(ref('…'), { … })`
+ *  or a plain object of members — its own members only (the rest come from
+ *  its base), `null` for the base's members it leaves out. */
+function serializeGroup(holder: Scope, name: string): string {
+  const entry = holder.getRaw(name) as any;
+  const group = holder.scopeAt(`${holder.name}.${name}`);
+  const pairs = (group?.ownKeys() ?? []).map((member) => `${member}: ${serializeMember(group!, member)}`);
+  for (const member of entry.omit ?? []) pairs.push(`${member}: null`);
+  const members = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
+  const tail = entry.description ? `, { description: ${JSON.stringify(entry.description)} }` : '';
+  if (entry.base) return `variant(${serializePlainToken(entry.base)}${pairs.length > 0 || tail ? `, ${members}` : ''}${tail})`;
+  if (entry.kind === 'typography') return `typography(${members}${tail})`;
+  return members;
 }
 
 /** One option value, the way it is typed: a member or value reference as
@@ -455,7 +461,6 @@ function serializeOptions(fn: any, skip: ReadonlySet<string> = new Set()): strin
 }
 
 function serializeFunctionToken(fn: any): string {
-  if (fn.name === 'typography') return serializeTypography(fn);
 
   // sibling(anchor, scale?, steps, { … }): the anchor and the count are
   // positional, the rest options.
@@ -495,6 +500,7 @@ export function getTokenDisplayValue(scope: Scope, tokenName: string): string {
   const token = scope.getRaw(tokenName);
   if (!token) return '';
 
+  if (token.type === 'group') return serializeGroup(scope, tokenName);
   if (token.type === 'function') {
     return serializeFunctionToken(token as any);
   }
@@ -514,7 +520,7 @@ function quote(value: string): string {
 
 function serializePlainToken(tv: any): string {
   // A reference, or a member reference (a `not` entry, an anchor, a base).
-  if (tv.type === 'reference' || tv.type === 'member') {
+  if (tv.type === 'reference' || tv.type === 'member' || tv.type === 'pool') {
     // inherited(…) first, then source(…), then refersTo(…) around it: the order they are read in
     const distance = (d: number | 'root') => (d === 1 ? '' : d === 'root' ? ", 'root'" : `, ${d}`);
     let written = `ref('${tv.key}')`;

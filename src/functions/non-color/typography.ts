@@ -1,211 +1,96 @@
 import { assertOptions } from '../args';
 import { parseKey, VALID_TOKEN_KEY } from '../../keys';
-import { createFunctionToken, extractDependencies, isFunctionTokenValue, isMemberReference, isReferenceValue, isUnresolvable, toMember } from '../../tokens';
-import type { AnyTokenValue, FunctionTokenValue, MemberReference, TokenValue, ReferenceValue, UnresolvableValue } from '../../tokens';
+import { dimension, isGroupValue, isMemberObject, isReferenceValue, isMemberReference, string, toMember } from '../../tokens';
+import type { FunctionTokenValue, GroupInput, GroupValue, MemberReference, ReferenceValue, TokenValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
+/** A text style's field as written: a token, or a plain string or number
+ *  (`'700'`, `1.5`), which becomes one. */
 export type TypographyField = TokenValue | ReferenceValue | FunctionTokenValue | string | number;
 export type TypographyFields = Record<string, TypographyField>;
-/** `variant` overrides: a value replaces or adds a field, `null` drops it. */
-export type TypographyOverrides = Record<string, TypographyField | null>;
+/** `variant` overrides: a value replaces or adds a member, `null` leaves
+ *  the base's out. */
+export type TypographyOverrides = Record<string, TypographyField | GroupInput | null>;
 
-/** What the typography helpers need from a book. */
-export interface TypographyBook {
-  resolve(key: string): string;
-  getTokenByKey(key: string): AnyTokenValue | undefined;
-}
-
-interface TypographyOptions {
-  /** Names of the token's own fields, one per arg. */
-  fields: string[];
-  /** A live variant's base: fields it doesn't set read the base's. A member
-   *  reference — it names the token, it is not a value. */
-  base?: MemberReference | UnresolvableValue;
-  /** Fields of the base the variant drops. */
-  removed?: string[];
-}
-
-/** fontSize → font-size */
-const toKebab = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-
-/** A token key, qualified (`type.title`) or relative (`.title`); not a
- *  scope, not a field. */
-const isTokenKey = (key: string) => {
-  const parsed = parseKey(key);
-  return !!parsed && !!parsed.token && !parsed.field;
-};
-
-function assertFieldNames(names: string[], fn: string): void {
+function assertMemberNames(names: string[], fn: string): void {
   for (const name of names) {
     if (!VALID_TOKEN_KEY.test(name)) {
-      throw new FunctionError(`${fn}: field "${name}" may only contain letters, digits, "-" and "_"`, fn);
+      throw new FunctionError(`${fn}: "${name}" may only contain letters, digits, "-" and "_"`, fn);
     }
   }
 }
 
-function build(fields: TypographyFields, options: Omit<TypographyOptions, 'fields'>, description?: string): FunctionTokenValue {
-  const names = Object.keys(fields);
-  const args = names.map((name) => fields[name]);
-  const opts: TypographyOptions = { fields: names };
-  if (options.base) opts.base = options.base;
-  if (options.removed?.length) opts.removed = options.removed;
-  return createFunctionToken('typography', args, {
-    description,
-    options: opts,
-    // The base is a dependency through its member slot (functionDependencies).
-    metadata: { dependencies: [], returnType: 'typography' },
-  });
+/** A field written as a plain string or number, as the token it stands for:
+ *  a number is a unitless dimension (`1.5`), a string a string (`'700'`). */
+function asMember(value: unknown): GroupInput {
+  if (typeof value === 'number') return dimension(value, '');
+  if (typeof value === 'string') return string(value);
+  return value as GroupInput;
+}
+
+function members(fields: Record<string, unknown>): Record<string, GroupInput> {
+  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, asMember(value)]));
 }
 
 /**
- * A text style as one token — the W3 `typography` composite. Each field
- * (`fontFamily`, `fontSize`, `lineHeight`, …; any key is allowed) is an
- * argument, so the refs it holds are graph dependencies like any function's,
- * a `ref()` to the token carries the whole style, and `ref('scope.token.field')`
- * reads one field. It resolves to its CSS declarations
- * (`font-size: 2rem; line-height: 1.5`); the css-variables renderer writes one
- * variable per field plus a class.
+ * A text style: a group of kind `typography` — the W3 `typography`
+ * composite. Each field (`fontFamily`, `fontSize`, `lineHeight`, …; any key
+ * is allowed) is a member, an ordinary key: `ref('type.title.fontSize')`
+ * reads one, and what it reads is a dependency like any token's. Outside the
+ * book the kind gives it a CSS class and the W3 composite, and makes
+ * `fontSize` the member that stands for it in comparisons and sorts.
  */
-export function typography(
-  fields: TypographyFields,
-  options?: { description?: string },
-): FunctionTokenValue {
+export function typography(fields: TypographyFields, options?: { description?: string }): GroupValue {
   assertOptions('typography', options, []);
   const names = Object.keys(fields);
   if (names.length === 0) {
     throw new FunctionError('typography: needs at least one field', 'typography');
   }
-  assertFieldNames(names, 'typography');
-  return build(fields, {}, options?.description);
-}
-
-export function isTypographyToken(token: unknown): token is FunctionTokenValue {
-  return isFunctionTokenValue(token) && token.name === 'typography';
-}
-
-function optionsOf(token: FunctionTokenValue): TypographyOptions {
-  return (token.options ?? { fields: [] }) as TypographyOptions;
-}
-
-/** The base key of a variant as a scope reads it. A navigated base is a key
- *  only once bound (`Scope.get`); unbound, it names nothing yet. */
-function baseKeyOf(options: TypographyOptions): string | undefined {
-  const base = options.base;
-  return isMemberReference(base) && base.up === undefined ? base.key : undefined;
-}
-
-/** A typography token's own fields, by name (a variant's inherited ones are
- *  not included — see `typographyFieldNames`). */
-export function typographyFields(token: FunctionTokenValue): TypographyFields {
-  const { fields } = optionsOf(token);
-  return Object.fromEntries(fields.map((name, i) => [name, token.args[i] as TypographyField]));
-}
-
-/** What one field of the typography `token` reads, for the graph: the
- *  refs in its own value, a variant's base field, or — for a field it does
- *  not have — `undefined`. */
-export function typographyFieldDependencies(token: AnyTokenValue | undefined, field: string): string[] | undefined {
-  if (isReferenceValue(token)) return isTokenKey(token.key) ? [`${token.key}.${field}`] : undefined;
-  if (!isTypographyToken(token)) return undefined;
-  const { fields, removed = [] } = optionsOf(token);
-  const base = baseKeyOf(optionsOf(token));
-  const own = fields.indexOf(field);
-  if (own !== -1) return extractDependencies([token.args[own]]);
-  if (base && !removed.includes(field)) return [`${base}.${field}`];
-  return undefined;
-}
-
-/** The base key of a live variant, or `undefined`. */
-export function typographyBase(token: FunctionTokenValue): string | undefined {
-  return baseKeyOf(optionsOf(token));
-}
-
-/** Every field name of the typography `token` holds — following refs and a
- *  variant's base, in base order with the variant's new fields after — or
- *  `undefined` when it is not a typography. */
-export function typographyFieldNames(
-  book: Pick<TypographyBook, 'getTokenByKey'>,
-  token: AnyTokenValue | undefined,
-  seen: Set<string> = new Set(),
-): string[] | undefined {
-  while (isReferenceValue(token)) {
-    if (!isTokenKey(token.key) || seen.has(token.key)) return undefined;
-    seen.add(token.key);
-    token = book.getTokenByKey(token.key);
-  }
-  if (!isTypographyToken(token)) return undefined;
-  const { fields, removed = [] } = optionsOf(token);
-  const base = baseKeyOf(optionsOf(token));
-  if (!base) return [...fields];
-  if (seen.has(base)) return undefined;
-  seen.add(base);
-  // A variant whose base is gone (or no typography) has no field list.
-  const inherited = typographyFieldNames(book, book.getTokenByKey(base), seen);
-  if (!inherited) return undefined;
-  return [...inherited, ...fields.filter((f) => !inherited.includes(f))].filter((f) => !removed.includes(f));
-}
-
-/** The resolved typography: one CSS declaration per field. A variant reads
- *  the fields it doesn't set from its base. */
-export function typographyImpl(book: TypographyBook, ...args: unknown[]): string {
-  const options = args.pop() as TypographyOptions;
-  const { fields, removed = [] } = options;
-  if (isUnresolvable(options.base)) {
-    throw new FunctionError(`typography: the base could not be read: ${options.base.message}`, 'typography');
-  }
-  const base = baseKeyOf(options);
-  if (!base) return fields.map((field, i) => `${toKebab(field)}: ${String(args[i])}`).join('; ');
-
-  const inherited = typographyFieldNames(book, book.getTokenByKey(base));
-  if (!inherited) {
-    throw new FunctionError(`typography: the base "${base}" is not a typography`, 'typography');
-  }
-  const names = [...inherited, ...fields.filter((f) => !inherited.includes(f))].filter((f) => !removed.includes(f));
-  return names.map((field) => {
-    const own = fields.indexOf(field);
-    const value = own === -1 ? book.resolve(`${base}.${field}`) : String(args[own]);
-    return `${toKebab(field)}: ${value}`;
-  }).join('; ');
+  assertMemberNames(names, 'typography');
+  return {
+    type: 'group',
+    kind: 'typography',
+    members: members(fields),
+    ...(options?.description !== undefined ? { description: options.description } : {}),
+  };
 }
 
 /**
- * Change some fields of a typography. Pass a **token** to get a copy — how a
- * theme or breakpoint layer changes a style in place, since a token cannot
- * `ref()` the value it replaces. Pass a **ref** to get a live variant: the
- * fields it doesn't set keep reading the base, so it follows every later
- * change to it. A `null` override drops a field.
+ * A group that extends another: the members it does not set read the base's,
+ * live, and a `null` leaves one of the base's out. The base is a reference
+ * to a group (`ref('type.title')`, `ref('.title')`, `inherited(ref('.title'))`);
+ * the variant is of the base's kind — a variant of a text style is a text
+ * style. Called with no overrides it places the base where it is written: its
+ * relative references (`holder(ref('.surface'))`) read the new place.
+ *
+ * To change a group in place, set its members: a group cannot extend the one
+ * it replaces.
  */
 export function variant(
-  token: AnyTokenValue | undefined,
-  overrides: TypographyOverrides,
-): FunctionTokenValue {
-  const set: TypographyFields = {};
-  const dropped: string[] = [];
+  base: ReferenceValue | MemberReference,
+  overrides: TypographyOverrides = {},
+): GroupValue {
+  if (!isReferenceValue(base) && !isMemberReference(base)) {
+    const hint = isGroupValue(base) || isMemberObject(base)
+      ? '; to change a group in place, set its members'
+      : '';
+    throw new FunctionError(`variant: the base is a ref(...) to a group${hint}`, 'variant');
+  }
+  const parsed = parseKey(base.key);
+  if (!parsed?.token) {
+    throw new FunctionError(`variant: the base must name a group, got "${base.key}"`, 'variant');
+  }
+  const set: Record<string, unknown> = {};
+  const omit: string[] = [];
   for (const [name, value] of Object.entries(overrides)) {
-    if (value === null) dropped.push(name);
+    if (value === null) omit.push(name);
     else set[name] = value;
   }
-  assertFieldNames(Object.keys(overrides), 'variant');
-
-  if (isReferenceValue(token)) {
-    if (!isTokenKey(token.key)) {
-      throw new FunctionError(`variant: the base must be a "scope.token" key, got "${token.key}"`, 'variant');
-    }
-    return build(set, { base: toMember(token), removed: dropped });
-  }
-  if (!isTypographyToken(token)) {
-    throw new FunctionError('variant: expects a typography() token or a ref() to one', 'variant');
-  }
-
-  const own = typographyFields(token);
-  for (const name of dropped) delete own[name];
-  const { base, removed = [] } = optionsOf(token);
-  const nextRemoved = base
-    ? [...removed.filter((f) => !(f in set)), ...dropped.filter((f) => !removed.includes(f))]
-    : [];
-  const merged = { ...own, ...set };
-  if (!base && Object.keys(merged).length === 0) {
-    throw new FunctionError('variant: a typography needs at least one field', 'variant');
-  }
-  return build(merged, { base, removed: nextRemoved }, token.description);
+  assertMemberNames(Object.keys(overrides), 'variant');
+  return {
+    type: 'group',
+    base: toMember(base),
+    members: members(set),
+    ...(omit.length ? { omit } : {}),
+  };
 }

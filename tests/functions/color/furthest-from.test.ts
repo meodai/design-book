@@ -54,7 +54,8 @@ describe('furthestFrom(target, scope)', () => {
     text.set('display', typography({ fontSize: rem(3), lineHeight: 1.1 }));
     const ui = book.addScope('ui');
     ui.set('apart', furthestFrom(ref('text.body'), ref('text')));
-    expect(book.resolve('ui.apart')).toBe(book.resolve('text.display'));
+    expect(book.pickOf('ui.apart')).toBe('text.display');
+    expect(book.resolve('ui.apart.fontSize')).toBe(book.resolve('text.display.fontSize'));
   });
 
   it('maxDistance takes the furthest member still within it', () => {

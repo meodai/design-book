@@ -8,7 +8,8 @@ import { FunctionError } from '../../errors';
 import { visibleDistance } from '../color/color-math';
 import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
-import { best, colorForm, colorPool, describeKind, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
+import { best, colorForm, colorPool, describeKind, measureOf, measuredPool, ofKind, parseColor, colorValueOf, colorTarget } from '../pool';
+import type { Measurable } from '../pool';
 import { pick } from '../picks';
 import type { Pick } from '../picks';
 
@@ -27,7 +28,7 @@ export interface FurthestFromInputs extends ReadableOn {
  * styles by font size. `maxDistance` keeps only the members no further than
  * that. See `furthestFrom`.
  */
-export function furthestFromImpl(targetValue: string, scope: Scope, options: FurthestFromInputs): Pick {
+export function furthestFromImpl(targetValue: Measurable, scope: Scope, options: FurthestFromInputs): Pick {
   const fn = 'furthestFrom';
   const { not, readableOn, readableContrast, maxDistance, by } = options;
   const limit = maxDistance === undefined ? Infinity : maxDistance + 1e-9;
@@ -53,7 +54,7 @@ export function furthestFromImpl(targetValue: string, scope: Scope, options: Fur
   }
 
   // A text style is compared by its color field `by`.
-  const targetColor = colorValueOf(targetValue, by) ?? targetValue;
+  const targetColor = colorTarget(fn, targetValue, by);
   if (!parseColor(targetColor)) throw new FunctionError(`${fn}: cannot parse target "${targetValue}"`, fn);
   // Compared in gamut-mapped sRGB, as the candidates are (see `closest`).
   const target = colorForm(targetColor);

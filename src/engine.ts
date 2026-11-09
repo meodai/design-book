@@ -33,6 +33,8 @@ export {
   color,
   ref,
   inherited,
+  holder,
+  pool,
   source,
   refersTo,
   isMemberReference,
@@ -45,7 +47,8 @@ export {
   createFunctionToken,
   isReferenceValue,
   isTokenValue,
-  isScopeReference,
+  isPoolReference,
+  isGroupValue,
 } from './tokens';
 export type {
   AnyTokenValue,
@@ -53,6 +56,9 @@ export type {
   MemberReference,
   UnresolvableValue,
   FunctionTokenValue,
+  GroupValue,
+  GroupInput,
+  PoolReference,
   ReferenceValue,
   TokenValue,
 } from './tokens';
@@ -81,7 +87,7 @@ export {
   largest, smallest,
   ramp, rampStops, rampSet,
   spacingScale, typographyScale, timing,
-  typography, variant, isTypographyToken, typographyFields, typographyFieldNames, typographyBase,
+  typography, variant,
   nextLarger, nextSmaller, nextLighter, nextDarker,
   random,
   nth,

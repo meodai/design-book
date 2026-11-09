@@ -112,7 +112,7 @@ describe('a text style handed to a color transform', () => {
     b.addScope('type').set('title', typography({ fontSize: rem(2), color: color('#336699') }));
     const ui = b.addScope('ui');
     ui.set('x', lighten(ref('type.title')));
-    expect(() => b.resolve('ui.x')).toThrow(`lighten: "type.title" is a text style; pass one of its fields, e.g. ref('type.title.color')`);
+    expect(() => b.resolve('ui.x')).toThrow(`lighten: "type.title" is a text style; pass one of its members, e.g. ref('type.title.color')`);
     ui.set('y', lighten(ref('type.title.color')));
     expect(b.resolve('ui.y')).toMatch(/^#/);
   });
@@ -151,7 +151,8 @@ describe('by a color field', () => {
     ui.set('loud', mostVivid(ref('type'), { by: 'color' }));
     ui.set('dark', darkest(ref('type'), { by: 'color' }));
     expect(pick(b, 'ui.loud')).toBe('type.accent');
-    expect(b.resolve('ui.loud')).toMatch(/^font-size: 1rem; color: #e0218a/);
+    // The pick is the whole style, held: read through it.
+    expect(b.resolve('ui.loud.color')).toBe('#e0218a');
     expect(pick(b, 'ui.dark')).toBe('type.body');
   });
 

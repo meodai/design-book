@@ -66,11 +66,14 @@ describe('closest compares only the target\'s kind', () => {
     const { book, ui } = mixed();
     ui.set('up', nextLarger(ref('type.body'), ref('type')));
     ui.set('down', nextSmaller(ref('type.body'), ref('type')));
-    expect(book.resolve('ui.up')).toBe(book.resolve('type.h4'));
-    expect(book.resolve('ui.down')).toBe(book.resolve('type.small'));
+    expect(book.pickOf('ui.up')).toBe('type.h4');
+    expect(book.resolve('ui.up.fontSize')).toBe(book.resolve('type.h4.fontSize'));
+    expect(book.pickOf('ui.down')).toBe('type.small');
+    expect(book.resolve('ui.down.fontSize')).toBe(book.resolve('type.small.fontSize'));
     // type.gap is a 1.25rem size, not a text style: never picked for a text style
     ui.set('near', closest(ref('type.h4'), ref('type'), { direction: 'larger' }));
-    expect(book.resolve('ui.near')).toBe(book.resolve('type.h3'));
+    expect(book.pickOf('ui.near')).toBe('type.h3');
+    expect(book.resolve('ui.near.fontSize')).toBe(book.resolve('type.h3.fontSize'));
   });
 
   it('upTo works on sizes', () => {
@@ -107,7 +110,8 @@ describe('contrast across kinds', () => {
     const { book, ui } = mixed();
     // the smallest style at least 1.25× the body, going up
     ui.set('step', minContrastWith(ref('type.body'), ref('type'), { minContrast: 1.25, direction: 'larger' }));
-    expect(book.resolve('ui.step')).toBe(book.resolve('type.h3'));
+    expect(book.pickOf('ui.step')).toBe('type.h3');
+    expect(book.resolve('ui.step.fontSize')).toBe(book.resolve('type.h3.fontSize'));
   });
 
   it('bestContrastWith on sizes picks the largest ratio', () => {
@@ -130,8 +134,10 @@ describe('largest / smallest / furthestFrom', () => {
     const { book, ui } = mixed();
     ui.set('big', largest(ref('type'), { type: 'text' }));
     ui.set('tiny', smallest(ref('type'), { type: 'text' }));
-    expect(book.resolve('ui.big')).toBe(book.resolve('type.h2'));
-    expect(book.resolve('ui.tiny')).toBe(book.resolve('type.small'));
+    expect(book.pickOf('ui.big')).toBe('type.h2');
+    expect(book.resolve('ui.big.fontSize')).toBe(book.resolve('type.h2.fontSize'));
+    expect(book.pickOf('ui.tiny')).toBe('type.small');
+    expect(book.resolve('ui.tiny.fontSize')).toBe(book.resolve('type.small.fontSize'));
   });
 
   it('throw on a pool mixing groups, naming them', () => {
@@ -151,7 +157,9 @@ describe('largest / smallest / furthestFrom', () => {
     ui.set('farColor', furthestFrom(color('#13254a'), ref('brand')));
     expect(book.resolve('ui.farColor')).toBe('#8fb3ff');
     ui.set('farText', furthestFrom(ref('type.small'), ref('type')));
-    expect(book.resolve('ui.farText')).not.toBe(book.resolve('type.small'));
+    // A text style picked is held as a group: the pick names which.
+    expect(book.pickOf('ui.farText')).not.toBe('type.small');
+    expect(book.pickOf('ui.farText')).toMatch(/^type\./);
   });
 });
 
@@ -173,7 +181,7 @@ describe('the editor prints the aliases', () => {
       ui.set('probe', parseTokenInput(typed, book, ui));
       expect(getTokenDisplayValue(ui, 'probe')).toBe(printed);
       ui.set('again', parseTokenInput(printed, book, ui));
-      expect(book.resolve('ui.again')).toBe(book.resolve('ui.probe'));
+      expect(book.pickOf('ui.again')).toBe(book.pickOf('ui.probe'));
     }
   });
 });
