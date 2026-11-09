@@ -110,8 +110,8 @@ describe('relative refs: ref(".token")', () => {
     brand.set('button', ref('brand.primary'));
     expect(book.isRebound('acme.button')).toBe(false);
     expect(book.resolve('acme.button')).toBe('#0066cc');
-    // nothing reads acme.button any more, so its node is gone
-    expect(book.getDependencyGraph().hasNode('acme.button')).toBe(false);
+    // a plain hop again: one edge, to its source
+    expect(book.getDependencyGraph().getPrerequisitesFor('acme.button')).toEqual(['brand.button']);
     acme.set('primary', color('#123456'));
     expect(book.resolve('acme.button')).toBe('#0066cc');
   });

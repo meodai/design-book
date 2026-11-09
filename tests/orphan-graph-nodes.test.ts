@@ -27,17 +27,23 @@ describe('graph nodes left with no token and no dependents are removed', () => {
     expect(book.getDependencyGraph().getAllNodes()).toEqual([]);
   });
 
-  it('an inherited shadow nothing reads any more', () => {
+  it('an inherited key keeps its hop to the source while it exists, and loses it when it is gone', () => {
     const book = new DesignBook('test');
-    book.addScope('parent').set('a', color('#ff0000'));
+    const parent = book.addScope('parent');
+    parent.set('a', color('#ff0000'));
     book.addScope('child', { extends: 'parent' });
+    const graph = book.getDependencyGraph();
+    // Wired as soon as it exists, read or not.
+    expect(graph.getDependentsOf('parent.a')).toEqual(['child.a']);
+
     const o = book.addScope('o');
     o.set('x', ref('child.a'));
-    expect(book.getDependencyGraph().getDependentsOf('parent.a')).toEqual(['child.a']);
-
     o.set('x', color('#00ff00'));
-    expect(book.getDependencyGraph().hasNode('child.a')).toBe(false);
-    expect(book.getDependencyGraph().getDependentsOf('parent.a')).toEqual([]);
+    expect(graph.getDependentsOf('parent.a')).toEqual(['child.a']);
+
+    parent.delete('a');
+    expect(graph.hasNode('child.a')).toBe(false);
+    expect(graph.hasNode('parent.a')).toBe(false);
   });
 
   it('keys that still have a token keep their node', () => {

@@ -205,10 +205,6 @@ export class DesignBook {
   private _depth = 0;
   private _listenerErrors: unknown[] = [];
 
-  /** Keys currently backed by a stored token, as far as the graph knows.
-   *  Used to spot the moment a key first appears, so that keys inheriting
-   *  scopes were already pointing at can be linked to their new source. */
-  private _liveKeys: Set<string> = new Set();
 
   /** Scope name → keys of the selectors that iterate it. A selector is a
    *  function token with a scope argument (bestContrastWith, nth, …); its
@@ -290,13 +286,14 @@ export class DesignBook {
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._scopesChanged();
+    // Everything it inherits is wired at once; a re-bound token closing a
+    // cycle in it refuses the scope.
     try {
-      this._bindInheritedKeysOf(name);
+      this._wireInherited(scope.getAllKeys().map((k) => `${name}.${k}`));
     } catch (e) {
       this._discardScope(name);
       throw e;
     }
-    this._linkInheritedKeysOf(name);
     this.emit('scopeAdded', { scope: name });
     return scope;
   }
@@ -879,19 +876,17 @@ export class DesignBook {
       try {
         this._setEdges(qualifiedKey, this._getEffectiveDepsForKey(qualifiedKey, restored), restored);
       } catch { /* keep the edges it has; the restored value was accepted before */ }
-      this._liveKeys.add(qualifiedKey);
       this._pruneOrphans(rejectedDeps);
     } else {
       this._detachNode(qualifiedKey);
       this._rewireFieldNodesOf(qualifiedKey);
-      this._liveKeys.delete(qualifiedKey);
     }
     try {
-      this._rebindShadows(qualifiedKey);
+      this._wireShadows(qualifiedKey);
     } catch { /* the restored state was accepted before */ }
   }
 
-  /** `Scope.delete` was refused (see `_rebindShadows`): the token is back
+  /** `Scope.delete` was refused (see `_wireInherited`): the token is back
    *  in the scope; put the graph, index and caches back with it. */
   _restoreRejectedDelete(qualifiedKey: string, restored: AnyTokenValue): void {
     this._rollbackKey(qualifiedKey, restored);
@@ -911,21 +906,17 @@ export class DesignBook {
       this._indexSelector(key, undefined);
       this._detachNode(key);
       this._rewireFieldNodesOf(key);
-      this._liveKeys.delete(key);
-      return this._rebindShadows(key);
+      return this._wireShadows(key);
     }
     const deps = this._getEffectiveDepsForKey(key, token);
     const previousDeps = this.graph.getPrerequisitesFor(key);
     const hadNode = this.graph.hasNode(key);
-    const isNewKey = !this._liveKeys.has(key);
     this.graph.addNode(key);
     let undoEdges = () => {};
     let shadows: string[];
     try {
       undoEdges = this._setEdges(key, deps, token);
-      this._linkInheritedDependencies(deps);
-      if (isNewKey) this._linkInheritedShadowsOf(key);
-      shadows = this._rebindShadows(key);
+      shadows = this._wireShadows(key);
     } catch (e) {
       undoEdges();
       this.graph.updateEdges(key, previousDeps);
@@ -936,7 +927,6 @@ export class DesignBook {
     }
     this._pruneOrphans(previousDeps);
     this._indexSelector(key, token);
-    this._liveKeys.add(key);
     return shadows;
   }
 
@@ -1008,7 +998,7 @@ export class DesignBook {
   // a field the token does not own — a variant's inherited field, a field
   // read through a ref, a field of an inherited shadow — points at the
   // field it actually reads, or at the token as a last resort. Field nodes
-  // are never tokens: no events, no `_liveKeys`, pruned once unread.
+  // are never tokens: no events, pruned once unread.
 
   /** Field nodes in the graph, by owning token key. */
   private _fieldNodes: Map<string, Set<string>> = new Map();
@@ -1091,9 +1081,6 @@ export class DesignBook {
         const owner = tokenKeyOf(fk);
         if (!this._fieldNodes.has(owner)) this._fieldNodes.set(owner, new Set());
         this._fieldNodes.get(owner)!.add(fk);
-        const inherited = fieldDeps.filter((d) => !isFieldKey(d));
-        track(inherited.flatMap((d) => [d, this.getSourceKey(d) ?? d]));
-        this._linkInheritedAll(inherited);
       }
     } catch (e) {
       undo();
@@ -1200,185 +1187,72 @@ export class DesignBook {
     return selectors;
   }
 
-  /** `name` plus every scope that (transitively) extends it — their
-   *  `getAllKeys()` all include `name`'s keys. */
-  private _scopeAndDescendants(name: string): Set<string> {
-    const names = new Set([name]);
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const scope of this.scopeManager.getAllScopes()) {
-        if (names.has(scope.name)) continue;
-        if (scope.extendsScope && names.has(scope.extendsScope)) {
-          names.add(scope.name);
-          grew = true;
-        }
-      }
-    }
-    return names;
-  }
-
-  /** A key that resolves through `extends` owns no token of its own, so
-   *  nothing ever gave it an edge from the parent key it reads. Register
-   *  that edge so changes to the source propagate to whatever depends on
-   *  the inherited key — and so cycle detection can see through
-   *  inheritance. */
-  private _linkInheritedDependencies(dependencies: string[]): void {
-    this._linkInheritedAll(dependencies);
-  }
-
-  private _linkInheritedDependency(dep: string): void {
-    if (!this._readsSource(dep)) return;
-    const source = this.getSourceKey(dep)!;
-    this.graph.addNode(dep);
-    this.graph.updateEdges(dep, [source]);
-  }
-
-  /** Link several inherited keys as one step: if any of them would close a
-   *  cycle, the ones already re-pointed get their previous edges back
-   *  before the error propagates. Otherwise the caller's cleanup (dropping
-   *  the rejected key's node) took the earlier links down with it and left
-   *  those keys with no edge at all. */
-  private _linkInheritedAll(keys: Iterable<string>): void {
-    const relinked: Array<{ key: string; hadNode: boolean; previous: string[] }> = [];
-    try {
-      for (const key of keys) {
-        relinked.push({
-          key,
-          hadNode: this.graph.hasNode(key),
-          previous: this.graph.getPrerequisitesFor(key),
-        });
-        this._linkInheritedDependency(key);
-      }
-    } catch (e) {
-      for (const { key, hadNode, previous } of relinked.reverse()) {
-        if (!hadNode) {
-          this.graph.removeNode(key);
-          continue;
-        }
-        try {
-          this.graph.updateEdges(key, previous);
-        } catch { /* they were acyclic a moment ago */ }
-      }
-      throw e;
-    }
-  }
-
-  /** A brand-new key may be the source that inheriting scopes were waiting
-   *  for: `other.x = ref('child.a')` written before `parent.a` existed left
-   *  `child.a` as an orphan node. Link every descendant scope's shadow of
-   *  this key that already has dependents. (Descendants that define the key
-   *  themselves are skipped — `_linkInheritedDependency` only acts when the
-   *  source differs from the key.) */
-  private _linkInheritedShadowsOf(qualifiedKey: string): void {
-    const parts = splitKey(qualifiedKey);
-    if (!parts) return;
-    const [scopeName, tokenName] = parts;
-
-    const shadows: string[] = [];
-    for (const name of this._scopeAndDescendants(scopeName)) {
-      if (name === scopeName) continue;
-      const key = `${name}.${tokenName}`;
-      if (!this.graph.hasNode(key)) continue;
-      if (this.graph.getDependentsOf(key).length === 0) continue;
-      shadows.push(key);
-    }
-    this._linkInheritedAll(shadows);
-  }
-
-  // --- Re-bound shadows ---
+  // --- Inherited keys ---
   //
-  // An inherited key normally reads its source's value, so the graph gives
-  // it one edge, to the source, and only when something reads it. A token
-  // with relative refs (`ref('.primary')`) is different: in `acme extends
-  // brand`, `acme.button` reads `acme.primary`, not whatever `brand.button`
-  // reads. Such a key is *re-bound* — wired like an own token, with the
-  // token's dependencies qualified against its scope — and wired eagerly,
-  // because its value changes with its own scope's keys even when nothing
-  // reads it. The set below records which shadows are wired that way.
+  // Every key a scope inherits through `extends` is wired like an own key,
+  // as soon as it exists. A plain one reads its source's token as is: one
+  // edge, to the source. A re-bound one — its token holds relative refs
+  // (`ref('.primary')`), so in `acme extends brand` `acme.button` reads
+  // `acme.primary` — gets the token's dependencies as its own scope reads
+  // them. So whatever reads an inherited key reaches what it really reads
+  // through the graph, and cycle checks see through inheritance.
 
-  private _boundShadows: Set<string> = new Set();
-
-  /** Bring the inherited copies of `key` in scopes extending its scope in
-   *  line with the token they now inherit: wire the re-bound ones, return
-   *  the ones that stopped being re-bound to a plain hop. Returns every
-   *  shadow whose wiring it touched — they change along with `key`'s token.
-   *  A re-bound shadow can close a cycle that exists only in its own scope
-   *  (`acme.primary = ref('acme.button')` against `button = ref('.primary')`
-   *  written in `brand`): then nothing is changed and the error is thrown,
-   *  so the write that caused it is refused. */
-  private _rebindShadows(key: string): string[] {
+  /** Wire every copy of `key` in the scopes below its own to what it
+   *  inherits now (see `_wireInherited`). */
+  private _wireShadows(key: string): string[] {
     const parts = splitKey(key);
-    if (!parts) return [];
+    if (!parts || parts[1].includes('.')) return [];
     const [scopeName, tokenName] = parts;
-    if (tokenName.includes('.')) return [];
-
-    const bind: string[] = [];
-    const unbind: string[] = [];
-    for (const name of this._scopeAndDescendants(scopeName)) {
-      const k = `${name}.${tokenName}`;
-      const rebound = this.isRebound(k);
-      // The key itself was just wired by the write that got us here.
-      if (name === scopeName) {
-        if (rebound) this._boundShadows.add(k);
-        else this._boundShadows.delete(k);
-        continue;
-      }
-      if (rebound) bind.push(k);
-      else if (this._boundShadows.has(k)) unbind.push(k);
-    }
-    return [...this._bindShadows(bind), ...this._unbindShadows(unbind)];
+    return this._wireInherited(this.scopeManager.lineageBelow(scopeName).slice(1).map((n) => `${n}.${tokenName}`));
   }
 
-  /** Wire `keys` (re-bound shadows) as one step: a cycle undoes them all. */
-  private _bindShadows(keys: string[]): string[] {
+  /**
+   * Wire the given keys, where they are inherited, to what they inherit
+   * now — or unwire the ones that no longer inherit anything. One step: a
+   * re-bound copy can close a cycle that exists only in its own scope
+   * (`acme.primary = ref('acme.button')` against `button = ref('.primary')`
+   * written in `brand`); then everything is undone and the error thrown, so
+   * the write that caused it is refused. Returns the re-bound keys: they
+   * change with the token they inherit but have no edge to it.
+   */
+  private _wireInherited(keys: string[]): string[] {
     const undos: Array<() => void> = [];
     const previous: string[] = [];
+    const wired: string[] = [];
+    const gone: string[] = [];
+    const rebound: string[] = [];
     try {
       for (const k of keys) {
-        const token = this.getTokenByKey(k)!;
+        const at = this._locate(k);
+        // A scope that owns the key wires it with its own writes.
+        if (!at || at.scope.hasOwn(at.name)) continue;
+        const token = at.scope.has(at.name) ? this.getTokenByKey(k) : undefined;
+        if (!token) {
+          gone.push(k);
+          continue;
+        }
+        const isRebound = this.isRebound(k);
         const deps = this._getEffectiveDepsForKey(k, token);
+        if (isRebound) rebound.push(k);
+        // A plain copy already pointing at its source has nothing to change.
+        else if (this.graph.hasNode(k) && sameMembers(this.graph.getPrerequisitesFor(k), deps)) continue;
         previous.push(...this.graph.getPrerequisitesFor(k));
         undos.push(this._setEdges(k, deps, token));
-        this._linkInheritedAll(deps);
+        wired.push(k);
       }
     } catch (e) {
       for (const undo of undos.reverse()) undo();
       throw e;
     }
-    for (const k of keys) {
-      this._boundShadows.add(k);
-      this._indexSelector(k, this.getTokenByKey(k));
-    }
-    this._pruneOrphans(previous);
-    return keys;
-  }
-
-  /** Turn shadows that no longer inherit a relative token back into plain
-   *  hops to their source — or drop them, when nothing reads them. */
-  private _unbindShadows(keys: string[]): string[] {
-    for (const k of keys) {
-      this._boundShadows.delete(k);
+    for (const k of wired) this._indexSelector(k, this.getTokenByKey(k));
+    for (const k of gone) {
       this._indexSelector(k, undefined);
       if (!this.graph.hasNode(k)) continue;
-      const previous = this.graph.getPrerequisitesFor(k);
-      this.graph.updateEdges(k, []);
+      this._detachNode(k);
       this._rewireFieldNodesOf(k);
-      if (this.graph.getDependentsOf(k).length > 0) this._linkInheritedDependency(k);
-      this._pruneOrphans([k, ...previous]);
     }
-    return keys;
-  }
-
-  /** A scope that starts out extending another inherits every re-bound
-   *  token at once. Wired as one step; a cycle throws and `addScope` drops
-   *  the scope again. */
-  private _bindInheritedKeysOf(scopeName: string): void {
-    const scope = this.scopeManager.getScope(scopeName);
-    if (!scope?.extendsScope) return;
-    this._bindShadows(
-      scope.getAllKeys().map((name) => `${scopeName}.${name}`).filter((k) => this.isRebound(k)),
-    );
+    this._pruneOrphans(previous);
+    return rebound;
   }
 
   /** Undo an `addScope` whose inherited tokens were refused. */
@@ -1388,27 +1262,12 @@ export class DesignBook {
     const prefix = `${name}.`;
     for (const node of this.graph.getAllNodes()) {
       if (!node.startsWith(prefix) || !this.graph.hasNode(node)) continue;
-      this._boundShadows.delete(node);
       this._indexSelector(node, undefined);
       // Forward refs to the scope (`ref('acme.x')` written before it
       // existed) keep their target node; anything else goes.
       const previous = this.graph.getPrerequisitesFor(node);
       this.graph.updateEdges(node, []);
       this._pruneOrphans([node, ...previous]);
-    }
-  }
-
-  /** After a scope starts extending another, any of its inherited keys that
-   *  already have dependents (e.g. a forward `ref('child.a')` written before
-   *  the scope existed) need the edge from their new source. */
-  private _linkInheritedKeysOf(scopeName: string): void {
-    const scope = this.scopeManager.getScope(scopeName);
-    if (!scope?.extendsScope) return;
-    for (const name of scope.getAllKeys()) {
-      const key = `${scopeName}.${name}`;
-      if (!this.graph.hasNode(key)) continue;
-      if (this.graph.getDependentsOf(key).length === 0) continue;
-      this._linkInheritedDependency(key);
     }
   }
 
@@ -1486,9 +1345,8 @@ export class DesignBook {
         this._pruneOrphans(prerequisites);
         continue;
       }
-      if (this._liveKeys.has(key)) continue;
-      if (this.has(key) && !this.isInherited(key)) continue;
-      if (this._boundShadows.has(key) && this.isRebound(key)) continue;
+      // A key that exists — own or inherited — keeps its node.
+      if (this.has(key)) continue;
       this.graph.removeNode(key);
     }
   }
@@ -1694,3 +1552,9 @@ function isRampSetSource(value: unknown): value is RampSetSource {
   return typeof inner === 'string' || (typeof inner === 'object' && inner !== null && 'mode' in (inner as object));
 }
 
+/** The same keys, in any order. */
+function sameMembers(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((k) => set.has(k));
+}
