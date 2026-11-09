@@ -135,9 +135,7 @@ function pickActiveOutline(fillValue: string): string {
  *  `metadata.iteratedScopes` (`sibling`, whose args are empty). A selector
  *  nested inside a value deriver (`colorMix(x, mostVivid(brand))`) does not
  *  make the outer token one — its output is a mix, not a pool member.
- *  The pool is read live from the book rather than from
- *  `metadata.visualDependencies` — that snapshot is taken when the token is
- *  built and is empty for a selector written before its scope had members. */
+ *  The pool is read live from the book: it changes as members come and go. */
 function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
   if (token.type !== 'function') return [];
   const fn = token as FunctionTokenValue;

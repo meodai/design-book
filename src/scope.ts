@@ -2,7 +2,6 @@ import { parse } from 'culori';
 import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvableReference, misplacedSource, unresolvableIn } from './tokens';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
-import { ReferenceResolver, BookLike } from './reference-resolver';
 import { CircularDependencyError, TokenError } from './errors';
 import { inFrame } from './functions/picks';
 import type { ComparableEntry, TokenOrderer } from './orderers';
@@ -14,7 +13,15 @@ export type SortCriterion =
   | { by: 'type'; priority?: string[] };
 export type ScopeOrder = SortCriterion[];
 
-type BookWithScope = BookLike & {
+/** What a scope needs from its book. */
+type BookWithScope = {
+  resolve(key: string): string;
+  getTokenByKey(key: string): AnyTokenValue | undefined;
+  getDependencyGraph(): { getDependentsOf(key: string): string[] };
+  /** The fully-qualified key a key actually reads (through `extends`). */
+  getSourceKey?(key: string): string | undefined;
+  /** True for an inherited key that re-binds relative refs to its own scope. */
+  isRebound?(key: string): boolean;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
@@ -45,7 +52,6 @@ export class Scope {
   readonly metadata: ScopeMetadata;
   private extendsName?: string;
   private tokens: Map<string, AnyTokenValue>;
-  private referenceResolver: ReferenceResolver;
   private book: BookWithScope;
   /** Local order config. `undefined` = inherit from extends chain;
    *  `[]` = explicit insertion order (overrides an inherited order). */
@@ -74,7 +80,6 @@ export class Scope {
     this.metadata = { ...options?.metadata };
     this.extendsName = options?.extends;
     this.tokens = new Map();
-    this.referenceResolver = new ReferenceResolver(book);
   }
 
   /** Name of the scope this one extends, or `undefined` if it doesn't
@@ -207,24 +212,6 @@ export class Scope {
     this.book.invalidateDescendantOrderCaches(this.name);
   }
 
-  updateReferenceCaches(key: string, dependentKeys?: string[]): void {
-    this.referenceResolver.updateAllReferencesTo(key, dependentKeys);
-  }
-
-  /** Refresh the cached resolution of the references a token holds itself —
-   *  the token's own key if it is a reference, plus any reference arguments
-   *  of a function token. `updateReferenceCaches` only walks the *dependents*
-   *  of a key, so without this a freshly set reference stayed uncached until
-   *  something it points at happened to change. */
-  updateOwnReferenceCaches(name: string): void {
-    const token = this.get(name);
-    if (!token) return;
-    if (isReferenceValue(token)) {
-      this.referenceResolver.updateReferenceMetadata(token);
-    } else if (isFunctionTokenValue(token)) {
-      this.referenceResolver.updateFunctionArgs(token);
-    }
-  }
 
   /** Resolve any fully-qualified token key (in this scope or another) by
    *  delegating to the owning book. Useful for selectors that need to

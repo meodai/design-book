@@ -39,10 +39,8 @@ export {
   extractDependencies,
   tokenKeyOf,
   isFieldKey,
-  extractVisualDependencies,
   extractIteratedScopes,
   iteratedScopesOf,
-  getReferenceResolution,
   getTokenProcessors,
   isReferenceValue,
   isTokenValue,
@@ -60,14 +58,13 @@ export type {
   BindingContext,
   UnresolvableReference,
   FunctionTokenValue,
-  ReferenceResolution,
   ReferenceValue,
   TokenProcessor,
   TokenValue,
 } from './tokens';
 
 // Errors
-export { TokenError, ScopeError, CircularDependencyError, FunctionError, LayerError } from './errors';
+export { TokenError, ScopeError, CircularDependencyError, FunctionError, LayerError, NamingError } from './errors';
 
 // Comparing books — brands, contexts, breakpoints built as variations
 export { diffBooks } from './diff-books';

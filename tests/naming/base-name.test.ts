@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames, namingScheme } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('scaleNames — base as [index, name]', () => {
   it('puts a chosen name on a chosen value of a range scheme, keeping both ends', () => {
@@ -34,7 +34,7 @@ describe('scaleNames — base as [index, name]', () => {
   });
 
   it('throws when a side cannot fit, or the name is not in the range', () => {
-    expect(() => scaleNames(9, 'hundreds', { base: [8, '100'] })).toThrow(TokenError);
+    expect(() => scaleNames(9, 'hundreds', { base: [8, '100'] })).toThrow(NamingError);
     expect(() => scaleNames(9, 'hundreds', { base: [8, '100'] })).toThrow(/100/);
     expect(() => scaleNames(3, 'hundreds', { base: [1, '42'] })).toThrow(/42/);
     expect(() => scaleNames(3, 'hundreds', { base: [1, '1000'] })).toThrow(/1000/);

@@ -2,27 +2,16 @@ import { Graph } from './graph';
 import { CircularDependencyError } from './errors';
 
 export class DependencyGraph extends Graph {
+  /** What `key` reads (a copy). */
   getPrerequisitesFor(key: string): string[] {
-    return [...this.getIncoming(key)];
+    return this.getIncoming(key);
   }
 
+  /** What reads `key` (a copy). */
   getDependentsOf(key: string): string[] {
-    return [...this.getOutgoing(key)];
+    return this.getOutgoing(key);
   }
 
-  getEvaluationOrderFor(key: string): string[] {
-    const upstream = this.dfsTraversal(key, true);
-    return this.topologicalSort(upstream);
-  }
-
-  /** Replace every incoming edge of `key` with the given prerequisites. If
-   *  they would close a cycle the whole update is rolled back and a
-   *  `CircularDependencyError` is thrown.
-   *
-   *  Only value dependencies belong here. The candidate pool of a
-   *  scope-iterating function token is deliberately *not* a graph edge —
-   *  the book keeps it in a selector index instead — so a pool member that
-   *  is derived from the selector iterating it is not a cycle. */
   /** True when `targets` contains `start` or a node downstream of it. */
   private reachesAny(start: string, targets: string[]): boolean {
     if (targets.length === 0) return false;
@@ -34,11 +23,19 @@ export class DependencyGraph extends Graph {
       if (wanted.has(node)) return true;
       if (seen.has(node)) continue;
       seen.add(node);
-      for (const next of this.getOutgoing(node)) if (!seen.has(next)) stack.push(next);
+      for (const next of this.outgoingOf(node)) if (!seen.has(next)) stack.push(next);
     }
     return false;
   }
 
+  /** Replace every incoming edge of `key` with the given prerequisites. If
+   *  they would close a cycle the whole update is rolled back and a
+   *  `CircularDependencyError` is thrown.
+   *
+   *  Only value dependencies belong here. The candidate pool of a
+   *  scope-iterating function token is deliberately *not* a graph edge —
+   *  the book keeps it in a selector index instead — so a pool member that
+   *  is derived from the selector iterating it is not a cycle. */
   updateEdges(key: string, dependencies: string[]): void {
     // Save current incoming edges for rollback
     const currentPrereqs = [...this.getIncoming(key)];

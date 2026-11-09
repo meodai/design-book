@@ -30,6 +30,15 @@ export class CircularDependencyError extends Error {
   }
 }
 
+/** A naming scheme cannot do what was asked (too few names, an unknown
+ *  name, options that do not fit the scheme). */
+export class NamingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NamingError';
+  }
+}
+
 export class FunctionError extends Error {
   public readonly functionName?: string;
   public readonly options?: Record<string, any>;

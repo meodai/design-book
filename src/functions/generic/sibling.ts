@@ -232,7 +232,6 @@ export function sibling(
     },
     metadata: {
       dependencies: keys,
-      visualDependencies: keys,
       iteratedScopes: walks,
       returnType: undefined,
     },

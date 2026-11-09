@@ -4,7 +4,6 @@ import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -133,7 +132,6 @@ export function furthestFrom(
       },
       metadata: {
         dependencies: [...extractDependencies([target]), ...readable.dependencies],
-        visualDependencies: extractVisualDependencies([target, scope, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

@@ -16,7 +16,10 @@
  * This module must stay dependency-free (it is published on its own as
  * `design-book/naming`): import only `../errors` and `../keys`.
  */
-import { TokenError } from '../errors';
+import { NamingError } from '../errors';
+
+/** Thrown when a scheme cannot do what was asked. */
+export { NamingError };
 import { assertValidTokenKey } from '../keys';
 
 export type NamingAnchor = 'start' | 'base' | 'range';
@@ -84,7 +87,7 @@ interface Range extends NamingScheme { kind: 'range'; from: number; to: number; 
 type AnyScheme = List | Ordinal | ValueScheme | Roman | Tshirt | Range;
 
 function fail(message: string): never {
-  throw new TokenError(message);
+  throw new NamingError(message);
 }
 
 function checkKeys(names: readonly string[], what: string): void {
@@ -506,7 +509,7 @@ function proportionalBase(count: number, s: List): number {
  *  evenly towards the base, or fills its gaps when it runs out. */
 function pinnedSpread(count: number, names: readonly string[], scheme: string, base: number, name: string, fill: boolean): string[] {
   const at = names.indexOf(name);
-  if (at < 0) fail(`scaleNames: "${name}" is not a name of the "${scheme}" scheme${names.length ? '' : ''}`);
+  if (at < 0) fail(`scaleNames: "${name}" is not a name of the "${scheme}" scheme`);
   const below = base, above = count - 1 - base;
   const haveBelow = at, haveAbove = names.length - 1 - at;
   const fits = (need: number, have: number) => need <= have || (fill && have > 0);
@@ -553,18 +556,25 @@ function tier({ from, to }: Ends, step: number): number[] {
   return out;
 }
 
-/** Tiers from coarse to fine; when filling, the finest step keeps halving. */
-function tiersOf(s: Range, ends: Ends, fill: boolean): number[][] {
-  const stepsUsed = [...s.steps];
-  if (fill) for (let i = 0; i < 10; i++) stepsUsed.push(stepsUsed[stepsUsed.length - 1] / 2);
-  return stepsUsed.map((st) => tier(ends, st));
+/** Tiers from coarse to fine; when filling, the finest step keeps halving
+ *  (up to ten times). Made one at a time: callers stop at the first that
+ *  fits, and the halved tiers of a fine scheme run to tens of thousands. */
+function* tiersOf(s: Range, ends: Ends, fill: boolean): Generator<number[]> {
+  for (const st of s.steps) yield tier(ends, st);
+  if (!fill) return;
+  let st = s.steps[s.steps.length - 1];
+  for (let i = 0; i < 10; i++) yield tier(ends, (st /= 2));
 }
 
 function rangeNames(count: number, s: Range, ends: Ends, fill = false): string[] {
-  const all = tiersOf(s, ends, fill);
-  const t = all.find((x) => x.length >= count);
+  let t: number[] | undefined;
+  let most = 0;
+  for (const tierValues of tiersOf(s, ends, fill)) {
+    most = tierValues.length;
+    if (tierValues.length >= count) { t = tierValues; break; }
+  }
   if (!t) {
-    fail(`scaleNames: "${s.name}" fits up to ${all[all.length - 1].length} values from ${ends.from} to ${ends.to}, ` +
+    fail(`scaleNames: "${s.name}" fits up to ${most} values from ${ends.from} to ${ends.to}, ` +
       `${count} were asked for`);
   }
   const R = t.length - 1;
@@ -586,14 +596,9 @@ function rangeNamesAround(count: number, s: Range, ends: Ends, index: number, na
     inAnyTier = true;
     const R = t.length - 1;
     if (b < below || R - b < above) continue;
-    const lower = Array.from({ length: below }, (_, j) => {
-      const x = (j * b) / below;
-      return t[x % 1 === 0.5 ? Math.ceil(x) : Math.round(x)];
-    });
-    const upper = Array.from({ length: above }, (_, j) => {
-      const x = ((j + 1) * (R - b)) / above;
-      return t[b + (x % 1 === 0.5 ? Math.floor(x) : Math.round(x))];
-    });
+    // An exact .5 rounds towards the base on both sides.
+    const lower = Array.from({ length: below }, (_, j) => t[roundTowards((j * b) / below, b)]);
+    const upper = Array.from({ length: above }, (_, j) => t[roundTowards(b + ((j + 1) * (R - b)) / above, b)]);
     return [...lower, value, ...upper].map(stepName);
   }
   if (!inAnyTier) {

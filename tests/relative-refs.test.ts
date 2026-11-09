@@ -4,7 +4,6 @@ import {
   color, ref, rem, colorMix, lighten, sibling, nth, typography, variant,
   composeBook, layer, CircularDependencyError,
 } from '../src/index';
-import { getReferenceResolution } from '../src/tokens';
 import type { ReferenceValue } from '../src/tokens';
 
 function brandBook(mode: 'auto' | 'batch' = 'auto') {
@@ -357,13 +356,6 @@ describe('relative refs: scopes', () => {
     expect(book.getScopeDependencies('brand')).toEqual([]);
   });
 
-  it('caches reference resolution per scope', () => {
-    const { book } = brandBook();
-    const acme = book.addScope('acme', { extends: 'brand' });
-    book.getScope('acme')!.updateOwnReferenceCaches('button');
-    const bound = acme.get('button') as ReferenceValue;
-    expect(getReferenceResolution(bound)?.isResolvable).toBe(true);
-  });
 });
 
 describe('relative refs: renderers', () => {

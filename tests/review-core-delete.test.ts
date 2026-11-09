@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color, getReferenceResolution, ref } from '../src/tokens';
+import { color, ref } from '../src/tokens';
 
 describe('deleting a token keeps its dependents connected', () => {
   it('re-setting a deleted token still reaches its dependents', () => {
@@ -83,11 +83,11 @@ describe('deleting invalidates the reference caches of dependents', () => {
     a.set('x', color('#ff0000'));
     const r = ref('a.x');
     b.set('y', r);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('b.y')).not.toThrow();
 
     a.delete('x');
 
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('b.y')).toThrow();
   });
 
   it('deleting the whole scope does the same', () => {
@@ -97,11 +97,11 @@ describe('deleting invalidates the reference caches of dependents', () => {
     a.set('x', color('#ff0000'));
     const r = ref('a.x');
     b.set('y', r);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('b.y')).not.toThrow();
 
     book.deleteScope('a');
 
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('b.y')).toThrow();
   });
 
   it('deleting a scope that extends another reports its inherited keys as gone', () => {
@@ -112,12 +112,12 @@ describe('deleting invalidates the reference caches of dependents', () => {
     parent.set('a', color('#ff0000'));
     const r = ref('child.a');
     other.set('x', r);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('other.x')).not.toThrow();
 
     book.deleteScope('child');
 
     expect(book.hasScope('child')).toBe(false);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('other.x')).toThrow();
   });
 });
 
@@ -130,12 +130,12 @@ describe('reference caches are invalidated through inherited hops', () => {
     parent.set('a', color('#ff0000'));
     const r = ref('child.a');
     other.set('x', r);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('other.x')).not.toThrow();
 
     parent.delete('a');
 
     expect(() => book.resolve('other.x')).toThrow();
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('other.x')).toThrow();
   });
 
   it('deleting the parent scope does the same', () => {
@@ -146,12 +146,12 @@ describe('reference caches are invalidated through inherited hops', () => {
     parent.set('a', color('#ff0000'));
     const r = ref('child.a');
     other.set('x', r);
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('other.x')).not.toThrow();
 
     book.deleteScope('parent');
 
     expect(() => book.resolve('other.x')).toThrow();
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('other.x')).toThrow();
   });
 
   it('re-resolves through the hop when the parent token comes back', () => {
@@ -163,11 +163,11 @@ describe('reference caches are invalidated through inherited hops', () => {
     const r = ref('child.a');
     other.set('x', r);
     parent.delete('a');
-    expect(getReferenceResolution(r)?.isResolvable).toBe(false);
+    expect(() => book.resolve('other.x')).toThrow();
 
     parent.set('a', color('#00ff00'));
 
-    expect(getReferenceResolution(r)?.isResolvable).toBe(true);
+    expect(() => book.resolve('other.x')).not.toThrow();
     expect(book.resolve('other.x')).toBe('#00ff00');
   });
 });

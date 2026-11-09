@@ -71,22 +71,9 @@ export class ScopeManager {
     }
   }
 
-  extendScope(name: string, base: string, description?: string): Scope {
-    return this.addScope(name, { extends: base, description });
-  }
-
-  copyScope(source: string, target: string): Scope {
-    if (!this.scopes.has(source)) {
-      throw new ScopeError(`Scope "${source}" not found`, source);
-    }
-    const targetScope = this.addScope(target);
-    this.copyTokensInto(source, targetScope);
-    return targetScope;
-  }
-
   /** Flatten `source`'s tokens (own and inherited) into an existing scope.
-   *  Split out of `copyScope` so the book can create the target through its
-   *  own `addScope` — and so fire `scopeAdded` — before the tokens land. */
+   *  The book creates the target through its own `addScope` — and so fires
+   *  `scopeAdded` — before the tokens land. */
   copyTokensInto(source: string, target: Scope): void {
     const sourceScope = this.scopes.get(source);
     if (!sourceScope) {

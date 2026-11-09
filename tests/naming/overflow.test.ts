@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames, namingScheme } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 const between = { overflow: 'between' } as const;
 
@@ -75,7 +75,7 @@ describe("scaleNames — overflow: 'between'", () => {
   });
 
   it('only accepts throw or between, and only where a list can run out', () => {
-    expect(() => scaleNames(30, 'greek', { overflow: 'throw' })).toThrow(TokenError);
+    expect(() => scaleNames(30, 'greek', { overflow: 'throw' })).toThrow(NamingError);
     expect(() => scaleNames(3, 'greek', { overflow: 'more' as any })).toThrow(/overflow/);
     expect(() => scaleNames(3, 'tshirt', between)).toThrow(/overflow/);
     expect(() => scaleNames(3, 'ordinal', between)).toThrow(/overflow/);

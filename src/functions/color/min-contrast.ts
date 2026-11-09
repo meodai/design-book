@@ -4,7 +4,6 @@ import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -106,7 +105,6 @@ export function minContrastWith(
       options: { minContrast, not: notKeys, ...(direction ? { direction } : {}), ...readable.options },
       metadata: {
         dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
-        visualDependencies: extractVisualDependencies([targetValue, scope, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

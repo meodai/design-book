@@ -21,7 +21,7 @@ describe('splitArgs tracks [ ] and { } depth', () => {
   it('round-trips a mostVivid `not` list with more than one entry', () => {
     // Token pool the selector iterates — kept separate from the scope the
     // token itself lives in, so setting the token doesn't change the pool's
-    // key set (which would shift the expected visualDependencies metadata).
+    // key set.
     const brand = book.addScope('brand-01');
     brand.set('a', color('#ff0000'));
     brand.set('b', color('#00ff00'));

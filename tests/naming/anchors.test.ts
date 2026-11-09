@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames, namingScheme, schemes } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('every scheme has a default strategy', () => {
   it('reports it as anchor', () => {
@@ -41,7 +41,7 @@ describe("anchor: 'start'", () => {
   });
 
   it('throws past the end of a list, unless overflow fills from the start', () => {
-    expect(() => scaleNames(5, 'creatures', { anchor: 'start', from: 'elephant' })).toThrow(TokenError);
+    expect(() => scaleNames(5, 'creatures', { anchor: 'start', from: 'elephant' })).toThrow(NamingError);
     expect(scaleNames(12, 'paper', { overflow: 'between' })).toHaveLength(12);
   });
 });

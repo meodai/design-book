@@ -10,8 +10,6 @@ import {
   string,
   extractDependencies,
   createFunctionToken,
-  extractVisualDependencies,
-  getReferenceResolution,
   getTokenProcessors,
 } from '../src/tokens';
 
@@ -62,7 +60,6 @@ describe('ref', () => {
     const r = ref('brand.primary');
     expect(r.type).toBe('reference');
     expect(r.key).toBe('brand.primary');
-    expect(getReferenceResolution(r)).toBeUndefined();
   });
 
   it('accepts description option', () => {
@@ -176,14 +173,9 @@ describe('extractDependencies', () => {
 
   it('lists a nested function token\'s dependency once, in first-seen order', () => {
     const inner = createFunctionToken('lighten', [ref('a.x')], {
-      metadata: { dependencies: ['a.x', 'a.z'], visualDependencies: [] },
+      metadata: { dependencies: ['a.x', 'a.z'] },
     });
     expect(extractDependencies([ref('a.y'), inner, ref('a.x')])).toEqual(['a.y', 'a.x', 'a.z']);
   });
 });
 
-describe('extractVisualDependencies', () => {
-  it('returns empty for non-scope args', () => {
-    expect(extractVisualDependencies([color('#fff'), ref('x')])).toEqual([]);
-  });
-});

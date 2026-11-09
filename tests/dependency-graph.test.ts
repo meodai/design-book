@@ -18,18 +18,6 @@ describe('DependencyGraph', () => {
     expect(dg.getDependentsOf('a')).toContain('b');
   });
 
-  it('getEvaluationOrderFor returns topologically sorted upstream', () => {
-    const dg = new DependencyGraph();
-    dg.addNode('a');
-    dg.addNode('b');
-    dg.addNode('c');
-    dg.addEdge('a', 'b');
-    dg.addEdge('b', 'c');
-    const order = dg.getEvaluationOrderFor('c');
-    expect(order.indexOf('a')).toBeLessThan(order.indexOf('b'));
-    expect(order.indexOf('b')).toBeLessThan(order.indexOf('c'));
-  });
-
   describe('updateEdges', () => {
     it('replaces all incoming edges for a key', () => {
       const dg = new DependencyGraph();

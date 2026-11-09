@@ -4,7 +4,6 @@ import { parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -88,7 +87,6 @@ export function bestContrastWith(
       options: { not: normalizeNotKeys(options?.not), ...(options?.direction ? { direction: options.direction } : {}), ...readable.options },
       metadata: {
         dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
-        visualDependencies: extractVisualDependencies([targetValue, scope, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

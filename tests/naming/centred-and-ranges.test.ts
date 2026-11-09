@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('ordinal with a base', () => {
   it('centres on 0 and counts into negatives', () => {
@@ -65,7 +65,7 @@ describe('range schemes with your own ends', () => {
   });
 
   it('reject ends in the wrong order', () => {
-    expect(() => scaleNames(3, 'hundreds', { from: 500, to: -500 })).toThrow(TokenError);
+    expect(() => scaleNames(3, 'hundreds', { from: 500, to: -500 })).toThrow(NamingError);
     expect(() => scaleNames(3, 'tshirt', { from: 0 })).toThrow(/from/);
   });
 });

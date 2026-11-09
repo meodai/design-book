@@ -1,6 +1,5 @@
 import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
-import { ReferenceResolver } from './reference-resolver';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { registerBuiltinFunctions } from './functions';
@@ -159,7 +158,6 @@ export class DesignBook {
   private _mode: 'auto' | 'batch';
   private scopeManager: ScopeManager;
   private graph: DependencyGraph;
-  private referenceResolver: ReferenceResolver;
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
@@ -225,7 +223,6 @@ export class DesignBook {
     this._rampSets.set('tailwind-v3', tailwindV3Ramps);
     this.scopeManager = new ScopeManager(this);
     this.graph = new DependencyGraph();
-    this.referenceResolver = new ReferenceResolver(this);
     registerBuiltinFunctions(this);
     registerBuiltinOrderers(this);
     this.registerFunction('ramp', (seedValue: string, options?: { shade: string; from?: string }) => {
@@ -934,13 +931,11 @@ export class DesignBook {
       } catch { /* keep the edges it has; the restored value was accepted before */ }
       this._liveKeys.add(qualifiedKey);
       this._pruneOrphans(rejectedDeps);
-      this._updateOwnReferenceCaches(qualifiedKey);
     } else {
       this._detachNode(qualifiedKey);
       this._rewireFieldNodesOf(qualifiedKey);
       this._liveKeys.delete(qualifiedKey);
     }
-    this._updateReferenceCaches(qualifiedKey);
     try {
       this._rebindShadows(qualifiedKey);
     } catch { /* the restored state was accepted before */ }
@@ -982,12 +977,9 @@ export class DesignBook {
       }
       this._pruneOrphans(previousDeps);
       this._indexSelector(qualifiedKey, currentValue);
-      this._updateReferenceCaches(qualifiedKey);
-      this._updateOwnReferenceCaches(qualifiedKey);
       if (isNewKey) this._liveKeys.add(qualifiedKey);
     } else {
       this._indexSelector(qualifiedKey, undefined);
-      this._updateReferenceCaches(qualifiedKey, previousDependents);
       this._detachNode(qualifiedKey);
       this._rewireFieldNodesOf(qualifiedKey);
       this._liveKeys.delete(qualifiedKey);
@@ -1573,23 +1565,6 @@ export class DesignBook {
     }
   }
 
-  /** Refresh the cached resolution of every reference that reads
-   *  `qualifiedKey`. Goes through the book's own resolver rather than the
-   *  key's scope: by the time a batch-mode `deleteScope` is flushed that
-   *  scope is no longer registered, and its dependents must still hear. */
-  private _updateReferenceCaches(qualifiedKey: string, dependentKeys?: string[]): void {
-    if (qualifiedKey.indexOf('.') === -1) return;
-    this.referenceResolver.updateAllReferencesTo(qualifiedKey, dependentKeys);
-  }
-
-  private _updateOwnReferenceCaches(qualifiedKey: string): void {
-    const dotIndex = qualifiedKey.indexOf('.');
-    if (dotIndex === -1) return;
-
-    const scope = this.scopeManager.getScope(qualifiedKey.substring(0, dotIndex));
-    scope?.updateOwnReferenceCaches(qualifiedKey.substring(dotIndex + 1));
-  }
-
   // --- Batch ---
 
   flush(): FlushResult {
@@ -1660,15 +1635,6 @@ export class DesignBook {
       else this._liveKeys.add(key);
     }
 
-    for (const key of keys) {
-      if (failedKeys.has(key)) continue;
-      if (deletedKeys.has(key)) {
-        this._updateReferenceCaches(key, previousDependents.get(key));
-      } else {
-        this._updateReferenceCaches(key);
-        this._updateOwnReferenceCaches(key);
-      }
-    }
 
     // Filter out failed keys before sorting
     const validKeys = keys.filter(k => !failedKeys.has(k));
@@ -1699,8 +1665,9 @@ export class DesignBook {
     }
 
     // Also check valid keys not in sorted output (e.g. those with unresolvable refs)
+    const done = new Set(processed);
     for (const key of validKeys) {
-      if (!processed.includes(key) && !failedKeys.has(key)) {
+      if (!done.has(key) && !failedKeys.has(key)) {
         if (deletedKeys.has(key)) {
           processed.push(key);
           continue;

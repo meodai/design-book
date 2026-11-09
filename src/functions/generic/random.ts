@@ -3,7 +3,6 @@ import type { PoolArg } from '../args';
 import { detectValueType } from '../../values';
 import {
   createFunctionToken,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type {
@@ -104,7 +103,6 @@ export function random(
       options: { type, seed: resolvedSeed, not: normalizeNotKeys(not) },
       metadata: {
         dependencies: [],
-        visualDependencies: extractVisualDependencies([scope]),
         returnType: type,
       },
     },

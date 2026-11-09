@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('scaleNames — start-anchored schemes', () => {
   it('counts ordinals from 1 by default', () => {
@@ -49,7 +49,7 @@ describe('scaleNames — start-anchored schemes', () => {
   });
 
   it('throws past the end of a fixed list, saying how many names it has', () => {
-    expect(() => scaleNames(25, 'greek')).toThrow(TokenError);
+    expect(() => scaleNames(25, 'greek')).toThrow(NamingError);
     expect(() => scaleNames(25, 'greek')).toThrow(/greek.*24/);
     expect(() => scaleNames(12, 'paper')).toThrow(/11/);
     expect(() => scaleNames(24, 'creatures')).toThrow(/23/);

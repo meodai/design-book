@@ -49,7 +49,6 @@ export function darken(
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
-        visualDependencies: [],
         returnType: 'color',
       },
     },

@@ -39,7 +39,7 @@ describe('a function token built without metadata.dependencies', () => {
     const { book, a } = setup();
     a.set('w', color('#333333'));
     a.set('v', createFunctionToken('ident', [ref('a.x')], {
-      metadata: { dependencies: ['a.w'], visualDependencies: [] },
+      metadata: { dependencies: ['a.w'] },
     }));
     expect(book.getDependencyGraph().getIncoming('a.v').sort()).toEqual(['a.w', 'a.x']);
   });

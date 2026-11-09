@@ -2,7 +2,6 @@ import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
 import {
   createFunctionToken,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type {
@@ -85,7 +84,6 @@ export function nth(
       options: { index, not: normalizeNotKeys(options?.not) },
       metadata: {
         dependencies: [],
-        visualDependencies: extractVisualDependencies([scope]),
         returnType: undefined,
       },
     },

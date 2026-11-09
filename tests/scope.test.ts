@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Scope } from '../src/scope';
-import { color, getReferenceResolution, px, ref } from '../src/tokens';
+import { color, px, ref } from '../src/tokens';
 import { DependencyGraph } from '../src/dependency-graph';
 
 function createMockBook() {
@@ -130,46 +130,9 @@ describe('Scope', () => {
       type: 'function',
       name: 'exclaim',
       args: ['Hello'],
-      metadata: { dependencies: [], visualDependencies: [] },
+      metadata: { dependencies: [] },
     } as any);
     expect(scope.resolve('loud')).toBe('Hello!');
-  });
-
-  it('Bug 6: reference cache is updated when referenced token changes', () => {
-    const brand = new Scope('brand', book);
-    book._scopes.set('brand', brand);
-
-    const semantic = new Scope('semantic', book);
-    book._scopes.set('semantic', semantic);
-
-    // Set up a reference before the target exists
-    const myRef = ref('brand.primary');
-    semantic.set('bg', myRef);
-
-    // The reference should not be resolvable yet (no brand.primary)
-    // Now set the target
-    brand.set('primary', color('#0066cc'));
-
-    // After setting the target, the graph needs edges for updateAllReferencesTo to work.
-    // We need to set up the graph edges manually since _notifyTokenChange is mocked.
-    const graph = book.getDependencyGraph();
-    graph.addNode('brand.primary');
-    graph.addNode('semantic.bg');
-    graph.updateEdges('semantic.bg', ['brand.primary']);
-
-    // Now update brand.primary again and manually trigger cache refresh for the mock setup
-    book.resolve.mockImplementation((key: string) => {
-      const [s, t] = key.split('.');
-      return book._scopes.get(s)!.resolve(t);
-    });
-
-    brand.set('primary', color('#ff0000'));
-    brand.updateReferenceCaches('brand.primary');
-
-    // The reference's resolvedMetadata should now be updated
-    const token = semantic.get('bg') as any;
-    expect(getReferenceResolution(token)).toBeDefined();
-    expect(getReferenceResolution(token)?.isResolvable).toBe(true);
   });
 
   it('getSourceKey and isInherited expose token provenance', () => {

@@ -29,7 +29,6 @@ export function typographyScale(
       options: { ratio, step },
       metadata: {
         dependencies: extractDependencies([baseSize]),
-        visualDependencies: [],
         returnType: 'dimension',
       },
     },

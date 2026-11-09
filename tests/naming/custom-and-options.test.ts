@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames, nameBetween, namingScheme, schemes } from '../../src/naming';
 import { assertValidTokenKey } from '../../src/scope';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 import * as designBook from '../../src/index';
 
 describe('namingScheme', () => {
@@ -20,7 +20,7 @@ describe('namingScheme', () => {
   });
 
   it('validates its list', () => {
-    expect(() => namingScheme([])).toThrow(TokenError);
+    expect(() => namingScheme([])).toThrow(NamingError);
     expect(() => namingScheme(['a', 'a'])).toThrow(/duplicate/);
     expect(() => namingScheme(['a', 'b c'])).toThrow(/b c/);
     expect(() => namingScheme(['a', 'b'], { base: 'z' })).toThrow(/z/);
@@ -34,7 +34,7 @@ describe('scaleNames options and errors', () => {
   });
 
   it('rejects a prefix that makes an invalid key', () => {
-    expect(() => scaleNames(2, 'tshirt', { prefix: 'space.' })).toThrow(TokenError);
+    expect(() => scaleNames(2, 'tshirt', { prefix: 'space.' })).toThrow(NamingError);
   });
 
   it('rejects options that do not apply to the scheme', () => {

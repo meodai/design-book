@@ -135,7 +135,6 @@ export function relativeTo(
       options: { colorSpace, modifications },
       metadata: {
         dependencies: extractDependencies([baseColor]),
-        visualDependencies: [],
         returnType: 'color',
       },
     },

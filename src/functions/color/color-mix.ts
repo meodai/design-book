@@ -119,7 +119,6 @@ export function colorMix(
       options: { ratio, colorSpace },
       metadata: {
         dependencies: extractDependencies([color1, color2]),
-        visualDependencies: [],
         returnType: 'color',
       },
     },

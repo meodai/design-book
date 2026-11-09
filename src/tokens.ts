@@ -6,13 +6,6 @@ export interface TokenProcessor {
   instance: any;
 }
 
-export interface ReferenceResolution {
-  resolvedType?: string;
-  isResolvable?: boolean;
-  lastResolvedAt?: number;
-  errorMessage?: string;
-}
-
 export interface TokenValue {
   type: string;
   rawValue: string | number;
@@ -69,8 +62,6 @@ export interface FunctionTokenValue {
   options?: Record<string, any>;
   metadata?: {
     dependencies: string[];
-    visualDependencies: string[];
-    acceptedTypes?: string[][];
     returnType?: string;
     /** Scopes the function walks without taking them as a `Scope` argument
      *  — `sibling` finds its scope from the anchor key. Indexed like a scope
@@ -83,7 +74,6 @@ export interface FunctionTokenValue {
 export type AnyTokenValue = TokenValue | ReferenceValue | FunctionTokenValue;
 
 const tokenProcessors = new WeakMap<TokenValue, TokenProcessor[]>();
-const referenceResolutions = new WeakMap<ReferenceValue, ReferenceResolution>();
 
 export function val<T>(value: T, options?: { description?: string; [key: string]: any }): T & { description?: string } {
   if (typeof value === 'object' && value !== null && options) {
@@ -122,18 +112,6 @@ export function setTokenProcessors(token: TokenValue, processors: TokenProcessor
 
 export function getTokenProcessors(token: TokenValue): TokenProcessor[] | undefined {
   return tokenProcessors.get(token);
-}
-
-export function setReferenceResolution(ref: ReferenceValue, resolution: ReferenceResolution): void {
-  referenceResolutions.set(ref, resolution);
-}
-
-export function clearReferenceResolution(ref: ReferenceValue): void {
-  referenceResolutions.delete(ref);
-}
-
-export function getReferenceResolution(ref: ReferenceValue): ReferenceResolution | undefined {
-  return referenceResolutions.get(ref);
 }
 
 export function color(value: string, options?: { description?: string; [key: string]: any }): TokenValue {
@@ -394,7 +372,6 @@ function traitsOf(token: unknown): TokenTraits {
       || isRelativeKey(options.base)
       || isRelativeKey(options.toward)
       || (metadata?.dependencies ?? []).some(isRelativeKey)
-      || (metadata?.visualDependencies ?? []).some(isRelativeKey)
       || (metadata?.iteratedScopes ?? []).includes('')) {
       merge({ relative: true, navigates: false });
     }
@@ -533,12 +510,10 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
     if (metadata) {
       metadata = { ...metadata };
       if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map(q);
-      if (metadata.visualDependencies) metadata.visualDependencies = metadata.visualDependencies.map(q);
       if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
       for (const key of [landed.from, landed.base, landed.toward]) {
         if (key === undefined) continue;
         metadata.dependencies = [...(metadata.dependencies ?? []), key];
-        metadata.visualDependencies = [...(metadata.visualDependencies ?? []), key];
       }
       // the scope an anchor walks, once it is known; a `source` anchor's is
       // only known when it is followed (the book indexes it then)
@@ -658,9 +633,8 @@ export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): 
 /** Names of the scopes a function token iterates — the scope arguments of
  *  the call itself plus those of any nested function-token arguments
  *  (including the ones a nested token declares in `metadata.iteratedScopes`).
- *  Unlike `extractVisualDependencies` this does not enumerate the scope's
- *  members, so it stays valid as the scope gains and loses keys: it is what
- *  the book indexes selectors by. */
+ *  It does not enumerate the scope's members, so it stays valid as the
+ *  scope gains and loses keys: it is what the book indexes selectors by. */
 export function extractIteratedScopes(args: FunctionArg[]): string[] {
   const names: string[] = [];
   for (const arg of args) {
@@ -680,15 +654,3 @@ export function iteratedScopesOf(fn: FunctionTokenValue): string[] {
   return [...extractIteratedScopes(fn.args), ...(fn.metadata?.iteratedScopes ?? [])];
 }
 
-/** Keys a function token was built from, for display. Pools are read live
- *  from the book (they change as members come and go), so a scope
- *  reference contributes nothing here; nested tokens contribute theirs. */
-export function extractVisualDependencies(args: FunctionArg[]): string[] {
-  const deps: string[] = [];
-  for (const arg of args) {
-    if (isFunctionTokenValue(arg)) {
-      for (const dep of extractVisualDependencies(arg.args)) deps.push(dep);
-    }
-  }
-  return deps;
-}

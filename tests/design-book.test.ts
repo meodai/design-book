@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import { color, getReferenceResolution, ref } from '../src/tokens';
+import { color, ref } from '../src/tokens';
 
 describe('DesignBook', () => {
   // Note: `ref` is imported above and used in batch-failed and re-entrancy tests
@@ -153,7 +153,7 @@ describe('DesignBook', () => {
         type: 'function',
         name: 'exclaim',
         args: ['Hello'],
-        metadata: { dependencies: [], visualDependencies: [] },
+        metadata: { dependencies: [] },
       } as any);
       expect(scope.resolve('loud')).toBe('Hello!');
     });
@@ -170,7 +170,7 @@ describe('DesignBook', () => {
         name: 'colorMix',
         args: [ref('brand.primary'), ref('brand.secondary')],
         options: { ratio: 0 },
-        metadata: { dependencies: ['brand.primary', 'brand.secondary'], visualDependencies: [] },
+        metadata: { dependencies: ['brand.primary', 'brand.secondary'] },
       } as any);
 
       expect(book.resolve('ui.mixed')).toBe('#000000');
@@ -337,7 +337,7 @@ describe('DesignBook', () => {
       expect(book.resolve('ui.bg')).toBe('#00aa00');
     });
 
-    it('updates reference cache when a referenced token is deleted', () => {
+    it('a reference stops resolving when its target is deleted', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
       const semantic = book.addScope('semantic');
@@ -346,12 +346,11 @@ describe('DesignBook', () => {
       semantic.set('bg', ref('brand.primary'));
       brand.set('primary', color('#0055cc'));
 
-      const token = book.getTokenByKey('semantic.bg') as any;
-      expect(getReferenceResolution(token)?.isResolvable).toBe(true);
+      expect(book.resolve('semantic.bg')).toBe('#0055cc');
 
       brand.delete('primary');
 
-      expect(getReferenceResolution(token)?.isResolvable).toBe(false);
+      expect(() => book.resolve('semantic.bg')).toThrow();
     });
   });
 

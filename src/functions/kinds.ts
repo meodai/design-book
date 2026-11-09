@@ -38,13 +38,6 @@ export function measureOf(value: string): Measure | null {
   return dim ? { kind: 'size', ...dim } : null;
 }
 
-/** The kind of a resolved value, or `null` when it is none of them. */
-export function kindOf(value: string): Kind | null {
-  const measure = measureOf(value);
-  if (measure) return measure.kind;
-  return parse(value) ? 'color' : null;
-}
-
 /** "sizes in px", "text styles in rem", "colors": for messages. */
 export function describeKind(kind: Kind, unit?: string): string {
   if (kind === 'color') return 'colors';

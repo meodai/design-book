@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('scaleNames — base-anchored schemes', () => {
   it('centres t-shirt sizes on m', () => {
@@ -48,7 +48,7 @@ describe('scaleNames — base-anchored schemes', () => {
   });
 
   it('throws when one side needs more names than the list has there', () => {
-    expect(() => scaleNames(10, 'intensity')).toThrow(TokenError);
+    expect(() => scaleNames(10, 'intensity')).toThrow(NamingError);
     // dynamics has 4 names below mf and 3 above
     expect(() => scaleNames(5, 'dynamics', { base: [0, 'mf'] })).toThrow(/3 above/);
     expect(() => scaleNames(6, 'dynamics', { base: [5, 'mf'] })).toThrow(/4 below/);

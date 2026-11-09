@@ -49,7 +49,6 @@ function build(fields: TypographyFields, options: Omit<TypographyOptions, 'field
     options: opts,
     metadata: {
       dependencies: [...extractDependencies(args), ...(typeof options.base === 'string' ? [options.base] : [])],
-      visualDependencies: [],
       returnType: 'typography',
     },
   });

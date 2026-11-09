@@ -4,7 +4,6 @@ import { converter, parse } from 'culori';
 import {
   createFunctionToken,
   extractDependencies,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
@@ -254,7 +253,6 @@ export function closest(
       },
       metadata: {
         dependencies: [...extractDependencies([target, ...upToArgs]), ...readable.dependencies],
-        visualDependencies: extractVisualDependencies([target, scope, ...upToArgs, ...readable.args]),
         // A color, a size or a text style, as the target is.
         returnType: undefined,
       },

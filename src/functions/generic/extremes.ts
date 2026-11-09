@@ -1,6 +1,6 @@
 import { poolArg } from '../args';
 import type { PoolArg } from '../args';
-import { createFunctionToken, extractVisualDependencies, normalizeNotKeys } from '../../tokens';
+import { createFunctionToken, normalizeNotKeys } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
@@ -52,7 +52,6 @@ function build(name: Extreme, pool: PoolArg, options?: ExtremeOptions): Function
     options: { not: normalizeNotKeys(options?.not), ...(type ? { type } : {}) },
     metadata: {
       dependencies: [],
-      visualDependencies: extractVisualDependencies([scope]),
       returnType: undefined,
     },
   });

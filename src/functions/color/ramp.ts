@@ -149,7 +149,6 @@ export function ramp(
       options: { shade: options.shade, ...(options.from !== undefined ? { from: options.from } : {}) },
       metadata: {
         dependencies: extractDependencies([seed]),
-        visualDependencies: [],
         returnType: 'color',
       },
     },

@@ -3,7 +3,6 @@ import type { PoolArg } from '../args';
 import { converter } from 'culori';
 import {
   createFunctionToken,
-  extractVisualDependencies,
   normalizeNotKeys,
 } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
@@ -83,7 +82,6 @@ export function mostVivid(pool: PoolArg, options?: MostVividOptions): FunctionTo
     options: { not: normalizeNotKeys(options?.not), ...(lightness ? { lightness } : {}), ...readable.options },
     metadata: {
       dependencies: readable.dependencies,
-      visualDependencies: extractVisualDependencies([scope, ...readable.args]),
       returnType: 'color',
     },
   });

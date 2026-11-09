@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames, nameValues, nameBetween, schemes } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('things — a hand-picked ladder for UI sizes', () => {
   const ALL = ['nothing', 'electron', 'atom', 'glitter', 'dust', 'snowflake', 'ant', 'pinhead', 'key-cap',
@@ -48,7 +48,7 @@ describe("value — each value named by its own number", () => {
 
   it('needs values, so scaleNames points to nameValues', () => {
     expect(() => scaleNames(3, 'value')).toThrow(/nameValues/);
-    expect(() => scaleNames(3, 'value')).toThrow(TokenError);
+    expect(() => scaleNames(3, 'value')).toThrow(NamingError);
   });
 
   it('splits like a number scheme', () => {

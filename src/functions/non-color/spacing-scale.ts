@@ -28,7 +28,6 @@ export function spacingScale(
       options: { multiplier },
       metadata: {
         dependencies: extractDependencies([baseValue]),
-        visualDependencies: [],
         returnType: 'dimension',
       },
     },

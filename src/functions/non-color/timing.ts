@@ -24,7 +24,6 @@ export function timing(
       options: { delay },
       metadata: {
         dependencies: extractDependencies([duration]),
-        visualDependencies: [],
         returnType: 'timing',
       },
     },

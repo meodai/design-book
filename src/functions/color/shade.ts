@@ -59,7 +59,6 @@ export function shade(
       options: { amount },
       metadata: {
         dependencies: extractDependencies([color]),
-        visualDependencies: [],
         returnType: 'color',
       },
     },

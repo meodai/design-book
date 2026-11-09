@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { nameBetween } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('nameBetween', () => {
   it('returns the midpoint for numeric schemes', () => {
@@ -39,7 +39,7 @@ describe('nameBetween', () => {
   });
 
   it('rejects names that are not part of the scheme', () => {
-    expect(() => nameBetween('100', 'huge', 'hundreds')).toThrow(TokenError);
+    expect(() => nameBetween('100', 'huge', 'hundreds')).toThrow(NamingError);
     expect(() => nameBetween('m', 'huge', 'tshirt')).toThrow(/huge/);
     expect(() => nameBetween('iiii', 'v', 'roman')).toThrow(/iiii/);
     expect(() => nameBetween('ii', 'IV', 'roman')).toThrow();

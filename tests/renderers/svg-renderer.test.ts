@@ -204,9 +204,8 @@ describe('SVGRenderer palette-linker edges', () => {
     const book = new DesignBook('late-pool');
     const palette = book.addScope('palette');
     const ui = book.addScope('ui');
-    // The scope is still empty here, so the construction-time
-    // visualDependencies snapshot is empty — the pool is what the scope
-    // holds at render time.
+    // The scope is still empty here: the pool is what the scope holds at
+    // render time.
     ui.set('text', bestContrastWith(color('#ffffff'), ref('palette')));
     palette.set('black', color('#000000'));
     palette.set('white', color('#ffffff'));

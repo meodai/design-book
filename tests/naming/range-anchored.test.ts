@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { scaleNames } from '../../src/naming';
-import { TokenError } from '../../src/errors';
+import { NamingError } from '../../src/errors';
 
 describe('scaleNames — range-anchored schemes', () => {
   it('gives the familiar eleven hundreds at count 11', () => {
@@ -53,7 +53,7 @@ describe('scaleNames — range-anchored schemes', () => {
   });
 
   it('throws past the finest tier', () => {
-    expect(() => scaleNames(38, 'hundreds')).toThrow(TokenError);
+    expect(() => scaleNames(38, 'hundreds')).toThrow(NamingError);
     expect(() => scaleNames(38, 'hundreds')).toThrow(/37/);
     expect(() => scaleNames(22, 'tones')).toThrow(/21/);
   });
