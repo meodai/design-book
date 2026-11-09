@@ -182,15 +182,24 @@ downstream color book (which has no groups) rendering exactly as before.
    variant per breakpoint, a card using one exact style, `largest` / sort by
    member. README, skill file, CLAUDE.md.
 
-## Open questions
+## Decisions (2026-11-09)
 
-1. **Gamut mapping in selector results** — return the member's own value
-   (recommended) or keep sRGB hex?
-2. **Syntax for the holder** — `ref('..x')` (recommended; one more dot, one
-   level up) or a navigation like `holder(ref('.x'))` next to `inherited` and
-   `source`?
-3. **Depth** — no limit (recommended), or one level like text styles today?
-4. **Name** — `group({ … })` for a generic group, or something else?
-5. **Lists as pools** — `mostVivid([ref('a.x'), ref('b.y')])`. Not needed for
-   groups: a group of references already is a named list. Leave out for now
-   (recommended)?
+1. **Selector results are the member's value as written.** Renderers convert
+   where their format needs it (the W3 renderer already gamut-maps).
+2. **The holder is a navigation, not syntax:** `holder(ref('.x'), levels? |
+   'root')`, next to `inherited` (the `extends` chain) and `source` (the
+   reference chain). The leading dot keeps its one meaning, the reading scope.
+   `..` is not introduced.
+3. **No depth limit.** Warnings about deep nesting belong to a future linter.
+4. **A plain object is a group.** `scope.set('hover', { bg: …, text: … })`
+   holds a group; nested objects are nested groups. A token is an object whose
+   `type` is a string; a group's members are tokens or objects, so the two
+   never collide. There is no `group()` constructor. `typography({ … })` marks
+   a group as a text style (CSS class, W3 composite, `fontSize` as the default
+   member for `by` / `field`); `variant(ref, { … })` makes a group extending
+   another.
+5. **Groups are no comparison candidates unless `by` names a member** (as in
+   0.25). Lists as pools stay out for now.
+
+Where the text above says `ref('..x')` or `group({ … })`, read
+`holder(ref('.x'))` and a plain object.
