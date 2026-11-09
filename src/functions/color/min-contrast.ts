@@ -4,7 +4,7 @@ import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide } from '../kinds';
+import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide, byOption } from '../kinds';
 import type { Direction } from '../kinds';
 import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor } from '../pool';
 import { contrastAgainst } from './color-math';
@@ -23,6 +23,10 @@ export interface MinContrastOptions extends ReadableOnOptions {
   direction?: Direction;
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
+  /** The field a text style is measured by: its font size unless given
+   *  (`'fontWeight'`, `'lineHeight'`, …). Sizes and colors are measured as
+   *  themselves. */
+  by?: string;
   description?: string;
 }
 
@@ -34,13 +38,13 @@ export function minContrastWithImpl(
   options: ContrastInputs & { minContrast?: number },
 ): string {
   const fn = 'minContrastWith';
-  const { not, direction, readableOn, readableContrast, minContrast = 4.5 } = options;
-  const measure = measureOf(targetValue);
+  const { not, direction, readableOn, readableContrast, minContrast = 4.5, by } = options;
+  const measure = measureOf(targetValue, by);
   if (measure && readableOn !== undefined) {
     throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
   }
   if (measure) {
-    return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not), direction, { pick: 'min', minContrast });
+    return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'min', minContrast });
   }
   assertDirectionFits(fn, direction, 'color');
   const target = parseColor(targetValue);
@@ -60,18 +64,18 @@ export function minContrastWith(
   pool: PoolArg,
   options?: MinContrastOptions,
 ): FunctionTokenValue {
-  assertOptions('minContrastWith', options, ['minContrast', 'direction', 'not', ...READABLE_OPTIONS]);
+  assertOptions('minContrastWith', options, ['minContrast', 'direction', 'not', 'by', ...READABLE_OPTIONS]);
   const fn = 'minContrastWith';
   const scope = poolArg(fn, pool);
   valueArg(fn, targetValue);
-  const { minContrast = 4.5, not, description, direction } = options ?? {};
+  const { minContrast = 4.5, not, description, direction, by } = options ?? {};
   assertDirection(fn, direction);
   if (typeof minContrast !== 'number' || !(minContrast > 0)) {
     throw new FunctionError(`${fn}: \`minContrast\` must be a positive number, got ${String(minContrast)}`, fn);
   }
   return createFunctionToken(fn, [targetValue, scope], {
     description,
-    options: { minContrast, not: toMembers(not), ...(direction ? { direction } : {}), ...readableOnOptions(fn, options) },
+    options: { minContrast, not: toMembers(not), ...(direction ? { direction } : {}), ...byOption(fn, by), ...readableOnOptions(fn, options) },
     // A color, a size or a text style, as the target is.
     metadata: { dependencies: [], returnType: undefined },
   });

@@ -7,7 +7,7 @@ import { FunctionError } from '../../errors';
 import { visibleDistance } from '../color/color-math';
 import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
-import { DIRECTION_KIND, assertDirection, assertDirectionFits } from '../kinds';
+import { DIRECTION_KIND, assertDirection, assertDirectionFits, byOption } from '../kinds';
 import type { Direction } from '../kinds';
 import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor } from '../pool';
 import type { Measure } from '../pool';
@@ -24,6 +24,8 @@ export interface ClosestInputs extends ReadableOn {
   upTo?: string;
   /** Gap a candidate must clear past the target. */
   minDistance?: number;
+  /** The field text styles are measured by. */
+  by?: string;
 }
 
 /** The side filter of a directional pick: a sign (+1 / -1, 0 for any side)
@@ -51,7 +53,7 @@ function noneOnSide(scope: Scope, targetValue: string, options: ClosestInputs, g
  * styles by font size. See `closest`.
  */
 export function closestImpl(targetValue: string, scope: Scope, options: ClosestInputs): string {
-  const measure = measureOf(targetValue);
+  const measure = measureOf(targetValue, options.by);
   if (measure) return closestMeasured(targetValue, measure, scope, options);
   assertDirectionFits('closest', options.direction, 'color');
   if (options.minDistance !== undefined && options.minDistance >= 1) {
@@ -66,14 +68,14 @@ function closestMeasured(targetValue: string, target: Measure, scope: Scope, opt
   if (options.readableOn !== undefined) {
     throw new FunctionError(`closest: \`readableOn\` applies to colors, not ${describeKind(target.kind)}`, 'closest');
   }
-  const members = ofKind(measuredPool(scope, options.not), target.kind, target.unit);
+  const members = ofKind(measuredPool(scope, options.not, options.by), target.kind, target.unit);
   if (members.length === 0) {
     throw new FunctionError(`closest: scope "${scope.name}" has no ${describeKind(target.kind, target.unit)} to compare with ${targetValue}`, 'closest');
   }
   let sign = options.direction === 'larger' ? 1 : options.direction === 'smaller' ? -1 : 0;
   let limit = Infinity;
   if (options.upTo !== undefined) {
-    const upTo = measureOf(options.upTo);
+    const upTo = measureOf(options.upTo, options.by);
     if (!upTo || upTo.kind !== target.kind || upTo.unit !== target.unit) {
       throw new FunctionError(`closest: \`upTo\` ${options.upTo} is not one of the ${describeKind(target.kind, target.unit)} the target is`, 'closest');
     }
@@ -138,6 +140,10 @@ export interface ClosestOptions extends ReadableOnOptions {
   minDistance?: number;
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
+  /** The field a text style is measured by: its font size unless given
+   *  (`'fontWeight'`, `'lineHeight'`, …). Sizes and colors are measured as
+   *  themselves. */
+  by?: string;
   description?: string;
 }
 
@@ -160,7 +166,7 @@ export function closest(
   pool: PoolArg,
   options?: ClosestOptions,
 ): FunctionTokenValue {
-  assertOptions('closest', options, ['direction', 'upTo', 'minDistance', 'not', ...READABLE_OPTIONS]);
+  assertOptions('closest', options, ['direction', 'upTo', 'minDistance', 'not', 'by', ...READABLE_OPTIONS]);
   const scope = poolArg('closest', pool);
   valueArg('closest', target);
   const { direction, upTo, minDistance } = options ?? {};
@@ -188,6 +194,7 @@ export function closest(
       // An input: it resolves like an argument and is a dependency.
       ...(upTo !== undefined ? { upTo } : {}),
       ...(minDistance ? { minDistance } : {}),
+      ...byOption('closest', options?.by),
       ...readableOnOptions('closest', options),
     },
     // A color, a size or a text style, as the target is.
@@ -197,7 +204,7 @@ export function closest(
 
 /** Options of the direction aliases: `closest`'s, without the direction. */
 export type NextOptions = Omit<ClosestOptions, 'direction' | 'upTo'>;
-const NEXT_OPTIONS = ['minDistance', 'not', ...READABLE_OPTIONS];
+const NEXT_OPTIONS = ['minDistance', 'not', 'by', ...READABLE_OPTIONS];
 
 /** The next larger size (or text style) in `pool`: `closest` with `direction: 'larger'`. */
 export function nextLarger(target: TokenValue | ReferenceValue | FunctionTokenValue, pool: PoolArg, options?: NextOptions): FunctionTokenValue {

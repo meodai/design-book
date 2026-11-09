@@ -28,3 +28,7 @@ export function detectValueType(resolved: string): 'color' | 'dimension' | 'stri
   if (parseDimension(resolved)) return 'dimension';
   return 'string';
 }
+
+/** The field a text style stands for when it is compared or sorted, unless
+ *  a function's `by` or an order's `field` names another. */
+export const DEFAULT_MEASURE_FIELD = 'fontSize';

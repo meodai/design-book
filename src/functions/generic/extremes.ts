@@ -4,7 +4,7 @@ import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { onlyMeasuredGroup } from '../kinds';
+import { onlyMeasuredGroup, byOption } from '../kinds';
 import { best, measuredPool } from '../pool';
 import { picked } from '../picks';
 
@@ -17,17 +17,17 @@ type Extreme = 'largest' | 'smallest';
  * sizes and text styles), `type` picks one or the call throws. Ties go to the
  * first member in scope order.
  */
-function extremeImpl(name: Extreme, scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
-  const members = onlyMeasuredGroup(name, scope, measuredPool(scope, options.not), options.type);
+function extremeImpl(name: Extreme, scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
+  const members = onlyMeasuredGroup(name, scope, measuredPool(scope, options.not, options.by), options.type);
   const pick = best(members, (m) => m.num, name === 'largest' ? 'max' : 'min')!;
   return picked(scope, pick.key, pick.value);
 }
 
-export function largestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
+export function largestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
   return extremeImpl('largest', scope, options);
 }
 
-export function smallestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
+export function smallestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
   return extremeImpl('smallest', scope, options);
 }
 
@@ -36,11 +36,15 @@ export interface ExtremeOptions {
   type?: 'size' | 'text';
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue>;
+  /** The field a text style is measured by: its font size unless given
+   *  (`'fontWeight'`, `'lineHeight'`, …). Sizes and colors are measured as
+   *  themselves. */
+  by?: string;
   description?: string;
 }
 
 function build(name: Extreme, pool: PoolArg, options?: ExtremeOptions): FunctionTokenValue {
-  assertOptions(name, options, ['type', 'not']);
+  assertOptions(name, options, ['type', 'not', 'by']);
   const scope = poolArg(name, pool);
   const type = options?.type;
   if (type !== undefined && type !== 'size' && type !== 'text') {
@@ -48,7 +52,7 @@ function build(name: Extreme, pool: PoolArg, options?: ExtremeOptions): Function
   }
   return createFunctionToken(name, [scope], {
     description: options?.description,
-    options: { not: toMembers(options?.not), ...(type ? { type } : {}) },
+    options: { not: toMembers(options?.not), ...(type ? { type } : {}), ...byOption(name, options?.by) },
     metadata: {
       dependencies: [],
       returnType: undefined,

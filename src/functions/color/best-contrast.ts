@@ -4,7 +4,7 @@ import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide } from '../kinds';
+import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide, byOption } from '../kinds';
 import type { Direction } from '../kinds';
 import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor } from '../pool';
 import { contrastAgainst } from './color-math';
@@ -17,18 +17,20 @@ export interface ContrastInputs extends ReadableOn {
   /** Qualified member keys left out (the registry has read `not`). */
   not: string[];
   direction?: Direction;
+  /** The field text styles are measured by. */
+  by?: string;
 }
 
 /** The member of `scope` that contrasts most with the target: WCAG ratio
  *  for colors, the ratio of the two values for sizes and text styles. */
 export function bestContrastWithImpl(targetValue: string, scope: Scope, options: ContrastInputs): string {
   const fn = 'bestContrastWith';
-  const { not, direction, readableOn, readableContrast } = options;
-  const measure = measureOf(targetValue);
+  const { not, direction, readableOn, readableContrast, by } = options;
+  const measure = measureOf(targetValue, by);
   if (measure && readableOn !== undefined) {
     throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
   }
-  if (measure) return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not), direction, { pick: 'best' });
+  if (measure) return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'best' });
   assertDirectionFits(fn, direction, 'color');
   const target = parseColor(targetValue);
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
@@ -51,10 +53,14 @@ export function bestContrastWith(
     direction?: Direction;
     /** Keys to exclude from the candidate pool. */
     not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
+    /** The field a text style is measured by: its font size unless given
+     *  (`'fontWeight'`, `'lineHeight'`, …). Sizes and colors are measured as
+     *  themselves. */
+    by?: string;
     description?: string;
   },
 ): FunctionTokenValue {
-  assertOptions('bestContrastWith', options, ['direction', 'not', ...READABLE_OPTIONS]);
+  assertOptions('bestContrastWith', options, ['direction', 'not', 'by', ...READABLE_OPTIONS]);
   const fn = 'bestContrastWith';
   const scope = poolArg(fn, pool);
   valueArg(fn, targetValue);
@@ -64,6 +70,7 @@ export function bestContrastWith(
     options: {
       not: toMembers(options?.not),
       ...(options?.direction ? { direction: options.direction } : {}),
+      ...byOption(fn, options?.by),
       ...readableOnOptions(fn, options),
     },
     // A color, a size or a text style, as the target is.

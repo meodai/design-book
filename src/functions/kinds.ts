@@ -3,6 +3,7 @@ import { FunctionError } from '../errors';
 import { best, describeKind, ofKind } from './pool';
 import type { Kind, Measure, MeasuredMember } from './pool';
 import { picked } from './picks';
+import { VALID_TOKEN_KEY } from '../keys';
 
 /**
  * Direction words and the comparisons of sizes and text styles, for the
@@ -26,6 +27,19 @@ export function assertDirection(fn: string, direction: unknown): asserts directi
   if (direction !== undefined && !(direction as string in DIRECTION_KIND)) {
     throw new FunctionError(`${fn}: \`direction\` is 'lighter' or 'darker' for colors, 'larger' or 'smaller' for sizes and text styles, got ${String(direction)}`, fn);
   }
+}
+
+/**
+ * Constructor side of `by`: the field a text style is measured by
+ * (`fontWeight`, `lineHeight`, …; its font size when not given). Returns the
+ * option to store. Sizes and colors are measured as themselves either way.
+ */
+export function byOption(fn: string, by: unknown): { by?: string } {
+  if (by === undefined) return {};
+  if (typeof by !== 'string' || !VALID_TOKEN_KEY.test(by)) {
+    throw new FunctionError(`${fn}: \`by\` names a text style's field, such as 'fontWeight', got ${JSON.stringify(by)}`, fn);
+  }
+  return { by };
 }
 
 /** Checks a direction against the kind of the target it applies to. */

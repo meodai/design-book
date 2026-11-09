@@ -1,3 +1,4 @@
+import { byOption } from '../kinds';
 import { poolArg, valueArg, assertOptions, READABLE_OPTIONS } from '../args';
 import type { PoolArg } from '../args';
 import { createFunctionToken, toMembers } from '../../tokens';
@@ -15,6 +16,8 @@ export interface FurthestFromInputs extends ReadableOn {
   /** Qualified member keys left out (the registry has read `not`). */
   not: string[];
   maxDistance?: number;
+  /** The field text styles are measured by. */
+  by?: string;
 }
 
 /**
@@ -25,15 +28,15 @@ export interface FurthestFromInputs extends ReadableOn {
  */
 export function furthestFromImpl(targetValue: string, scope: Scope, options: FurthestFromInputs): string {
   const fn = 'furthestFrom';
-  const { not, readableOn, readableContrast, maxDistance } = options;
+  const { not, readableOn, readableContrast, maxDistance, by } = options;
   const limit = maxDistance === undefined ? Infinity : maxDistance + 1e-9;
-  const measure = measureOf(targetValue);
+  const measure = measureOf(targetValue, by);
 
   if (measure) {
     if (readableOn !== undefined) {
       throw new FunctionError(`${fn}: \`readableOn\` applies to colors, not ${describeKind(measure.kind)}`, fn);
     }
-    const members = ofKind(measuredPool(scope, not), measure.kind, measure.unit);
+    const members = ofKind(measuredPool(scope, not, by), measure.kind, measure.unit);
     if (members.length === 0) {
       throw new FunctionError(`${fn}: scope "${scope.name}" has no ${describeKind(measure.kind, measure.unit)} to compare with ${targetValue}`, fn);
     }
@@ -73,6 +76,10 @@ export interface FurthestFromOptions extends ReadableOnOptions {
   maxDistance?: number;
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
+  /** The field a text style is measured by: its font size unless given
+   *  (`'fontWeight'`, `'lineHeight'`, …). Sizes and colors are measured as
+   *  themselves. */
+  by?: string;
   description?: string;
 }
 
@@ -93,7 +100,7 @@ export function furthestFrom(
   pool: PoolArg,
   options?: FurthestFromOptions,
 ): FunctionTokenValue {
-  assertOptions('furthestFrom', options, ['maxDistance', 'not', ...READABLE_OPTIONS]);
+  assertOptions('furthestFrom', options, ['maxDistance', 'not', 'by', ...READABLE_OPTIONS]);
   const fn = 'furthestFrom';
   const scope = poolArg(fn, pool);
   valueArg(fn, target);
@@ -106,6 +113,7 @@ export function furthestFrom(
     options: {
       not: toMembers(options?.not),
       ...(maxDistance !== undefined ? { maxDistance } : {}),
+      ...byOption(fn, options?.by),
       ...readableOnOptions(fn, options),
     },
     // A color, a size or a text style, as the target is.

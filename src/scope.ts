@@ -2,16 +2,24 @@ import { parse } from 'culori';
 import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvable, MEMBER_SLOTS, misplacedSource, unresolvableIn } from './tokens';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
-import { CircularDependencyError, TokenError } from './errors';
+import { CircularDependencyError, FunctionError, TokenError } from './errors';
+
+/** A resolved text style: CSS declarations. */
+const TEXT_STYLE = /^[a-z-]+\s*:/i;
 import { inFrame } from './functions/picks';
 import type { ComparableEntry, TokenOrderer } from './orderers';
 
 export type SortDirection = 'asc' | 'desc';
 export type SortCriterion =
   | { by: 'name'; direction?: SortDirection }
-  | { by: 'value'; direction?: SortDirection }
+  /** `field`: the field a text style is sorted by (`fontSize` unless
+   *  given); other values sort as themselves. */
+  | { by: 'value'; direction?: SortDirection; field?: string }
   | { by: 'type'; priority?: string[] };
 export type ScopeOrder = SortCriterion[];
+
+/** An entry's place in one ordered group of a `value` criterion. */
+type Rank = { group: string; index: number };
 
 /** What a scope needs from its book. */
 export type BookWithScope = {
@@ -319,7 +327,10 @@ export class Scope {
         return { key, index, type, resolved, token };
       });
 
-      const ranks = this.computeValueRanks(entries, order);
+      // One ranking per value criterion: they may sort text styles by
+      // different fields.
+      const ranks = new Map<SortCriterion, Map<string, Rank>>();
+      for (const c of order) if (c.by === 'value') ranks.set(c, this.valueRanks(entries, c.field));
 
       const resolvable = entries.filter(e => e.resolved !== null);
       const unresolvable = entries.filter(e => e.resolved === null);
@@ -333,13 +344,11 @@ export class Scope {
           } else if (c.by === 'type') {
             r = this.typeRank(a.type, c.priority) - this.typeRank(b.type, c.priority);
           } else if (c.by === 'value') {
-            if (a.type === b.type) {
-              const ra = ranks.get(a.key);
-              const rb = ranks.get(b.key);
-              if (ra !== undefined && rb !== undefined) {
-                r = ra - rb;
-                if (c.direction === 'desc') r = -r;
-              }
+            const ra = ranks.get(c)!.get(a.key);
+            const rb = ranks.get(c)!.get(b.key);
+            if (ra && rb && ra.group === rb.group) {
+              r = ra.index - rb.index;
+              if (c.direction === 'desc') r = -r;
             }
           }
           if (r !== 0) return r;
@@ -353,30 +362,45 @@ export class Scope {
     }
   }
 
-  /** For any `value` criterion: group resolvable entries by effective type,
-   *  run that type's orderer once, and record each entry's rank (index). */
-  private computeValueRanks(
+  /**
+   * Ranks for a `value` criterion: entries grouped by effective type, each
+   * group put in order by that type's orderer. A text style is ranked by
+   * one field (`field`, its font size unless given) among the text styles,
+   * with the orderer of that field's kind — so they sort like the sizes or
+   * numbers they stand for. Entries of different groups are not compared.
+   */
+  private valueRanks(
     entries: Array<{ key: string; type: string; resolved: string | null; token: AnyTokenValue }>,
-    order: ScopeOrder,
-  ): Map<string, number> {
-    const ranks = new Map<string, number>();
-    if (!order.some(c => c.by === 'value')) return ranks;
-
-    const byType = new Map<string, ComparableEntry[]>();
+    field: string = DEFAULT_MEASURE_FIELD,
+  ): Map<string, Rank> {
+    const groups = new Map<string, { type: string; list: ComparableEntry[] }>();
     for (const e of entries) {
       if (e.resolved === null) continue;
-      const list = byType.get(e.type) ?? [];
-      list.push({ key: e.key, type: e.type, resolved: e.resolved, token: e.token });
-      byType.set(e.type, list);
+      let type = e.type;
+      let resolved = e.resolved;
+      let group = type;
+      if (type === 'typography') {
+        try {
+          resolved = this.resolve(`${e.key}.${field}`);
+        } catch {
+          continue; // a style without the field has no rank
+        }
+        type = detectValueType(resolved);
+        group = `typography:${type}`;
+      }
+      const g = groups.get(group) ?? { type, list: [] };
+      g.list.push({ key: e.key, type, resolved, token: e.token });
+      groups.set(group, g);
     }
 
-    for (const [type, group] of byType) {
+    const ranks = new Map<string, Rank>();
+    for (const [group, { type, list }] of groups) {
       const orderer = this.book.getOrderer(type);
       if (!orderer) {
         warnMissingOrderer(type);
         continue; // no ranks for this type -> value criterion falls through
       }
-      orderer(group).forEach((entry, i) => ranks.set(entry.key, i));
+      orderer(list).forEach((entry, index) => ranks.set(entry.key, { group, index }));
     }
     return ranks;
   }
@@ -502,6 +526,7 @@ export class Scope {
     // call and not for the call that is resolving it (./functions/picks).
     return inFrame(() => {
       const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveArg(arg));
+      if (fn.metadata?.returnType === 'color') this.assertNoTextStyle(fn, resolvedArgs);
       const implementation = this.book.getFunction(fn.name);
       if (!implementation) {
         throw new Error(`Function "${fn.name}" is not registered`);
@@ -529,6 +554,20 @@ export class Scope {
     return resolved ?? options;
   }
 
+  /** A color transform handed a whole text style (its resolved value is
+   *  declarations, `font-size: …; color: …`) gets a message that says how
+   *  to pass one of its fields, instead of failing to parse a color. */
+  private assertNoTextStyle(fn: FunctionTokenValue, resolvedArgs: unknown[]): void {
+    resolvedArgs.forEach((value, i) => {
+      if (typeof value !== 'string' || !TEXT_STYLE.test(value)) return;
+      const arg = fn.args[i];
+      const key = isReferenceValue(arg) ? arg.key : undefined;
+      const what = key ? `"${key}" is a text style` : 'that argument is a text style';
+      const hint = key ? `, e.g. ref('${key}.color')` : '';
+      throw new FunctionError(`${fn.name}: ${what}; pass one of its fields${hint}`, fn.name);
+    });
+  }
+
   private resolveArg(arg: FunctionArg): unknown {
     if (isUnresolvable(arg)) throw new TokenError(`${arg.key}: ${arg.message}`, arg.key);
     if (isReferenceValue(arg)) {
@@ -552,7 +591,7 @@ export class Scope {
   }
 }
 
-import { detectValueType } from './values';
+import { DEFAULT_MEASURE_FIELD, detectValueType } from './values';
 export { DIMENSION_VALUE_PATTERN, detectValueType } from './values';
 
 

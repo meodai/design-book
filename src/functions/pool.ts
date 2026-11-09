@@ -2,7 +2,7 @@ import { converter, parse } from 'culori';
 import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
-import { parseDimension } from '../values';
+import { DEFAULT_MEASURE_FIELD, parseDimension } from '../values';
 import { resolvePool } from './scope-members';
 import { contrastAgainst, formatColor, gamutMapSrgb } from './color/color-math';
 
@@ -147,25 +147,42 @@ export interface MeasuredMember extends Measure {
 
 /** A resolved `typography()` value: CSS declarations (`font-size: 2rem; …`). */
 const DECLARATIONS = /^[a-z-]+\s*:/i;
-const FONT_SIZE = /(?:^|;)\s*font-size\s*:\s*([^;]+)/i;
 
-/** The size a resolved value stands for: a dimension, or a text style's font size. */
-export function measureOf(value: string): Measure | null {
+
+const fieldPatterns = new Map<string, RegExp>();
+/** The declaration of a field (`fontWeight` → `font-weight: …`). */
+function fieldPattern(field: string): RegExp {
+  let pattern = fieldPatterns.get(field);
+  if (!pattern) {
+    const kebab = field.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+    pattern = new RegExp(`(?:^|;)\\s*${kebab.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^;]+)`, 'i');
+    fieldPatterns.set(field, pattern);
+  }
+  return pattern;
+}
+
+/**
+ * The size a resolved value stands for: a dimension as itself, a text style
+ * by one of its fields — `by`, its font size unless told otherwise. A field
+ * that is a number with or without a unit measures (`2rem`, `900`, `1.5`);
+ * a text style without it, or with a value that is no number, is no member.
+ */
+export function measureOf(value: string, by: string = DEFAULT_MEASURE_FIELD): Measure | null {
   const trimmed = value.trim();
   if (DECLARATIONS.test(trimmed)) {
-    const fontSize = trimmed.match(FONT_SIZE)?.[1]?.trim();
-    const dim = fontSize ? parseDimension(fontSize) : null;
+    const field = trimmed.match(fieldPattern(by))?.[1]?.trim();
+    const dim = field ? parseDimension(field) : null;
     return dim ? { kind: 'text', ...dim } : null;
   }
   const dim = parseDimension(trimmed);
   return dim ? { kind: 'size', ...dim } : null;
 }
 
-/** The pool's sizes and text styles, measured. */
-export function measuredPool(scope: Scope, not: ReadonlyArray<string>): MeasuredMember[] {
+/** The pool's sizes and text styles, measured (text styles by `by`). */
+export function measuredPool(scope: Scope, not: ReadonlyArray<string>, by?: string): MeasuredMember[] {
   const members: MeasuredMember[] = [];
   for (const { key, value } of resolvePool(scope, not)) {
-    const measure = measureOf(value);
+    const measure = measureOf(value, by);
     if (measure) members.push({ key, value, ...measure });
   }
   return members;

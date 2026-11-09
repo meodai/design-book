@@ -794,6 +794,8 @@ function parseSelectorTail(
       options.readableContrast = parseFloat(valueStr);
     } else if (key === 'minContrast' && name === 'minContrastWith') {
       options.minContrast = parseFloat(valueStr);
+    } else if (key === 'by') {
+      options.by = parseQuotedString(valueStr);
     } else if (key === 'minDistance') {
       options.minDistance = parseFloat(valueStr);
     } else if (key === 'lightness' && (name === 'mostVivid' || name === 'leastVivid')) {
@@ -829,6 +831,8 @@ function parseNotList(valueStr: string, book?: DesignBook): Array<ReferenceValue
 }
 
 type SelectorTailOptions = {
+  /** The field text styles are measured by. */
+  by?: string;
   type?: 'color' | 'size' | 'text';
   minDistance?: number;
   /** furthestFrom only: how far the pick may be. */

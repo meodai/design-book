@@ -120,6 +120,9 @@ largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes
 | `maxDistance` (`furthestFrom`) | OKLab distance, 0 to about 1 | the target's unit | the target's unit |
 | extremes | `lightest` / `darkest` | `largest` / `smallest` | `largest` / `smallest` |
 | `readableOn` | yes | — | — |
+| `by` | — | — | the field it is measured by (font size unless given) |
+
+**`by`: what stands for a text style.** A text style is measured by its font size unless the function names another field: `largest(ref('type'), { by: 'fontWeight' })` is the heaviest style, `nextLarger(ref('.body'), ref('type'), { by: 'lineHeight' })` the next looser one, `bestContrastWith(ref('.body'), ref('type'), { by: 'lineHeight' })` the one whose line height differs most. Any field that is a number, with or without a unit, measures — inherited fields of a variant included; a style without that field is no candidate. Sizes and colors are measured as themselves. A whole text style handed to a color transform (`lighten(ref('type.title'))`) throws and says to pass one of its fields: `ref('type.title.color')`.
 
 **`closest` and its direction.** Colors are compared by perceptual distance (Euclidean in OKLab), so `nextLighter` from a blue is the nearest lighter *blue*, not a yellow that happens to be the next step up in lightness. `nextLarger` / `nextSmaller` / `nextLighter` / `nextDarker` are `closest` with `direction: 'larger' | 'smaller' | 'lighter' | 'darker'` — the editor writes them back that way. `upTo: ref('.page')` takes the side from where another value lies and stops there: one rule that is lighter on a light page and darker on a dark one, or that steps a size upTo another. `minDistance` is the gap the pick must clear past the target. The target does not need to be a member, and the pool needs no order.
 
@@ -871,7 +874,7 @@ An order is a list of criteria, tried in turn until one separates two keys:
 
 | Criterion | Sorts by |
 |---|---|
-| `{ by: 'value', direction? }` | the resolved value, within one type: dimensions by their number, strings alphabetically, colors dark → light along the smoothest path through the set ([colorsort-js](https://github.com/meodai/colorsort-js)) |
+| `{ by: 'value', direction?, field? }` | the resolved value, within one type: dimensions by their number, strings alphabetically, colors dark → light along the smoothest path through the set ([colorsort-js](https://github.com/meodai/colorsort-js)); text styles by one field, `field` (font size unless given), the way that field's kind sorts |
 | `{ by: 'name', direction? }` | the key, alphabetically |
 | `{ by: 'type', priority? }` | the type: the ones listed in `priority` first, then the rest |
 
