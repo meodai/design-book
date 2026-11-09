@@ -1,32 +1,48 @@
 import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
-import { converter, parse } from 'culori';
-import {
-  createFunctionToken,
-  extractDependencies,
-  normalizeNotKeys,
-} from '../../tokens';
-import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
+import { createFunctionToken, toMembers } from '../../tokens';
+import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors, formatColor, gamutMapSrgb, visibleDistance } from '../color/scope-colors';
-import { filterReadable, readableOnParts } from '../color/readable';
-import type { ReadableOnOptions } from '../color/readable';
-import { DIRECTION_KIND, assertDirection, assertDirectionFits, describeKind, measureOf, measuredMembers } from '../kinds';
-import type { Direction, Measure } from '../kinds';
+import { visibleDistance } from '../color/color-math';
+import { readableOnOptions } from '../color/readable';
+import type { ReadableOn, ReadableOnOptions } from '../color/readable';
+import { DIRECTION_KIND, assertDirection, assertDirectionFits } from '../kinds';
+import type { Direction } from '../kinds';
+import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor } from '../pool';
+import type { Measure } from '../pool';
 import { picked } from '../picks';
 
-const toOklch = converter('oklch');
-
-/** Which side of the target a directional pick may come from. */
-export interface ClosestDirection {
+/** `closest`'s options as the implementation receives them. */
+export interface ClosestInputs extends ReadableOn {
+  /** Qualified member keys left out (the registry has read `not`). */
+  not: string[];
   /** Only candidates on that side of the target: lighter / darker for
    *  colors, larger / smaller for sizes and text styles. */
   direction?: Direction;
-  /** The side another value lies on, and no further than its lightness. */
+  /** The side another value lies on, and no further than it (resolved). */
   upTo?: string;
-  /** Gap in OKLCH lightness (0–1) a candidate must clear past the target. */
+  /** Gap a candidate must clear past the target. */
   minDistance?: number;
+}
+
+/** The side filter of a directional pick: a sign (+1 / -1, 0 for any side)
+ *  and how far past the target a candidate may lie. */
+function sideOf(sign: number, limit: number, minDistance: number | undefined) {
+  const minGap = (minDistance ?? 0) + 1e-9;
+  return (gap: number) => sign === 0 || (sign * gap > minGap && sign * gap <= limit);
+}
+
+/** The "no member is …" message of a directional pick that found none. */
+function noneOnSide(scope: Scope, targetValue: string, options: ClosestInputs, gapUnit: string): FunctionError {
+  const where = options.upTo !== undefined
+    ? `between ${targetValue} and ${options.upTo}`
+    : `${options.direction} than ${targetValue}`;
+  return new FunctionError(
+    `closest: no member of scope "${scope.name}" is ${where}`
+      + (options.minDistance ? ` by at least ${options.minDistance}${gapUnit}` : ''),
+    'closest',
+  );
 }
 
 /**
@@ -34,149 +50,78 @@ export interface ClosestDirection {
  * target's kind: colors by OKLab distance, sizes by value (same unit), text
  * styles by font size. See `closest`.
  */
-export function closestImpl(
-  targetValue: string,
-  scope: Scope,
-  not: string[] = [],
-  readableOn: string | null = null,
-  readableContrast?: number,
-  side: ClosestDirection = {},
-): string {
+export function closestImpl(targetValue: string, scope: Scope, options: ClosestInputs): string {
   const measure = measureOf(targetValue);
-  if (measure) return closestMeasured(targetValue, measure, scope, not, readableOn, side);
-  assertDirectionFits('closest', side.direction, 'color');
-  if (side.minDistance !== undefined && side.minDistance >= 1) {
-    throw new FunctionError(`closest: \`minDistance\` for colors is a lightness gap between 0 and 1, got ${side.minDistance}`, 'closest');
+  if (measure) return closestMeasured(targetValue, measure, scope, options);
+  assertDirectionFits('closest', options.direction, 'color');
+  if (options.minDistance !== undefined && options.minDistance >= 1) {
+    throw new FunctionError(`closest: \`minDistance\` for colors is a lightness gap between 0 and 1, got ${options.minDistance}`, 'closest');
   }
-  return closestColorImpl(targetValue, scope, not, readableOn, readableContrast, side);
+  return closestColor(targetValue, scope, options);
 }
 
 /** Sizes and text styles: by value, in the target's unit. */
-function closestMeasured(
-  targetValue: string,
-  target: Measure,
-  scope: Scope,
-  not: string[],
-  readableOn: string | null,
-  side: ClosestDirection,
-): string {
-  assertDirectionFits('closest', side.direction, target.kind);
-  if (readableOn !== null) {
+function closestMeasured(targetValue: string, target: Measure, scope: Scope, options: ClosestInputs): string {
+  assertDirectionFits('closest', options.direction, target.kind);
+  if (options.readableOn !== undefined) {
     throw new FunctionError(`closest: \`readableOn\` applies to colors, not ${describeKind(target.kind)}`, 'closest');
   }
-  const members = measuredMembers(scope, target.kind, target.unit, not);
+  const members = ofKind(measuredPool(scope, options.not), target.kind, target.unit);
   if (members.length === 0) {
     throw new FunctionError(`closest: scope "${scope.name}" has no ${describeKind(target.kind, target.unit)} to compare with ${targetValue}`, 'closest');
   }
-
-  let sign = side.direction === 'larger' ? 1 : side.direction === 'smaller' ? -1 : 0;
+  let sign = options.direction === 'larger' ? 1 : options.direction === 'smaller' ? -1 : 0;
   let limit = Infinity;
-  if (side.upTo !== undefined) {
-    const upTo = measureOf(side.upTo);
+  if (options.upTo !== undefined) {
+    const upTo = measureOf(options.upTo);
     if (!upTo || upTo.kind !== target.kind || upTo.unit !== target.unit) {
-      throw new FunctionError(`closest: \`upTo\` ${side.upTo} is not one of the ${describeKind(target.kind, target.unit)} the target is`, 'closest');
+      throw new FunctionError(`closest: \`upTo\` ${options.upTo} is not one of the ${describeKind(target.kind, target.unit)} the target is`, 'closest');
     }
     sign = Math.sign(upTo.num - target.num);
     limit = Math.abs(upTo.num - target.num) + 1e-9;
   }
-  const minGap = (side.minDistance ?? 0) + 1e-9;
-
-  let best: { key: string; value: string } | null = null;
-  let bestDistance = Infinity;
-  for (const member of members) {
-    const gap = member.num - target.num;
-    if (sign !== 0 && !(sign * gap > minGap && sign * gap <= limit)) continue;
-    if (Math.abs(gap) < bestDistance) {
-      bestDistance = Math.abs(gap);
-      best = member;
-    }
-  }
-  if (best === null) {
-    const where = side.upTo !== undefined
-      ? `between ${targetValue} and ${side.upTo}`
-      : `${side.direction} than ${targetValue}`;
-    throw new FunctionError(
-      `closest: no member of scope "${scope.name}" is ${where}`
-        + (side.minDistance ? ` by at least ${side.minDistance}${target.unit}` : ''),
-      'closest',
-    );
-  }
-  return picked(scope, best.key, best.value);
+  const onSide = sideOf(sign, limit, options.minDistance);
+  const pick = best(members.filter((m) => onSide(m.num - target.num)), (m) => Math.abs(m.num - target.num), 'min');
+  if (!pick) throw noneOnSide(scope, targetValue, options, target.unit);
+  return picked(scope, pick.key, pick.value);
 }
 
-function closestColorImpl(
-  targetValue: string,
-  scope: Scope,
-  not: string[] = [],
-  readableOn: string | null = null,
-  readableContrast?: number,
-  side: ClosestDirection = {},
-): string {
-  const targetRaw = parse(targetValue);
-  if (!targetRaw) {
+/** Colors: by OKLab distance, compared in gamut-mapped sRGB as the
+ *  candidates are (a wide-gamut token measured against its own hex is at
+ *  distance zero). A direction keeps the members on one side of the
+ *  target's OKLCH lightness, strictly past it by `minDistance`; `upTo` no
+ *  further than the other color's lightness. */
+function closestColor(targetValue: string, scope: Scope, options: ClosestInputs): string {
+  if (!parseColor(targetValue)) {
     throw new FunctionError(`closest: cannot parse target color "${targetValue}"`, 'closest');
   }
-  // Candidates are compared in their gamut-mapped sRGB hex form (that is what
-  // the function returns), so map the target the same way. Otherwise a
-  // wide-gamut token measured against its own hex would not be at distance zero.
-  const targetParsed = parse(formatColor(gamutMapSrgb(targetRaw)) ?? '');
-  if (!targetParsed) {
-    throw new FunctionError(`closest: cannot format target color "${targetValue}"`, 'closest');
-  }
+  const target = colorForm(targetValue);
+  if (!target) throw new FunctionError(`closest: cannot format target color "${targetValue}"`, 'closest');
 
-  // A direction keeps only the candidates on one side of the target's OKLCH
-  // lightness — strictly past it by minDistance — and `upTo` no further
-  // than the other color's lightness.
-  const lightness = (c: Parameters<typeof toOklch>[0]) => toOklch(c)?.l ?? NaN;
-  const targetL = lightness(targetParsed);
-  let sign = side.direction === 'lighter' ? 1 : side.direction === 'darker' ? -1 : 0;
+  let sign = options.direction === 'lighter' ? 1 : options.direction === 'darker' ? -1 : 0;
   let limit = Infinity;
-  if (side.upTo !== undefined) {
-    const upToParsed = parse(side.upTo);
-    if (!upToParsed) {
-      throw new FunctionError(`closest: cannot parse \`upTo\` color "${side.upTo}"`, 'closest');
-    }
-    const upToL = lightness(upToParsed);
-    sign = Math.sign(upToL - targetL);
-    limit = Math.abs(upToL - targetL) + 1e-9;
+  if (options.upTo !== undefined) {
+    const upTo = parseColor(options.upTo);
+    if (!upTo) throw new FunctionError(`closest: cannot parse \`upTo\` color "${options.upTo}"`, 'closest');
+    const upToL = lightnessOf(upTo);
+    sign = Math.sign(upToL - target.l);
+    limit = Math.abs(upToL - target.l) + 1e-9;
   }
-  const minGap = (side.minDistance ?? 0) + 1e-9;
-  const onSide = (l: number) => {
-    if (sign === 0) return true;
-    const gap = sign * (l - targetL);
-    return gap > minGap && gap <= limit;
-  };
+  const onSide = sideOf(sign, limit, options.minDistance);
 
-  let closest: { key: string; hex: string } | null = null;
-  let closestDistance = Infinity;
-
-  const pool = filterReadable('closest', collectScopeColors(scope, not), readableOn, readableContrast);
   // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
-  const backdrop = readableOn === null ? null : parse(readableOn) ?? null;
-  for (const candidate of pool) {
-    if (!onSide(lightness(candidate.parsed))) continue;
-    const distance = visibleDistance(targetParsed, candidate.parsed, backdrop);
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closest = candidate;
-    }
-  }
-
-  if (!closest) {
-    if (sign !== 0) {
-      const where = side.upTo !== undefined
-        ? `between ${targetValue} and ${side.upTo}`
-        : `${side.direction} than ${targetValue}`;
-      throw new FunctionError(
-        `closest: no member of scope "${scope.name}" is ${where}`
-          + (side.minDistance ? ` by at least ${side.minDistance} in OKLCH lightness` : ''),
-        'closest',
-      );
-    }
+  const backdrop = options.readableOn === undefined ? null : parseColor(options.readableOn) ?? null;
+  const pick = best(
+    colorPool('closest', scope, options.not, options.readableOn, options.readableContrast).filter((c) => onSide(c.l - target.l)),
+    (c) => visibleDistance(target.color, c.color, backdrop),
+    'min',
+  );
+  if (!pick) {
+    if (sign !== 0) throw noneOnSide(scope, targetValue, options, ' in OKLCH lightness');
     throw new FunctionError('closest: no valid color candidates found in scope', 'closest');
   }
-  return picked(scope, closest.key, closest.hex);
+  return picked(scope, pick.key, pick.hex);
 }
 
 export interface ClosestOptions extends ReadableOnOptions {
@@ -192,9 +137,8 @@ export interface ClosestOptions extends ReadableOnOptions {
    *  lightness (0–1) for colors, the target's unit for sizes. */
   minDistance?: number;
   /** Keys to exclude from the candidate pool. */
-  not?: ReadonlyArray<string | ReferenceValue>;
+  not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   description?: string;
-  [key: string]: any;
 }
 
 /**
@@ -235,29 +179,19 @@ export function closest(
     }
   }
   if (upTo !== undefined) valueArg('closest', upTo);
-  const readable = readableOnParts('closest', options);
-  // `upTo` is an argument, so it resolves like one and is a dependency;
-  // it sits before the optional readableOn backdrop, marked in the options.
-  const upToArgs = upTo !== undefined ? [upTo] : [];
-  return createFunctionToken(
-    'closest',
-    [target, scope, ...upToArgs, ...readable.args],
-    {
-      description: options?.description,
-      options: {
-        not: normalizeNotKeys(options?.not),
-        ...(direction ? { direction } : {}),
-        ...(upTo !== undefined ? { upTo: true } : {}),
-        ...(minDistance ? { minDistance } : {}),
-        ...readable.options,
-      },
-      metadata: {
-        dependencies: [...extractDependencies([target, ...upToArgs]), ...readable.dependencies],
-        // A color, a size or a text style, as the target is.
-        returnType: undefined,
-      },
+  return createFunctionToken('closest', [target, scope], {
+    description: options?.description,
+    options: {
+      not: toMembers(options?.not),
+      ...(direction ? { direction } : {}),
+      // An input: it resolves like an argument and is a dependency.
+      ...(upTo !== undefined ? { upTo } : {}),
+      ...(minDistance ? { minDistance } : {}),
+      ...readableOnOptions('closest', options),
     },
-  );
+    // A color, a size or a text style, as the target is.
+    metadata: { dependencies: [], returnType: undefined },
+  });
 }
 
 /** Options of the direction aliases: `closest`'s, without the direction. */

@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvableReference, misplacedSource, unresolvableIn } from './tokens';
+import { bindToken, isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue, isUnresolvable, MEMBER_SLOTS, misplacedSource, unresolvableIn } from './tokens';
 import type { AnyTokenValue, BindingContext, FunctionArg, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { FunctionImplementation } from './design-book';
 import { CircularDependencyError, TokenError } from './errors';
@@ -131,7 +131,7 @@ export class Scope {
     const qualified = `${this.name}.${name}`;
     const bound = bindToken(value, this.name, this.book._bindingContext?.());
     // A scope is a pool for a selector, never a value of its own.
-    if (isReferenceValue(bound) && isScopeKey(bound.key) && !isUnresolvableReference(bound)) {
+    if (isReferenceValue(bound) && isScopeKey(bound.key)) {
       throw new TokenError(
         `${qualified}: ref('${(value as ReferenceValue).key}') names a scope; a token needs 'scope.token'`,
         qualified,
@@ -452,6 +452,8 @@ export class Scope {
     }
 
     const qualified = `${this.name}.${name}`;
+    // inherited(...) that no longer leads anywhere (a scope above was removed).
+    if (isUnresolvable(token)) throw new TokenError(`${qualified}: ${token.message}`, qualified);
     if (this.resolving.has(name)) {
       // Turned away mid-resolution: whatever is being computed around this
       // depends on the order things were asked in, not on the book alone.
@@ -517,7 +519,6 @@ export class Scope {
   /** The key a bound reference reads as a value. Refuses a navigation that
    *  could not be followed and a scope, which has no value of its own. */
   private valueKey(reference: ReferenceValue, where: string): string {
-    if (isUnresolvableReference(reference)) throw new TokenError(`${where}: ${reference.unresolvable}`, where);
     if (isScopeKey(reference.key)) {
       throw new TokenError(`${where}: ref('${reference.key}') names a scope; a value needs 'scope.token'`, where);
     }
@@ -537,16 +538,34 @@ export class Scope {
       if (!implementation) {
         throw new Error(`Function "${fn.name}" is not registered`);
       }
-      return implementation(...resolvedArgs, fn.options);
+      return implementation(...resolvedArgs, this.resolveInputs(fn.options));
     });
   }
 
   /** A function argument's value: refs and nested functions resolved, a
    *  scope argument looked up by name, anything else as is. */
+  /** The options a function receives: every input — a reference, a token
+   *  or a function token at the top level, outside the member slots —
+   *  resolved like an argument (`closest`'s `upTo`, a selector's
+   *  `readableOn`). Member references and plain values pass as they are. */
+  private resolveInputs(options: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+    if (!options) return options;
+    let resolved: Record<string, unknown> | undefined;
+    for (const [name, value] of Object.entries(options)) {
+      if (MEMBER_SLOTS.has(name)) continue;
+      if (isReferenceValue(value) || isFunctionTokenValue(value) || isTokenValue(value) || isUnresolvable(value)) {
+        resolved ??= { ...options };
+        resolved[name] = this.resolveArg(value as FunctionArg);
+      }
+    }
+    return resolved ?? options;
+  }
+
   private resolveArg(arg: FunctionArg): unknown {
+    if (isUnresolvable(arg)) throw new TokenError(`${arg.key}: ${arg.message}`, arg.key);
     if (isReferenceValue(arg)) {
       // A scope reference is a pool: hand the function the scope itself.
-      if (isScopeKey(arg.key) && !isUnresolvableReference(arg)) {
+      if (isScopeKey(arg.key)) {
         const scope = this.book.getScope(arg.key);
         if (!scope) throw new TokenError(`Scope "${arg.key}" not found`, arg.key);
         return scope;

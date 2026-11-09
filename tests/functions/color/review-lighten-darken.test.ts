@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse, formatHex, interpolate, toGamut } from 'culori';
-import { lightenImpl } from '../../../src/functions/color/lighten';
-import { darkenImpl } from '../../../src/functions/color/darken';
+import { lightenImpl, darkenImpl } from '../../../src/functions/color/lighten-darken';
 import { shadeImpl } from '../../../src/functions/color/shade';
 
 const toRgbGamut = toGamut('rgb', 'oklch');
@@ -13,11 +12,11 @@ function cssColorMix(colorValue: string, towards: 'white' | 'black', amount: num
 
 describe('lighten / darken match the CSS renderer', () => {
   it('lighten mixes towards white in OKLCH', () => {
-    expect(lightenImpl('#0066cc', 0.1)).toBe(cssColorMix('#0066cc', 'white', 0.1));
+    expect(lightenImpl('#0066cc', { amount: 0.1 })).toBe(cssColorMix('#0066cc', 'white', 0.1));
   });
 
   it('darken mixes towards black in OKLCH', () => {
-    expect(darkenImpl('#0066cc', 0.1)).toBe(cssColorMix('#0066cc', 'black', 0.1));
+    expect(darkenImpl('#0066cc', { amount: 0.1 })).toBe(cssColorMix('#0066cc', 'black', 0.1));
   });
 
   it('gamut-maps a saturated result instead of clipping channels', () => {
@@ -29,7 +28,7 @@ describe('lighten / darken match the CSS renderer', () => {
     const mapped = formatHex(toRgbGamut(raw));
 
     expect(mapped).not.toBe(clipped); // guards the premise of this test
-    expect(lightenImpl('#00ff00', 0.05)).toBe(mapped);
+    expect(lightenImpl('#00ff00', { amount: 0.05 })).toBe(mapped);
   });
 
   it('gamut-maps a saturated darken result too', () => {
@@ -38,7 +37,7 @@ describe('lighten / darken match the CSS renderer', () => {
     const mapped = formatHex(toRgbGamut(raw));
 
     expect(mapped).not.toBe(clipped);
-    expect(darkenImpl('#00ffff', 0.2)).toBe(mapped);
+    expect(darkenImpl('#00ffff', { amount: 0.2 })).toBe(mapped);
   });
 });
 
@@ -46,26 +45,26 @@ describe('lighten / darken / shade keep alpha', () => {
   it('lighten reports the alpha CSS color-mix would produce', () => {
     // 90% of a half-transparent blue mixed with opaque white: the browser
     // ends up at alpha 0.55, and so must we.
-    expect(lightenImpl('#0066cc80', 0.1)).toBe('#4283d88d');
+    expect(lightenImpl('#0066cc80', { amount: 0.1 })).toBe('#4283d88d');
   });
 
   it('darken reports the alpha CSS color-mix would produce', () => {
-    expect(darkenImpl('#0066cc80', 0.1)).toBe('#004c9c8d');
+    expect(darkenImpl('#0066cc80', { amount: 0.1 })).toBe('#004c9c8d');
   });
 
   it('shade carries the input alpha through untouched', () => {
-    expect(shadeImpl('#0066cc80', 0.1)).toBe('#0047aa80');
+    expect(shadeImpl('#0066cc80', { amount: 0.1 })).toBe('#0047aa80');
   });
 
   it('leaves an opaque color six digits long', () => {
-    expect(lightenImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
-    expect(darkenImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
-    expect(shadeImpl('#0066cc', 0.1)).toMatch(/^#[0-9a-f]{6}$/);
+    expect(lightenImpl('#0066cc', { amount: 0.1 })).toMatch(/^#[0-9a-f]{6}$/);
+    expect(darkenImpl('#0066cc', { amount: 0.1 })).toMatch(/^#[0-9a-f]{6}$/);
+    expect(shadeImpl('#0066cc', { amount: 0.1 })).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it('mixes a translucent color with premultiplied alpha', () => {
     // A fully transparent color must not drag the hue anywhere: lightening
     // it is pure white at the mixed alpha.
-    expect(lightenImpl('#ff000000', 0.5)).toBe('#ffffff80');
+    expect(lightenImpl('#ff000000', { amount: 0.5 })).toBe('#ffffff80');
   });
 });

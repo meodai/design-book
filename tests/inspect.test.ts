@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import { color, ref, px } from '../src/tokens';
-import { darken } from '../src/functions/color/darken';
+import { darken } from '../src/functions/color/lighten-darken';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 
 describe('book.inspect', () => {

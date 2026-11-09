@@ -2,7 +2,7 @@ import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
 import {
   createFunctionToken,
-  normalizeNotKeys,
+  toMembers,
 } from '../../tokens';
 import type {
   FunctionTokenValue,
@@ -10,7 +10,7 @@ import type {
 } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { resolvePool } from '../scope-members';
+import { poolKeys, resolvePool } from '../scope-members';
 import { picked } from '../picks';
 
 export interface NthOptions {
@@ -20,44 +20,45 @@ export interface NthOptions {
   [key: string]: any;
 }
 
-export function nthImpl(
-  scope: Scope,
-  index: number,
-  not: string[] = [],
-): string {
-  const candidates = resolvePool(scope, not);
-
-  if (candidates.length === 0) {
+export function nthImpl(scope: Scope, options: { index: number; not: string[] }): string {
+  const { index, not } = options;
+  // A non-negative whole index needs the members only up to it.
+  if (Number.isInteger(index) && index >= 0) {
+    let position = -1;
+    for (const key of poolKeys(scope, not)) {
+      let value: string;
+      try {
+        value = scope.resolve(key);
+      } catch {
+        continue; // unresolvable members are not candidates
+      }
+      if (++position === index) return picked(scope, key, value);
+    }
+    if (position === -1) throw new FunctionError(`nth: no candidates found in scope "${scope.name}"`, 'nth');
     throw new FunctionError(
-      `nth: no candidates found in scope "${scope.name}"`,
+      `nth: index ${index} is out of bounds for scope "${scope.name}" with ${position + 1} candidate(s)`,
       'nth',
     );
   }
 
-  let i: number;
-
-  if (Number.isInteger(index)) {
-    // Integer mode: direct index, negative wraps like Array.at()
-    if (index < 0) {
-      i = candidates.length + index;
-    } else {
-      i = index;
-    }
-  } else {
-    // Relative mode, for non-integers only: 0.5 is the middle, 0.999 rounds
-    // to the last member. Integers never get here — `1.0 === 1` is index 1,
-    // not "last"; use -1 for that. Values outside (0, 1) are clamped.
-    const clamped = Math.max(0, Math.min(1, index));
-    i = Math.round(clamped * (candidates.length - 1));
+  // Counting from the end, or a relative position: the whole pool.
+  const candidates = resolvePool(scope, not);
+  if (candidates.length === 0) {
+    throw new FunctionError(`nth: no candidates found in scope "${scope.name}"`, 'nth');
   }
-
+  // Negative wraps like Array.at(); a non-integer is a relative position:
+  // 0.5 is the middle, 0.999 rounds to the last member, outside (0, 1) is
+  // clamped. Integers never take that path — `1.0 === 1` is index 1, not
+  // "last"; use -1 for that.
+  const i = Number.isInteger(index)
+    ? candidates.length + index
+    : Math.round(Math.max(0, Math.min(1, index)) * (candidates.length - 1));
   if (i < 0 || i >= candidates.length) {
     throw new FunctionError(
       `nth: index ${index} is out of bounds for scope "${scope.name}" with ${candidates.length} candidate(s)`,
       'nth',
     );
   }
-
   return picked(scope, candidates[i].key, candidates[i].value);
 }
 
@@ -76,12 +77,15 @@ export function nth(
   options?: NthOptions,
 ): FunctionTokenValue {
   const scope = poolArg('nth', pool);
+  if (typeof index !== 'number' || !Number.isFinite(index)) {
+    throw new FunctionError(`nth: index must be a finite number, got ${String(index)}`, 'nth');
+  }
   return createFunctionToken(
     'nth',
     [scope],
     {
       description: options?.description,
-      options: { index, not: normalizeNotKeys(options?.not) },
+      options: { index, not: toMembers(options?.not) },
       metadata: {
         dependencies: [],
         returnType: undefined,

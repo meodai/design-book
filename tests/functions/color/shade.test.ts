@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color } from '../../../src/tokens';
+import { FunctionError } from '../../../src/errors';
 import { shade, shadeImpl } from '../../../src/functions/color/shade';
 import { parse, converter, formatHex, toGamut } from 'culori';
 
@@ -86,12 +87,11 @@ describe('shade', () => {
     const palette = book.addScope('palette');
     palette.set('black', color('#000000'));
 
-    const ui = book.addScope('ui');
     // amount well past 1 — internal lightness is clamped to [0, 1] before
-    // formatting, so the result should be pure white.
-    ui.set('big', shade(palette.get('black') as any, { amount: 2 }));
-
-    expect(book.resolve('ui.big')).toBe('#ffffff');
+    // formatting, so the result should be pure white. The constructor
+    // refuses such an amount; the implementation still clamps.
+    expect(() => shade(palette.get('black') as any, { amount: 2 })).toThrow(FunctionError);
+    expect(shadeImpl('#000000', { amount: 2 })).toBe('#ffffff');
   });
 });
 
@@ -100,12 +100,12 @@ describe('shade gamut mapping', () => {
     // Raising OKLCH lightness on pure blue leaves sRGB. Formatting the raw
     // OKLCH color clips the channels (#0448ff); mapping it back into gamut
     // by reducing chroma keeps the hue and lands on #1757ff.
-    expect(shadeImpl('#0000ff', 0.1)).toBe('#1757ff');
+    expect(shadeImpl('#0000ff', { amount: 0.1 })).toBe('#1757ff');
   });
 
   it('matches an explicit toGamut of the shifted color', () => {
     const lch = toOklch(parse('#0000ff'));
     const shifted = { ...lch!, l: (lch!.l ?? 0) + 0.1 };
-    expect(shadeImpl('#0000ff', 0.1)).toBe(formatHex(toGamut('rgb', 'oklch')(shifted)));
+    expect(shadeImpl('#0000ff', { amount: 0.1 })).toBe(formatHex(toGamut('rgb', 'oklch')(shifted)));
   });
 });

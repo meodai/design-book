@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { color, px, ms } from '../../src/tokens';
 import type { FunctionTokenValue } from '../../src/tokens';
-import { lighten } from '../../src/functions/color/lighten';
-import { darken } from '../../src/functions/color/darken';
+import { lighten, darken } from '../../src/functions/color/lighten-darken';
 import { shade } from '../../src/functions/color/shade';
 import { colorMix } from '../../src/functions/color/color-mix';
 import { relativeTo } from '../../src/functions/color/relative-to';

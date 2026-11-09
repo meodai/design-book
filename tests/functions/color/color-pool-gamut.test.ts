@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
-import { mostVivid } from '../../../src/functions/color/most-vivid';
-import { lighten } from '../../../src/functions/color/lighten';
-import { collectScopeColors } from '../../../src/functions/color/scope-colors';
+import { mostVivid } from '../../../src/functions/color/vividness';
+import { lighten } from '../../../src/functions/color/lighten-darken';
+import { colorPool } from '../../../src/functions/pool';
+const colorsOf = (scope: Parameters<typeof colorPool>[1]) => colorPool('test', scope, []);
 
-describe('collectScopeColors and wide-gamut members', () => {
+describe('the color pool and wide-gamut members', () => {
   function makeBook() {
     const book = new DesignBook('test');
     const s = book.addScope('s');
@@ -17,14 +18,14 @@ describe('collectScopeColors and wide-gamut members', () => {
 
   it('gamut-maps a wide-gamut color token instead of clipping it', () => {
     const { s } = makeBook();
-    expect(collectScopeColors(s).map((c) => c.hex)).toEqual(['#00c300']);
+    expect(colorsOf(s).map((c) => c.hex)).toEqual(['#00c300']);
   });
 
   it('gamut-maps a wide-gamut member reached through a reference', () => {
     const { book, s } = makeBook();
     const t = book.addScope('t');
     t.set('alias', ref('s.p'));
-    expect(collectScopeColors(t).map((c) => c.hex)).toEqual(['#00c300']);
+    expect(colorsOf(t).map((c) => c.hex)).toEqual(['#00c300']);
     expect(s.getAllKeys()).toEqual(['p']);
   });
 
@@ -41,6 +42,6 @@ describe('collectScopeColors and wide-gamut members', () => {
     const book = new DesignBook('test');
     const s = book.addScope('s');
     s.set('p', color('oklch(0.7 0.35 145 / 0.5)'));
-    expect(collectScopeColors(s).map((c) => c.hex)).toEqual(['#00c30080']);
+    expect(colorsOf(s).map((c) => c.hex)).toEqual(['#00c30080']);
   });
 });

@@ -20,18 +20,39 @@ export interface ReferenceValue {
    *  reading scope with a leading dot (`.`, `.token`, `.token.field`). */
   key: string;
   /** Read the path this many `extends` levels up, or at the top of the
-   *  chain (`inherited`). */
+   *  chain (`inherited`). Gone once a scope binds the reference. */
   up?: number | 'root';
-  /** Follow the token this path names along its references: this many
-   *  hops, or to the token where the value is written (`source`). Only a
-   *  member-naming slot reads it: a `sibling` anchor or `toward` target, a
-   *  `not` entry. */
-  via?: number | 'root';
-  /** Name the members of the walked pool whose references lead to this
-   *  token (`refersTo`): down the value tree, where `via` goes up. Read
-   *  only where `via` is. */
-  referredBy?: true;
   description?: string;
+}
+
+/**
+ * Names a token instead of reading its value: a `not` entry, a `sibling`
+ * anchor (`from`) or target (`toward`), a variant's `base`. The function
+ * gets the (bound) key, never a resolved value. `ref(...)` written in one
+ * of those places is stored as one; `source` and `refersTo` build one that
+ * is followed when the function reads it:
+ * - `via` (`source`): follow the token's references this many hops, or to
+ *   where the value is written;
+ * - `referredBy` (`refersTo`): the members whose references lead to the
+ *   token, down the value tree.
+ */
+export interface MemberReference {
+  type: 'member';
+  key: string;
+  /** As on a reference: `inherited`, until a scope binds it. */
+  up?: number | 'root';
+  via?: number | 'root';
+  referredBy?: true;
+}
+
+/** What binding gives for a navigation that could not be followed (past the
+ *  top of the `extends` chain): reading it throws `message`; it reads
+ *  nothing, so it adds no graph edge. `Scope.set` refuses a token holding
+ *  one. */
+export interface UnresolvableValue {
+  type: 'unresolvable';
+  key: string;
+  message: string;
 }
 
 /** What a function argument may hold. A scope is passed as a reference to
@@ -169,8 +190,8 @@ export function ref(key: string, options?: { description?: string; [key: string]
  * scope cannot read its own `.surface` to work out its own `.surface`.
  * Its counterpart along references is `source`.
  */
-export function inherited(reference: ReferenceValue, levels: number | 'root' = 1): ReferenceValue {
-  if (!isReferenceValue(reference)) {
+export function inherited<R extends ReferenceValue | MemberReference>(reference: R, levels: number | 'root' = 1): R {
+  if (!isReferenceValue(reference) && !isMemberReference(reference)) {
     throw new Error('inherited: expects a ref(...)');
   }
   if (levels === 'root') return { ...reference, up: 'root' };
@@ -196,27 +217,23 @@ export function inherited(reference: ReferenceValue, levels: number | 'root' = 1
  * is refused: write the ref itself. Combined with `inherited`, inheritance is
  * read first: `source(inherited(ref('.x')), 'root')`.
  */
-export function source(reference: ReferenceValue, hops: number | 'root' = 1): ReferenceValue {
-  if (!isReferenceValue(reference)) {
+export function source(reference: ReferenceValue | MemberReference, hops: number | 'root' = 1): MemberReference {
+  if (!isReferenceValue(reference) && !isMemberReference(reference)) {
     throw new Error('source: expects a ref(...)');
   }
   if (isScopeKey(reference.key)) {
     throw new Error(`source: "${reference.key}" is a scope; source follows a token's references`);
   }
-  if (reference.referredBy) {
+  if (isMemberReference(reference) && reference.referredBy) {
     throw new Error(`source: follow the references first, then come back down: refersTo(source(ref('${reference.key}')))`);
   }
-  if (hops === 'root') return { ...reference, via: 'root' };
+  const member = toMember(reference);
+  if (hops === 'root') return { ...member, via: 'root' };
   if (!Number.isInteger(hops) || hops < 1) {
     throw new Error(`source: hops must be a whole number of 1 or more, or 'root', got ${String(hops)}`);
   }
-  if (reference.via === 'root') return reference;
-  return { ...reference, via: (reference.via ?? 0) + hops };
-}
-
-/** True for a reference that `source` marked to be followed. */
-export function isSourceReference(arg: unknown): arg is ReferenceValue & { via: number | 'root' } {
-  return isReferenceValue(arg) && arg.via !== undefined;
+  if (member.via === 'root') return member;
+  return { ...member, via: (member.via ?? 0) + hops };
 }
 
 /**
@@ -234,35 +251,40 @@ export function isSourceReference(arg: unknown): arg is ReferenceValue & { via: 
  * `refersTo(source(ref('.accent'), 'root'))` is every member that ends where
  * the accent's value is written.
  */
-export function refersTo(reference: ReferenceValue): ReferenceValue {
-  if (!isReferenceValue(reference)) {
+export function refersTo(reference: ReferenceValue | MemberReference): MemberReference {
+  if (!isReferenceValue(reference) && !isMemberReference(reference)) {
     throw new Error('refersTo: expects a ref(...)');
   }
   if (isScopeKey(reference.key)) {
     throw new Error(`refersTo: "${reference.key}" is a scope; refersTo names the members that refer to a token`);
   }
-  return reference.referredBy ? reference : { ...reference, referredBy: true };
+  const member = toMember(reference);
+  return member.referredBy ? member : { ...member, referredBy: true };
 }
 
-/** True for a reference that `refersTo` marked. */
-export function isRefersToReference(arg: unknown): arg is ReferenceValue & { referredBy: true } {
-  return isReferenceValue(arg) && arg.referredBy === true;
+/** True for a reference that names a token (see `MemberReference`). */
+export function isMemberReference(arg: unknown): arg is MemberReference {
+  return typeof arg === 'object' && arg !== null && (arg as { type?: string }).type === 'member';
 }
 
-/** A reference that names members (`source` / `refersTo`): stays a
- *  reference until a function reads it against its pool. */
-export function isMemberReference(arg: unknown): boolean {
-  return isReferenceValue(arg) && (arg.via !== undefined || arg.referredBy === true);
+/** True for a navigation binding could not follow (see `UnresolvableValue`). */
+export function isUnresolvable(arg: unknown): arg is UnresolvableValue {
+  return typeof arg === 'object' && arg !== null && (arg as { type?: string }).type === 'unresolvable';
 }
 
-/** The stored form of a member-naming reference: key plus its markers. */
-export function memberReference(r: ReferenceValue): ReferenceValue {
-  return {
-    type: 'reference',
-    key: r.key,
-    ...(r.via !== undefined ? { via: r.via } : {}),
-    ...(r.referredBy ? { referredBy: true as const } : {}),
-  };
+/** What a member slot stores, from what an author may write there: a key
+ *  (`'palette.red'`), a `ref(...)` (navigation kept), or a `source` /
+ *  `refersTo` reference as is. */
+export function toMember(entry: string | ReferenceValue | MemberReference): MemberReference {
+  if (typeof entry === 'string') return { type: 'member', key: entry };
+  if (isMemberReference(entry)) return entry;
+  if (isReferenceValue(entry)) return { type: 'member', key: entry.key, ...(entry.up !== undefined ? { up: entry.up } : {}) };
+  throw new Error(`Expected a key, ref(...), source(...) or refersTo(...), got ${JSON.stringify(entry)}`);
+}
+
+/** `toMember` for a list (a `not` option); `[]` for none. */
+export function toMembers(entries?: ReadonlyArray<string | ReferenceValue | MemberReference>): MemberReference[] {
+  return entries ? entries.map(toMember) : [];
 }
 
 export function dimension(value: number, unit: string, options?: { description?: string; [key: string]: any }): TokenValue {
@@ -349,6 +371,44 @@ export interface BindingContext {
   version: number;
 }
 
+/** Option names whose values name tokens (`MemberReference`s); every
+ *  other option holding a reference, token or function is an input,
+ *  resolved like an argument. */
+export const MEMBER_SLOTS: ReadonlySet<string> = new Set(['not', 'from', 'toward', 'base']);
+
+/** A reference-like node of a token, and where it sits. */
+type RefNode = ReferenceValue | MemberReference | UnresolvableValue;
+/** `value`: an argument or input option; `member`: a member slot. */
+type Place = 'value' | 'member';
+
+function isRefNode(arg: unknown): arg is RefNode {
+  return isReferenceValue(arg) || isMemberReference(arg) || isUnresolvable(arg);
+}
+
+/**
+ * Visits every reference in a token, nested function tokens included, and
+ * says where it sits: the one walk the binding, the traits, the
+ * dependencies and the checks below share, so they cannot disagree about
+ * where references live.
+ */
+function walkRefs(token: unknown, visit: (node: RefNode, place: Place, slot?: string) => void): void {
+  if (isRefNode(token)) {
+    visit(token, 'value');
+    return;
+  }
+  if (!isFunctionTokenValue(token)) return;
+  for (const arg of token.args) {
+    if (isRefNode(arg)) visit(arg, 'value');
+    else if (isFunctionTokenValue(arg)) walkRefs(arg, visit);
+  }
+  for (const [name, value] of Object.entries(token.options ?? {})) {
+    if (MEMBER_SLOTS.has(name)) {
+      for (const entry of Array.isArray(value) ? value : [value]) if (isRefNode(entry)) visit(entry, 'member', name);
+    } else if (isRefNode(value)) visit(value, 'value', name);
+    else if (isFunctionTokenValue(value)) walkRefs(value, visit);
+  }
+}
+
 type TokenTraits = { relative: boolean; navigates: boolean };
 const tokenTraits = new WeakMap<object, TokenTraits>();
 
@@ -356,29 +416,15 @@ function traitsOf(token: unknown): TokenTraits {
   if (typeof token !== 'object' || token === null) return { relative: false, navigates: false };
   const cached = tokenTraits.get(token);
   if (cached) return cached;
-  let traits: TokenTraits = { relative: false, navigates: false };
-  const merge = (other: TokenTraits) => {
-    traits = { relative: traits.relative || other.relative, navigates: traits.navigates || other.navigates };
-  };
-  if (isReferenceValue(token)) {
-    traits = { relative: isRelativeKey(token.key), navigates: token.up !== undefined };
-  } else if (isFunctionTokenValue(token)) {
-    const options = token.options ?? {};
+  const traits: TokenTraits = { relative: false, navigates: false };
+  walkRefs(token, (node) => {
+    if (isRelativeKey(node.key)) traits.relative = true;
+    if (!isUnresolvable(node) && node.up !== undefined) traits.navigates = true;
+  });
+  if (isFunctionTokenValue(token)) {
     const metadata = token.metadata;
-    for (const arg of token.args) merge(traitsOf(arg));
-    if (Array.isArray(options.not)) {
-      for (const n of options.not) merge(typeof n === 'string' ? { relative: isRelativeKey(n), navigates: false } : traitsOf(n));
-    }
-    // sibling's anchor and target / a variant's base: a key, or a navigated reference.
-    for (const key of [options.from, options.base, options.toward]) {
-      if (isReferenceValue(key)) merge(traitsOf(key));
-    }
-    if (isRelativeKey(options.from)
-      || isRelativeKey(options.base)
-      || isRelativeKey(options.toward)
-      || (metadata?.dependencies ?? []).some(isRelativeKey)
-      || (metadata?.iteratedScopes ?? []).includes('')) {
-      merge({ relative: true, navigates: false });
+    if ((metadata?.dependencies ?? []).some(isRelativeKey) || (metadata?.iteratedScopes ?? []).includes('')) {
+      traits.relative = true;
     }
   }
   tokenTraits.set(token, traits);
@@ -396,16 +442,6 @@ export function hasRelativeKeys(token: unknown): boolean {
 export function needsBinding(token: unknown): boolean {
   const traits = traitsOf(token);
   return traits.relative || traits.navigates;
-}
-
-/** A reference whose navigation could not be followed (past the top of the
- *  chain). Resolving it throws `unresolvable`; it adds no graph edge. */
-export interface UnresolvableReference extends ReferenceValue {
-  unresolvable: string;
-}
-
-export function isUnresolvableReference(arg: unknown): arg is UnresolvableReference {
-  return isReferenceValue(arg) && typeof (arg as Partial<UnresolvableReference>).unresolvable === 'string';
 }
 
 /** Follow `up` from the scope a qualified path starts in. */
@@ -435,18 +471,17 @@ function navigate(path: string, up: number | 'root', context: BindingContext): s
   return scope + rest;
 }
 
-/** A reference as `scope` reads it: qualified, then navigated. */
-function bindReference(reference: ReferenceValue, scope: string, context: BindingContext | undefined): ReferenceValue {
-  const qualified = qualifyKey(reference.key, scope);
-  const { up, ...plain } = reference;
+/** A reference (or member reference) as `scope` reads it: qualified, then
+ *  navigated — or, past the top of the chain, unresolvable. */
+function bindNode(node: RefNode, scope: string, context: BindingContext | undefined): RefNode {
+  if (isUnresolvable(node)) return node;
+  const qualified = qualifyKey(node.key, scope);
+  const { up, ...plain } = node;
   if (up === undefined) return { ...plain, key: qualified };
-  if (!context) {
-    return { ...plain, key: qualified, unresolvable: `"${reference.key}" needs a book to read inherited(...)` } as UnresolvableReference;
-  }
-  const navigated = navigate(qualified, up, context);
-  if (typeof navigated !== 'string') {
-    return { ...plain, key: qualified, unresolvable: navigated.error } as UnresolvableReference;
-  }
+  const navigated = context
+    ? navigate(qualified, up, context)
+    : { error: `"${node.key}" needs a book to read inherited(...)` };
+  if (typeof navigated !== 'string') return { type: 'unresolvable', key: qualified, message: navigated.error };
   return { ...plain, key: navigated };
 }
 
@@ -468,170 +503,115 @@ export function bindToken<T>(token: T, scope: string, context?: BindingContext):
   const cached = cache.byScope.get(scope);
   if (cached) return cached as T;
 
-  const q = (key: string) => qualifyKey(key, scope);
   let bound: unknown;
-  if (isReferenceValue(token)) {
-    bound = bindReference(token, scope, context);
+  if (isRefNode(token)) {
+    bound = bindNode(token, scope, context);
   } else {
     const fn = token as unknown as FunctionTokenValue;
+    const bindValue = (v: unknown): unknown => (isRefNode(v) ? bindNode(v, scope, context) : bindToken(v, scope, context));
     let options = fn.options;
-    // Keys a navigated anchor / base lands on: they become the token's
-    // dependencies (and, for an anchor, the scope it walks) once known.
-    const landed: { from?: string; base?: string; toward?: string } = {};
     if (options) {
       options = { ...options };
-      for (const name of ['from', 'base', 'toward'] as const) {
-        const key = options[name];
-        if (typeof key === 'string') options[name] = q(key);
-        else if (isReferenceValue(key)) {
-          const bound = bindReference(key, scope, context);
-          if (isUnresolvableReference(bound)) options[name] = bound;
-          else if (isMemberReference(bound)) {
-            // a `source` / `refersTo` anchor: stays a reference, read against
-            // the pool when resolved; a `source` one reads its start key (a
-            // dependency the constructor already declared, unless
-            // `inherited` named it only now)
-            options[name] = memberReference(bound);
-            if (key.up !== undefined && bound.via !== undefined) landed[name] = bound.key;
-          } else {
-            options[name] = bound.key;
-            landed[name] = bound.key;
-          }
-        }
-      }
-      if (Array.isArray(options.not)) {
-        options.not = options.not.map((n: unknown) => {
-          if (typeof n === 'string') return q(n);
-          const r = bindToken(n, scope, context);
-          if (isReferenceValue(r) && !isUnresolvableReference(r)) {
-            return isMemberReference(r) ? memberReference(r) : r.key;
-          }
-          return r;
-        });
+      for (const [name, value] of Object.entries(options)) {
+        if (MEMBER_SLOTS.has(name) && Array.isArray(value)) options[name] = value.map(bindValue);
+        else if (isRefNode(value) || isFunctionTokenValue(value)) options[name] = bindValue(value);
       }
     }
     let metadata = fn.metadata;
     if (metadata) {
       metadata = { ...metadata };
-      if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map(q);
+      if (metadata.dependencies) metadata.dependencies = metadata.dependencies.map((key) => qualifyKey(key, scope));
       if (metadata.iteratedScopes) metadata.iteratedScopes = metadata.iteratedScopes.map((n) => (n === '' ? scope : n));
-      for (const key of [landed.from, landed.base, landed.toward]) {
-        if (key === undefined) continue;
-        metadata.dependencies = [...(metadata.dependencies ?? []), key];
-      }
-      // the scope an anchor walks, once it is known; a `source` anchor's is
-      // only known when it is followed (the book indexes it then)
-      if (landed.from !== undefined && typeof options?.from === 'string') {
-        metadata.iteratedScopes = [...(metadata.iteratedScopes ?? []), scopeOf(landed.from)];
-      }
     }
-    bound = { ...fn, args: fn.args.map((arg) => bindToken(arg, scope, context)), options, metadata };
+    bound = { ...fn, args: fn.args.map(bindValue), options, metadata };
   }
   cache.byScope.set(scope, bound);
   return bound as T;
 }
 
-/** Where a `source` reference sits outside a member-naming slot (a value,
- *  or a value argument of a function), a message saying so; else
+/** Where a member reference (`source`, `refersTo`) sits outside a member
+ *  slot — as a value, an argument or an input — a message saying so; else
  *  `undefined`. `Scope.set` refuses such a token. */
 export function misplacedSource(token: unknown): string | undefined {
-  if (isRefersToReference(token)) {
-    return `refersTo(ref('${token.key}')) names members, for a sibling anchor, a toward target or a not entry; it is not a value`;
-  }
-  if (isSourceReference(token)) {
-    return `source(ref('${token.key}')) names a member, for a sibling anchor, a toward target or a not entry; as a value, write ref('${token.key}')`;
-  }
-  if (isFunctionTokenValue(token)) {
-    for (const arg of token.args) {
-      const error = misplacedSource(arg);
-      if (error) return error;
-    }
-  }
-  return undefined;
+  let error: string | undefined;
+  walkRefs(token, (node, place) => {
+    if (error || place === 'member' || !isMemberReference(node)) return;
+    error = node.referredBy
+      ? `refersTo(ref('${node.key}')) names members, for a sibling anchor, a toward target or a not entry; it is not a value`
+      : `source(ref('${node.key}')) names a member, for a sibling anchor, a toward target or a not entry; as a value, write ref('${node.key}')`;
+  });
+  return error;
 }
 
 /** The first navigation in a bound token that could not be followed, or
  *  `undefined`. `Scope.set` uses it to refuse such a token up front. */
 export function unresolvableIn(token: unknown): string | undefined {
-  if (isUnresolvableReference(token)) return token.unresolvable;
-  if (isFunctionTokenValue(token)) {
-    for (const arg of token.args) {
-      const error = unresolvableIn(arg);
-      if (error) return error;
-    }
-    for (const n of [...((token.options?.not ?? []) as unknown[]), token.options?.from, token.options?.base, token.options?.toward]) {
-      const error = unresolvableIn(n);
-      if (error) return error;
-    }
-  }
-  return undefined;
+  let error: string | undefined;
+  walkRefs(token, (node) => {
+    if (!error && isUnresolvable(node)) error = node.message;
+  });
+  return error;
 }
 
-/** Keys the args read as values, each listed once in first-seen order. */
+/** The key a value reference reads, or `undefined`: a scope is a pool (read
+ *  through the selector index, not as a value), an unresolvable navigation
+ *  reads nothing, and one not yet followed names no key yet. */
+function valueKey(node: RefNode): string | undefined {
+  if (!isReferenceValue(node) || isScopeKey(node.key) || node.up !== undefined) return undefined;
+  return node.key;
+}
+
+/** The key a member reference reads to name its member, or `undefined`: a
+ *  `source` reads its start key; a bare `refersTo` only the pool. */
+function memberReadKey(node: RefNode): string | undefined {
+  if (!isMemberReference(node) || node.up !== undefined) return undefined;
+  if (node.referredBy && node.via === undefined) return undefined;
+  return node.via !== undefined ? tokenKeyOf(node.key) : node.key;
+}
+
+/** Keys the args read as values, each listed once in first-seen order;
+ *  nested function tokens contribute everything they read. */
 export function extractDependencies(args: FunctionArg[]): string[] {
   const deps = new Set<string>();
   for (const arg of args) {
-    if (isReferenceValue(arg)) {
-      // A scope reference is a pool, read through the selector index — not
-      // a value. A navigation that failed reads nothing, and one not yet
-      // followed (`inherited` before a scope binds it) names no key yet: the
-      // bound argument carries its dependency.
-      if (isScopeKey(arg.key) || isUnresolvableReference(arg) || arg.up !== undefined) continue;
-      deps.add(arg.key);
+    if (isRefNode(arg)) {
+      const key = valueKey(arg);
+      if (key !== undefined) deps.add(key);
     } else if (isFunctionTokenValue(arg)) {
-      // Nested function token — its dependencies are transitively this
-      // function's dependencies, so the graph propagates correctly. Include
-      // the ones it declares outside its args too (`sibling`'s anchor).
-      for (const dep of extractDependencies(arg.args)) deps.add(dep);
-      for (const dep of arg.metadata?.dependencies ?? []) deps.add(dep);
+      for (const dep of functionDependencies(arg)) deps.add(dep);
     }
   }
   return [...deps];
 }
 
-/** Every key a function token reads as a value: the references in its args
- *  (nested function tokens included) plus whatever it declares in
- *  `metadata.dependencies` (a key held in options, like `sibling`'s anchor).
- *  A token built with `createFunctionToken` and no metadata still gets the
- *  edges its args imply. Deduplicated, first-seen order. */
+/**
+ * Every key a function token reads — its graph edges: the references among
+ * its arguments and inputs (nested function tokens included), the token a
+ * `from` / `toward` / `base` names, the `not` entries outside the scopes it
+ * iterates, and whatever it declares in `metadata.dependencies` (a custom
+ * function reading keys it holds some other way). Deduplicated, first-seen
+ * order.
+ *
+ * A `not` entry inside an iterated scope is a pool member: the selector
+ * index already follows it, and an edge to one could close a false cycle
+ * with a member derived from the token.
+ */
 export function functionDependencies(fn: FunctionTokenValue): string[] {
-  return [...new Set([...extractDependencies(fn.args), ...(fn.metadata?.dependencies ?? []), ...notDependencies(fn)])];
-}
-
-/** `not` entries outside the scopes a token iterates are read for their
- *  value: `not: [ref('.text')]` leaves out whichever member `.text` picked,
- *  so the token must follow `.text`. Entries inside an iterated scope are
- *  pool members — the selector index already follows those, and an edge to
- *  one could close a false cycle with a member derived from the token. */
-function notDependencies(fn: FunctionTokenValue): string[] {
-  const not = fn.options?.not;
-  if (!Array.isArray(not) || not.length === 0) return [];
+  const deps = new Set<string>();
   const iterated = new Set(iteratedScopesOf(fn));
-  const deps: string[] = [];
-  for (const n of not) {
-    // a `source` entry is followed from its start key, so it reads it; a
-    // bare `refersTo` reads only the pool, which the selector index covers
-    if (isRefersToReference(n) && n.via === undefined) continue;
-    if (isSourceReference(n)) {
-      if (!isRelativeKey(n.key)) deps.push(tokenKeyOf(n.key));
-      continue;
+  walkRefs(fn, (node, place, slot) => {
+    if (place === 'value') {
+      const key = valueKey(node);
+      if (key !== undefined) deps.add(key);
+      return;
     }
-    if (typeof n === 'string' && !isRelativeKey(n) && n.includes('.') && !iterated.has(scopeOf(n))) deps.push(n);
-  }
-  return deps;
-}
-
-/** Normalises a `not` option into an array of fully-qualified token keys.
- *  Accepts strings (already qualified keys) or `ReferenceValue` objects
- *  produced by `ref('scope.token')`. Used by scope-iterating analysis
- *  functions (bestContrastWith, mostVivid, …) to exclude candidates from
- *  the search pool. */
-export function normalizeNotKeys(not?: ReadonlyArray<string | ReferenceValue>): Array<string | ReferenceValue> {
-  if (!not || not.length === 0) return [];
-  // A navigated reference (`inherited(ref('.x'))`) stays a reference until a
-  // scope binds it, a `source` one until it is followed; a plain one is
-  // stored as its key.
-  return not.map((n) => (typeof n === 'string' ? n : n.up !== undefined || isMemberReference(n) ? n : n.key));
+    const key = memberReadKey(node);
+    if (key === undefined || isRelativeKey(key)) return;
+    if (slot === 'not' && isMemberReference(node) && node.via === undefined && (!key.includes('.') || iterated.has(scopeOf(key)))) return;
+    deps.add(key);
+  });
+  for (const dep of fn.metadata?.dependencies ?? []) deps.add(dep);
+  return [...deps];
 }
 
 /** Names of the scopes a function token iterates — the scope arguments of
@@ -644,7 +624,7 @@ export function extractIteratedScopes(args: FunctionArg[]): string[] {
   for (const arg of args) {
     if (isFunctionTokenValue(arg)) {
       for (const name of iteratedScopesOf(arg)) names.push(name);
-    } else if (isScopeReference(arg) && !isUnresolvableReference(arg)) {
+    } else if (isScopeReference(arg)) {
       // Bound, this is the scope's name; `.` before binding means the reading scope.
       names.push(arg.key === '.' ? '' : arg.key);
     }
@@ -653,8 +633,22 @@ export function extractIteratedScopes(args: FunctionArg[]): string[] {
 }
 
 /** Every scope a function token iterates: its scope arguments, nested
- *  tokens' scopes, and the scopes it declares in `metadata.iteratedScopes`. */
+ *  tokens' scopes, the scopes it declares in `metadata.iteratedScopes`, and
+ *  — for a function that names an anchor (`from`) and no scope — the
+ *  anchor's own scope (`''` for a relative one: the reading scope). A
+ *  `source` or `refersTo` anchor's scope is only known when it is followed. */
 export function iteratedScopesOf(fn: FunctionTokenValue): string[] {
-  return [...extractIteratedScopes(fn.args), ...(fn.metadata?.iteratedScopes ?? [])];
+  return [...extractIteratedScopes(fn.args), ...(fn.metadata?.iteratedScopes ?? []), ...anchorScopeOf(fn)];
 }
 
+/** The scope a function walks from its `from` anchor (`sibling`) when it
+ *  takes no scope argument: the anchor's own scope, `''` for a relative
+ *  anchor (the reading scope). Empty when it names a scope, has no plain
+ *  anchor, or the anchor's scope is only known once it is followed
+ *  (`source`, `refersTo`) or navigated (`inherited`, before binding). */
+export function anchorScopeOf(fn: FunctionTokenValue): string[] {
+  const from = fn.options?.from;
+  if (fn.args.some(isScopeReference) || !isMemberReference(from)) return [];
+  if (from.up !== undefined || from.via !== undefined || from.referredBy) return [];
+  return [isRelativeKey(from.key) ? '' : scopeOf(from.key)];
+}

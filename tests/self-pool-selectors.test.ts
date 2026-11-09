@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { formatHex } from 'culori';
 import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
-import { mostVivid } from '../src/functions/color/most-vivid';
-import { leastVivid } from '../src/functions/color/least-vivid';
+import { mostVivid, leastVivid } from '../src/functions/color/vividness';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 
 /** Color selectors sitting in the scope they search: each is no candidate

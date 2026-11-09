@@ -4,10 +4,10 @@ import {
   isRelativeKey,
   isMemberReference,
   isScopeKey,
-  memberReference,
-  normalizeNotKeys,
+  toMember,
+  toMembers,
 } from '../../tokens';
-import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
+import type { FunctionTokenValue, MemberReference, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { parseKey } from '../../keys';
@@ -19,11 +19,11 @@ import { picked } from '../picks';
 export interface SiblingOptions {
   /** Step in the direction of this token's color on the same scale, and
    *  stop when it is reached. With a negative step count: away from it. */
-  toward?: ReferenceValue;
+  toward?: ReferenceValue | MemberReference;
   /** Wrap around past either end (modulo) instead of stopping there. */
   wrap?: boolean;
   /** Keys to skip while stepping. */
-  not?: ReadonlyArray<string | ReferenceValue>;
+  not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   description?: string;
   [key: string]: any;
 }
@@ -162,17 +162,17 @@ export function siblingImpl(
  * target; a negative count walks away from it.
  *
  * The anchor's *key* is what matters (its position), not its value, so it is
- * stored in the options rather than as an argument the resolver would turn
- * into a value. The scope it walks is declared in `metadata.iteratedScopes`
- * (or, given as a scope argument, is the function's argument).
+ * stored in the `from` member slot rather than as an argument the resolver
+ * would turn into a value. The scope it walks is the scope argument, or the
+ * anchor's own scope (`iteratedScopesOf` reads it from `from`).
  */
 export function sibling(
-  anchor: ReferenceValue,
+  anchor: ReferenceValue | MemberReference,
   pool?: PoolArg | number | SiblingOptions,
   offset?: number | SiblingOptions,
   options?: SiblingOptions,
 ): FunctionTokenValue {
-  if (!isReferenceValue(anchor) || anchor.key === '.') {
+  if ((!isReferenceValue(anchor) && !isMemberReference(anchor)) || anchor.key === '.') {
     throw new FunctionError('sibling: the anchor must be a ref(...) to a token', 'sibling');
   }
   // sibling(anchor, pool?, steps?, options?): the pool and the count are
@@ -192,7 +192,7 @@ export function sibling(
   }
   const toward = opts.toward;
   if (toward !== undefined) {
-    if (!isReferenceValue(toward) || isScopeKey(toward.key)) {
+    if ((!isReferenceValue(toward) && !isMemberReference(toward)) || isScopeKey(toward.key)) {
       throw new FunctionError('sibling: `toward` must be a ref(...) to a token', 'sibling');
     }
     if (opts.wrap) {
@@ -200,42 +200,25 @@ export function sibling(
     }
   }
 
-  const scopeName = scopeOfKey(anchor.key);
-  // A navigated anchor or target (`inherited(ref('.g100'))`) names its key
-  // only once a scope reads the token, a `source` one only once it is
-  // followed: keep the reference (binding adds an inherited key as a
-  // dependency). A plain key is stored as is.
-  const asStored = (r: ReferenceValue) => (r.up !== undefined || isMemberReference(r)
-    ? { ...memberReference(r), ...(r.up !== undefined ? { up: r.up } : {}) }
-    : r.key);
-  // `refersTo` reads only the scale (the selector index covers it), not its key's value.
-  const keys = [anchor, ...(toward ? [toward] : [])]
-    .filter((r) => r.up === undefined && !(r.referredBy && r.via === undefined))
-    .map((r) => r.key);
-  if (anchor.referredBy && !scale) {
+  scopeOfKey(anchor.key); // a malformed anchor throws here, when written
+  const from = toMember(anchor);
+  if (from.referredBy && !scale) {
     throw new FunctionError(
       `sibling: refersTo(ref('${anchor.key}')) needs the scale named: sibling(refersTo(ref('${anchor.key}')), ref('scale'), n)`,
       'sibling',
     );
   }
-  // The scope walked: the scope argument; else the anchor's own scope, known
-  // now unless the anchor still has to be navigated or followed.
-  const walks = scale ? [] : anchor.up !== undefined || anchor.via !== undefined ? [] : [scopeName];
 
   return createFunctionToken('sibling', scale ? [scale] : [], {
     description: opts.description,
     options: {
-      from: asStored(anchor),
+      from,
       offset: steps,
       wrap: opts.wrap ?? false,
-      not: normalizeNotKeys(opts.not),
-      ...(toward ? { toward: asStored(toward) } : {}),
+      not: toMembers(opts.not),
+      ...(toward ? { toward: toMember(toward) } : {}),
     },
-    metadata: {
-      dependencies: keys,
-      iteratedScopes: walks,
-      returnType: undefined,
-    },
+    metadata: { dependencies: [], returnType: undefined },
   });
 }
 

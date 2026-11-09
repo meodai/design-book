@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color } from '../../src/tokens';
 import { Renderer } from '../../src/renderers/renderer';
-import { gamutMapSrgb } from '../../src/functions/color/scope-colors';
+import { gamutMapSrgb } from '../../src/functions/color/color-math';
 import { parse, formatHex } from 'culori';
 
 describe('w3 colors outside sRGB', () => {

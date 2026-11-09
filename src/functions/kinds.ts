@@ -1,49 +1,15 @@
-import { converter, parse } from 'culori';
-import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
-import { parseDimension } from '../values';
-import { resolvePool } from './scope-members';
+import { best, describeKind, ofKind } from './pool';
+import type { Kind, Measure, MeasuredMember } from './pool';
 import { picked } from './picks';
 
 /**
- * What a value is, for the functions that compare values across types
- * (`closest`, the contrast pair, `furthestFrom`, `largest` / `smallest`).
- * A comparison only ever looks at members of the target's kind: colors with
- * colors, sizes with sizes in the same unit, text styles with text styles
- * by their `font-size`. Members of another kind are skipped.
+ * Direction words and the comparisons of sizes and text styles, for the
+ * functions that compare values across types (`closest`, the contrast pair,
+ * `furthestFrom`, `largest` / `smallest`). The pool and its measures are in
+ * `./pool`.
  */
-export type Kind = 'color' | 'size' | 'text';
-
-/** A size, or a text style measured by its font size. */
-export interface Measure {
-  kind: 'size' | 'text';
-  num: number;
-  unit: string;
-}
-
-/** A resolved `typography()` value: CSS declarations (`font-size: 2rem; …`). */
-const DECLARATIONS = /^[a-z-]+\s*:/i;
-const FONT_SIZE = /(?:^|;)\s*font-size\s*:\s*([^;]+)/i;
-
-/** The size a resolved value stands for: a dimension, or a text style's font size. */
-export function measureOf(value: string): Measure | null {
-  const trimmed = value.trim();
-  if (DECLARATIONS.test(trimmed)) {
-    const fontSize = trimmed.match(FONT_SIZE)?.[1]?.trim();
-    const dim = fontSize ? parseDimension(fontSize) : null;
-    return dim ? { kind: 'text', ...dim } : null;
-  }
-  const dim = parseDimension(trimmed);
-  return dim ? { kind: 'size', ...dim } : null;
-}
-
-/** "sizes in px", "text styles in rem", "colors": for messages. */
-export function describeKind(kind: Kind, unit?: string): string {
-  if (kind === 'color') return 'colors';
-  const noun = kind === 'size' ? 'sizes' : 'text styles';
-  return unit ? `${noun} in ${unit}` : unit === '' ? `unitless ${noun}` : noun;
-}
 
 /** The direction words and the kind each one belongs to. */
 export const DIRECTION_KIND = {
@@ -72,31 +38,11 @@ export function assertDirectionFits(fn: string, direction: Direction | undefined
   }
 }
 
-/** A member measured as a size or text style. */
-export interface MeasuredMember {
-  key: string;
-  value: string;
-  num: number;
-}
-
-/** The pool's members of one kind and unit, with their measure. */
-export function measuredMembers(scope: Scope, kind: 'size' | 'text', unit: string, not: ReadonlyArray<string> = []): MeasuredMember[] {
-  const members: MeasuredMember[] = [];
-  for (const { key, value } of resolvePool(scope, not)) {
-    const measure = measureOf(value);
-    if (measure && measure.kind === kind && measure.unit === unit) members.push({ key, value, num: measure.num });
-  }
-  return members;
-}
-
-/** The size and text-style groups a pool holds, as `kind:unit` with counts. */
-export function measuredGroups(scope: Scope, not: ReadonlyArray<string> = []): Map<string, { kind: 'size' | 'text'; unit: string }> {
-  const groups = new Map<string, { kind: 'size' | 'text'; unit: string }>();
-  for (const { value } of resolvePool(scope, not)) {
-    const measure = measureOf(value);
-    if (measure) groups.set(`${measure.kind}:${measure.unit}`, { kind: measure.kind, unit: measure.unit });
-  }
-  return groups;
+/** True when a candidate's OKLCH lightness lies on `direction`'s side of
+ *  the target's — the side filter the color comparisons share. */
+export function onLightnessSide(direction: Direction | undefined, targetL: number, candidateL: number): boolean {
+  if (direction === undefined) return true;
+  return direction === 'lighter' ? candidateL > targetL + 1e-9 : candidateL < targetL - 1e-9;
 }
 
 /**
@@ -104,28 +50,21 @@ export function measuredGroups(scope: Scope, not: ReadonlyArray<string> = []): M
  * of sizes or text styles the pool holds, narrowed by `type` when given.
  * Several groups (px and rem, sizes and text styles) are ambiguous and throw.
  */
-export function onlyMeasuredGroup(fn: string, scope: Scope, not: ReadonlyArray<string>, type?: 'size' | 'text'): { kind: 'size' | 'text'; unit: string } {
-  const groups = [...measuredGroups(scope, not).values()].filter((g) => !type || g.kind === type);
-  if (groups.length === 1) return groups[0];
-  if (groups.length === 0) {
+export function onlyMeasuredGroup(fn: string, scope: Scope, members: MeasuredMember[], type?: 'size' | 'text'): MeasuredMember[] {
+  const groups = new Map<string, { kind: 'size' | 'text'; unit: string }>();
+  for (const m of members) if (!type || m.kind === type) groups.set(`${m.kind}:${m.unit}`, { kind: m.kind, unit: m.unit });
+  if (groups.size === 1) {
+    const [{ kind, unit }] = groups.values();
+    return ofKind(members, kind, unit);
+  }
+  if (groups.size === 0) {
     throw new FunctionError(`${fn}: scope "${scope.name}" has no ${type ? describeKind(type) : 'sizes or text styles'} to compare`, fn);
   }
-  const found = groups.map((g) => describeKind(g.kind, g.unit)).join(', ');
+  const found = [...groups.values()].map((g) => describeKind(g.kind, g.unit)).join(', ');
   throw new FunctionError(
     `${fn}: scope "${scope.name}" mixes ${found}; pass { type: 'size' | 'text' } or keep one unit per scope`,
     fn,
   );
-}
-
-const toOklch = converter('oklch');
-
-/** True when `candidate` lies on `direction`'s side of `target` in OKLCH
- *  lightness — the side filter the color comparisons share. */
-export function onLightnessSide(direction: Direction | undefined, target: Color, candidate: Color): boolean {
-  if (direction === undefined) return true;
-  const t = toOklch(target)?.l ?? NaN;
-  const c = toOklch(candidate)?.l ?? NaN;
-  return direction === 'lighter' ? c > t + 1e-9 : c < t - 1e-9;
 }
 
 /**
@@ -139,7 +78,7 @@ export function measuredContrast(
   targetValue: string,
   target: Measure,
   scope: Scope,
-  not: ReadonlyArray<string>,
+  members: MeasuredMember[],
   direction: Direction | undefined,
   mode: { pick: 'best' } | { pick: 'min'; minContrast: number },
 ): string {
@@ -147,7 +86,7 @@ export function measuredContrast(
   if (!(target.num > 0)) {
     throw new FunctionError(`${fn}: a ratio needs a positive target, got ${targetValue}`, fn);
   }
-  const candidates = measuredMembers(scope, target.kind, target.unit, not)
+  const candidates = ofKind(members, target.kind, target.unit)
     .filter((m) => m.num > 0)
     .filter((m) => direction === undefined || (direction === 'larger' ? m.num > target.num : m.num < target.num))
     .map((m) => ({ key: m.key, value: m.value, ratio: Math.max(m.num, target.num) / Math.min(m.num, target.num) }));
@@ -158,12 +97,9 @@ export function measuredContrast(
     );
   }
   if (mode.pick === 'min') {
-    const meeting = candidates.filter((c) => c.ratio >= mode.minContrast - 1e-9);
-    if (meeting.length > 0) {
-      const best = meeting.reduce((a, b) => (b.ratio < a.ratio ? b : a));
-      return picked(scope, best.key, best.value);
-    }
+    const meeting = best(candidates.filter((c) => c.ratio >= mode.minContrast - 1e-9), (c) => c.ratio, 'min');
+    if (meeting) return picked(scope, meeting.key, meeting.value);
   }
-  const best = candidates.reduce((a, b) => (b.ratio > a.ratio ? b : a));
-  return picked(scope, best.key, best.value);
+  const top = best(candidates, (c) => c.ratio, 'max')!;
+  return picked(scope, top.key, top.value);
 }

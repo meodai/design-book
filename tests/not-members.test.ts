@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import { color, px, ref, source, inherited } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
-import { mostVivid } from '../src/functions/color/most-vivid';
+import { mostVivid } from '../src/functions/color/vividness';
 import { lightest } from '../src/functions/color/lightest-darkest';
 import { nth } from '../src/functions/generic/nth';
 import { largest } from '../src/functions/generic/extremes';

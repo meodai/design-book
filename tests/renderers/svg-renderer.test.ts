@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color, ref } from '../../src/tokens';
-import { darken } from '../../src/functions/color/darken';
+import { darken } from '../../src/functions/color/lighten-darken';
 import { bestContrastWith } from '../../src/functions/color/best-contrast';
 import { SVGRenderer } from '../../src/renderers/svg-renderer';
 import { nth } from '../../src/functions/generic/nth';

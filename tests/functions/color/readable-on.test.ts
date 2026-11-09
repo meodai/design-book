@@ -2,8 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, createFunctionToken, ref } from '../../../src/tokens';
 import type { Scope } from '../../../src/scope';
-import { mostVivid } from '../../../src/functions/color/most-vivid';
-import { leastVivid } from '../../../src/functions/color/least-vivid';
+import { mostVivid, leastVivid } from '../../../src/functions/color/vividness';
 import { lightest, darkest } from '../../../src/functions/color/lightest-darkest';
 import { closest } from '../../../src/functions/generic/closest';
 import { furthestFrom } from '../../../src/functions/generic/furthest-from';
@@ -85,7 +84,7 @@ describe('readableOn', () => {
 
   it('throws when the backdrop does not parse', () => {
     const { book, pool, ui } = setup();
-    const tok = createFunctionToken('mostVivid', [pool, 'not-a-color'], { options: { readableContrast: 4.5, not: [] } });
+    const tok = createFunctionToken('mostVivid', [pool], { options: { readableOn: 'not-a-color', readableContrast: 4.5, not: [] } });
     expect(() => {
       ui.set('x', tok);
       book.resolve('ui.x');
@@ -106,15 +105,6 @@ describe('readableOn', () => {
   it('points the old `against` option at its new name', () => {
     const { pool } = setup();
     expect(() => mostVivid(ref('pool'), { against: ref('ui.bg') } as any)).toThrow(/readableOn/);
-  });
-
-  it('still resolves a token saved in the old against + readableContrast shape', () => {
-    const { book, pool, ui } = setup();
-    const legacy = createFunctionToken('mostVivid', [pool, ref('ui.bg')], {
-      options: { readableContrast: 4.5, not: [] },
-    });
-    ui.set('accent', legacy);
-    expect(book.resolve('ui.accent')).toBe('#1d4eb8');
   });
 
   it('ignores a stored readableContrast of 0 with no backdrop (old default)', () => {

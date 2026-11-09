@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color } from '../../../src/tokens';
-import { lighten } from '../../../src/functions/color/lighten';
+import { lighten } from '../../../src/functions/color/lighten-darken';
 
 describe('lighten', () => {
   it('lightens a color', () => {

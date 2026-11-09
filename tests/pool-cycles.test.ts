@@ -3,7 +3,7 @@ import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { furthestFrom } from '../src/functions/generic/furthest-from';
-import { lighten } from '../src/functions/color/lighten';
+import { lighten } from '../src/functions/color/lighten-darken';
 import { CircularDependencyError } from '../src/errors';
 
 /** Regression for the Figma-plugin freeze: two function tokens that appear

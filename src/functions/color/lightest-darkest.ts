@@ -1,22 +1,16 @@
 import { poolArg } from '../args';
 import type { PoolArg } from '../args';
-import { converter } from 'culori';
-import {
-  createFunctionToken,
-  normalizeNotKeys,
-} from '../../tokens';
-import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
+import { createFunctionToken, toMembers } from '../../tokens';
+import type { FunctionTokenValue, MemberReference, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { collectScopeColors } from './scope-colors';
-import { filterReadable, readableOnParts } from './readable';
+import { best, colorPool } from '../pool';
+import { readableOnOptions } from './readable';
+import type { ReadableOn, ReadableOnOptions } from './readable';
 import { picked } from '../picks';
-import type { ReadableOnOptions } from './readable';
-
-const toOklch = converter('oklch');
 
 /**
- * Returns the color from a scope at one end of the OKLCH lightness axis.
+ * `lightest` / `darkest`: the color at one end of the OKLCH lightness axis.
  * OKLCH L rather than HSL lightness, which calls #ffff00 and #0000ff equally
  * light, and rather than WCAG luminance, which is a contrast measure and not
  * perceptually uniform. Ties go to the first candidate in scope order.
@@ -26,85 +20,50 @@ const toOklch = converter('oklch');
  * returned with its alpha intact. (`readableOn` does composite, but only to
  * decide which candidates stay in the pool.)
  */
-function extremeLightness(
-  name: 'lightest' | 'darkest',
-  scope: Scope,
-  not: string[],
-  readableOn: string | null,
-  readableContrast: number | undefined,
-): string {
-  const pool = filterReadable(name, collectScopeColors(scope, not), readableOn, readableContrast);
-  const sign = name === 'lightest' ? 1 : -1;
-  let bestHex: string | null = null;
-  let bestKey = '';
-  let bestScore = -Infinity;
+type End = 'lightest' | 'darkest';
 
-  for (const candidate of pool) {
-    const l = toOklch(candidate.parsed)?.l;
-    if (typeof l !== 'number') continue;
-    const score = sign * l;
-    if (score > bestScore) {
-      bestScore = score;
-      bestHex = candidate.hex;
-      bestKey = candidate.key;
-    }
-  }
-
-  if (!bestHex) {
-    throw new FunctionError(`${name}: no valid color candidates found in scope`, name);
-  }
-  return picked(scope, bestKey, bestHex);
+/** The options as the implementation receives them. */
+export interface LightnessInputs extends ReadableOn {
+  /** Qualified member keys left out (the registry has read `not`). */
+  not: string[];
 }
 
-export function lightestImpl(
-  scope: Scope,
-  not: string[] = [],
-  readableOn: string | null = null,
-  readableContrast?: number,
-): string {
-  return extremeLightness('lightest', scope, not, readableOn, readableContrast);
+function endImpl(fn: End, scope: Scope, options: LightnessInputs): string {
+  const pick = best(colorPool(fn, scope, options.not, options.readableOn, options.readableContrast), (c) => c.l, fn === 'lightest' ? 'max' : 'min');
+  if (!pick) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
+  return picked(scope, pick.key, pick.hex);
 }
 
-export function darkestImpl(
-  scope: Scope,
-  not: string[] = [],
-  readableOn: string | null = null,
-  readableContrast?: number,
-): string {
-  return extremeLightness('darkest', scope, not, readableOn, readableContrast);
+export function lightestImpl(scope: Scope, options: LightnessInputs): string {
+  return endImpl('lightest', scope, options);
+}
+
+export function darkestImpl(scope: Scope, options: LightnessInputs): string {
+  return endImpl('darkest', scope, options);
 }
 
 export interface LightnessSelectorOptions extends ReadableOnOptions {
-  /** Keys to exclude from the candidate pool. Pass `ref('scope.token')`
-   *  or a literal `'scope.token'` string. */
-  not?: ReadonlyArray<string | ReferenceValue>;
+  /** Keys to exclude from the candidate pool: `ref('scope.token')` or a
+   *  literal `'scope.token'` string. */
+  not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   description?: string;
-  [key: string]: unknown;
 }
 
-function lightnessSelector(
-  name: 'lightest' | 'darkest',
-  pool: PoolArg,
-  options?: LightnessSelectorOptions,
-): FunctionTokenValue {
-  const scope = poolArg(name, pool);
-  const readable = readableOnParts(name, options);
-  return createFunctionToken(name, [scope, ...readable.args], {
+function build(fn: End, pool: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
+  const scope = poolArg(fn, pool);
+  return createFunctionToken(fn, [scope], {
     description: options?.description,
-    options: { not: normalizeNotKeys(options?.not), ...readable.options },
-    metadata: {
-      dependencies: readable.dependencies,
-      returnType: 'color',
-    },
+    options: { not: toMembers(options?.not), ...readableOnOptions(fn, options) },
+    metadata: { dependencies: [], returnType: 'color' },
   });
 }
 
 /** The color in `scope` with the highest OKLCH lightness. */
 export function lightest(scope: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
-  return lightnessSelector('lightest', scope, options);
+  return build('lightest', scope, options);
 }
 
 /** The color in `scope` with the lowest OKLCH lightness. */
 export function darkest(scope: PoolArg, options?: LightnessSelectorOptions): FunctionTokenValue {
-  return lightnessSelector('darkest', scope, options);
+  return build('darkest', scope, options);
 }

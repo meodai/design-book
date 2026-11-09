@@ -1,19 +1,16 @@
 import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
-import { parse } from 'culori';
-import {
-  createFunctionToken,
-  extractDependencies,
-  normalizeNotKeys,
-} from '../../tokens';
-import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
+import { createFunctionToken, toMembers } from '../../tokens';
+import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
+import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide } from '../kinds';
 import type { Direction } from '../kinds';
-import { collectScopeColors, contrastAgainst } from './scope-colors';
-import { filterReadable, readableOnParts } from './readable';
+import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor } from '../pool';
+import { contrastAgainst } from './color-math';
+import { readableOnOptions } from './readable';
 import type { ReadableOnOptions } from './readable';
+import type { ContrastInputs } from './best-contrast';
 import { picked } from '../picks';
 
 export interface MinContrastOptions extends ReadableOnOptions {
@@ -25,89 +22,56 @@ export interface MinContrastOptions extends ReadableOnOptions {
    *  colors, 'larger' / 'smaller' for sizes and text styles. */
   direction?: Direction;
   /** Keys to exclude from the candidate pool. */
-  not?: ReadonlyArray<string | ReferenceValue>;
+  not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   description?: string;
-  [key: string]: any;
 }
 
+/** The member that just reaches `minContrast` against the target — the
+ *  lowest contrast at or above it — or, when none does, the highest. */
 export function minContrastWithImpl(
   targetValue: string,
   scope: Scope,
-  minContrast: number,
-  not: string[] = [],
-  direction?: Direction,
-  readableOn: string | null = null,
-  readableContrast?: number,
+  options: ContrastInputs & { minContrast?: number },
 ): string {
+  const fn = 'minContrastWith';
+  const { not, direction, readableOn, readableContrast, minContrast = 4.5 } = options;
   const measure = measureOf(targetValue);
-  if (measure && readableOn !== null) {
-    throw new FunctionError('minContrastWith: `readableOn` is for colors; the target is a size or a text style', 'minContrastWith');
+  if (measure && readableOn !== undefined) {
+    throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
   }
-  if (measure) return measuredContrast('minContrastWith', targetValue, measure, scope, not, direction, { pick: 'min', minContrast });
-  assertDirectionFits('minContrastWith', direction, 'color');
-  const targetColor = parse(targetValue);
-  if (!targetColor) {
-    throw new FunctionError(
-      `minContrastWith: cannot parse target color "${targetValue}"`,
-      'minContrastWith'
-    );
+  if (measure) {
+    return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not), direction, { pick: 'min', minContrast });
   }
-
-  const candidates: Array<{ key: string; hex: string; contrast: number }> = [];
-
-  for (const candidate of filterReadable('minContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
-    if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
-    candidates.push({
-      key: candidate.key,
-      hex: candidate.hex,
-      contrast: contrastAgainst(targetColor, candidate.parsed),
-    });
-  }
-
-  if (candidates.length === 0) {
-    throw new FunctionError(
-      'minContrastWith: no valid color candidates found in scope',
-      'minContrastWith'
-    );
-  }
-
-  const meetingThreshold = candidates.filter(c => c.contrast >= minContrast);
-
-  if (meetingThreshold.length > 0) {
-    // Return the one with lowest contrast among those meeting the threshold
-    meetingThreshold.sort((a, b) => a.contrast - b.contrast);
-    return picked(scope, meetingThreshold[0].key, meetingThreshold[0].hex);
-  }
-
-  // Fallback: return highest contrast
-  candidates.sort((a, b) => b.contrast - a.contrast);
-  return picked(scope, candidates[0].key, candidates[0].hex);
+  assertDirectionFits(fn, direction, 'color');
+  const target = parseColor(targetValue);
+  if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
+  const targetL = lightnessOf(target);
+  const candidates = colorPool(fn, scope, not, readableOn, readableContrast)
+    .filter((c) => onLightnessSide(direction, targetL, c.l))
+    .map((c) => ({ ...c, contrast: contrastAgainst(target, c.color) }));
+  if (candidates.length === 0) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
+  const pick = best(candidates.filter((c) => c.contrast >= minContrast), (c) => c.contrast, 'min')
+    ?? best(candidates, (c) => c.contrast, 'max')!;
+  return picked(scope, pick.key, pick.hex);
 }
 
 export function minContrastWith(
   targetValue: TokenValue | ReferenceValue | FunctionTokenValue,
   pool: PoolArg,
-  options?: MinContrastOptions
+  options?: MinContrastOptions,
 ): FunctionTokenValue {
-  const scope = poolArg('minContrastWith', pool);
-  valueArg('minContrastWith', targetValue);
-  const { minContrast = 4.5, not, description, direction, readableOn, readableContrast, ...rest } = options ?? {};
-  assertDirection('minContrastWith', direction);
-  const notKeys = normalizeNotKeys(not);
-  const readable = readableOnParts('minContrastWith', { readableOn, readableContrast });
-
-  return createFunctionToken(
-    'minContrastWith',
-    [targetValue, scope, ...readable.args],
-    {
-      description,
-      ...rest,
-      options: { minContrast, not: notKeys, ...(direction ? { direction } : {}), ...readable.options },
-      metadata: {
-        dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
-        // A color, a size or a text style, as the target is.
-        returnType: undefined,
-      },
-    },
-  );
+  const fn = 'minContrastWith';
+  const scope = poolArg(fn, pool);
+  valueArg(fn, targetValue);
+  const { minContrast = 4.5, not, description, direction } = options ?? {};
+  assertDirection(fn, direction);
+  if (typeof minContrast !== 'number' || !(minContrast > 0)) {
+    throw new FunctionError(`${fn}: \`minContrast\` must be a positive number, got ${String(minContrast)}`, fn);
+  }
+  return createFunctionToken(fn, [targetValue, scope], {
+    description,
+    options: { minContrast, not: toMembers(not), ...(direction ? { direction } : {}), ...readableOnOptions(fn, options) },
+    // A color, a size or a text style, as the target is.
+    metadata: { dependencies: [], returnType: undefined },
+  });
 }

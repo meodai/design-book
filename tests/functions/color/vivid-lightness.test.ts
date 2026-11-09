@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
-import { mostVivid } from '../../../src/functions/color/most-vivid';
-import { leastVivid } from '../../../src/functions/color/least-vivid';
+import { mostVivid, leastVivid } from '../../../src/functions/color/vividness';
 import { capturePick } from '../../../src/functions/picks';
 import { parseTokenInput } from '../../../site/editor/editor-input-parser';
 import { loadEditorModule } from '../../editor/load-editor';

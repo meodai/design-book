@@ -5,7 +5,7 @@ import { registerBuiltinFunctionRenderers, argToCssValue } from './function-rend
 import { isTypographyToken, typographyBase, typographyFieldNames } from '../functions/non-color/typography';
 import { FunctionError } from '../errors';
 import { parse, formatHex, converter } from 'culori';
-import { gamutMapSrgb } from '../functions/color/scope-colors';
+import { gamutMapSrgb } from '../functions/color/color-math';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
 import type { Scope } from '../scope';
 

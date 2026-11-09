@@ -1,20 +1,7 @@
+/** Color math the color functions share: gamut mapping, formatting,
+ *  compositing, contrast and perceptual distance. */
 import { parse, formatHex, formatHex8, wcagContrast, differenceEuclidean, converter, inGamut, toGamut } from 'culori';
 import type { Color } from 'culori';
-import { getTokenProcessors } from '../../tokens';
-import type { TokenValue } from '../../tokens';
-import type { Scope } from '../../scope';
-import { poolKeys } from '../scope-members';
-
-/** A candidate color drawn from a scope's token pool. */
-export interface ScopeColor {
-  /** Unqualified token key within the iterated scope. */
-  key: string;
-  /** The candidate's sRGB hex form — what selectors return. Translucent
-   *  candidates keep their alpha as `#rrggbbaa`. */
-  hex: string;
-  /** `hex` parsed back, so every selector measures the value it returns. */
-  parsed: Color;
-}
 
 const toRgb = converter('rgb');
 const toRgbGamut = toGamut('rgb', 'oklch');
@@ -101,60 +88,4 @@ export function visibleDistance(a: Color, b: Color, backdrop?: Color | null): nu
     perceptualDistance(compositeOver(a, WHITE), compositeOver(b, WHITE)),
     perceptualDistance(compositeOver(a, BLACK), compositeOver(b, BLACK)),
   );
-}
-
-/**
- * Collects every color a scope can offer as a selector candidate.
- *
- * Color tokens are read from their cached Culori processor when present and
- * re-parsed from `rawValue` otherwise; references and function tokens are
- * resolved through the scope, so the pool includes computed colors
- * (colorMix, lighten, darken, …) and not just hand-written ones. Tokens that
- * are not colors, or that fail to resolve, are skipped.
- *
- * @param scope Scope to iterate.
- * @param not Qualified member keys of `scope` to leave out (`dark.black`), as
- *   `excludedMembers` in `../members` maps them from what the author wrote —
- *   an inherited member's source key (`palette.black`) included.
- */
-export function collectScopeColors(scope: Scope, not: ReadonlyArray<string> = []): ScopeColor[] {
-  const colors: ScopeColor[] = [];
-
-  // The shared pool rule: members that walk this scope themselves are no
-  // candidates (each would resolve the others, recursively).
-  for (const key of poolKeys(scope, not)) {
-    const token = scope.get(key);
-    if (!token) continue;
-
-    let colorHex: string | null = null;
-
-    if (token.type === 'color') {
-      const tv = token as TokenValue;
-      const processors = getTokenProcessors(tv);
-      if (processors && processors[0]) {
-        const formatted = formatColor(gamutMapSrgb(processors[0].instance));
-        if (formatted) colorHex = formatted;
-      }
-      if (!colorHex) {
-        const parsed = parse(String(tv.rawValue));
-        if (parsed) colorHex = formatColor(gamutMapSrgb(parsed)) ?? null;
-      }
-    } else {
-      try {
-        const parsed = parse(scope.resolve(key));
-        if (parsed) colorHex = formatColor(gamutMapSrgb(parsed)) ?? null;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!colorHex) continue;
-
-    const parsed = parse(colorHex);
-    if (!parsed) continue;
-
-    colors.push({ key, hex: colorHex, parsed });
-  }
-
-  return colors;
 }

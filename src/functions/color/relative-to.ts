@@ -1,9 +1,9 @@
 import { valueArg } from '../args';
 import { parse, converter } from 'culori';
-import { createFunctionToken, extractDependencies } from '../../tokens';
+import { createFunctionToken } from '../../tokens';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
-import { formatColor, gamutMapSrgb } from './scope-colors';
+import { formatColor, gamutMapSrgb } from './color-math';
 
 /** Channel order per color space. Culori's object key order is not a
  *  reliable channel order — `hsl` comes out `s, l, h`, and achromatic
@@ -46,9 +46,10 @@ export function relativeToChannels(colorSpace: string): readonly [string, string
 
 export function relativeToImpl(
   colorValue: string,
-  colorSpace: string,
-  modifications: (null | number | string)[]
+  options: { colorSpace?: string; modifications?: Modification[] },
 ): string {
+  const colorSpace = options.colorSpace ?? 'oklch';
+  const modifications = options.modifications ?? [null, null, null];
   const channels = relativeToChannels(colorSpace);
 
   const parsed = parse(colorValue);
@@ -119,24 +120,35 @@ export function relativeToImpl(
   return result;
 }
 
+/** A channel change: `null` keeps it, a number sets it, `'+0.1'` / `'-20'` /
+ *  `'*1.5'` / `'/2'` changes it, a numeric string sets it. */
+export type Modification = null | number | string;
+const MODIFICATION = /^[+\-*/]?\s*-?(?:\d+\.?\d*|\.\d+)$/;
+
 export function relativeTo(
   baseColor: TokenValue | ReferenceValue | FunctionTokenValue,
   colorSpace: string,
-  modifications: (null | number | string)[],
+  modifications: Modification[],
   options?: { description?: string }
 ): FunctionTokenValue {
   valueArg('relativeTo', baseColor);
   relativeToChannels(colorSpace);
-  return createFunctionToken(
-    'relativeTo',
-    [baseColor],
-    {
-      description: options?.description,
-      options: { colorSpace, modifications },
-      metadata: {
-        dependencies: extractDependencies([baseColor]),
-        returnType: 'color',
-      },
-    },
-  );
+  if (!Array.isArray(modifications) || modifications.length > 3) {
+    throw new FunctionError(`relativeTo: modifications are up to three channel changes, got ${JSON.stringify(modifications)}`, 'relativeTo');
+  }
+  for (const mod of modifications) {
+    const ok = mod === null || (typeof mod === 'number' && Number.isFinite(mod))
+      || (typeof mod === 'string' && MODIFICATION.test(mod.trim()));
+    if (!ok) {
+      throw new FunctionError(
+        `relativeTo: a modification is null, a number, or an operator (+, -, *, /) and a number like '+0.1', got ${JSON.stringify(mod)}`,
+        'relativeTo',
+      );
+    }
+  }
+  return createFunctionToken('relativeTo', [baseColor], {
+    description: options?.description,
+    options: { colorSpace, modifications },
+    metadata: { dependencies: [], returnType: 'color' },
+  });
 }

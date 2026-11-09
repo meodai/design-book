@@ -1,8 +1,7 @@
-import { parseKey } from '../../keys';
-import { createFunctionToken, extractDependencies, isFunctionTokenValue, isReferenceValue } from '../../tokens';
-import type { AnyTokenValue, FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
+import { parseKey, VALID_TOKEN_KEY } from '../../keys';
+import { createFunctionToken, extractDependencies, isFunctionTokenValue, isMemberReference, isReferenceValue, isUnresolvable, toMember } from '../../tokens';
+import type { AnyTokenValue, FunctionTokenValue, MemberReference, TokenValue, ReferenceValue, UnresolvableValue } from '../../tokens';
 import { FunctionError } from '../../errors';
-import { VALID_TOKEN_KEY } from '../../keys';
 
 export type TypographyField = TokenValue | ReferenceValue | FunctionTokenValue | string | number;
 export type TypographyFields = Record<string, TypographyField>;
@@ -18,10 +17,9 @@ export interface TypographyBook {
 interface TypographyOptions {
   /** Names of the token's own fields, one per arg. */
   fields: string[];
-  /** A live variant's base, `scope.token`: fields it doesn't set read the
-   *  base's. A navigated base (`inherited(ref('.title'))`) is kept as the
-   *  reference until a scope binds the token. */
-  base?: string | ReferenceValue;
+  /** A live variant's base: fields it doesn't set read the base's. A member
+   *  reference — it names the token, it is not a value. */
+  base?: MemberReference | UnresolvableValue;
   /** Fields of the base the variant drops. */
   removed?: string[];
 }
@@ -53,10 +51,8 @@ function build(fields: TypographyFields, options: Omit<TypographyOptions, 'field
   return createFunctionToken('typography', args, {
     description,
     options: opts,
-    metadata: {
-      dependencies: [...extractDependencies(args), ...(typeof options.base === 'string' ? [options.base] : [])],
-      returnType: 'typography',
-    },
+    // The base is a dependency through its member slot (functionDependencies).
+    metadata: { dependencies: [], returnType: 'typography' },
   });
 }
 
@@ -92,7 +88,8 @@ function optionsOf(token: FunctionTokenValue): TypographyOptions {
 /** The base key of a variant as a scope reads it. A navigated base is a key
  *  only once bound (`Scope.get`); unbound, it names nothing yet. */
 function baseKeyOf(options: TypographyOptions): string | undefined {
-  return typeof options.base === 'string' ? options.base : undefined;
+  const base = options.base;
+  return isMemberReference(base) && base.up === undefined ? base.key : undefined;
 }
 
 /** A typography token's own fields, by name (a variant's inherited ones are
@@ -151,9 +148,8 @@ export function typographyFieldNames(
 export function typographyImpl(book: TypographyBook, ...args: unknown[]): string {
   const options = args.pop() as TypographyOptions;
   const { fields, removed = [] } = options;
-  if (options.base !== undefined && typeof options.base !== 'string') {
-    const reason = (options.base as { unresolvable?: string }).unresolvable;
-    throw new FunctionError(`typography: the base could not be read${reason ? `: ${reason}` : ''}`, 'typography');
+  if (isUnresolvable(options.base)) {
+    throw new FunctionError(`typography: the base could not be read: ${options.base.message}`, 'typography');
   }
   const base = baseKeyOf(options);
   if (!base) return fields.map((field, i) => `${toKebab(field)}: ${String(args[i])}`).join('; ');
@@ -193,8 +189,7 @@ export function variant(
     if (!isTokenKey(token.key)) {
       throw new FunctionError(`variant: the base must be a "scope.token" key, got "${token.key}"`, 'variant');
     }
-    const base = token.up === undefined ? token.key : { type: 'reference' as const, key: token.key, up: token.up };
-    return build(set, { base, removed: dropped });
+    return build(set, { base: toMember(token), removed: dropped });
   }
   if (!isTypographyToken(token)) {
     throw new FunctionError('variant: expects a typography() token or a ref() to one', 'variant');

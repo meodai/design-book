@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
-import { darken } from '../src/functions/color/darken';
-import { lighten } from '../src/functions/color/lighten';
+import { darken, lighten } from '../src/functions/color/lighten-darken';
 import { shade } from '../src/functions/color/shade';
 import { colorMix } from '../src/functions/color/color-mix';
 import { spacingScale } from '../src/functions/non-color/spacing-scale';

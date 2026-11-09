@@ -9,7 +9,6 @@ import {
 import type { RenderFormat } from '../../src/index';
 import type { Scope, ScopeOrder } from '../../src/index';
 import { parseTokenInput, FUNCTION_NAMES, SCOPE_ARG_FUNCTIONS } from './editor-input-parser';
-import { readableOnArgIndex } from '../../src/functions/color/readable';
 
 import { EditorView, keymap, lineNumbers, ViewPlugin, ViewUpdate, Decoration, DecorationSet, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
@@ -435,73 +434,53 @@ function serializeTypography(fn: any): string {
   const tail = fn.description ? `, { description: ${JSON.stringify(fn.description)} }` : '';
   const base = fn.options?.base;
   if (!base) return `typography(${fields}${tail})`;
-  // A navigated base (inherited) is kept as the reference.
-  return `variant(${typeof base === 'string' ? `ref('${base}')` : serializePlainToken(base)}, ${fields}${tail})`;
+  return `variant(${serializePlainToken(base)}, ${fields}${tail})`;
+}
+
+/** One option value, the way it is typed: a member or value reference as
+ *  the call that made it, a nested function as its call, a list item by
+ *  item, anything else as JSON. */
+function serializeOptionValue(value: any): string {
+  if (Array.isArray(value)) {
+    // A list of plain values is JSON; one holding references, item by item.
+    return value.some((v) => v && typeof v === 'object') ? `[${value.map(serializeOptionValue).join(', ')}]` : JSON.stringify(value);
+  }
+  if (value && typeof value === 'object' && (value.type === 'member' || value.type === 'reference')) return serializePlainToken(value);
+  if (value && typeof value === 'object' && (value.type === 'function' || 'rawValue' in value)) return serializeArg(value);
+  return JSON.stringify(value);
+}
+
+/** The options object as typed — empty entries (`not: []`) left out, and
+ *  the description, which lives on the token, added. */
+function serializeOptions(fn: any, skip: ReadonlySet<string> = new Set()): string | undefined {
+  const pairs = Object.entries(fn.options ?? {})
+    .filter(([k, v]) => !skip.has(k) && k !== 'description' && v !== undefined && v !== null
+      && !(Array.isArray(v) && v.length === 0))
+    .map(([k, v]) => `${k}: ${serializeOptionValue(v)}`);
+  if (fn.description) pairs.push(`description: ${JSON.stringify(fn.description)}`);
+  return pairs.length > 0 ? `{ ${pairs.join(', ')} }` : undefined;
 }
 
 function serializeFunctionToken(fn: any): string {
   if (fn.name === 'typography') return serializeTypography(fn);
 
-  // sibling keeps its anchor key in fn.options (it needs the key's position,
-  // not its value); print it the way it is typed.
+  // sibling(anchor, scale?, steps, { … }): the anchor and the count are
+  // positional, the rest options.
   if (fn.name === 'sibling' && fn.options?.from) {
-    const { from, offset, wrap, not, toward } = fn.options;
-    const extras: string[] = [];
-    if (toward !== undefined) extras.push(`toward: ${typeof toward === 'string' ? `ref('${toward}')` : serializePlainToken(toward)}`);
-    if (wrap) extras.push('wrap: true');
-    if (Array.isArray(not) && not.length > 0) {
-      extras.push(`not: [${not.map((n: any) => (typeof n === 'string' ? JSON.stringify(n) : serializePlainToken(n))).join(', ')}]`);
-    }
-    if (fn.description) extras.push(`description: ${JSON.stringify(fn.description)}`);
-    const tail = extras.length > 0 ? `, { ${extras.join(', ')} }` : '';
-    const anchor = typeof from === 'string' ? `ref('${from}')` : serializePlainToken(from);
-    // the scale, when given, is the function's argument
+    const options = serializeOptions(fn, new Set(['from', 'offset', ...(fn.options.wrap ? [] : ['wrap'])]));
     const scale = fn.args?.[0] ? `${serializePlainToken(fn.args[0])}, ` : '';
-    return `sibling(${anchor}, ${scale}${offset}${tail})`;
+    return `sibling(${serializePlainToken(fn.options.from)}, ${scale}${fn.options.offset}${options ? `, ${options}` : ''})`;
   }
 
-  // The color selectors' `readableOn` backdrop is stored as a trailing
-  // argument; the token itself says where (readableOnArgIndex). It is
-  // printed back inside the options object, the way it is typed.
-  const args: any[] = fn.args ?? [];
-  const backdropIdx = readableOnArgIndex({ args, options: fn.options });
-  // closest's `upTo` is the argument after the pool, marked by
-  // `upTo: true` in the options; it is printed as `upTo: …` too.
-  const upToIdx = fn.name === 'closest' && fn.options?.upTo === true ? 2 : -1;
   // A closest with a plain direction prints as its alias: nextLarger(…), nextLighter(…).
-  const alias = fn.name === 'closest' && upToIdx < 0 && typeof fn.options?.direction === 'string'
+  const alias = fn.name === 'closest' && fn.options?.upTo === undefined && typeof fn.options?.direction === 'string'
     ? ({ larger: 'nextLarger', smaller: 'nextSmaller', lighter: 'nextLighter', darker: 'nextDarker' } as Record<string, string>)[fn.options.direction]
     : undefined;
-  const argStrs = args.filter((_, i) => i !== backdropIdx && i !== upToIdx).map(serializeArg);
-  const readableOn = backdropIdx >= 0 ? serializeArg(args[backdropIdx]) : undefined;
-  const upTo = upToIdx >= 0 ? serializeArg(args[upToIdx]) : undefined;
-  // Preserve options across edit-cycle round-trips so ratios, steps, etc.
-  // aren't reset to defaults on re-parse. Skip empty entries (empty arrays,
-  // null, undefined) so e.g. `not: []` doesn't clutter the rendered form.
-  const optionKeys = fn.options
-    ? Object.keys(fn.options).filter((k) => {
-        if (k === 'description') return false;
-        if (k === 'upTo' && upToIdx >= 0) return false;
-        if (k === 'direction' && alias) return false;
-        const v = fn.options[k];
-        if (v === undefined || v === null) return false;
-        if (Array.isArray(v) && v.length === 0) return false;
-        return true;
-      })
-    : [];
-  const optionPairs = [
-    ...(upTo ? [`upTo: ${upTo}`] : []),
-    ...(readableOn ? [`readableOn: ${readableOn}`] : []),
-    ...optionKeys.map(k => k === 'not' && Array.isArray(fn.options.not)
-      // a `source(…)` / `refersTo(…)` entry is a reference, printed as the call
-      ? `not: [${fn.options.not.map((n: any) => (typeof n === 'string' ? JSON.stringify(n) : serializePlainToken(n))).join(', ')}]`
-      : `${k}: ${JSON.stringify(fn.options[k])}`),
-    // The description lives on the token itself, not in fn.options.
-    ...(fn.description ? [`description: ${JSON.stringify(fn.description)}`] : []),
-  ];
-  if (optionPairs.length > 0) {
-    argStrs.push(`{ ${optionPairs.join(', ')} }`);
-  }
+  // Options are kept across edit round-trips so ratios, steps, backdrops
+  // etc. are not reset to defaults on re-parse.
+  const argStrs = (fn.args ?? []).map(serializeArg);
+  const options = serializeOptions(fn, new Set(alias ? ['direction'] : []));
+  if (options) argStrs.push(options);
   return `${alias ?? fn.name}(${argStrs.join(', ')})`;
 }
 
@@ -534,7 +513,8 @@ function quote(value: string): string {
 }
 
 function serializePlainToken(tv: any): string {
-  if (tv.type === 'reference') {
+  // A reference, or a member reference (a `not` entry, an anchor, a base).
+  if (tv.type === 'reference' || tv.type === 'member') {
     // inherited(…) first, then source(…), then refersTo(…) around it: the order they are read in
     const distance = (d: number | 'root') => (d === 1 ? '' : d === 'root' ? ", 'root'" : `, ${d}`);
     let written = `ref('${tv.key}')`;

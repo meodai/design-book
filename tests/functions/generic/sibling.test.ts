@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
-import { color, createFunctionToken, px, ref } from '../../../src/tokens';
+import { color, createFunctionToken, px, ref, toMember } from '../../../src/tokens';
 import { sibling, siblingImpl, scopeOfKey } from '../../../src/functions/generic/sibling';
-import { lighten } from '../../../src/functions/color/lighten';
+import { lighten } from '../../../src/functions/color/lighten-darken';
 import { TokenError, FunctionError } from '../../../src/errors';
 import { Renderer } from '../../../src/renderers/renderer';
 import { nth } from '../../../src/functions/generic/nth';
@@ -165,9 +165,9 @@ describe('sibling', () => {
     const { book, ui } = setup();
     const cases = [
       createFunctionToken('sibling', [], { options: { offset: 1 } }),
-      createFunctionToken('sibling', [], { options: { from: 'nodot', offset: 1 } }),
-      createFunctionToken('sibling', [], { options: { from: 'ramp.s300', offset: 1.5 } }),
-      createFunctionToken('sibling', [], { options: { from: 'ghost.s300', offset: 1 } }),
+      createFunctionToken('sibling', [], { options: { from: toMember('nodot'), offset: 1 } }),
+      createFunctionToken('sibling', [], { options: { from: toMember('ramp.s300'), offset: 1.5 } }),
+      createFunctionToken('sibling', [], { options: { from: toMember('ghost.s300'), offset: 1 } }),
     ];
     const messages = cases.map((tok, i) => {
       try {

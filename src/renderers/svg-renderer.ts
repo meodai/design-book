@@ -1,7 +1,7 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import { detectValueType } from '../scope';
-import { isFieldKey, isScopeReference, tokenKeyOf } from '../tokens';
+import { isFieldKey, isScopeReference, tokenKeyOf, anchorScopeOf } from '../tokens';
 import { OrthogonalRouter, roundedPath, midpoint, bridges, junctions } from './orthogonal-router';
 import type { Point } from './orthogonal-router';
 import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
@@ -139,7 +139,8 @@ function pickActiveOutline(fillValue: string): string {
 function paletteCandidates(book: DesignBook, token: AnyTokenValue): string[] {
   if (token.type !== 'function') return [];
   const fn = token as FunctionTokenValue;
-  const scopeNames = new Set<string>(fn.metadata?.iteratedScopes ?? []);
+  // Its own walk only: a selector nested in a value deriver does not count.
+  const scopeNames = new Set<string>([...(fn.metadata?.iteratedScopes ?? []), ...anchorScopeOf(fn)]);
   for (const arg of fn.args) {
     if (isScopeReference(arg)) scopeNames.add(arg.key);
   }

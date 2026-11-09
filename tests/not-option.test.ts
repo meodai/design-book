@@ -5,8 +5,7 @@ import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { minContrastWith } from '../src/functions/color/min-contrast';
 import { closest } from '../src/functions/generic/closest';
 import { furthestFrom } from '../src/functions/generic/furthest-from';
-import { mostVivid } from '../src/functions/color/most-vivid';
-import { leastVivid } from '../src/functions/color/least-vivid';
+import { mostVivid, leastVivid } from '../src/functions/color/vividness';
 
 describe('"not" option excludes keys from the candidate pool', () => {
   it('mostVivid skips excluded keys', () => {

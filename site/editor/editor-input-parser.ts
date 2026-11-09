@@ -604,10 +604,14 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
 
     const secondArg = args[1].trim();
     if (secondArg.startsWith('{')) {
-      const options = parseOptionsArg(secondArg) as
-        | { index?: number; not?: string[]; description?: string }
-        | undefined;
-      if (typeof options?.index !== 'number') {
+      const options: { index?: number; not?: Array<ReferenceValue | string>; description?: string } = {};
+      for (const [key, valueStr] of optionPairs(secondArg)) {
+        if (key === 'index') options.index = parseFloat(valueStr);
+        else if (key === 'not') options.not = parseNotList(valueStr, book);
+        else if (key === 'description') options.description = parseQuotedString(valueStr);
+        else throw new Error(`nth: unknown option \`${key}\` (expected index, not or description)`);
+      }
+      if (typeof options.index !== 'number' || Number.isNaN(options.index)) {
         throw new Error('nth requires a numeric "index" in its options object');
       }
       return nth(scope, options.index, { not: options.not, description: options.description });
@@ -668,11 +672,19 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     const args = splitArgs(argsStr);
     if (args.length < 2) throw new Error('random requires 2 arguments: scope and an options object with a "type"');
     const scope = getScopeArg(parseArg(args[0], book));
-    const options = parseOptionsArg(args.slice(1).join(',')) as RandomOptions | undefined;
-    if (!options || typeof options.type !== 'string') {
+    const options: Partial<RandomOptions> = {};
+    for (const [key, valueStr] of optionPairs(args.slice(1).join(','))) {
+      const v = valueStr.trim();
+      if (key === 'type') options.type = parseQuotedString(v) as RandomOptions['type'];
+      else if (key === 'seed') options.seed = /^['"]/.test(v) ? parseQuotedString(v) : parseFloat(v);
+      else if (key === 'not') options.not = parseNotList(v, book);
+      else if (key === 'description') options.description = parseQuotedString(v);
+      else throw new Error(`random: unknown option \`${key}\` (expected type, seed, not or description)`);
+    }
+    if (typeof options.type !== 'string') {
       throw new Error('random requires an options object with a "type" (e.g. { type: "color" })');
     }
-    return random(scope, options);
+    return random(scope, options as RandomOptions);
   },
 
   // color('...') as an explicit constructor
@@ -726,13 +738,6 @@ for (const name of SCOPE_ARG_FUNCTIONS) {
  * clear message if the result still isn't parseable, rather than silently
  * falling back to the caller's defaults.
  */
-/**
- * Everything after a color selector's fixed arguments: an optional
- * positional `readableOn` (what the serializer writes, since the backdrop is
- * stored as a trailing function argument) followed by an optional options
- * object. Hand-parsed rather than through parseOptionsArg because `not` and
- * `readableOn` may hold `ref(...)` calls, which are not JSON.
- */
 /** Parser for a direction alias of `closest`: `nextLarger(target, scope, readableOn?, options?)`. */
 function aliasParser(
   name: string,
@@ -747,6 +752,11 @@ function aliasParser(
   };
 }
 
+/**
+ * Everything after a selector's fixed arguments: an optional options
+ * object. Hand-parsed rather than through parseOptionsArg because `not`,
+ * `readableOn` and `upTo` may hold `ref(...)` calls, which are not JSON.
+ */
 function parseSelectorTail(
   name: string,
   rest: string[],
@@ -755,11 +765,7 @@ function parseSelectorTail(
   if (rest.length === 0) return undefined;
 
   const options: SelectorTailOptions = {};
-  let tail = rest.map((a) => a.trim());
-  if (!tail[0].startsWith('{')) {
-    options.readableOn = getTokenArg(parseArg(tail[0], book));
-    tail = tail.slice(1);
-  }
+  const tail = rest.map((a) => a.trim());
   // At most one options object may follow — anything else is a typo that
   // would otherwise be dropped silently.
   if (tail.length > 1 || (tail.length === 1 && !(tail[0].startsWith('{') && tail[0].endsWith('}')))) {

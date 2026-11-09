@@ -1,7 +1,7 @@
 import { FunctionError } from '../errors';
 import { scopeOf } from '../keys';
 import type { Scope } from '../scope';
-import { isFieldKey, isFunctionTokenValue, isMemberReference, isReferenceValue, isScopeKey, isSourceReference } from '../tokens';
+import { isFieldKey, isFunctionTokenValue, isMemberReference, isReferenceValue, isScopeKey } from '../tokens';
 import { capturePick } from './picks';
 import type { AnyTokenValue } from '../tokens';
 
@@ -52,18 +52,16 @@ export function followSource(book: MemberBook, fn: string, key: string, hops: nu
   return current;
 }
 
-/** A member-naming value as stored: a key, or a `source` / `refersTo`
- *  reference — where it starts, a `source` followed. */
+/** Where a member slot's entry starts — a `source` followed — or
+ *  `undefined` for anything that is not a member reference. */
 export function memberStart(book: MemberBook, fn: string, entry: unknown): string | undefined {
-  if (typeof entry === 'string') return entry;
-  if (isSourceReference(entry)) return followSource(book, fn, entry.key, entry.via);
-  if (isMemberReference(entry)) return (entry as { key: string }).key;
-  return undefined;
+  if (!isMemberReference(entry)) return undefined;
+  return entry.via !== undefined ? followSource(book, fn, entry.key, entry.via) : entry.key;
 }
 
-/** True for a stored entry that reads down the value tree (`refersTo`). */
+/** True for an entry that reads down the value tree (`refersTo`). */
 function readsDown(entry: unknown): boolean {
-  return isReferenceValue(entry) && entry.referredBy === true;
+  return isMemberReference(entry) && entry.referredBy === true;
 }
 
 /**

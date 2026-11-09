@@ -3,7 +3,7 @@ import type { PoolArg } from '../args';
 import { detectValueType } from '../../values';
 import {
   createFunctionToken,
-  normalizeNotKeys,
+  toMembers,
 } from '../../tokens';
 import type {
   FunctionTokenValue,
@@ -60,12 +60,12 @@ function mulberry32(seed: number): () => number {
 }
 
 
-export function randomImpl(
-  scope: Scope,
-  type: RandomType,
-  seed: number | string,
-  not: string[] = [],
-): string {
+export function randomImpl(scope: Scope, options: { type: RandomType; seed: number | string; not: string[] }): string {
+  const { type, seed, not } = options;
+  // The constructor always stores both; a hand-built or saved token may not.
+  if (typeof seed !== 'number' && typeof seed !== 'string') {
+    throw new FunctionError(`random: options.seed must be a number or string, got ${typeof seed}`, 'random');
+  }
   const candidates = resolvePool(scope, not).filter((m) => m.value.length > 0 && detectValueType(m.value) === type);
 
   if (candidates.length === 0) {
@@ -91,20 +91,17 @@ export function random(
   options: RandomOptions,
 ): FunctionTokenValue {
   const scope = poolArg('random', pool);
-  const { type, seed, not, description, ...rest } = options;
+  const { type, seed, not, description } = options ?? ({} as RandomOptions);
+  if (type !== 'color' && type !== 'dimension' && type !== 'string') {
+    throw new FunctionError(`random: \`type\` is 'color', 'dimension' or 'string', got ${String(type)}`, 'random');
+  }
+  if (seed !== undefined && typeof seed !== 'number' && typeof seed !== 'string') {
+    throw new FunctionError(`random: options.seed must be a number or string, got ${typeof seed}`, 'random');
+  }
   const resolvedSeed = seed ?? Math.floor(Math.random() * 0x1_0000_0000);
-
-  return createFunctionToken(
-    'random',
-    [scope],
-    {
-      description,
-      ...rest,
-      options: { type, seed: resolvedSeed, not: normalizeNotKeys(not) },
-      metadata: {
-        dependencies: [],
-        returnType: type,
-      },
-    },
-  );
+  return createFunctionToken('random', [scope], {
+    description,
+    options: { type, seed: resolvedSeed, not: toMembers(not) },
+    metadata: { dependencies: [], returnType: type },
+  });
 }

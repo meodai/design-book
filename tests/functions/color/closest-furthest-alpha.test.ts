@@ -14,24 +14,24 @@ function pool(entries: Record<string, string>) {
 describe('closest and translucent candidates', () => {
   it('does not read a 5% black hairline as opaque black', () => {
     const s = pool({ hair: '#0000000d', grey: '#333333' });
-    expect(closestImpl('#000000', s)).toBe('#333333');
+    expect(closestImpl('#000000', s, { not: [] })).toBe('#333333');
   });
 
   it('matches a translucent target to the same translucent candidate', () => {
     const s = pool({ grey: '#333333', hair: '#0000000d' });
-    expect(closestImpl('#0000000d', s)).toBe('#0000000d');
+    expect(closestImpl('#0000000d', s, { not: [] })).toBe('#0000000d');
   });
 
   it('judges candidates as they look on the readableOn backdrop', () => {
     // On white, 50% black reads as #808080 — far closer to a mid grey than
     // the opaque near-black is.
     const s = pool({ ink: '#1a1a1a', half: '#00000080' });
-    expect(closestImpl('#7f7f7f', s, [], '#ffffff', 1)).toBe('#00000080');
+    expect(closestImpl('#7f7f7f', s, { not: [], readableOn: '#ffffff', readableContrast: 1 })).toBe('#00000080');
   });
 
   it('leaves opaque pools unchanged', () => {
     const s = pool({ red: '#ff0000', blue: '#0000ff' });
-    expect(closestImpl('#ee1111', s)).toBe('#ff0000');
+    expect(closestImpl('#ee1111', s, { not: [] })).toBe('#ff0000');
   });
 });
 
@@ -44,7 +44,7 @@ describe('furthestFrom and translucent candidates', () => {
       pink: '#ffdddd',
       blue: '#0000ff',
     });
-    expect(furthestFromImpl('#ffffff', s)).toBe('#0000000d');
-    expect(furthestFromImpl('#ffffff', s, [], '#ffffff', 1)).toBe('#0000ff');
+    expect(furthestFromImpl('#ffffff', s, { not: [] })).toBe('#0000000d');
+    expect(furthestFromImpl('#ffffff', s, { not: [], readableOn: '#ffffff', readableContrast: 1 })).toBe('#0000ff');
   });
 });

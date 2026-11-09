@@ -40,6 +40,6 @@ describe('splitArgs tracks [ ] and { } depth', () => {
 
     expect(parsed).toEqual(original);
     // Guard against the regression collapsing to a single-entry array.
-    expect((parsed as any).options.not).toEqual(['brand-01.a', 'brand-01.b']);
+    expect((parsed as any).options.not.map((m: any) => m.key)).toEqual(['brand-01.a', 'brand-01.b']);
   });
 });

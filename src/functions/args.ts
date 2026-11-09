@@ -1,10 +1,10 @@
 import { isReferenceValue, isScopeKey, ref } from '../tokens';
 import type { FunctionArg, ReferenceValue } from '../tokens';
 import type { Scope } from '../scope';
+import { FunctionError } from '../errors';
 
 /** What a selector accepts as its pool: `ref('palette')` or the scope itself. */
 export type PoolArg = ReferenceValue | Scope;
-import { FunctionError } from '../errors';
 
 /**
  * A selector's pool argument, as the token stores it: a reference to a scope.
@@ -34,4 +34,23 @@ export function valueArg<T extends FunctionArg | undefined>(fn: string, arg: T):
     throw new FunctionError(`${fn} needs a value, got ${name}; a token is 'scope.token'`, fn);
   }
   return arg;
+}
+
+/** Checks a number option at construction: finite, and `positive` (> 0),
+ *  `atLeast` a bound, or an `integer` when asked. */
+export function assertNumber(
+  fn: string,
+  label: string,
+  value: unknown,
+  rule: { positive?: boolean; atLeast?: number; integer?: boolean } = {},
+): void {
+  const ok = typeof value === 'number' && Number.isFinite(value)
+    && (!rule.positive || value > 0)
+    && (rule.atLeast === undefined || value >= rule.atLeast)
+    && (!rule.integer || Number.isInteger(value));
+  if (!ok) {
+    const what = rule.integer ? 'a whole number' : rule.positive ? 'a positive number'
+      : rule.atLeast !== undefined ? `a number of ${rule.atLeast} or more` : 'a finite number';
+    throw new FunctionError(`${fn}: \`${label}\` must be ${what}, got ${String(value)}`, fn);
+  }
 }

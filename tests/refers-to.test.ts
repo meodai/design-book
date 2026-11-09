@@ -3,7 +3,7 @@ import { DesignBook } from '../src/design-book';
 import { color, ref, source, inherited, refersTo } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { lightest } from '../src/functions/color/lightest-darkest';
-import { lighten } from '../src/functions/color/lighten';
+import { lighten } from '../src/functions/color/lighten-darken';
 import { sibling } from '../src/functions/generic/sibling';
 
 /** A scale whose dark end refers to a brand role: `scale.900 = ref('brand.ink')`,
@@ -27,7 +27,7 @@ function brandBook() {
 
 describe('refersTo(…): the members that refer to a token', () => {
   it('stores a marker and refuses scopes', () => {
-    expect(refersTo(ref('brand.ink'))).toEqual({ type: 'reference', key: 'brand.ink', referredBy: true });
+    expect(refersTo(ref('brand.ink'))).toEqual({ type: 'member', key: 'brand.ink', referredBy: true });
     expect(refersTo(refersTo(ref('brand.ink')))).toEqual(refersTo(ref('brand.ink')));
     expect(() => refersTo(ref('brand'))).toThrow(/is a scope/);
     expect(() => source(refersTo(ref('brand.ink')))).toThrow(/refersTo\(source/);
@@ -92,7 +92,7 @@ describe('refersTo(…): the members that refer to a token', () => {
     }));
     expect(book.resolve('ui.text')).toBe('#1a2a80');
     // the editor's order: source inside refersTo
-    expect(refersTo(source(ref('.accent'), 'root'))).toEqual({ type: 'reference', key: '.accent', via: 'root', referredBy: true });
+    expect(refersTo(source(ref('.accent'), 'root'))).toEqual({ type: 'member', key: '.accent', via: 'root', referredBy: true });
   });
 
   it('composes with inherited and re-binds in each scope', () => {

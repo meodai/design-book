@@ -3,6 +3,7 @@ import {
   DesignBook, typography, variant, ref, rem, string, composeBook, layer,
   FunctionError, Renderer,
 } from '../src/index';
+import { functionDependencies } from '../src/tokens';
 
 function buildBook() {
   const book = new DesignBook('t');
@@ -24,7 +25,7 @@ describe('typography()', () => {
     expect(token.name).toBe('typography');
     expect(token.options?.fields).toEqual(['fontSize', 'fontWeight', 'lineHeight']);
     expect(token.metadata?.returnType).toBe('typography');
-    expect(token.metadata?.dependencies).toEqual(['font-size.md']);
+    expect(functionDependencies(token)).toEqual(['font-size.md']);
   });
 
   it('throws on no fields or a field name that cannot be a key', () => {

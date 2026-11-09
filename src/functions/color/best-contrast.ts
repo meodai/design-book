@@ -1,65 +1,45 @@
 import { poolArg, valueArg } from '../args';
 import type { PoolArg } from '../args';
-import { parse } from 'culori';
-import {
-  createFunctionToken,
-  extractDependencies,
-  normalizeNotKeys,
-} from '../../tokens';
-import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
+import { createFunctionToken, toMembers } from '../../tokens';
+import type { FunctionTokenValue, MemberReference, TokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { assertDirection, assertDirectionFits, measureOf, measuredContrast, onLightnessSide } from '../kinds';
+import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide } from '../kinds';
 import type { Direction } from '../kinds';
-import { collectScopeColors, contrastAgainst } from './scope-colors';
-import { filterReadable, readableOnParts } from './readable';
+import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor } from '../pool';
+import { contrastAgainst } from './color-math';
+import { readableOnOptions } from './readable';
+import type { ReadableOn, ReadableOnOptions } from './readable';
 import { picked } from '../picks';
-import type { ReadableOnOptions } from './readable';
 
-export function bestContrastWithImpl(
-  targetValue: string,
-  scope: Scope,
-  not: string[] = [],
-  direction?: Direction,
-  readableOn: string | null = null,
-  readableContrast?: number,
-): string {
+/** The contrast selectors' options as the implementation receives them. */
+export interface ContrastInputs extends ReadableOn {
+  /** Qualified member keys left out (the registry has read `not`). */
+  not: string[];
+  direction?: Direction;
+}
+
+/** The member of `scope` that contrasts most with the target: WCAG ratio
+ *  for colors, the ratio of the two values for sizes and text styles. */
+export function bestContrastWithImpl(targetValue: string, scope: Scope, options: ContrastInputs): string {
+  const fn = 'bestContrastWith';
+  const { not, direction, readableOn, readableContrast } = options;
   const measure = measureOf(targetValue);
-  if (measure && readableOn !== null) {
-    throw new FunctionError('bestContrastWith: `readableOn` is for colors; the target is a size or a text style', 'bestContrastWith');
+  if (measure && readableOn !== undefined) {
+    throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
   }
-  if (measure) return measuredContrast('bestContrastWith', targetValue, measure, scope, not, direction, { pick: 'best' });
-  assertDirectionFits('bestContrastWith', direction, 'color');
-  const targetColor = parse(targetValue);
-  if (!targetColor) {
-    throw new FunctionError(
-      `bestContrastWith: cannot parse target color "${targetValue}"`,
-      'bestContrastWith'
-    );
-  }
-
-  let bestHex: string | null = null;
-  let bestKey = '';
-  let bestRatio = -1;
-
-  for (const candidate of filterReadable('bestContrastWith', collectScopeColors(scope, not), readableOn, readableContrast)) {
-    if (!onLightnessSide(direction, targetColor, candidate.parsed)) continue;
-    const ratio = contrastAgainst(targetColor, candidate.parsed);
-    if (ratio > bestRatio) {
-      bestRatio = ratio;
-      bestHex = candidate.hex;
-      bestKey = candidate.key;
-    }
-  }
-
-  if (!bestHex) {
-    throw new FunctionError(
-      'bestContrastWith: no valid color candidates found in scope',
-      'bestContrastWith'
-    );
-  }
-
-  return picked(scope, bestKey, bestHex);
+  if (measure) return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not), direction, { pick: 'best' });
+  assertDirectionFits(fn, direction, 'color');
+  const target = parseColor(targetValue);
+  if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
+  const targetL = lightnessOf(target);
+  const top = best(
+    colorPool(fn, scope, not, readableOn, readableContrast).filter((c) => onLightnessSide(direction, targetL, c.l)),
+    (c) => contrastAgainst(target, c.color),
+    'max',
+  );
+  if (!top) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
+  return picked(scope, top.key, top.hex);
 }
 
 export function bestContrastWith(
@@ -70,26 +50,22 @@ export function bestContrastWith(
      *  colors, 'larger' / 'smaller' for sizes and text styles. */
     direction?: Direction;
     /** Keys to exclude from the candidate pool. */
-    not?: ReadonlyArray<string | ReferenceValue>;
+    not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
     description?: string;
-    [key: string]: any;
   },
 ): FunctionTokenValue {
-  const scope = poolArg('bestContrastWith', pool);
-  valueArg('bestContrastWith', targetValue);
-  assertDirection('bestContrastWith', options?.direction);
-  const readable = readableOnParts('bestContrastWith', options);
-  return createFunctionToken(
-    'bestContrastWith',
-    [targetValue, scope, ...readable.args],
-    {
-      description: options?.description,
-      options: { not: normalizeNotKeys(options?.not), ...(options?.direction ? { direction: options.direction } : {}), ...readable.options },
-      metadata: {
-        dependencies: [...extractDependencies([targetValue]), ...readable.dependencies],
-        // A color, a size or a text style, as the target is.
-        returnType: undefined,
-      },
+  const fn = 'bestContrastWith';
+  const scope = poolArg(fn, pool);
+  valueArg(fn, targetValue);
+  assertDirection(fn, options?.direction);
+  return createFunctionToken(fn, [targetValue, scope], {
+    description: options?.description,
+    options: {
+      not: toMembers(options?.not),
+      ...(options?.direction ? { direction: options.direction } : {}),
+      ...readableOnOptions(fn, options),
     },
-  );
+    // A color, a size or a text style, as the target is.
+    metadata: { dependencies: [], returnType: undefined },
+  });
 }

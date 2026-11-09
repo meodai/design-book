@@ -1,8 +1,5 @@
-import { converter } from 'culori';
 import { FunctionError } from '../../errors';
-import type { ScopeColor } from './scope-colors';
-
-const toOklch = converter('oklch');
+import type { ColorMember } from '../pool';
 
 /** An OKLCH lightness band, `[min, max]` between 0 and 1. */
 export type LightnessRange = readonly [number, number];
@@ -21,18 +18,15 @@ export function lightnessOption(fn: string, range: unknown): [number, number] | 
 }
 
 /** Keeps the members whose OKLCH lightness lies in the band; throws when none do. */
-export function filterLightness<T extends Pick<ScopeColor, 'parsed'>>(
+export function filterLightness(
   fn: string,
-  pool: T[],
+  pool: ColorMember[],
   range: LightnessRange | undefined,
   scopeName: string,
-): T[] {
+): ColorMember[] {
   if (!range) return pool;
   const [min, max] = range;
-  const kept = pool.filter((c) => {
-    const l = toOklch(c.parsed)?.l;
-    return typeof l === 'number' && l >= min - 1e-9 && l <= max + 1e-9;
-  });
+  const kept = pool.filter((c) => c.l >= min - 1e-9 && c.l <= max + 1e-9);
   if (kept.length === 0) {
     throw new FunctionError(`${fn}: no color of scope "${scopeName}" has a lightness between ${min} and ${max}`, fn);
   }

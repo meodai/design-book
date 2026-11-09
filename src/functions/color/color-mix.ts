@@ -1,7 +1,7 @@
 import { valueArg } from '../args';
-import { parse, interpolate, interpolateWithPremultipliedAlpha } from 'culori';
-import { formatColor, gamutMapSrgb } from './scope-colors';
-import { createFunctionToken, extractDependencies } from '../../tokens';
+import { getMode, parse, interpolate, interpolateWithPremultipliedAlpha } from 'culori';
+import { formatColor, gamutMapSrgb } from './color-math';
+import { createFunctionToken } from '../../tokens';
 import type { Color } from 'culori';
 import type { FunctionTokenValue, TokenValue, ReferenceValue } from '../../tokens';
 import { FunctionError } from '../../errors';
@@ -55,6 +55,14 @@ export function cssColorMix(
 /** Constructor-side check for a 0..1 fraction (a mix ratio, a lighten /
  *  darken amount), so a bad value fails where it is written rather than
  *  producing a nonsense color at resolve time. */
+/** Checks a color space name at construction: a CSS `<color-space>`
+ *  (`srgb`, `display-p3`, `oklch`, …) or Culori's spelling of one. */
+export function assertColorSpace(fn: string, colorSpace: unknown): void {
+  if (typeof colorSpace !== 'string' || !getMode(toCuloriColorSpace(colorSpace) as Parameters<typeof getMode>[0])) {
+    throw new FunctionError(`${fn}: unknown color space ${JSON.stringify(colorSpace)}; use one CSS color-mix() accepts, such as 'oklch', 'oklab', 'srgb' or 'display-p3'`, fn);
+  }
+}
+
 export function assertFraction(fn: string, label: string, value: unknown): void {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
     throw new FunctionError(`${fn}: \`${label}\` must be a number between 0 and 1, got ${String(value)}`, fn);
@@ -64,9 +72,10 @@ export function assertFraction(fn: string, label: string, value: unknown): void 
 export function colorMixImpl(
   color1Value: string,
   color2Value: string,
-  ratio: number,
-  colorSpace: string
+  options: { ratio?: number; colorSpace?: string },
 ): string {
+  const ratio = options.ratio ?? 0.5;
+  const colorSpace = options.colorSpace ?? 'lab';
   const parsed1 = parse(color1Value);
   if (!parsed1) {
     throw new FunctionError(
@@ -111,16 +120,10 @@ export function colorMix(
   const ratio = options?.ratio ?? 0.5;
   const colorSpace = options?.colorSpace ?? 'lab';
   assertFraction('colorMix', 'ratio', ratio);
-  return createFunctionToken(
-    'colorMix',
-    [color1, color2],
-    {
-      description: options?.description,
-      options: { ratio, colorSpace },
-      metadata: {
-        dependencies: extractDependencies([color1, color2]),
-        returnType: 'color',
-      },
-    },
-  );
+  assertColorSpace('colorMix', colorSpace);
+  return createFunctionToken('colorMix', [color1, color2], {
+    description: options?.description,
+    options: { ratio, colorSpace },
+    metadata: { dependencies: [], returnType: 'color' },
+  });
 }

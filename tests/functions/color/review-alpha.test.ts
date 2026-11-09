@@ -3,8 +3,7 @@ import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
 import { bestContrastWith } from '../../../src/functions/color/best-contrast';
 import { minContrastWith } from '../../../src/functions/color/min-contrast';
-import { mostVivid } from '../../../src/functions/color/most-vivid';
-import { leastVivid } from '../../../src/functions/color/least-vivid';
+import { mostVivid, leastVivid } from '../../../src/functions/color/vividness';
 
 describe('selectors and translucent candidates', () => {
   it('bestContrastWith judges a translucent candidate as composited, not opaque', () => {

@@ -141,18 +141,12 @@ describe('nth', () => {
     expect(book.resolve('ui.near-last')).toBe('#cccccc');
   });
 
-  it('throws a FunctionError from the wrapper when index is NaN', () => {
-    const { book, ramp } = makeColorScope();
-    const ui = book.addScope('ui');
-    ui.set('bad', nth(ref('ramp'), NaN));
-    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
+  it('refuses an index of NaN when the token is written', () => {
+    expect(() => nth(ref('ramp'), NaN)).toThrow(FunctionError);
   });
 
-  it('throws a FunctionError from the wrapper when index is Infinity', () => {
-    const { book, ramp } = makeColorScope();
-    const ui = book.addScope('ui');
-    ui.set('bad', nth(ref('ramp'), Infinity));
-    expect(() => book.resolve('ui.bad')).toThrow(FunctionError);
+  it('refuses an index of Infinity when the token is written', () => {
+    expect(() => nth(ref('ramp'), Infinity)).toThrow(FunctionError);
   });
 
   // --- Error cases ---

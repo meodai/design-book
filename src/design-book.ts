@@ -230,12 +230,6 @@ export class DesignBook {
     this.graph = new DependencyGraph();
     registerBuiltinFunctions(this);
     registerBuiltinOrderers(this);
-    this.registerFunction('ramp', (seedValue: string, options?: { shade: string; from?: string }) => {
-      if (!options?.shade) {
-        throw new FunctionError('ramp: missing required "shade" option', 'ramp');
-      }
-      return rampImpl(seedValue, options.shade, this.getRampEngine(options.from));
-    });
     registerBuiltinRenderers(this);
     const ramps = options?.colorRamps;
     if (ramps) {

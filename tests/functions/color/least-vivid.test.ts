@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
-import { leastVivid } from '../../../src/functions/color/least-vivid';
+import { leastVivid } from '../../../src/functions/color/vividness';
 
 describe('leastVivid', () => {
   it('picks the lowest-chroma color in the scope', () => {

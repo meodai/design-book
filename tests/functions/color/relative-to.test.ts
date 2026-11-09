@@ -5,15 +5,15 @@ import { relativeTo, relativeToImpl } from '../../../src/functions/color/relativ
 
 describe('relativeTo alpha', () => {
   it('keeps a translucent input translucent', () => {
-    expect(relativeToImpl('#ff000080', 'oklch', [null, null, null])).toBe('#ff000080');
+    expect(relativeToImpl('#ff000080', { colorSpace: 'oklch', modifications: [null, null, null] })).toBe('#ff000080');
   });
 
   it('keeps alpha through a channel change', () => {
-    expect(relativeToImpl('#ff000080', 'rgb', [0, null, null])).toBe('#00000080');
+    expect(relativeToImpl('#ff000080', { colorSpace: 'rgb', modifications: [0, null, null] })).toBe('#00000080');
   });
 
   it('stays 6-digit hex for an opaque input', () => {
-    expect(relativeToImpl('#ff0000', 'oklch', [null, null, null])).toBe('#ff0000');
+    expect(relativeToImpl('#ff0000', { colorSpace: 'oklch', modifications: [null, null, null] })).toBe('#ff0000');
   });
 });
 
@@ -130,7 +130,7 @@ describe('relativeTo', () => {
       // Rejected at construction; the resolve-time check stays for tokens
       // built by hand or deserialized.
       expect(() => relativeTo(color('#0066cc'), 'hwb', [null, null, null])).toThrow(/unsupported color space/i);
-      expect(() => relativeToImpl('#0066cc', 'hwb', [null, null, null])).toThrow(/unsupported color space/i);
+      expect(() => relativeToImpl('#0066cc', { colorSpace: 'hwb', modifications: [null, null, null] })).toThrow(/unsupported color space/i);
     });
   });
 });

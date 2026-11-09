@@ -21,14 +21,14 @@ describe('closest / furthestFrom with nothing to pick', () => {
     const book = new DesignBook('test');
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
-    expect(() => closestImpl('#ff0000', p, ['p.red'])).toThrow(FunctionError);
+    expect(() => closestImpl('#ff0000', p, { not: ['p.red'] })).toThrow(FunctionError);
   });
 
   it('closest throws on an unparseable target', () => {
     const book = new DesignBook('test');
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
-    expect(() => closestImpl('not-a-color', p)).toThrow(/closest: cannot parse/);
+    expect(() => closestImpl('not-a-color', p, { not: [] })).toThrow(/closest: cannot parse/);
   });
 
   it('furthestFrom throws on a scope with nothing to compare', () => {
@@ -43,7 +43,7 @@ describe('closest / furthestFrom with nothing to pick', () => {
     const book = new DesignBook('test');
     const p = book.addScope('p');
     p.set('red', color('#ff0000'));
-    expect(() => furthestFromImpl('#00ff00', p, ['p.red'])).toThrow(FunctionError);
+    expect(() => furthestFromImpl('#00ff00', p, { not: ['p.red'] })).toThrow(FunctionError);
   });
 
   it('still works through a reference target', () => {

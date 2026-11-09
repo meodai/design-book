@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { nth } from '../src/functions/generic/nth';
-import { lighten } from '../src/functions/color/lighten';
+import { lighten } from '../src/functions/color/lighten-darken';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
-import { mostVivid } from '../src/functions/color/most-vivid';
+import { mostVivid } from '../src/functions/color/vividness';
 import { capturePick } from '../src/functions/picks';
 
 function paletteBook() {

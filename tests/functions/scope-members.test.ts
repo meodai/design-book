@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../src/design-book';
-import { color, px, ref } from '../../src/tokens';
+import { color, px, ref, toMembers } from '../../src/tokens';
 import { nth } from '../../src/functions/generic/nth';
 import { sibling } from '../../src/functions/generic/sibling';
 import { random } from '../../src/functions/generic/random';
 import { nextLarger } from '../../src/functions/generic/closest';
 import { nextSmaller } from '../../src/functions/generic/closest';
-import { lighten } from '../../src/functions/color/lighten';
+import { lighten } from '../../src/functions/color/lighten-darken';
 import { poolKeys } from '../../src/functions/scope-members';
 import { excludedMembers } from '../../src/functions/members';
 
@@ -45,7 +45,7 @@ describe('poolKeys', () => {
 
   it('honours `not` by local key and by an inherited member’s source key', () => {
     const { book, kid } = inheritedDims();
-    const not = excludedMembers(book, 'nth', kid, ['kid.a', 'base.b']);
+    const not = excludedMembers(book, 'nth', kid, toMembers(['kid.a', 'base.b']));
     expect(not).toEqual(['kid.a', 'kid.b']);
     expect(poolKeys(kid, not)).toEqual(['c']);
   });

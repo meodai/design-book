@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
-import { mostVivid } from '../../../src/functions/color/most-vivid';
+import { mostVivid } from '../../../src/functions/color/vividness';
 
 describe('mostVivid', () => {
   it('picks the highest-chroma color in the scope', () => {

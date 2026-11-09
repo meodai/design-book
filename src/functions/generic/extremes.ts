@@ -1,10 +1,11 @@
 import { poolArg } from '../args';
 import type { PoolArg } from '../args';
-import { createFunctionToken, normalizeNotKeys } from '../../tokens';
+import { createFunctionToken, toMembers } from '../../tokens';
 import type { FunctionTokenValue, ReferenceValue } from '../../tokens';
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
-import { measuredMembers, onlyMeasuredGroup } from '../kinds';
+import { onlyMeasuredGroup } from '../kinds';
+import { best, measuredPool } from '../pool';
 import { picked } from '../picks';
 
 type Extreme = 'largest' | 'smallest';
@@ -16,21 +17,18 @@ type Extreme = 'largest' | 'smallest';
  * sizes and text styles), `type` picks one or the call throws. Ties go to the
  * first member in scope order.
  */
-function extremeImpl(name: Extreme, scope: Scope, not: string[], type?: 'size' | 'text'): string {
-  const group = onlyMeasuredGroup(name, scope, not, type);
-  const members = measuredMembers(scope, group.kind, group.unit, not);
-  const sign = name === 'largest' ? 1 : -1;
-  let best = members[0];
-  for (const member of members) if (sign * (member.num - best.num) > 0) best = member;
-  return picked(scope, best.key, best.value);
+function extremeImpl(name: Extreme, scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
+  const members = onlyMeasuredGroup(name, scope, measuredPool(scope, options.not), options.type);
+  const pick = best(members, (m) => m.num, name === 'largest' ? 'max' : 'min')!;
+  return picked(scope, pick.key, pick.value);
 }
 
-export function largestImpl(scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }): string {
-  return extremeImpl('largest', scope, options?.not ?? [], options?.type);
+export function largestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
+  return extremeImpl('largest', scope, options);
 }
 
-export function smallestImpl(scope: Scope, options?: { not?: string[]; type?: 'size' | 'text' }): string {
-  return extremeImpl('smallest', scope, options?.not ?? [], options?.type);
+export function smallestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text' }): string {
+  return extremeImpl('smallest', scope, options);
 }
 
 export interface ExtremeOptions {
@@ -49,7 +47,7 @@ function build(name: Extreme, pool: PoolArg, options?: ExtremeOptions): Function
   }
   return createFunctionToken(name, [scope], {
     description: options?.description,
-    options: { not: normalizeNotKeys(options?.not), ...(type ? { type } : {}) },
+    options: { not: toMembers(options?.not), ...(type ? { type } : {}) },
     metadata: {
       dependencies: [],
       returnType: undefined,

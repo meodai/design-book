@@ -56,7 +56,7 @@ describe('readableOn in the editor', () => {
     ui.set('match', closest(color('#ffff66'), pool, { readableOn: ref('bg-10.white'), readableContrast: 7 }));
 
     expect(getTokenDisplayValue(ui, 'accent')).toBe(
-      "mostVivid(ref('pool-10'), { readableOn: ref('bg-10.white'), not: [\"pool-10.gray\"], readableContrast: 4.5 })",
+      "mostVivid(ref('pool-10'), { not: [ref('pool-10.gray')], readableOn: ref('bg-10.white'), readableContrast: 4.5 })",
     );
     expect(getTokenDisplayValue(ui, 'match')).toBe(
       "closest(color('#ffff66'), ref('pool-10'), { readableOn: ref('bg-10.white'), readableContrast: 7 })",
