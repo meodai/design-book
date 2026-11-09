@@ -12,16 +12,26 @@ import type { Scope } from '../scope';
  * returns what its call reported; the SVG renderer uses it to draw a
  * selector's edge from the member it picked.
  *
- * Nothing is stored on tokens or in the book: a pick is read by resolving
- * again, the same way the value is.
+ * Nothing is stored on tokens. The book's resolve cache keeps the pick a
+ * computation reported next to its value and reports it again on a hit
+ * (`beginCapture` / `endCapture` / `replay`), so a cached resolve answers
+ * `capturePick` the same way a fresh one does.
  */
 
 interface Frame {
   key?: string;
 }
 
+/** Listens for the function call that closes at `depth`: `key` is what it
+ *  reported, `closed` whether one closed there at all. */
+export interface Capture {
+  depth: number;
+  key?: string;
+  closed: boolean;
+}
+
 const frames: Frame[] = [];
-const captures: Array<{ depth: number; key?: string }> = [];
+const captures: Capture[] = [];
 
 /** Runs one function call — its arguments and its implementation — in its
  *  own frame. */
@@ -33,7 +43,10 @@ export function inFrame<T>(run: () => T): T {
     const frame = frames.pop()!;
     const capture = captures[captures.length - 1];
     // The frame that closes back at the capture's depth is the call it asked for.
-    if (capture && frames.length === capture.depth) capture.key = frame.key;
+    if (capture && frames.length === capture.depth) {
+      capture.key = frame.key;
+      capture.closed = true;
+    }
   }
 }
 
@@ -49,12 +62,34 @@ export function picked(scope: Scope, key: string, value: string): string {
  *  call reported — `undefined` when it reported none (a value transform, or
  *  a custom function that does not call `picked`). */
 export function capturePick(resolve: () => unknown): string | undefined {
-  const capture: { depth: number; key?: string } = { depth: frames.length };
-  captures.push(capture);
+  const capture = beginCapture();
   try {
     resolve();
   } finally {
-    captures.pop();
+    endCapture();
   }
   return capture.key;
+}
+
+/** Starts listening at the current depth (see `Capture`). */
+export function beginCapture(): Capture {
+  const capture: Capture = { depth: frames.length, closed: false };
+  captures.push(capture);
+  return capture;
+}
+
+/** Stops the innermost capture. */
+export function endCapture(): void {
+  captures.pop();
+}
+
+/** Reports again what a capture heard, as if its call had closed now: a
+ *  cached result answers the capture listening outside it. */
+export function replay(heard: { key?: string; closed: boolean }): void {
+  if (!heard.closed) return;
+  const capture = captures[captures.length - 1];
+  if (capture && frames.length === capture.depth) {
+    capture.key = heard.key;
+    capture.closed = true;
+  }
 }

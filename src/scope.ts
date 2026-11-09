@@ -22,6 +22,8 @@ type BookWithScope = {
   getSourceKey?(key: string): string | undefined;
   /** True for an inherited key that re-binds relative refs to its own scope. */
   isRebound?(key: string): boolean;
+  /** The book's memo of resolved values. */
+  _cache: ResolveCache;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
   _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
@@ -38,6 +40,7 @@ type BookWithScope = {
 // The key check lives in ./keys so design-book/naming can use it alone.
 export { assertValidTokenKey } from './keys';
 import { assertValidTokenKey, splitKey } from './keys';
+import type { ResolveCache } from './resolve-cache';
 import { isTypographyToken, typographyBase, typographyFieldNames } from './functions/non-color/typography';
 
 /** See `Scope.metadata`. */
@@ -159,6 +162,7 @@ export class Scope {
       // the order caches stay invalidated and recompute from the restored map
       if (existed) this.tokens.set(name, oldValue as AnyTokenValue);
       else this.tokens.delete(name);
+      this.invalidateOrderCache();
       // The book may already have announced this change — handlers run
       // synchronously inside _notifyTokenChange — so announce the restored
       // state too rather than leave listeners holding a value that is gone.
@@ -251,8 +255,11 @@ export class Scope {
     return sorted;
   }
 
+  /** Something in this scope changed (a token, the order, an inherited
+   *  key): its order and every resolved value may be stale. */
   invalidateOrderCache(): void {
     this.orderedKeysCache = null;
+    this.book._cache.clear();
   }
 
   private subscribeToChanges(): void {
@@ -327,6 +334,12 @@ export class Scope {
   }
 
   private computeOrderedKeys(keys: string[], order: ScopeOrder): string[] {
+    // Pools see insertion order while this runs: nothing computed now is
+    // the value the key has outside it, so none of it is cached.
+    return this.book._cache.without(() => this.sortKeys(keys, order));
+  }
+
+  private sortKeys(keys: string[], order: ScopeOrder): string[] {
     this._ordering = true;
     try {
       type Entry = { key: string; index: number; type: string; resolved: string | null; token: AnyTokenValue };
@@ -426,6 +439,11 @@ export class Scope {
   }
 
   resolve(name: string): string {
+    return this.book._cache.resolve(`${this.name}.${name}`, () => this.compute(name));
+  }
+
+  /** `resolve` without the cache. */
+  private compute(name: string): string {
     const field = splitKey(name);
     if (field) return this.resolveField(field[0], field[1]);
     const token = this.get(name);
@@ -435,6 +453,9 @@ export class Scope {
 
     const qualified = `${this.name}.${name}`;
     if (this.resolving.has(name)) {
+      // Turned away mid-resolution: whatever is being computed around this
+      // depends on the order things were asked in, not on the book alone.
+      this.book._cache.trip();
       throw new CircularDependencyError([qualified, qualified]);
     }
     this.resolving.add(name);

@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ScopeManager } from '../src/scope-manager';
 import { color, ref } from '../src/tokens';
 import { DependencyGraph } from '../src/dependency-graph';
+import { ResolveCache } from '../src/resolve-cache';
 import { DesignBook } from '../src/design-book';
 
 function createMockBook() {
   const graph = new DependencyGraph();
   const book: any = {
     getDependencyGraph: () => graph,
+    _cache: new ResolveCache(),
     getTokenByKey: vi.fn(),
     resolve: vi.fn(),
     getScope: vi.fn(),

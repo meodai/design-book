@@ -2,6 +2,7 @@ import { ScopeManager } from './scope-manager';
 import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
+import { ResolveCache } from './resolve-cache';
 import { scopeOf, splitKey } from './keys';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
@@ -162,6 +163,9 @@ export class DesignBook {
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
+  /** Resolved values, cleared on every change (see `ResolveCache`). Read
+   *  by the scopes; internal. */
+  readonly _cache = new ResolveCache();
   private orderers: Map<string, TokenOrderer> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
   /** Queue entries already reported by a previous `flush()`. A key that
@@ -267,7 +271,7 @@ export class DesignBook {
     options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
-    this._binding.version++;
+    this._scopesChanged();
     try {
       this._bindInheritedKeysOf(name);
     } catch (e) {
@@ -295,9 +299,9 @@ export class DesignBook {
   }
 
   deleteScope(name: string): string[] {
-    this._binding.version++;
+    this._scopesChanged();
     const keys = this.scopeManager.deleteScope(name);
-    this._binding.version++;
+    this._scopesChanged();
     this.emit('scopeRemoved', { scope: name, removedKeys: keys });
     return keys;
   }
@@ -382,6 +386,13 @@ export class DesignBook {
 
   _bindingContext(): BindingContext {
     return this._binding;
+  }
+
+  /** A scope was added or removed: bindings that followed an `extends`
+   *  chain, and every resolved value, may be stale. */
+  private _scopesChanged(): void {
+    this._binding.version++;
+    this._cache.clear();
   }
 
   // --- Token operations ---
@@ -528,6 +539,7 @@ export class DesignBook {
 
   registerFunction<Args extends unknown[]>(name: string, impl: FunctionImplementation<Args>): void {
     this.functions.set(name, impl as FunctionImplementation);
+    this._cache.clear();
   }
 
   getFunction(name: string): FunctionImplementation | undefined {
@@ -539,6 +551,7 @@ export class DesignBook {
 
   registerOrderer(type: string, orderer: TokenOrderer): void {
     this.orderers.set(type, orderer);
+    this._cache.clear();
   }
 
   getOrderer(type: string): TokenOrderer | undefined {
@@ -614,6 +627,7 @@ export class DesignBook {
       this._rampSets.set(name, rampSet(set as RampSetSource));
     }
     this._rampEngines.delete(name);
+    this._cache.clear();
     const wasDefault = this._defaultRampSet;
     if (options?.default) this._defaultRampSet = name;
     this._announceRampSet(name, wasDefault);
@@ -1417,7 +1431,7 @@ export class DesignBook {
   /** Undo an `addScope` whose inherited tokens were refused. */
   private _discardScope(name: string): void {
     this.scopeManager._discard(name);
-    this._binding.version++;
+    this._scopesChanged();
     const prefix = `${name}.`;
     for (const node of this.graph.getAllNodes()) {
       if (!node.startsWith(prefix) || !this.graph.hasNode(node)) continue;
