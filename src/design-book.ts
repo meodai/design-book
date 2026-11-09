@@ -377,10 +377,11 @@ export class DesignBook {
     return this.scopeManager.hasScope(name);
   }
 
-  /** The top-level scopes. A group is reached through the key that holds
-   *  it: `getScope('type.title')`. */
+  /** Every scope: the top-level ones and the groups in them (a group is a
+   *  scope; its name is its path, `type.title`, and `scope.holderName` is
+   *  the scope holding it). */
   getAllScopes(): Scope[] {
-    return this.scopeManager.getAllScopes().filter((s) => !s.name.includes('.'));
+    return this.scopeManager.getAllScopes();
   }
 
   getAllKeysForScope(name: string): string[] {

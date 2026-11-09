@@ -1012,7 +1012,7 @@ const VALUE_CONSTRUCTORS = [
 
 function getAllQualifiedKeys(): { key: string; color?: string }[] {
   const results: { key: string; color?: string }[] = [];
-  for (const scope of book.getAllScopes()) {
+  for (const scope of book.getAllScopes().filter((s) => s.holderName === undefined)) {
     for (const tokenName of scope.getAllKeys()) {
       const qualifiedKey = `${scope.name}.${tokenName}`;
       let color: string | undefined;
@@ -1279,7 +1279,7 @@ function renderInputColumn() {
 
   inputColumn.innerHTML = '';
 
-  const scopes = book.getAllScopes();
+  const scopes = book.getAllScopes().filter((s) => s.holderName === undefined);
 
   for (const scope of scopes) {
     const block = document.createElement('div');
@@ -1360,7 +1360,7 @@ function showAddScopeForm() {
   noneOption.textContent = '(no extends)';
   extendsSelect.appendChild(noneOption);
 
-  for (const s of book.getAllScopes()) {
+  for (const s of book.getAllScopes().filter((g) => g.holderName === undefined)) {
     const opt = document.createElement('option');
     opt.value = s.name;
     opt.textContent = `extends ${s.name}`;

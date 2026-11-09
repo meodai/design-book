@@ -79,9 +79,11 @@ describe('a key holds a group', () => {
     expect(book.getScope('type.body')).toBeUndefined();
   });
 
-  it('a top-level scope list does not include groups', () => {
+  it('is a scope like any other: listed, with its holder', () => {
     const { book } = typeBook();
-    expect(book.getAllScopes().map((s) => s.name)).toEqual(['font', 'font-size', 'type', 'button']);
+    expect(book.getAllScopes().map((s) => s.name)).toEqual(['font', 'font-size', 'type', 'type.body', 'type.title', 'button']);
+    expect(book.getScope('type.title')!.holderName).toBe('type');
+    expect(book.getScope('type')!.holderName).toBeUndefined();
   });
 
   it('refuses a member name that cannot be a key', () => {
@@ -451,11 +453,13 @@ describe('rendering groups', () => {
     expect(json['type.body']).toBeUndefined();
   });
 
-  it('svg: a member reference is an edge from the row holding its group', () => {
+  it('svg: a group is a table; the key holding it a line to it; a member reference a line to the member', () => {
     const { book } = typeBook();
     book.addScope('callout').set('size', ref('type.title.fontSize'));
     const svg = new SVGRenderer(book, { linksOnly: false }).render();
-    expect(svg).toContain('data-from="callout.size" data-to="type.title"');
+    expect(svg).toContain('>type.title</text>');
+    expect(svg).toContain('data-from="type.title" data-to="__header__type.title"');
+    expect(svg).toContain('data-from="callout.size" data-to="type.title.fontSize"');
   });
 });
 

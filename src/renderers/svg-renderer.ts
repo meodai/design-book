@@ -1,17 +1,19 @@
 import { parse, formatHex, formatHex8, wcagLuminance } from 'culori';
 import { DesignBook } from '../design-book';
 import { detectValueType } from '../scope';
-import { isPoolReference, anchorScopeOf } from '../tokens';
+import { isGroupValue, isPoolReference, anchorScopeOf } from '../tokens';
 
-/** True for a key inside a group (`type.title.fontSize`): it has no row of
- *  its own and is drawn on the row of the key holding its group. */
-const isMemberKey = (key: string) => key.indexOf('.') !== key.lastIndexOf('.');
-/** The row a key is drawn on: the key of a top-level scope it is in. */
-const rowKeyOf = (key: string) => {
-  const first = key.indexOf('.');
-  const second = first === -1 ? -1 : key.indexOf('.', first + 1);
-  return second === -1 ? key : key.slice(0, second);
-};
+/** The table a key is a row of: the scope it belongs to, everything before
+ *  its last dot — `type.title` for `type.title.fontSize`, a group drawn as a
+ *  table of its own. */
+const tableOf = (key: string) => key.slice(0, key.lastIndexOf('.'));
+
+/** What a prerequisite stands for in the drawing: a key is its row; a path
+ *  read through a group (no table of its own) is what it reads. */
+function drawnKeys(book: DesignBook, key: string): string[] {
+  if (book.getScope(tableOf(key))) return [key];
+  return book.getDependencyGraph().getIncoming(key).filter((k) => k.includes('.') && book.getScope(tableOf(k)));
+}
 import { OrthogonalRouter, roundedPath, midpoint, bridges, junctions } from './orthogonal-router';
 import type { Point } from './orthogonal-router';
 import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
@@ -200,9 +202,11 @@ function scopeFlow(
     row.set(to, (row.get(to) ?? 0) + 1);
   };
   const graph = book.getDependencyGraph();
-  const scopeOf = (key: string) => key.slice(0, key.indexOf('.'));
+  const scopeOf = tableOf;
   for (const scope of book.getAllScopes()) {
     if (scope.extendsScope) add(scope.extendsScope, scope.name);
+    // A group sits by the scope holding it.
+    if (scope.name.includes('.')) add(tableOf(scope.name), scope.name);
     for (const name of scope.getAllKeys()) {
       const key = `${scope.name}.${name}`;
       if (book.isInherited(key) && !book.isRebound(key)) continue;
@@ -213,11 +217,10 @@ function scopeFlow(
         continue;
       }
       if (linksOnly && token?.type === 'function') continue;
+      // A key holding a group reads its members: the group sits by it.
+      if (isGroupValue(token)) continue;
       for (const p of graph.getIncoming(key)) {
-        const deps = isMemberKey(p) && rowKeyOf(p) === key ? graph.getIncoming(p) : [p];
-        for (const d of deps) {
-          if (!d.includes('.')) continue;
-          const dep = isMemberKey(d) ? rowKeyOf(d) : d;
+        for (const dep of drawnKeys(book, p)) {
           if (keep(key, dep)) addRow(dep, scope.name);
         }
       }
@@ -247,7 +250,7 @@ function differingRows(book: DesignBook, shown: Set<string>): Set<string> {
     const parent = book.getScope(name)?.extendsScope;
     return parent && shown.has(parent) ? family(parent) : name;
   };
-  const scopeOf = (key: string) => key.slice(0, key.indexOf('.'));
+  const scopeOf = tableOf;
   const resolved = (key: string) => {
     try { return book.resolve(key); } catch { return undefined; }
   };
@@ -262,7 +265,7 @@ function differingRows(book: DesignBook, shown: Set<string>): Set<string> {
   for (const scope of scopes) {
     for (const name of scope.getAllKeys()) {
       const key = `${scope.name}.${name}`;
-      for (const r of graph.getOutgoing(key)) if (r.includes('.')) addReader(key, isMemberKey(r) ? rowKeyOf(r) : r);
+      for (const r of graph.getOutgoing(key)) if (r.includes('.') && book.getScope(tableOf(r))) addReader(key, r);
       const token = book.getTokenByKey(key);
       if (token && isPaletteLinker(book, token)) {
         const picked = findResolvedSource(book, key, token);
@@ -940,18 +943,24 @@ export class SVGRenderer {
         // linksOnly hides value-deriving function edges entirely.
         if (this.options.linksOnly && isFunction) continue;
 
+        // A key holding a group: one line to the group's table.
+        if (isGroupValue(token)) {
+          const toDot = dots.get(`__header__${key}`);
+          const connId = `${key}->__header__${key}`;
+          if (toDot && !processedConnections.has(connId)) {
+            processedConnections.add(connId);
+            connections.push({ from: fromDot, to: toDot, isDashed: false, label: 'holds', consumerAtStart: false });
+          }
+          continue;
+        }
+
         const label = isFunction && token
           ? (token as FunctionTokenValue).name
           : (token?.type === 'reference' ? 'ref' : '');
 
-        // Field nodes (`type.title.fontSize`) have no row: a typography's own
-        // fields are looked through to what they read, any other field is
-        // drawn as an edge to the token it belongs to.
+        // A path read through a group has no row: drawn as what it reads.
         const prerequisites = new Set<string>();
-        for (const p of graph.getIncoming(key)) {
-          const deps = isMemberKey(p) && rowKeyOf(p) === key ? graph.getIncoming(p) : [p];
-          for (const d of deps) prerequisites.add(isMemberKey(d) ? rowKeyOf(d) : d);
-        }
+        for (const p of graph.getIncoming(key)) for (const d of drawnKeys(this.book, p)) prerequisites.add(d);
         for (const depKey of prerequisites) {
           const toDot = dots.get(depKey);
           if (!toDot) continue;

@@ -284,7 +284,8 @@ export class Renderer {
   /** The top-level scopes that have output: templates are only
    *  definitions, rendered where they are placed. */
   private renderable(): Scope[] {
-    return this.book.getAllScopes().filter((scope) => !scope.template);
+    // Groups are written through the keys holding them.
+    return this.book.getAllScopes().filter((scope) => !scope.template && scope.holderName === undefined);
   }
 
   private scopesToRender() {
