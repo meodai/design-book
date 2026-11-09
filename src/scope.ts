@@ -14,7 +14,7 @@ export type SortCriterion =
 export type ScopeOrder = SortCriterion[];
 
 /** What a scope needs from its book. */
-type BookWithScope = {
+export type BookWithScope = {
   resolve(key: string): string;
   getTokenByKey(key: string): AnyTokenValue | undefined;
   getDependencyGraph(): { getDependentsOf(key: string): string[] };

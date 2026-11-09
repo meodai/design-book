@@ -18,9 +18,9 @@ import { typographyImpl } from './non-color/typography';
 import { randomImpl } from './generic/random';
 import { nthImpl } from './generic/nth';
 import { siblingImpl, scopeOfKey } from './generic/sibling';
-import { excludedMembers, memberStart, oneMember } from './members';
+import { excludedMembers, followSource, memberStart, oneMember } from './members';
 import type { Scope } from '../scope';
-import type { AnyTokenValue } from '../tokens';
+import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 import { isMemberReference, isUnresolvable } from '../tokens';
 import { FunctionError } from '../errors';
 
@@ -60,7 +60,11 @@ export type { SiblingOptions } from './generic/sibling';
 
 /** What the built-in functions need from a book. */
 export interface BuiltinHost {
-  registerFunction<Args extends unknown[]>(name: string, impl: (...args: Args) => string): void;
+  registerFunction<Args extends unknown[]>(
+    name: string,
+    impl: (...args: Args) => string,
+    traits?: { scopesRead?(token: FunctionTokenValue): string[] },
+  ): void;
   /** `sibling` looks up the scope its anchor key lives in. */
   getScope(name: string): Scope | undefined;
   /** A typography variant reads its base's fields. */
@@ -68,6 +72,8 @@ export interface BuiltinHost {
   getTokenByKey(key: string): AnyTokenValue | undefined;
   /** `ramp` copies the masters of a ramp set the book keeps. */
   getRampEngine(name?: string): RampEngine;
+  /** The scopes a ramp set's masters live in. */
+  rampMasterScopes(name?: string): string[];
 }
 
 /**
@@ -121,10 +127,11 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
   book.registerFunction('typographyScale', typographyScaleImpl);
   book.registerFunction('timing', timingImpl);
   book.registerFunction('typography', (...args: unknown[]) => typographyImpl(book, ...args));
+  // A ramp copying scope masters reads those scopes, like a pool.
   book.registerFunction('ramp', (seed: string, options?: { shade?: string; from?: string }) => {
     if (!options?.shade) throw new FunctionError('ramp: missing required "shade" option', 'ramp');
     return rampImpl(seed, options.shade, book.getRampEngine(options.from));
-  });
+  }, { scopesRead: (token) => book.rampMasterScopes(token.options?.from as string | undefined) });
 
   // sibling: (scope?, options). The anchor and `toward` are members, read
   // against the scale the way a `not` entry is.
@@ -153,5 +160,13 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
     const target = toward !== undefined ? oneMember(book, 'sibling', '`toward`', toward, scope) : undefined;
     const not = excludedMembers(book, 'sibling', scope, options.not ?? []);
     return siblingImpl(scope, anchor, offset as number, options.wrap ?? false, not, target);
+  }, {
+    // Without a scale argument, a `source(…)` anchor steps along wherever
+    // its references lead, which changes as they are re-pointed.
+    scopesRead(token) {
+      const from = token.options?.from;
+      if (token.args.length > 0 || !isMemberReference(from) || from.via === undefined) return [];
+      return [followSource(book, 'sibling', from.key, from.via).split('.')[0]];
+    },
   });
 }

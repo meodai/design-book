@@ -2,14 +2,42 @@ import { Scope } from './scope';
 import { ScopeError } from './errors';
 import { scopeOf } from './keys';
 import { functionDependencies } from './tokens';
-import type { ReferenceValue, FunctionTokenValue } from './tokens';
+import type { AnyTokenValue, ReferenceValue, FunctionTokenValue } from './tokens';
+import type { BookWithScope } from './scope';
 
 export class ScopeManager {
   private scopes: Map<string, Scope> = new Map();
-  private book: any;
+  /** Scope name → the scopes that extend it directly. */
+  private children: Map<string, Set<string>> = new Map();
+  private book: BookWithScope;
 
-  constructor(book: any) {
+  constructor(book: BookWithScope) {
     this.book = book;
+  }
+
+  /** `name` and every scope that extends it, at any depth — the scopes
+   *  that see `name`'s keys. */
+  lineageBelow(name: string): string[] {
+    const out = [name];
+    for (let i = 0; i < out.length; i++) {
+      for (const child of this.children.get(out[i]) ?? []) out.push(child);
+    }
+    return out;
+  }
+
+  private link(scope: Scope): void {
+    const base = scope.extendsScope;
+    if (base === undefined) return;
+    let set = this.children.get(base);
+    if (!set) this.children.set(base, (set = new Set()));
+    set.add(scope.name);
+  }
+
+  private unlink(scope: Scope): void {
+    const base = scope.extendsScope;
+    const set = base === undefined ? undefined : this.children.get(base);
+    set?.delete(scope.name);
+    if (set?.size === 0) this.children.delete(base!);
   }
 
   addScope(
@@ -24,6 +52,7 @@ export class ScopeManager {
     }
     const scope = new Scope(name, this.book, options);
     this.scopes.set(name, scope);
+    this.link(scope);
     if (options?.order !== undefined) scope.setOrder(options.order);
     return scope;
   }
@@ -91,30 +120,37 @@ export class ScopeManager {
   /** Unregister a scope that was just added, silently — for an `addScope`
    *  the book refused after the fact. */
   _discard(name: string): void {
-    this.scopes.get(name)?.dispose();
+    const scope = this.scopes.get(name);
+    if (!scope) return;
+    scope.dispose();
+    this.unlink(scope);
     this.scopes.delete(name);
   }
 
-  deleteScope(name: string): string[] {
+  /** Removes a scope; `notify` hears its keys (each with the token it
+   *  held) while the scope is still registered but empty. */
+  deleteScope(name: string, notify: (removed: Array<[string, AnyTokenValue | undefined]>) => void): string[] {
     const scope = this.scopes.get(name);
     if (!scope) {
       throw new ScopeError(`Scope "${name}" not found`, name);
     }
-    const keys = scope.getAllKeys().map(k => `${name}.${k}`);
-    // I2 fix: release the book-level change subscription before removing the
-    // scope so the listener Set doesn't retain a stale closure forever.
+    const removed = scope.getAllKeys().map((k): [string, AnyTokenValue | undefined] => [`${name}.${k}`, scope.getRaw(k)]);
+    // Release the book-level change subscription, so the listener set does
+    // not keep a closure over a removed scope.
     scope.dispose();
-    // Empty the scope but keep it registered while notifying: that makes
-    // every key read as gone (so the node is detached the way Scope.delete
-    // does it, keeping it while dependents point at it, and the change fans
-    // out to them) while the book can still reach the scope to refresh those
-    // dependents' reference caches. Unregister it only afterwards.
+    // Unlinked before it is emptied: emptying forgets what it extends.
+    this.unlink(scope);
+    // Empty the scope but keep it registered while notifying: every key
+    // reads as gone (so the node is detached the way Scope.delete does it,
+    // kept while dependents point at it, and the change fans out to them).
+    // Unregister it only afterwards — even if a removal was refused.
     scope._detachForDeletion();
-    for (const key of keys) {
-      this.book._notifyTokenChange(key, undefined, undefined);
+    try {
+      notify(removed);
+    } finally {
+      this.scopes.delete(name);
     }
-    this.scopes.delete(name);
-    return keys;
+    return removed.map(([key]) => key);
   }
 
   hasScope(name: string): boolean {

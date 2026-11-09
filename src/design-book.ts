@@ -14,7 +14,6 @@ import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl, rampSet } from './functions/color/ramp';
 import type { RampSet, RampSetSource } from './functions/color/ramp';
 import { tailwindV3Ramps } from 'dittotones/ramps/tailwind-v3';
-import { followSource } from './functions/members';
 import { FunctionError } from './errors';
 import { registerBuiltinRenderers } from './renderers/builtin';
 
@@ -38,8 +37,17 @@ export interface DesignBookOptions {
 
 export interface TokenChangedDetail {
   key: string;
-  newValue: any;
-  oldValue: any;
+  /** `written`: the token stored at `key` was set or deleted. `dependent`:
+   *  the token is unchanged, but something it reads (a reference, a pool, a
+   *  ramp set) changed, so its value may have moved. */
+  cause: 'written' | 'dependent';
+  /** The token stored at `key` now (`undefined` once deleted). */
+  newValue: AnyTokenValue | undefined;
+  /** The token stored before: the one before the write for a written key,
+   *  the same token as `newValue` for a dependent. */
+  oldValue: AnyTokenValue | undefined;
+  /** The resolved value now; `undefined` when it does not resolve. */
+  value: string | undefined;
 }
 
 export interface ChangeDetail {
@@ -105,6 +113,19 @@ export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
 
 export type FunctionImplementation<Args extends unknown[] = unknown[]> = (...args: Args) => string;
 
+/** What a function tells the book besides its implementation. */
+export interface FunctionTraits {
+  /**
+   * Scopes a token of this function reads as a whole, beyond its scope
+   * arguments, which only the book can work out: a `sibling` whose anchor
+   * is a `source(…)` steps along wherever the anchor's references lead; a
+   * `ramp` copying scope masters reads those scopes. A change to any key of
+   * them notifies the token, like a selector's pool. Asked again whenever
+   * the token is notified, so the answer may change with the book.
+   */
+  scopesRead?(token: FunctionTokenValue): string[];
+}
+
 /** Bundled info about a token returned by `book.inspect(key)`. */
 export interface TokenInspection {
   /** Fully-qualified key, e.g. `"color.brand"`. */
@@ -162,6 +183,7 @@ export class DesignBook {
   private graph: DependencyGraph;
   private listeners: Map<string, Set<Function>> = new Map();
   private functions: Map<string, FunctionImplementation> = new Map();
+  private functionTraits: Map<string, FunctionTraits> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
   /** Resolved values, cleared on every change (see `ResolveCache`). Read
    *  by the scopes; internal. */
@@ -204,12 +226,16 @@ export class DesignBook {
    *  without scanning every scope. */
   private _scopesBySelector: Map<string, Set<string>> = new Map();
 
+  /** Function name → keys of the stored tokens calling it (own and
+   *  re-bound), kept with the selector index. */
+  private _keysByFunction: Map<string, Set<string>> = new Map();
+
   /** Master ramp sets by name: a fixed set, or the names of scopes whose
    *  tokens are the masters (one scope a ramp, its keys the shades), read
    *  live. Engines are made on first use; a scope set's engine is rebuilt
    *  when its colors change (`fingerprint`). */
   private _rampSets: Map<string, RampSet | { scopes: string[] }> = new Map();
-  private _rampEngines: Map<string, { engine: RampEngine; fingerprint: string }> = new Map();
+  private _rampEngines: Map<string, { engine: RampEngine; fingerprint: string; generation: number }> = new Map();
   private _buildingRampSets = new Set<string>();
   private _defaultRampSet = 'tailwind-v3';
   private _rampOptions: {
@@ -294,7 +320,7 @@ export class DesignBook {
 
   deleteScope(name: string): string[] {
     this._scopesChanged();
-    const keys = this.scopeManager.deleteScope(name);
+    const keys = this.scopeManager.deleteScope(name, (removed) => this._notifyRemoved(removed));
     this._scopesChanged();
     this.emit('scopeRemoved', { scope: name, removedKeys: keys });
     return keys;
@@ -531,8 +557,10 @@ export class DesignBook {
 
   // --- Function registry ---
 
-  registerFunction<Args extends unknown[]>(name: string, impl: FunctionImplementation<Args>): void {
+  registerFunction<Args extends unknown[]>(name: string, impl: FunctionImplementation<Args>, traits?: FunctionTraits): void {
     this.functions.set(name, impl as FunctionImplementation);
+    if (traits) this.functionTraits.set(name, traits);
+    else this.functionTraits.delete(name);
     this._cache.clear();
   }
 
@@ -640,25 +668,29 @@ export class DesignBook {
     if (!source) {
       throw new FunctionError(`ramp: no ramp set "${name}"; registered: ${this.rampSetNames.join(', ')}`, 'ramp');
     }
-    let set: RampSet;
+    // A fixed set never changes. A scope set is current while no value has
+    // changed since it was read (the cache's generation); after that its
+    // masters are read again, and the engine kept if they are the same.
+    const generation = this._cache.generation;
+    const cached = this._rampEngines.get(name);
+    if (cached && (source instanceof Map || cached.generation === generation)) return cached.engine;
+    let set: RampSet = source as RampSet;
     let fingerprint = '';
-    if (source instanceof Map) {
-      set = source;
-    } else {
+    if (!(source instanceof Map)) {
       const hexes = this._masterRamps(name, source.scopes);
       fingerprint = JSON.stringify(hexes);
-      const cached = this._rampEngines.get(name);
-      if (cached && cached.fingerprint === fingerprint) return cached.engine;
+      if (cached && cached.fingerprint === fingerprint) {
+        cached.generation = generation;
+        return cached.engine;
+      }
       set = rampSet(hexes);
     }
-    const cached = this._rampEngines.get(name);
-    if (cached && cached.fingerprint === fingerprint) return cached.engine;
     const engine = new RampEngine({
       ramps: set,
       preserveHueOffsets: this._rampOptions.preserveHueOffsets,
       gamutMap: this._rampOptions.gamutMap,
     });
-    this._rampEngines.set(name, { engine, fingerprint });
+    this._rampEngines.set(name, { engine, fingerprint, generation });
     return engine;
   }
 
@@ -683,42 +715,45 @@ export class DesignBook {
     }
   }
 
-  /** The `ramp` tokens that copy a set whose masters include `node`'s scope. */
-  private _rampsReadingMastersOf(node: string): string[] {
-    const scopeName = scopeOf(node);
-    const sets: string[] = [];
-    for (const [name, source] of this._rampSets) {
-      if (!(source instanceof Map) && source.scopes.includes(scopeName)) sets.push(name);
-    }
-    if (sets.length === 0) return [];
-    return this._rampTokensReading((from) => sets.includes((from as string | undefined) ?? this._defaultRampSet));
+  /** The scopes a ramp set's masters live in; none for a fixed set. */
+  rampMasterScopes(from?: string): string[] {
+    const source = this._rampSets.get(from ?? this._defaultRampSet);
+    return source && !(source instanceof Map) ? [...source.scopes] : [];
   }
 
-  /** Every `ramp` token whose `from` passes the test. */
-  private _rampTokensReading(test: (from: unknown) => boolean): string[] {
-    const keys: string[] = [];
-    for (const scope of this.scopeManager.getAllScopes()) {
-      for (const key of scope.ownKeys()) {
-        const token = scope.getRaw(key) as FunctionTokenValue | undefined;
-        if (token?.type === 'function' && token.name === 'ramp' && test(token.options?.from)) {
-          keys.push(`${scope.name}.${key}`);
-        }
-      }
-    }
-    return keys;
-  }
-
-  /** The `ramp` tokens that read a set (or, when the default moved, the
-   *  ones without `from`) and what follows from them, as one change. */
+  /** A ramp set was registered: its readers (and, when the default moved,
+   *  the readers of the default) re-indexed against its masters and
+   *  announced, with what follows from them, as one change. */
   private _announceRampSet(name: string, previousDefault: string): void {
-    const keys = this._rampTokensReading((from) => (from ?? this._defaultRampSet) === name
-      || (from === undefined && previousDefault !== this._defaultRampSet));
+    const defaultMoved = previousDefault !== this._defaultRampSet;
+    const keys = [...(this._keysByFunction.get('ramp') ?? [])].filter((key) => {
+      const from = (this.getTokenByKey(key) as FunctionTokenValue | undefined)?.options?.from as string | undefined;
+      return (from ?? this._defaultRampSet) === name || (from === undefined && defaultMoved);
+    });
     if (keys.length === 0) return;
+    for (const key of keys) this._indexSelector(key, this.getTokenByKey(key));
     const changed = new Set(keys);
     for (const key of keys) for (const dep of this._collectDependents(key)) changed.add(dep);
     const changedKeys = [...changed];
-    const scopes = new Set(changedKeys.map(scopeOf));
-    this.emit('change', { changedKeys, scopes: Array.from(scopes) });
+    for (const key of changedKeys) this._emitTokenChanged(key);
+    this.emit('change', { changedKeys, scopes: [...new Set(changedKeys.map(scopeOf))] });
+  }
+
+  /** One `tokenChanged`: a written key with its tokens before and after, or
+   *  a dependent (no `written`), whose token is unchanged. */
+  private _emitTokenChanged(key: string, written?: { newValue: any; oldValue: any }): void {
+    let value: string | undefined;
+    try {
+      value = this.resolve(key);
+    } catch {
+      value = undefined;
+    }
+    if (written) {
+      this.emit('tokenChanged', { key, cause: 'written', newValue: written.newValue, oldValue: written.oldValue, value });
+    } else {
+      const token = this.getTokenByKey(key);
+      this.emit('tokenChanged', { key, cause: 'dependent', newValue: token, oldValue: token, value });
+    }
   }
 
   // --- Events ---
@@ -740,15 +775,7 @@ export class DesignBook {
     callback: (newValue: string | undefined, detail: TokenChangedDetail) => void,
   ): () => void {
     return this.on('tokenChanged', (event) => {
-      if (event.detail.key === key) {
-        let newValue: string | undefined;
-        try {
-          newValue = this.resolve(key);
-        } catch {
-          newValue = undefined;
-        }
-        callback(newValue, event.detail);
-      }
+      if (event.detail.key === key) callback(event.detail.value, event.detail);
     });
   }
 
@@ -782,11 +809,16 @@ export class DesignBook {
       return;
     }
 
+    this._propagate(qualifiedKey, () => this._processAutoChange(qualifiedKey, newValue, oldValue));
+  }
+
+  /** Runs one top-level change in auto mode: changes made by its listeners
+   *  are queued and replayed after it, whatever happens. */
+  private _propagate(key: string, change: () => void): void {
     this._propagating = true;
     this._announced = false;
     try {
-      this._processAutoChange(qualifiedKey, newValue, oldValue);
-
+      change();
       this._drainReentrantQueue();
     } finally {
       // The outer change may have bailed out — an event handler throwing, a
@@ -798,7 +830,7 @@ export class DesignBook {
       } catch (e) {
         // An exception may already be in flight towards the caller; letting
         // this one out of the finally would replace it and hide the cause.
-        this._reportSuppressed(qualifiedKey, e, 'reentrant');
+        this._reportSuppressed(key, e, 'reentrant');
       } finally {
         // Backstop: a listener throwing out of the drain must not leave a
         // poisoned queue behind to replay on the next change.
@@ -934,67 +966,66 @@ export class DesignBook {
     this._rollbackKey(qualifiedKey, restored);
   }
 
+  /**
+   * Wires the token stored at `key` now — or its absence — into the graph,
+   * the inheritance links and the selector index: the one step a write goes
+   * through in both modes. A token the graph refuses (a cycle) is undone —
+   * its edges and node as they were — and the error thrown; the caller
+   * restores the stored token. Returns the re-bound copies of the key in
+   * inheriting scopes, which change with it.
+   */
+  private _wire(key: string): string[] {
+    const token = this.getTokenByKey(key);
+    if (!token) {
+      this._indexSelector(key, undefined);
+      this._detachNode(key);
+      this._rewireFieldNodesOf(key);
+      this._liveKeys.delete(key);
+      return this._rebindShadows(key);
+    }
+    const deps = this._getEffectiveDepsForKey(key, token);
+    const previousDeps = this.graph.getPrerequisitesFor(key);
+    const hadNode = this.graph.hasNode(key);
+    const isNewKey = !this._liveKeys.has(key);
+    this.graph.addNode(key);
+    let undoEdges = () => {};
+    let shadows: string[];
+    try {
+      undoEdges = this._setEdges(key, deps, token);
+      this._linkInheritedDependencies(deps);
+      if (isNewKey) this._linkInheritedShadowsOf(key);
+      shadows = this._rebindShadows(key);
+    } catch (e) {
+      undoEdges();
+      this.graph.updateEdges(key, previousDeps);
+      // Don't leave a node behind for a key the graph never accepted.
+      if (!hadNode) this.graph.removeNode(key);
+      this._pruneOrphans(deps);
+      throw e;
+    }
+    this._pruneOrphans(previousDeps);
+    this._indexSelector(key, token);
+    this._liveKeys.add(key);
+    return shadows;
+  }
+
   private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {
     const previousDependents = this.graph.getDependentsOf(qualifiedKey);
-    const currentValue = this.getTokenByKey(qualifiedKey);
-    /** Re-bound copies of this key in scopes that inherit it: their token
-     *  is this one, so they change with it. */
-    let shadows: string[] = [];
-
-    if (currentValue) {
-      const deps = this._getEffectiveDepsForKey(qualifiedKey, currentValue);
-      const previousDeps = this.graph.getPrerequisitesFor(qualifiedKey);
-      const hadNode = this.graph.hasNode(qualifiedKey);
-      const isNewKey = !this._liveKeys.has(qualifiedKey);
-      this.graph.addNode(qualifiedKey);
-      let undoEdges = () => {};
-      try {
-        undoEdges = this._setEdges(qualifiedKey, deps, currentValue);
-        this._linkInheritedDependencies(deps);
-        if (isNewKey) this._linkInheritedShadowsOf(qualifiedKey);
-        shadows = this._rebindShadows(qualifiedKey);
-      } catch (e) {
-        undoEdges();
-        this.graph.updateEdges(qualifiedKey, previousDeps);
-        // The caller will drop the token; don't leave a node behind for a key
-        // the graph never accepted in the first place.
-        if (!hadNode) this.graph.removeNode(qualifiedKey);
-        this._pruneOrphans(deps);
-        throw e;
-      }
-      this._pruneOrphans(previousDeps);
-      this._indexSelector(qualifiedKey, currentValue);
-      if (isNewKey) this._liveKeys.add(qualifiedKey);
-    } else {
-      this._indexSelector(qualifiedKey, undefined);
-      this._detachNode(qualifiedKey);
-      this._rewireFieldNodesOf(qualifiedKey);
-      this._liveKeys.delete(qualifiedKey);
-      shadows = this._rebindShadows(qualifiedKey);
-    }
+    const shadows = this._wire(qualifiedKey);
 
     const changedKeys: string[] = [qualifiedKey];
     const scopeSet = new Set<string>();
     if (splitKey(qualifiedKey)) scopeSet.add(scopeOf(qualifiedKey));
 
-    // Fire tokenChanged for this key
     this._announced = true;
-    this.emit('tokenChanged', { key: qualifiedKey, newValue, oldValue });
+    this._emitTokenChanged(qualifiedKey, { newValue, oldValue });
 
-    // Fire tokenChanged for all dependents with their actual resolved values
     const dependents = this._collectDependents(qualifiedKey, [...previousDependents, ...shadows]);
     for (const dep of dependents) {
       this._reindexDynamic(dep);
       changedKeys.push(dep);
       if (splitKey(dep)) scopeSet.add(scopeOf(dep));
-      // Bug 4 fix: try to resolve the dependent's new value
-      let depNewValue: any;
-      try {
-        depNewValue = this.resolve(dep);
-      } catch {
-        depNewValue = undefined;
-      }
-      this.emit('tokenChanged', { key: dep, newValue: depNewValue, oldValue: undefined });
+      this._emitTokenChanged(dep);
     }
 
     // Fire change event with summary
@@ -1150,6 +1181,9 @@ export class DesignBook {
    *  function token iterates. Called for every write and every delete, so
    *  the index always mirrors the stored tokens. */
   private _indexSelector(qualifiedKey: string, value: AnyTokenValue | undefined): void {
+    for (const [fn, keys] of this._keysByFunction) {
+      if (keys.delete(qualifiedKey) && keys.size === 0) this._keysByFunction.delete(fn);
+    }
     const previous = this._scopesBySelector.get(qualifiedKey);
     if (previous) {
       for (const scopeName of previous) {
@@ -1167,11 +1201,16 @@ export class DesignBook {
     // A re-bound key is the exception: it reads its own scope's keys.
     if (this._readsSource(qualifiedKey)) return;
 
-    const scopeNames = new Set(iteratedScopesOf(value as FunctionTokenValue));
-    // `sibling` steps along the scale its anchor's color lives on, which can
-    // be another scope than the anchor's — and can change when the anchor is
-    // re-pointed (`_reindexDynamic` re-runs this on every notification).
-    for (const name of this._walkedScopes(value as FunctionTokenValue)) scopeNames.add(name);
+    const fn = value as FunctionTokenValue;
+    let keys = this._keysByFunction.get(fn.name);
+    if (!keys) this._keysByFunction.set(fn.name, (keys = new Set()));
+    keys.add(qualifiedKey);
+
+    const scopeNames = new Set(iteratedScopesOf(fn));
+    // Scopes only the book can work out (FunctionTraits.scopesRead); they
+    // may move as the book changes, so a notified token is asked again
+    // (`_reindexDynamic`).
+    for (const name of this._scopesRead(fn)) scopeNames.add(name);
     if (scopeNames.size === 0) return;
     this._scopesBySelector.set(qualifiedKey, scopeNames);
     for (const scopeName of scopeNames) {
@@ -1184,27 +1223,25 @@ export class DesignBook {
     }
   }
 
-  /** The scope a `sibling` with a `source(…)` anchor currently steps along:
-   *  where the anchor's references lead, which only following them tells
-   *  (every other sibling declares its scope up front). Empty for any other
-   *  token. */
-  private _walkedScopes(token: FunctionTokenValue): string[] {
-    if (token.name !== 'sibling' || token.args.length > 0) return [];
-    const from = token.options?.from as { key?: unknown; via?: unknown } | undefined;
-    if (!from || typeof from.key !== 'string' || (from.via !== 'root' && typeof from.via !== 'number')) return [];
+  /** The scopes a token reads that its function works out from the book
+  (`FunctionTraits.scopesRead`); none while that cannot be told yet — the
+   *  next notification asks again. */
+  private _scopesRead(token: FunctionTokenValue): string[] {
+    const traits = this.functionTraits.get(token.name);
+    if (!traits?.scopesRead) return [];
     try {
-      const key = followSource(this, 'sibling', from.key, from.via as number | 'root');
-      return [scopeOf(key)];
+      return traits.scopesRead(token);
     } catch {
-      return []; // not followable yet; the next notification indexes it
+      return [];
     }
   }
 
-  /** Re-index a notified `sibling`: where a `source` anchor leads can change
-   *  with the tokens on the way, which notify it but are not its own write. */
+  /** Re-index a notified token whose function works out its scopes from the
+   *  book: they can change with tokens that notify it but are not its own
+   *  write. */
   private _reindexDynamic(key: string): void {
     const token = this.getTokenByKey(key);
-    if (token?.type === 'function' && (token as FunctionTokenValue).name === 'sibling') {
+    if (token?.type === 'function' && this.functionTraits.get((token as FunctionTokenValue).name)?.scopesRead) {
       this._indexSelector(key, token);
     }
   }
@@ -1220,25 +1257,12 @@ export class DesignBook {
     const changedScope = parts[0];
 
     const selectors: string[] = [];
-    for (const [iterated, keys] of this._selectorsByScope) {
-      if (!this._scopeInheritsFrom(iterated, changedScope)) continue;
-      for (const key of keys) {
+    for (const iterated of this.scopeManager.lineageBelow(changedScope)) {
+      for (const key of this._selectorsByScope.get(iterated) ?? []) {
         if (key !== changedKey) selectors.push(key);
       }
     }
     return selectors;
-  }
-
-  /** True when `scopeName` is `ancestor` or reaches it through `extends`. */
-  private _scopeInheritsFrom(scopeName: string, ancestor: string): boolean {
-    const seen = new Set<string>();
-    let current: string | undefined = scopeName;
-    while (current !== undefined && !seen.has(current)) {
-      if (current === ancestor) return true;
-      seen.add(current);
-      current = this.scopeManager.getScope(current)?.extendsScope;
-    }
-    return false;
   }
 
   /** `name` plus every scope that (transitively) extends it — their
@@ -1484,15 +1508,6 @@ export class DesignBook {
 
     while (pending.length > 0) {
       const node = pending.shift()!;
-      // A ramp copying master scopes changes when a master does, though it
-      // has no graph edge to them (like a selector's pool).
-      for (const rampKey of this._rampsReadingMastersOf(node)) {
-        if (seen.has(rampKey)) continue;
-        seen.add(rampKey);
-        dependents.push(rampKey);
-        pending.push(rampKey);
-        walk(rampKey);
-      }
       for (const selector of this._selectorsIterating(node)) {
         if (seen.has(selector)) continue;
         seen.add(selector);
@@ -1546,6 +1561,40 @@ export class DesignBook {
   // --- Batch ---
 
   flush(): FlushResult {
+    const result = this._flushQueue();
+    if (result.errors.length > 0) {
+      this.emit('batch-failed', { processed: result.processed, errors: result.errors, rejected: result.rejected });
+    } else {
+      this.emit('batch-complete', { processed: result.processed });
+    }
+    return result;
+  }
+
+  /**
+   * A scope's keys, removed at once (`deleteScope`): announced as one
+   * change, the way a flush announces a batch — not one propagation and one
+   * `change` per key. In batch mode, or from inside a change, they are
+   * queued like any write. A key whose removal the graph refuses (a re-bound
+   * copy in an inheriting scope closing a cycle) is thrown once the rest is
+   * announced.
+   */
+  private _notifyRemoved(removed: Array<[string, AnyTokenValue | undefined]>): void {
+    if (this._mode === 'batch' || this._propagating) {
+      for (const [key, old] of removed) this._notifyTokenChange(key, undefined, old);
+      return;
+    }
+    for (const [key, old] of removed) this.batchQueue.set(key, { newValue: undefined, oldValue: old });
+    let errors: Error[] = [];
+    this._propagate(removed[0]?.[0] ?? '', () => {
+      this._announced = true;
+      errors = this._flushQueue().errors;
+    });
+    if (errors.length > 0) throw errors[0];
+  }
+
+  /** Wires, resolves and announces the queued writes; `flush` adds the
+   *  batch events. */
+  private _flushQueue(): FlushResult {
     const processed: string[] = [];
     const errors: Error[] = [];
     const failedKeys = new Set<string>();
@@ -1561,56 +1610,22 @@ export class DesignBook {
       if (shadows.length > 0) previousDependents.set(key, [...(previousDependents.get(key) ?? []), ...shadows]);
     };
 
-    // Add all keys as nodes and update edges
+    // Wire every queued key; a refused one is rolled back and reported.
     for (const key of keys) {
       previousDependents.set(key, this.graph.getDependentsOf(key));
-      const currentValue = this.getTokenByKey(key);
-
-      if (!currentValue) {
-        deletedKeys.add(key);
-        this._indexSelector(key, undefined);
-        this._detachNode(key);
-        this._rewireFieldNodesOf(key);
-        try {
-          shadowsOf(key, this._rebindShadows(key));
-        } catch (e) {
-          errors.push(e instanceof Error ? e : new Error(String(e)));
-          rejectedKeys.add(key);
-        }
-        continue;
-      }
-
-      const hadNode = this.graph.hasNode(key);
-      this.graph.addNode(key);
-      const deps = this._getEffectiveDepsForKey(key, currentValue);
-      const previousDeps = this.graph.getPrerequisitesFor(key);
-      let undoEdges = () => {};
+      const deleted = !this.getTokenByKey(key);
+      if (deleted) deletedKeys.add(key);
       try {
-        undoEdges = this._setEdges(key, deps, currentValue);
-        this._linkInheritedDependencies(deps);
-        if (!this._liveKeys.has(key)) this._linkInheritedShadowsOf(key);
-        shadowsOf(key, this._rebindShadows(key));
-        this._indexSelector(key, currentValue);
-        this._pruneOrphans(previousDeps);
+        shadowsOf(key, this._wire(key));
       } catch (e) {
-        undoEdges();
-        // Collect circular dependency errors instead of ignoring them
         errors.push(e instanceof Error ? e : new Error(String(e)));
-        failedKeys.add(key);
-        // Undo the write the graph refused. Leaving it in place kept the
-        // cyclic token in the scope and the key in the queue, so every later
-        // flush re-reported the same error.
         rejectedKeys.add(key);
+        if (deleted) continue;
+        failedKeys.add(key);
+        // Undo the write the graph refused: left in place, the cyclic token
+        // would stay in the scope and every later flush re-report it.
         this._rollbackKey(key, queued.get(key)?.oldValue);
-        if (!hadNode) this.graph.removeNode(key);
-        this._pruneOrphans(deps);
       }
-    }
-
-    for (const key of keys) {
-      if (failedKeys.has(key)) continue;
-      if (deletedKeys.has(key)) this._liveKeys.delete(key);
-      else this._liveKeys.add(key);
     }
 
 
@@ -1690,13 +1705,6 @@ export class DesignBook {
       notified.push(key);
     }
     this._emitBatchChanges(notified, queued, previousDependents);
-
-    if (errors.length > 0) {
-      this.emit('batch-failed', { processed, errors, rejected: [...rejectedKeys] });
-    } else {
-      this.emit('batch-complete', { processed });
-    }
-
     return { processed, errors, rejected: [...rejectedKeys] };
   }
 
@@ -1726,16 +1734,7 @@ export class DesignBook {
     for (const key of changedKeys) {
       if (splitKey(key)) scopes.add(scopeOf(key));
 
-      const entry = queued.get(key);
-      let newValue = entry?.newValue;
-      if (!entry) {
-        try {
-          newValue = this.resolve(key);
-        } catch {
-          newValue = undefined;
-        }
-      }
-      this.emit('tokenChanged', { key, newValue, oldValue: entry?.oldValue });
+      this._emitTokenChanged(key, queued.get(key));
     }
 
     this.emit('change', { changedKeys, scopes: Array.from(scopes) });

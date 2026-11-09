@@ -292,7 +292,10 @@ describe('DesignBook', () => {
       // Find the event for the dependent (ui.bg)
       const uiBgEvent = events.find(e => e.key === 'ui.bg');
       expect(uiBgEvent).toBeDefined();
-      expect(uiBgEvent.newValue).toBe('#ff0000');
+      expect(uiBgEvent.cause).toBe('dependent');
+      expect(uiBgEvent.value).toBe('#ff0000');
+      // A dependent's token is unchanged.
+      expect(uiBgEvent.newValue).toBe(uiBgEvent.oldValue);
     });
 
     it('processes token deletion in batch mode and clears it from the queue', () => {

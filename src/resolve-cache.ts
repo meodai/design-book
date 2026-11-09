@@ -29,10 +29,19 @@ export class ResolveCache {
   private entries = new Map<string, Entry>();
   private off = 0;
   private trips = 0;
+  private _generation = 0;
+
+  /** Bumped by every `clear`: anything derived from resolved values and
+   *  stamped with the generation it was computed in is current while the
+   *  stamp matches. */
+  get generation(): number {
+    return this._generation;
+  }
 
   /** Forget every value. */
   clear(): void {
     this.entries.clear();
+    this._generation++;
   }
 
   /** The re-entrancy guard refused a key: nothing computed around it is kept. */

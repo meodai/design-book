@@ -61,7 +61,7 @@ describe('ScopeManager', () => {
 
   it('deleteScope removes scope', () => {
     manager.addScope('brand');
-    manager.deleteScope('brand');
+    manager.deleteScope('brand', () => {});
     expect(manager.hasScope('brand')).toBe(false);
   });
 

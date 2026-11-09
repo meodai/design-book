@@ -37,7 +37,7 @@ describe('batch writes to one key merge', () => {
     a.set('y', blue);
     book.flush();
 
-    expect(events).toEqual([{ key: 'a.y', newValue: blue, oldValue: green }]);
+    expect(events).toEqual([{ key: 'a.y', cause: 'written', newValue: blue, oldValue: green, value: 'blue' }]);
   });
 
   it('start a new oldValue once a write has been through a flush', () => {
