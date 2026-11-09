@@ -251,7 +251,7 @@ ui.set('label', bestContrastWith(
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Work freely,</em> land on your system.</p>
-          <p class="fn-detail">Pick a color by eye, take a size from a mockup, pull a brand color out of a partner's logo: <code>closest</code> snaps it to the nearest value your design system actually has, so the freedom never leaks a one-off into the system. Colors are compared by distance in OKLab, so colors that look alike are treated alike; sizes and text styles by value, so the 13px from the mockup lands on your 12px.</p>
+          <p class="fn-detail">Pick a color by eye, take a size from a mockup, pull a brand color out of a partner's logo: <code>closest</code> snaps it to the nearest value your design system actually has, so the freedom never leaks a one-off into the system. Colors are compared by distance in OKLab, so colors that look alike are treated alike; sizes by value, so the 13px from the mockup lands on your 12px; text styles by their font size, or by any other field you name with <code>by</code>.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>const space = book.addScope('space');
@@ -302,7 +302,7 @@ ui.set('accent', closest(color('#7f4dc4'), ref('palette')));</Code></Sheet>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Furthest from</em> what is already there.</p>
-          <p class="fn-detail">The mirror of <code>closest</code>: the member that looks least like the target. An accent that stands apart from the surface, a display size far from the body text. Colors by OKLab distance, sizes and text styles by value. <code>maxDistance</code> keeps it in reach: the furthest member that is no further than that.</p>
+          <p class="fn-detail">The mirror of <code>closest</code>: the member that looks least like the target. An accent that stands apart from the surface, a display size far from the body text. Colors by OKLab distance, sizes by value, text styles by font size or the field named in <code>by</code>. <code>maxDistance</code> keeps it in reach: the furthest member that is no further than that.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>// the palette color that looks least like the target

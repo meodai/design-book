@@ -219,6 +219,18 @@ CSS output gets one variable per field (`--type-title-font-size`) plus a
 `.type-title` class; a variant's unchanged fields render as `var()` of its
 base's.
 
+Text styles compare and sort by their font size unless told otherwise:
+`by` names another field for the comparisons, `field` for a scope's value
+order. Breakpoint scopes that `extend` each other can refine a style one
+level up without naming the scope:
+
+```typescript
+largest(ref('type'), { by: 'fontWeight' });                   // the heaviest style
+nextLarger(ref('.body'), ref('type'), { by: 'lineHeight' });  // the next looser one
+type.setOrder([{ by: 'value', field: 'fontWeight' }]);         // light → heavy
+tablet.set('title', variant(inherited(ref('.title')), { fontSize: rem(2.4) }));
+```
+
 ### 7. Contexts side by side: `extends` and relative refs
 
 Many systems have **contexts** that live on the same page at once: a
