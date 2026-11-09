@@ -133,6 +133,38 @@ since a selector chooses a token rather than making a new color.
 | `picked`, `capturePick`, frames | **replaced** by selectors returning members |
 | `resolve()` on a text style (CSS declarations) | **throws** for a group; renderers and comparisons read members |
 
+## Rendering
+
+A member renders at its path: `--` and the path with dots as dashes, at any
+depth. It is how text-style fields render today, so their variable names do
+not change.
+
+```css
+/* type.title = typography({ fontSize: rem(2.4), lineHeight: 1.2 }) */
+--type-title-font-size: 2.4rem;
+--type-title-line-height: 1.2;
+
+/* context-normal.major = variant(ref('button-major')): an own group */
+--context-normal-major-bg: var(--brand-scale-1800);
+
+/* card.heading = ref('type.title--compact'): held by reference */
+--card-heading-font-size: var(--type-title--compact-font-size);
+```
+
+A group held by reference points at the original's variables, so it stays
+live in the browser. A text style also gets its class (`.type-title`), a
+reference to one too (`.card-heading`). Two paths that mangle to one name
+throw, as keys do today. W3 writes nested groups (text styles as the
+`typography` composite); JSON writes nested objects.
+
+## README
+
+The README introduces groups by what they are for before how they work:
+offering the possible variants of a thing (the text styles a card may use,
+the button kinds a context offers), using one exact variant from another
+scope, and placing one definition in several contexts that each fill in
+their own surroundings.
+
 ## Inside the book
 
 - **Groups are scopes.** The scope manager holds them under their path. A
@@ -170,6 +202,8 @@ since a selector chooses a token rather than making a new color.
 Each stage ends with the full test suite, the site build, and the large
 downstream color book (which has no groups) rendering exactly as before.
 
+0. **Selectors return members** (moved first: a selector picking a text
+   style has no value string to return once text styles are groups).
 1. **Paths and groups.** Path walk, groups as scopes, `group()`,
    `typography()` and `variant()` building them, `..` refs, `omit`; `resolve`
    throws for groups; text styles move onto it and field nodes go. Renderers
