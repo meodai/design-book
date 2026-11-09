@@ -7,7 +7,6 @@ export type {
   ChangeDetail,
   DesignBookEvent,
   DesignBookEventMap,
-  ErrorDetail,
   FunctionImplementation,
   FunctionTraits,
   RendererFn,

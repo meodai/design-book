@@ -13,7 +13,8 @@ function createMockBook() {
     getTokenByKey: vi.fn(),
     resolve: vi.fn(),
     getScope: vi.fn(),
-    _notifyTokenChange: vi.fn(),
+    _accept: vi.fn(),
+    _settle: vi.fn(),
     on: vi.fn(() => () => {}),
   };
   return book;

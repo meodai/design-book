@@ -1232,7 +1232,6 @@ book.on('scopeAdded', (e) => { /* e.detail.scope */ });
 book.on('scopeRemoved', (e) => { /* e.detail.scope, e.detail.removedKeys */ });
 book.on('batch-failed', (e) => { /* e.detail.processed, e.detail.errors, e.detail.rejected */ });
 book.on('batch-complete', (e) => { /* e.detail.processed */ });
-book.on('error', (e) => { /* e.detail.key, e.detail.error, e.detail.phase */ });
 book.watch('brand.primary', (value, detail) => {
   // value is undefined when the token no longer resolves
   // detail is the tokenChanged payload
@@ -1250,22 +1249,9 @@ dispose();
 
 Deleting a scope announces its keys and their dependents as one `change`.
 
-`error` reports a failure that could not be thrown at anybody.
-`e.detail.phase` says which:
+**A write is checked before anyone hears of it.** A write the graph refuses (it would close a cycle) throws from `set()` / `delete()` and is never announced; the old token stays. That holds for writes made by listeners too: they are checked the moment the listener makes them, so a refused one throws to that listener, while the announcement of an accepted one waits until the change being announced is done.
 
-- `'reentrant'` — the change was made from an event handler while a previous
-  change was still propagating, so it was queued; by the time it ran the
-  outer `set()` had already returned and there was no caller left to throw
-  at. The token is rolled back and the failure is reported here.
-- `'rollback'` — announcing that an already-announced change had been undone
-  itself failed.
-
-**A rejected `set()` corrects itself before it throws.** When a write is
-accepted, announced, and only then refused (a cycle the graph rejects, say),
-listeners have already been told the new value. The book rolls the token
-back and emits a second `tokenChanged` (plus the accompanying `change`)
-carrying the restored value *before* rethrowing, so watchers and renderers
-never keep a value that no longer exists.
+**A listener that throws undoes nothing.** Every other listener still hears the change, the change completes, and then the call that made it (`set()`, `delete()`, `flush()`, `deleteScope()`, …) throws the first listener error.
 
 ## Source Introspection
 

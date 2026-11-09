@@ -3,7 +3,7 @@ import { DesignBook } from '../src/design-book';
 import type { TokenChangedDetail } from '../src/design-book';
 import { color, px, ref } from '../src/tokens';
 
-describe('a re-entrant write rolled back because a listener threw', () => {
+describe('a listener that throws while hearing a write made by another listener', () => {
   function setup() {
     const book = new DesignBook('test');
     const a = book.addScope('a');
@@ -28,20 +28,19 @@ describe('a re-entrant write rolled back because a listener threw', () => {
     return { book, a, yEvents };
   }
 
-  it('leaves no graph edge or live key behind', () => {
+  it('undoes nothing: the write and its graph edge stand', () => {
     const { book, a } = setup();
-    a.set('t', px(1));
+    expect(() => a.set('t', px(1))).toThrow('listener boom');
 
-    expect(a.has('y')).toBe(false);
-    expect(book.getDependencyGraph().getDependentsOf('a.z')).toEqual([]);
-    // The stale edge a.z → a.y used to make this read as a cycle.
-    expect(() => a.set('z', ref('a.y'))).not.toThrow();
+    expect(book.resolve('a.y')).toBe('#111111');
+    expect(book.getDependencyGraph().getDependentsOf('a.z')).toEqual(['a.y']);
+    // The edge is real, so this is a cycle.
+    expect(() => a.set('z', ref('a.y'))).toThrow();
   });
 
-  it('announces the restored state', () => {
+  it('does not keep the other listeners from hearing it', () => {
     const { a, yEvents } = setup();
-    a.set('t', px(1));
-    expect(yEvents.length).toBeGreaterThan(0);
-    expect(yEvents[yEvents.length - 1].newValue).toBeUndefined();
+    expect(() => a.set('t', px(1))).toThrow('listener boom');
+    expect(yEvents.map((d) => d.value)).toEqual(['#111111']);
   });
 });

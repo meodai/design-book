@@ -259,15 +259,6 @@ book.on('change', (e) => {
 book.on('scopeAdded', (e) => {
   logEvent('scopeAdded', e.detail);
 });
-// Changes rejected after they were announced (a re-entrant write that had
-// nobody left to throw at, or a failed rollback) surface only here.
-book.on('error', (e) => {
-  logEvent('error', {
-    key: e.detail.key,
-    phase: e.detail.phase,
-    message: e.detail.error.message,
-  });
-});
 
 // --- Rendering ---
 

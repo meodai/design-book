@@ -84,19 +84,6 @@ export interface BatchCompleteDetail {
   processed: string[];
 }
 
-export interface ErrorDetail {
-  /** Key whose change was rejected. */
-  key: string;
-  error: Error;
-  /** Where the rejection happened.
-   *  `reentrant`: the change was made from an event handler while a previous
-   *  change was still propagating, so it was queued; by the time it ran, the
-   *  outer `set()` had already returned and there was nobody left to throw at.
-   *  `rollback`: announcing that an already-announced change had been undone
-   *  itself failed. */
-  phase: 'reentrant' | 'rollback';
-}
-
 export interface DesignBookEventMap {
   tokenChanged: TokenChangedDetail;
   change: ChangeDetail;
@@ -104,7 +91,6 @@ export interface DesignBookEventMap {
   scopeRemoved: ScopeRemovedDetail;
   'batch-failed': BatchFailedDetail;
   'batch-complete': BatchCompleteDetail;
-  error: ErrorDetail;
 }
 
 export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
@@ -174,6 +160,19 @@ export interface TokenInspection {
 
 type EventCallback<K extends keyof DesignBookEventMap> = (event: DesignBookEvent<K>) => void;
 
+/** An accepted write waiting to be announced, with what it needs from
+ *  before it was wired. */
+interface Announcement {
+  key: string;
+  newValue: AnyTokenValue | undefined;
+  oldValue: AnyTokenValue | undefined;
+  /** Who read the key before the write: they hear of it even if they no
+   *  longer do. */
+  previousDependents: string[];
+  /** Re-bound copies of the key in inheriting scopes. */
+  shadows: string[];
+}
+
 export class DesignBook {
   readonly name: string;
   readonly description?: string;
@@ -193,19 +192,18 @@ export class DesignBook {
   /** Queue entries already reported by a previous `flush()`. A key that
    *  fails to resolve stays queued, and re-announcing the identical pending
    *  write on every later flush is noise. Entry objects are replaced by each
-   *  `_notifyTokenChange`, so identity is the "is this write new" stamp. */
+   *  `_accept`, so identity is the "is this write new" stamp. */
   private reportedBatchEntries: WeakSet<object> = new WeakSet();
 
-  private _propagating = false;
-  /** `correction` marks an entry that re-announces a rolled-back key; if
-   *  that fails too it is not corrected again. */
-  private _reentrantQueue: Array<{ key: string; newValue: any; oldValue: any; correction?: boolean }> = [];
-
-  /** True once the current top-level propagation has announced a change.
-   *  `_notifyRollback` consults it: a change that was announced and then
-   *  undone needs a corrective announcement, while one the graph refused
-   *  before saying anything needs none. */
-  private _announced = false;
+  /** Accepted writes waiting to be announced (auto mode), in order. */
+  private _announcements: Announcement[] = [];
+  /** True while announcements are being made: writes from listeners are
+   *  accepted at once but announced after the current one. */
+  private _announcing = false;
+  /** Depth of nested public operations, and the listener errors raised in
+   *  the current outermost one (see `_operation`). */
+  private _depth = 0;
+  private _listenerErrors: unknown[] = [];
 
   /** Keys currently backed by a stored token, as far as the graph knows.
    *  Used to spot the moment a key first appears, so that keys inheriting
@@ -766,123 +764,98 @@ export class DesignBook {
     });
   }
 
+  /** Calls every listener; one that throws does not stop the others. Its
+   *  error is thrown when the operation emitting is done (`_operation`). */
   private emit<K extends keyof DesignBookEventMap>(event: K, detail: DesignBookEventMap[K]): void {
     const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      for (const cb of callbacks) {
-        (cb as EventCallback<K>)({ detail });
+    if (!callbacks || callbacks.size === 0) return;
+    this._operation(() => {
+      for (const cb of [...callbacks]) {
+        try {
+          (cb as EventCallback<K>)({ detail });
+        } catch (e) {
+          this._listenerErrors.push(e);
+        }
       }
-    }
+    });
   }
 
-  // --- Token change notification (called by Scope.set) ---
+  // --- Writes (called by Scope.set / Scope.delete) ---
 
-  _notifyTokenChange(qualifiedKey: string, newValue: any, oldValue: any): void {
+  /**
+   * A token was just stored at (or removed from) `key`. In auto mode it is
+   * wired now — a write the graph refuses throws here, before anyone heard
+   * of it, and the scope puts the old token back — and its announcement is
+   * queued for `_settle`. Writes made by listeners while a change is being
+   * announced are wired the same way, so a refused one throws to the
+   * listener that made it; only their announcements wait. In batch mode the
+   * write is queued for `flush`, which wires it with the rest.
+   */
+  _accept(key: string, newValue: AnyTokenValue | undefined, oldValue: AnyTokenValue | undefined): void {
     if (this._mode === 'batch') {
       // Several writes to one key merge into one entry, which must keep the
-      // value from before the first of them: it is what a rejected write
+      // value from before the first of them: it is what a refused write
       // rolls back to and what listeners last heard about. An entry that has
       // already been through a flush (accepted, still failing to resolve)
       // was announced, so the new write starts from its value instead.
-      const pending = this.batchQueue.get(qualifiedKey);
+      const pending = this.batchQueue.get(key);
       const firstOld = pending && !this.reportedBatchEntries.has(pending) ? pending.oldValue : oldValue;
-      this.batchQueue.set(qualifiedKey, { newValue, oldValue: firstOld });
+      this.batchQueue.set(key, { newValue, oldValue: firstOld });
       return;
     }
-
-    // Auto mode
-    if (this._propagating) {
-      this._reentrantQueue.push({ key: qualifiedKey, newValue, oldValue });
-      return;
-    }
-
-    this._propagate(qualifiedKey, () => this._processAutoChange(qualifiedKey, newValue, oldValue));
+    const previousDependents = this.graph.getDependentsOf(key);
+    const shadows = this._wire(key);
+    this._announcements.push({ key, newValue, oldValue, previousDependents, shadows });
   }
 
-  /** Runs one top-level change in auto mode: changes made by its listeners
-   *  are queued and replayed after it, whatever happens. */
-  private _propagate(key: string, change: () => void): void {
-    this._propagating = true;
-    this._announced = false;
+  /**
+   * Announces the accepted writes, in order — including those listeners
+   * make while hearing them. Inside an announcement it does nothing: the
+   * outer one carries on with the queue. A listener that throws does not
+   * undo anything; every listener still hears every change, and the error
+   * is thrown when the outermost operation is done (`_operation`).
+   */
+  _settle(): void {
+    if (this._mode === 'batch' || this._announcing) return;
+    this._operation(() => this._announceWhile(() => {}));
+  }
+
+  /** Runs `fn` as part of an announcement (listener writes are queued, not
+   *  announced in the middle of it), then announces the queue. */
+  private _announceWhile(fn: () => void): void {
+    if (this._announcing) {
+      fn();
+      return;
+    }
+    this._announcing = true;
     try {
-      change();
-      this._drainReentrantQueue();
+      fn();
+      while (this._announcements.length > 0) this._announceChange(this._announcements.shift()!);
     } finally {
-      // The outer change may have bailed out — an event handler throwing, a
-      // rejected write — with entries still queued. Their tokens are already
-      // stored, so discarding them would leave orphans with no graph node
-      // that nothing ever retries. Drain them through the same path instead.
-      try {
-        this._drainReentrantQueue();
-      } catch (e) {
-        // An exception may already be in flight towards the caller; letting
-        // this one out of the finally would replace it and hide the cause.
-        this._reportSuppressed(key, e, 'reentrant');
-      } finally {
-        // Backstop: a listener throwing out of the drain must not leave a
-        // poisoned queue behind to replay on the next change.
-        this._reentrantQueue.length = 0;
-        this._propagating = false;
-      }
+      this._announcing = false;
     }
   }
 
-  /** Apply the changes that were made while a previous one was propagating.
-   *  Each gets its own try/catch: the outer `set()` has already been
-   *  accepted, so a failure here must roll back *that* key rather than
-   *  surface as an exception from an unrelated `set()`, and it must not
-   *  abandon the changes queued behind it. */
-  private _drainReentrantQueue(): void {
-    /** Per key, the value last accepted by the graph during this drain —
-     *  what a refused write rolls back to and what listeners last heard. A
-     *  queued entry's own `oldValue` may be a value that was itself refused. */
-    const accepted = new Map<string, AnyTokenValue | undefined>();
-    while (this._reentrantQueue.length > 0) {
-      const queued = this._reentrantQueue.shift()!;
-      const oldValue = accepted.has(queued.key) ? accepted.get(queued.key) : queued.oldValue;
-      // Writes queued behind this one have already replaced the stored
-      // token; replay them one at a time, as auto mode would have, so this
-      // entry is judged — and announced — with its own value.
-      if (this._ownToken(queued.key) !== queued.newValue) {
-        this._putToken(queued.key, queued.newValue);
-      }
-      // Whether *this* entry got announced; the outer change's flag is
-      // restored afterwards so `_notifyRollback` still answers for it alone.
-      const outerAnnounced = this._announced;
-      this._announced = false;
-      try {
-        this._processAutoChange(queued.key, queued.newValue, oldValue);
-        accepted.set(queued.key, queued.newValue);
-      } catch (e) {
-        const announced = this._announced;
-        // Reporting must not throw either: the drain also runs from a
-        // `finally`, where an escaping error would replace the caller's.
-        try {
-          this._rollbackKey(queued.key, oldValue);
-        } catch { /* the token is already unusable; the report matters more */ }
-        accepted.set(queued.key, oldValue);
-        this._reportSuppressed(queued.key, e, queued.correction ? 'rollback' : 'reentrant');
-        // A listener threw after the write was announced: listeners and
-        // dependents were told about a value that is gone. Announce the
-        // restored one next, through the same path.
-        if (announced && !queued.correction) {
-          this._reentrantQueue.unshift({
-            key: queued.key,
-            newValue: oldValue,
-            oldValue: queued.newValue,
-            correction: true,
-          });
-        }
-      } finally {
-        this._announced = outerAnnounced;
-      }
+  /**
+   * One public operation: listener errors raised inside it are collected
+   * (`emit`) and the first is thrown once it is done — unless the operation
+   * itself threw, whose error wins. Nested operations join the outer one.
+   */
+  private _operation<T>(fn: () => T): T {
+    this._depth++;
+    let result: T;
+    try {
+      result = fn();
+    } catch (e) {
+      if (--this._depth === 0) this._listenerErrors.length = 0;
+      throw e;
     }
-  }
-
-  /** The token stored on the key's own scope, ignoring inheritance. */
-  private _ownToken(qualifiedKey: string): AnyTokenValue | undefined {
-    const at = this._locate(qualifiedKey);
-    return at?.scope.hasOwn(at.name) ? at.scope.getRaw(at.name) : undefined;
+    if (--this._depth === 0 && this._listenerErrors.length > 0) {
+      const [first] = this._listenerErrors;
+      this._listenerErrors.length = 0;
+      throw first;
+    }
+    return result;
   }
 
   /** Store (or, for `undefined`, remove) a key's own token without
@@ -890,35 +863,6 @@ export class DesignBook {
   private _putToken(qualifiedKey: string, value: AnyTokenValue | undefined): void {
     const at = this._locate(qualifiedKey);
     at?.scope._rollback(at.name, value);
-  }
-
-  /** Announce that an already-announced change has been undone.
-   *
-   *  `Scope.set` rolls its token back only after `_notifyTokenChange` has
-   *  returned — and handlers have by then been told the new value, and may
-   *  have made further changes off the back of it. Without a second
-   *  announcement every watcher and renderer keeps a value that no longer
-   *  exists. A change the graph refused before saying anything needs no
-   *  correction, hence the `_announced` guard.
-   *
-   *  Never throws: the caller is already on its way out with the original
-   *  error, and replacing it would hide the real cause. */
-  _notifyRollback(qualifiedKey: string, restoredValue: any, rejectedValue: any): void {
-    if (!this._announced) return;
-    try {
-      this._notifyTokenChange(qualifiedKey, restoredValue, rejectedValue);
-    } catch (e) {
-      this._reportSuppressed(qualifiedKey, e, 'rollback');
-    }
-  }
-
-  /** Report an error raised while another one is already in flight. */
-  private _reportSuppressed(key: string, e: unknown, phase: ErrorDetail['phase']): void {
-    try {
-      this.emit('error', { key, error: e instanceof Error ? e : new Error(String(e)), phase });
-    } catch {
-      // An error listener that throws is not worth masking the original for.
-    }
   }
 
   private _rollbackKey(qualifiedKey: string, oldValue: AnyTokenValue | undefined): void {
@@ -996,19 +940,23 @@ export class DesignBook {
     return shadows;
   }
 
-  private _processAutoChange(qualifiedKey: string, newValue: any, oldValue: any): void {
-    const previousDependents = this.graph.getDependentsOf(qualifiedKey);
-    const shadows = this._wire(qualifiedKey);
+  /** Announces one accepted write: the key, then everything that reads it,
+   *  then the change as a whole. */
+  private _announceChange(change: Announcement): void {
+    const { key: qualifiedKey, newValue, oldValue, previousDependents, shadows } = change;
 
     const changedKeys: string[] = [qualifiedKey];
     const scopeSet = new Set<string>();
     if (splitKey(qualifiedKey)) scopeSet.add(scopeOf(qualifiedKey));
 
-    this._announced = true;
     this._emitTokenChanged(qualifiedKey, { newValue, oldValue });
 
+    // A listener's write already wired in, waiting to be announced, is
+    // announced as written by its own entry, not as a dependent here.
+    const ownAnnouncement = new Set(this._announcements.map((a) => a.key));
     const dependents = this._collectDependents(qualifiedKey, [...previousDependents, ...shadows]);
     for (const dep of dependents) {
+      if (ownAnnouncement.has(dep)) continue;
       this._reindexDynamic(dep);
       changedKeys.push(dep);
       if (splitKey(dep)) scopeSet.add(scopeOf(dep));
@@ -1548,13 +1496,15 @@ export class DesignBook {
   // --- Batch ---
 
   flush(): FlushResult {
-    const result = this._flushQueue();
-    if (result.errors.length > 0) {
-      this.emit('batch-failed', { processed: result.processed, errors: result.errors, rejected: result.rejected });
-    } else {
-      this.emit('batch-complete', { processed: result.processed });
-    }
-    return result;
+    return this._operation(() => {
+      const result = this._flushQueue();
+      if (result.errors.length > 0) {
+        this.emit('batch-failed', { processed: result.processed, errors: result.errors, rejected: result.rejected });
+      } else {
+        this.emit('batch-complete', { processed: result.processed });
+      }
+      return result;
+    });
   }
 
   /**
@@ -1566,16 +1516,23 @@ export class DesignBook {
    * announced.
    */
   private _notifyRemoved(removed: Array<[string, AnyTokenValue | undefined]>): void {
-    if (this._mode === 'batch' || this._propagating) {
-      for (const [key, old] of removed) this._notifyTokenChange(key, undefined, old);
+    if (this._mode === 'batch' || this._announcing) {
+      const errors: unknown[] = [];
+      for (const [key, old] of removed) {
+        try {
+          this._accept(key, undefined, old);
+        } catch (e) {
+          errors.push(e);
+        }
+      }
+      if (errors.length > 0) throw errors[0];
       return;
     }
     for (const [key, old] of removed) this.batchQueue.set(key, { newValue: undefined, oldValue: old });
     let errors: Error[] = [];
-    this._propagate(removed[0]?.[0] ?? '', () => {
-      this._announced = true;
+    this._operation(() => this._announceWhile(() => {
       errors = this._flushQueue().errors;
-    });
+    }));
     if (errors.length > 0) throw errors[0];
   }
 

@@ -26,8 +26,8 @@ export type BookWithScope = {
   _cache: ResolveCache;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
-  _notifyTokenChange(key: string, newValue: any, oldValue: any): void;
-  _notifyRollback(key: string, restoredValue: any, rejectedValue: any): void;
+  _accept(key: string, newValue: AnyTokenValue | undefined, oldValue: AnyTokenValue | undefined): void;
+  _settle(): void;
   _restoreRejectedDelete(key: string, restored: AnyTokenValue): void;
   /** How this book's `extends` chains are read while binding a token. */
   _bindingContext?(): BindingContext;
@@ -156,20 +156,16 @@ export class Scope {
     this.tokens.set(name, value);
     this.changed();
     try {
-      this.book._notifyTokenChange(`${this.name}.${name}`, value, oldValue);
+      this.book._accept(qualified, value, oldValue);
     } catch (e) {
-      // change was rejected (e.g. it would close a dependency cycle) —
-      // roll the token back so the book never holds a value the graph refused;
-      // the order caches stay invalidated and recompute from the restored map
+      // Refused (it would close a dependency cycle) before anyone heard of
+      // it: put the old token back, and the book holds nothing it refused.
       if (existed) this.tokens.set(name, oldValue as AnyTokenValue);
       else this.tokens.delete(name);
       this.changed();
-      // The book may already have announced this change — handlers run
-      // synchronously inside _notifyTokenChange — so announce the restored
-      // state too rather than leave listeners holding a value that is gone.
-      this.book._notifyRollback(`${this.name}.${name}`, oldValue, value);
       throw e;
     }
+    this.book._settle();
   }
 
   has(name: string): boolean {
@@ -192,15 +188,16 @@ export class Scope {
     if (had) {
       this.changed();
       try {
-        this.book._notifyTokenChange(`${this.name}.${name}`, undefined, old);
+        this.book._accept(`${this.name}.${name}`, undefined, old);
       } catch (e) {
-        // The delete was rejected: with the own token gone the key inherits
-        // one whose relative refs close a cycle in this scope. Put it back.
+        // Refused: with the own token gone the key inherits one whose
+        // relative refs close a cycle in this scope. Put it back.
         this.tokens.set(name, old as AnyTokenValue);
         this.changed();
         this.book._restoreRejectedDelete(`${this.name}.${name}`, old as AnyTokenValue);
         throw e;
       }
+      this.book._settle();
     }
     return had;
   }

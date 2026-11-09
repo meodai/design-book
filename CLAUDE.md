@@ -183,7 +183,6 @@ Event system uses `DesignBookEventMap` with typed payloads:
 - `scopeRemoved` → `ScopeRemovedDetail { scope, removedKeys }`
 - `batch-complete` → `BatchCompleteDetail { processed }`
 - `batch-failed` → `BatchFailedDetail { processed, errors }`
-- `error` → `ErrorDetail { key, error, phase }` — `phase` is `'reentrant'` (a change made from an event handler was rejected after the outer `set()` had already returned, so it was reported instead of thrown) or `'rollback'` (announcing that an already-announced change had been undone itself failed)
 
 `on()` and `watch()` return unsubscribe functions.
 
@@ -196,10 +195,11 @@ Event system uses `DesignBookEventMap` with typed payloads:
 - `flush()` does not throw — collects errors, fires `batch-failed`; its result (and the event) list `rejected`, the writes the graph refused and rolled back
 - A write is wired into the graph, inheritance links and selector index by one method, `_wire`, in auto mode and in `flush` alike (undone and thrown when refused); `_rollbackKey` is the lenient twin that restores an accepted state
 - Setting `mode` from `batch` to `auto` flushes whatever is still queued
-- A `set()` the graph rejects after the change was announced emits a corrective `tokenChanged` + `change` with the restored value before rethrowing
+- A write is checked and wired when it is made (`_accept` → `_wire`), before it is announced (`_settle` → `_announceChange`): a refused write throws from `set()` / `delete()` and was never announced; the scope puts the old token back. There is no corrective announcement and no `error` event
 - `addScope` rejects empty/dotted names and self- or cyclic `extends` with a `ScopeError`
 - Circular dependency errors in batch mode are collected, not silently swallowed
-- Re-entrancy in auto mode: changes from event handlers are queued
+- Writes from listeners in auto mode are accepted (checked, wired) at once — a refused one throws to the listener — and announced after the current announcement (`_announcements`); a dependent with its own queued announcement is not also announced as a dependent
+- A listener that throws undoes nothing: `emit` calls every listener and collects errors; the outermost public operation (`_operation`: set / delete / flush / deleteScope / …) throws the first once it is done, unless it threw itself
 - Deleting a token cleans up its graph node and updates dependent caches; a node with no token of its own (a missing or deleted key, an inherited shadow) is pruned once nothing depends on it
 - Inherited tokens register dependency edges on their source key for correct propagation
 - Selector candidate pools are an index, not graph edges — pool membership never rejects a write
