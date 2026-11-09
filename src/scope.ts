@@ -6,7 +6,8 @@ import { CircularDependencyError, FunctionError, TokenError } from './errors';
 
 /** A resolved text style: CSS declarations. */
 const TEXT_STYLE = /^[a-z-]+\s*:/i;
-import { inFrame } from './functions/picks';
+import { evaluateArg, evaluateFunction, valueKey, valueOf } from './evaluate';
+import type { Resolution } from './functions/picks';
 import type { ComparableEntry, TokenOrderer } from './orderers';
 
 export type SortDirection = 'asc' | 'desc';
@@ -24,6 +25,8 @@ type Rank = { group: string; index: number };
 /** What a scope needs from its book. */
 export type BookWithScope = {
   resolve(key: string): string;
+  /** A key's value and the member it is, when it is one. */
+  _resolution(key: string): Resolution;
   getTokenByKey(key: string): AnyTokenValue | undefined;
   getDependencyGraph(): { getDependentsOf(key: string): string[] };
   /** The fully-qualified key a key actually reads (through `extends`). */
@@ -431,13 +434,19 @@ export class Scope {
   }
 
   resolve(name: string): string {
+    return this.resolution(name).value;
+  }
+
+  /** The value of `name` and, when it is a member a selector picked (also
+   *  through references to that selector), which member. */
+  resolution(name: string): Resolution {
     return this.book._cache.resolve(`${this.name}.${name}`, () => this.compute(name));
   }
 
-  /** `resolve` without the cache. */
-  private compute(name: string): string {
+  /** `resolution` without the cache. */
+  private compute(name: string): Resolution {
     const field = splitKey(name);
-    if (field) return this.resolveField(field[0], field[1]);
+    if (field) return { value: this.resolveField(field[0], field[1]) };
     const token = this.get(name);
     if (!token) {
       throw new Error(`Token "${name}" not found in scope "${this.name}"`);
@@ -454,20 +463,16 @@ export class Scope {
     }
     this.resolving.add(name);
     try {
+      // A reference passes on what it refers to, a pick included.
       if (token.type === 'reference') {
-        return this.book.resolve(this.valueKey(token as ReferenceValue, qualified));
+        return this.book._resolution(valueKey(token as ReferenceValue, qualified));
       }
 
       if (token.type === 'function') {
-        return this.resolveFunctionToken(token as FunctionTokenValue);
+        return evaluateFunction(this.book, token as FunctionTokenValue);
       }
 
-      const tv = token as TokenValue;
-      if (tv.metadata?.unit) {
-        return `${tv.rawValue}${tv.metadata.unit}`;
-      }
-
-      return String(tv.rawValue);
+      return { value: valueOf(token as TokenValue) };
     } finally {
       this.resolving.delete(name);
     }
@@ -487,7 +492,7 @@ export class Scope {
       );
     }
     if (token.type === 'reference') {
-      return this.book.resolve(`${this.valueKey(token as ReferenceValue, qualified)}.${field}`);
+      return this.book.resolve(`${valueKey(token as ReferenceValue, qualified)}.${field}`);
     }
     if (!isTypographyToken(token)) {
       throw new TokenError(`"${qualified}" is not a typography, so "${qualified}.${field}" names no field`, `${qualified}.${field}`);
@@ -502,92 +507,10 @@ export class Scope {
     if (this.resolving.has(guard)) throw new CircularDependencyError([`${qualified}.${field}`, `${qualified}.${field}`]);
     this.resolving.add(guard);
     try {
-      return String(this.resolveArg(token.args[own]));
+      return String(evaluateArg(this.book, token.args[own]));
     } finally {
       this.resolving.delete(guard);
     }
-  }
-
-  /** The key a bound reference reads as a value. Refuses a navigation that
-   *  could not be followed and a scope, which has no value of its own. */
-  private valueKey(reference: ReferenceValue, where: string): string {
-    if (isScopeKey(reference.key)) {
-      throw new TokenError(`${where}: ref('${reference.key}') names a scope; a value needs 'scope.token'`, where);
-    }
-    return reference.key;
-  }
-
-  /** Resolve a function token, recursing into any nested function-token
-   *  arguments. Function tokens don't live in a scope as named entries —
-   *  they're inlined as args — so they're invoked directly through the
-   *  book's function registry rather than via `book.resolve`. */
-  private resolveFunctionToken(fn: FunctionTokenValue): string {
-    // Its own frame, so the member a selector picks is reported for this
-    // call and not for the call that is resolving it (./functions/picks).
-    return inFrame(() => {
-      const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveArg(arg));
-      if (fn.metadata?.returnType === 'color') this.assertNoTextStyle(fn, resolvedArgs);
-      const implementation = this.book.getFunction(fn.name);
-      if (!implementation) {
-        throw new Error(`Function "${fn.name}" is not registered`);
-      }
-      return implementation(...resolvedArgs, this.resolveInputs(fn.options));
-    });
-  }
-
-  /** A function argument's value: refs and nested functions resolved, a
-   *  scope argument looked up by name, anything else as is. */
-  /** The options a function receives: every input — a reference, a token
-   *  or a function token at the top level, outside the member slots —
-   *  resolved like an argument (`closest`'s `upTo`, a selector's
-   *  `readableOn`). Member references and plain values pass as they are. */
-  private resolveInputs(options: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
-    if (!options) return options;
-    let resolved: Record<string, unknown> | undefined;
-    for (const [name, value] of Object.entries(options)) {
-      if (MEMBER_SLOTS.has(name)) continue;
-      if (isReferenceValue(value) || isFunctionTokenValue(value) || isTokenValue(value) || isUnresolvable(value)) {
-        resolved ??= { ...options };
-        resolved[name] = this.resolveArg(value as FunctionArg);
-      }
-    }
-    return resolved ?? options;
-  }
-
-  /** A color transform handed a whole text style (its resolved value is
-   *  declarations, `font-size: …; color: …`) gets a message that says how
-   *  to pass one of its fields, instead of failing to parse a color. */
-  private assertNoTextStyle(fn: FunctionTokenValue, resolvedArgs: unknown[]): void {
-    resolvedArgs.forEach((value, i) => {
-      if (typeof value !== 'string' || !TEXT_STYLE.test(value)) return;
-      const arg = fn.args[i];
-      const key = isReferenceValue(arg) ? arg.key : undefined;
-      const what = key ? `"${key}" is a text style` : 'that argument is a text style';
-      const hint = key ? `, e.g. ref('${key}.color')` : '';
-      throw new FunctionError(`${fn.name}: ${what}; pass one of its fields${hint}`, fn.name);
-    });
-  }
-
-  private resolveArg(arg: FunctionArg): unknown {
-    if (isUnresolvable(arg)) throw new TokenError(`${arg.key}: ${arg.message}`, arg.key);
-    if (isReferenceValue(arg)) {
-      // A scope reference is a pool: hand the function the scope itself.
-      if (isScopeKey(arg.key)) {
-        const scope = this.book.getScope(arg.key);
-        if (!scope) throw new TokenError(`Scope "${arg.key}" not found`, arg.key);
-        return scope;
-      }
-      return this.book.resolve(this.valueKey(arg, this.name));
-    }
-    if (isFunctionTokenValue(arg)) {
-      return this.resolveFunctionToken(arg);
-    }
-    if (isTokenValue(arg)) {
-      const tv = arg as TokenValue;
-      if (tv.metadata?.unit) return `${tv.rawValue}${tv.metadata.unit}`;
-      return String(tv.rawValue);
-    }
-    return arg;
   }
 }
 

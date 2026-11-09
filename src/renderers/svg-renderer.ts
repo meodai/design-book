@@ -111,11 +111,6 @@ function getTokenBaseType(book: DesignBook, key: string): string {
   }
 }
 
-function normalizeColor(value: string): string | null {
-  const parsed = parse(value);
-  return parsed ? (formatHex(parsed) ?? null) : null;
-}
-
 /** Returns the theme variable (`--on-surface` or `--surface`) whose value
  *  contrasts better with the given fill — used to outline the colored
  *  edge stroke so the animated dashes stay readable against the curve's
@@ -157,46 +152,17 @@ function isPaletteLinker(book: DesignBook, token: AnyTokenValue): boolean {
   return paletteCandidates(book, token).length > 0;
 }
 
-/** For a palette-linker function token, find the candidate in its
- *  live candidate pool whose resolved value matches the function's output —
- *  the token that was actually picked. Returns null if no match. Handles
- *  both color outputs (matched via normalized hex) and non-color outputs
- *  like dimensions (matched via raw resolved string). */
+/** For a palette-linker function token, the member of its pool it
+ *  picked (`book.pickOf`), or null when it picked none there. Exact: two
+ *  members with the same value are told apart. */
 function findResolvedSource(
   book: DesignBook,
   qualifiedKey: string,
   token: AnyTokenValue,
 ): string | null {
-  const visualDeps = paletteCandidates(book, token);
-  if (visualDeps.length === 0) return null;
-
-  let resolved: string;
-  try {
-    resolved = book.resolve(qualifiedKey);
-  } catch {
-    return null;
-  }
-  const resolvedHex = normalizeColor(resolved);
-
-  for (const depKey of visualDeps) {
-    // A selector can sit in the scope it iterates; it trivially matches
-    // its own output, which would draw a self-loop.
-    if (depKey === qualifiedKey) continue;
-    let candResolved: string;
-    try {
-      candResolved = book.resolve(depKey);
-    } catch {
-      continue;
-    }
-
-    if (resolvedHex) {
-      const candHex = normalizeColor(candResolved);
-      if (candHex && candHex === resolvedHex) return depKey;
-    } else if (candResolved === resolved) {
-      return depKey;
-    }
-  }
-  return null;
+  const candidates = paletteCandidates(book, token);
+  const picked = book.pickOf(qualifiedKey);
+  return picked !== undefined && picked !== qualifiedKey && candidates.includes(picked) ? picked : null;
 }
 
 /** How much each scope feeds each other: `flow.get(p).get(s)` counts the

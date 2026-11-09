@@ -1,4 +1,5 @@
 import { DesignBook } from '../design-book';
+import { evaluateArg, evaluateFunction } from '../evaluate';
 import { isFunctionTokenValue, isReferenceValue, isScopeKey, isTokenValue } from '../tokens';
 import type { TokenValue, ReferenceValue, FunctionTokenValue, AnyTokenValue, FunctionArg } from '../tokens';
 import { registerBuiltinFunctionRenderers, argToCssValue } from './function-renderers';
@@ -228,20 +229,7 @@ export class Renderer {
   renderFunctionToken(fn: FunctionTokenValue): string {
     const funcRenderer = this.functionRenderers.get(fn.name);
     if (funcRenderer) return funcRenderer(fn.args, fn.options);
-    return this.resolveFunctionToken(fn);
-  }
-
-  /** Evaluate a function token through the book's function registry.
-   *  Inline (nested) function tokens have no scope entry of their own, so
-   *  they can't go through `book.resolve`; this mirrors what
-   *  `Scope.resolveFunctionToken` does for named ones. */
-  private resolveFunctionToken(fn: FunctionTokenValue): string {
-    const resolvedArgs = fn.args.map((arg: FunctionArg) => this.resolveFunctionArg(arg));
-    const implementation = this.book.getFunction(fn.name);
-    if (!implementation) {
-      throw new Error(`Function "${fn.name}" is not registered`);
-    }
-    return implementation(...resolvedArgs, fn.options);
+    return evaluateFunction(this.book, fn).value;
   }
 
   /** Two different `scope.token` pairs can mangle to the same CSS custom
@@ -600,7 +588,7 @@ export class Renderer {
     const durationArg = fn.args[0];
     const durationStr = durationArg === undefined
       ? ''
-      : String(this.resolveFunctionArg(durationArg));
+      : String(evaluateArg(this.book, durationArg));
     const duration = parseDimensionString(durationStr) ?? { value: 0, unit: 'ms' };
     const delay = Number(fn.options?.delay ?? 0);
     const easing = fn.args[1] === undefined ? '' : String(fn.args[1]);
@@ -654,25 +642,5 @@ export class Renderer {
     }
 
     return resolvedStr;
-  }
-
-  /** Resolve one function argument to the string the implementation would
-   *  see. Shared by the CSS fallback path and the W3 transition composite. */
-  private resolveFunctionArg(arg: FunctionArg): unknown {
-    if (isReferenceValue(arg)) {
-      // A pool reaches the implementation as the scope itself, as in `Scope`.
-      if (isScopeKey(arg.key)) {
-        const scope = this.book.getScope(arg.key);
-        if (!scope) throw new Error(`Scope "${arg.key}" not found`);
-        return scope;
-      }
-      return this.book.resolve(arg.key);
-    }
-    if (isFunctionTokenValue(arg)) return this.resolveFunctionToken(arg);
-    if (isTokenValue(arg)) {
-      if (arg.metadata?.unit) return `${arg.rawValue}${arg.metadata.unit}`;
-      return String(arg.rawValue);
-    }
-    return arg;
   }
 }

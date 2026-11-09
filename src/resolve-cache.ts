@@ -1,12 +1,4 @@
-import { beginCapture, endCapture, replay } from './functions/picks';
-
-/** A resolved value and the pick its computation reported. */
-interface Entry {
-  value: string;
-  /** The member the computation's outermost call reported picking. */
-  key?: string;
-  closed: boolean;
-}
+import type { Resolution } from './functions/picks';
 
 /**
  * The book's memo of resolved values, keyed by qualified key.
@@ -26,7 +18,7 @@ interface Entry {
  * Errors are not kept either.
  */
 export class ResolveCache {
-  private entries = new Map<string, Entry>();
+  private entries = new Map<string, Resolution>();
   private off = 0;
   private trips = 0;
   private _generation = 0;
@@ -59,26 +51,16 @@ export class ResolveCache {
     }
   }
 
-  /** The value of `key`: from the cache, or computed and kept. */
-  resolve(key: string, compute: () => string): string {
+  /** The resolution of `key` (its value, and the member it is when it is
+   *  one): from the cache, or computed and kept. */
+  resolve(key: string, compute: () => Resolution): Resolution {
     if (this.off === 0) {
       const hit = this.entries.get(key);
-      if (hit) {
-        replay(hit);
-        return hit.value;
-      }
+      if (hit) return hit;
     }
     const trips = this.trips;
-    const capture = beginCapture();
-    let value: string;
-    try {
-      value = compute();
-    } finally {
-      endCapture();
-    }
-    const entry: Entry = { value, key: capture.key, closed: capture.closed };
-    if (this.off === 0 && this.trips === trips) this.entries.set(key, entry);
-    replay(entry);
-    return value;
+    const resolution = compute();
+    if (this.off === 0 && this.trips === trips) this.entries.set(key, resolution);
+    return resolution;
   }
 }

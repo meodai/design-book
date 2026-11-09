@@ -11,7 +11,8 @@ import { contrastAgainst } from './color-math';
 import { readableOnOptions } from './readable';
 import type { ReadableOnOptions } from './readable';
 import type { ContrastInputs } from './best-contrast';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 export interface MinContrastOptions extends ReadableOnOptions {
   /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
@@ -36,7 +37,7 @@ export function minContrastWithImpl(
   targetValue: string,
   scope: Scope,
   options: ContrastInputs & { minContrast?: number },
-): string {
+): Pick {
   const fn = 'minContrastWith';
   const { not, direction, readableOn, readableContrast, minContrast = 4.5, by } = options;
   const measure = measureOf(targetValue, by);
@@ -54,9 +55,9 @@ export function minContrastWithImpl(
     .filter((c) => onLightnessSide(direction, targetL, c.l))
     .map((c) => ({ ...c, contrast: contrastAgainst(target, c.color) }));
   if (candidates.length === 0) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  const pick = best(candidates.filter((c) => c.contrast >= minContrast), (c) => c.contrast, 'min')
+  const choice = best(candidates.filter((c) => c.contrast >= minContrast), (c) => c.contrast, 'min')
     ?? best(candidates, (c) => c.contrast, 'max')!;
-  return picked(scope, pick.key, pick.value);
+  return pick(scope, choice.key);
 }
 
 export function minContrastWith(

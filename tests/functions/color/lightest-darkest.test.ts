@@ -75,7 +75,8 @@ describe('lightest / darkest', () => {
 
     const ui = book.addScope('ui');
     ui.set('bg', lightest(ref('palette')));
-    expect(book.resolve('ui.bg')).toBe('#ffffff80');
+    expect(book.pickOf('ui.bg')).toBe('palette.veil');
+    expect(book.resolve('ui.bg')).toBe('rgba(255, 255, 255, 0.5)');
   });
 
   it('throws when the scope has no colors', () => {

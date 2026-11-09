@@ -9,7 +9,8 @@ import { visibleDistance } from '../color/color-math';
 import { readableOnOptions } from '../color/readable';
 import type { ReadableOn, ReadableOnOptions } from '../color/readable';
 import { best, colorForm, colorPool, describeKind, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 /** `furthestFrom`'s options as the implementation receives them. */
 export interface FurthestFromInputs extends ReadableOn {
@@ -26,7 +27,7 @@ export interface FurthestFromInputs extends ReadableOn {
  * styles by font size. `maxDistance` keeps only the members no further than
  * that. See `furthestFrom`.
  */
-export function furthestFromImpl(targetValue: string, scope: Scope, options: FurthestFromInputs): string {
+export function furthestFromImpl(targetValue: string, scope: Scope, options: FurthestFromInputs): Pick {
   const fn = 'furthestFrom';
   const { not, readableOn, readableContrast, maxDistance, by } = options;
   const limit = maxDistance === undefined ? Infinity : maxDistance + 1e-9;
@@ -40,15 +41,15 @@ export function furthestFromImpl(targetValue: string, scope: Scope, options: Fur
     if (members.length === 0) {
       throw new FunctionError(`${fn}: scope "${scope.name}" has no ${describeKind(measure.kind, measure.unit)} to compare with ${targetValue}`, fn);
     }
-    const pick = best(
+    const choice = best(
       members.filter((m) => Math.abs(m.num - measure.num) <= limit),
       (m) => Math.abs(m.num - measure.num),
       'max',
     );
-    if (!pick) {
+    if (!choice) {
       throw new FunctionError(`${fn}: no member of scope "${scope.name}" is within ${maxDistance}${measure.unit} of ${targetValue}`, fn);
     }
-    return picked(scope, pick.key, pick.value);
+    return pick(scope, choice.key);
   }
 
   // A text style is compared by its color field `by`.
@@ -65,11 +66,11 @@ export function furthestFromImpl(targetValue: string, scope: Scope, options: Fur
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = readableOn === undefined ? null : parseColor(readableOn) ?? null;
   const distance = (c: (typeof pool)[number]) => visibleDistance(target.color, c.color, backdrop);
-  const pick = best(pool.filter((c) => distance(c) <= limit), distance, 'max');
-  if (!pick) {
+  const choice = best(pool.filter((c) => distance(c) <= limit), distance, 'max');
+  if (!choice) {
     throw new FunctionError(`${fn}: no member of scope "${scope.name}" is within ${maxDistance} (OKLab) of ${targetValue}`, fn);
   }
-  return picked(scope, pick.key, pick.value);
+  return pick(scope, choice.key);
 }
 
 export interface FurthestFromOptions extends ReadableOnOptions {

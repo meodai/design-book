@@ -29,13 +29,14 @@ describe('the color pool and wide-gamut members', () => {
     expect(s.getAllKeys()).toEqual(['p']);
   });
 
-  it('a selector agrees with a no-op transform on the same member', () => {
+  it('a selector returns the member as written; a transform maps it into sRGB', () => {
     const { book } = makeBook();
     const ui = book.addScope('ui');
     ui.set('vivid', mostVivid(ref('s')));
     ui.set('same', lighten(ref('s.p'), { amount: 0 }));
-    expect(book.resolve('ui.vivid')).toBe(book.resolve('ui.same'));
-    expect(book.resolve('ui.vivid')).toBe('#00c300');
+    expect(book.pickOf('ui.vivid')).toBe('s.p');
+    expect(book.resolve('ui.vivid')).toBe(book.resolve('s.p'));
+    expect(book.resolve('ui.same')).toBe('#00c300');
   });
 
   it('keeps alpha on a translucent wide-gamut member', () => {

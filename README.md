@@ -640,21 +640,22 @@ book.resolve('ui.overlay'); // '#0066cc80'
 The same pattern handles functions that pick from a scope — pass the scope
 as an argument (`ref('palette')`): the implementation receives the live
 `Scope`, and the book indexes it as the function's pool, so adding or
-changing a member re-resolves it. When the function returns one of the
-members, report which one with `picked(scope, key, value)`, so a `sibling`
-stepping in that scope and a `not` entry naming it know the exact member,
-and the SVG renderer draws its edge from it:
+changing a member re-resolves it. A function that chooses one of the
+members returns the member itself, `pick(scope, key)`: the token's value is
+that member's, and the book knows which member it is (`book.pickOf(key)`), so
+a `sibling` stepping in that scope, a `not` entry naming it and the SVG
+renderer's edge all find the exact member, even when another one has the same
+value:
 
 ```typescript
-import { picked, type Scope } from 'design-book';
+import { pick, type Scope } from 'design-book';
 
-book.registerFunction('secondOf', (scope: Scope) => {
-  const key = scope.getAllKeys()[1];
-  return picked(scope, key, scope.resolve(key));
-});
+book.registerFunction('secondOf', (scope: Scope) => pick(scope, scope.getAllKeys()[1]));
 ```
 
-Without `picked` it still works as a value; it just cannot be stepped from or excluded by name, and the renderer finds its member by value.
+A selector's value is the member's value as written: a pick of
+`color('oklch(0.7 0.25 150)')` is `oklch(0.7 0.25 150)`, and each renderer
+writes it the way its format can.
 
 A function that reads whole scopes it is not handed as arguments — scopes named in its options, or worked out from the book — says so when it is registered, so a change in them reaches its tokens:
 
@@ -1508,7 +1509,7 @@ they fit together.
 
 **Errors.** `TokenError` (bad keys or values, unknown tokens), `ScopeError` (bad scope names or inheritance), `CircularDependencyError` (with `path`), `FunctionError` (invalid function arguments), `LayerError` (`layerName`, `tokenKey`, `cause`).
 
-**For custom functions.** Type guards `isReferenceValue`, `isTokenValue`, `isScopeReference`, `isMemberReference`; `toMember(key | ref)` for a member slot; `picked(scope, key, value)`; `registerFunction(name, impl, { scopesRead })`.
+**For custom functions.** Type guards `isReferenceValue`, `isTokenValue`, `isScopeReference`, `isMemberReference`; `toMember(key | ref)` for a member slot; `pick(scope, key)` and `book.pickOf(key)`; `registerFunction(name, impl, { scopesRead })`.
 
 **Internals** (`design-book/internals`), for tools built on the book — the editor, renderers, inspectors. They follow the engine rather than a stable contract:
 - Keys: `tokenKeyOf('type.title.fontSize')` returns `'type.title'`; `isFieldKey(key)`; `isScopeKey('palette')`; `isRelativeKey('.bg')`, `qualifyKey('.bg', 'button')` returns `'button.bg'`

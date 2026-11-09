@@ -20,6 +20,12 @@ function createMockBook() {
       if (!scope) throw new Error(`Scope ${scopeName} not found`);
       return scope.resolve(tokenName);
     }),
+    _resolution: vi.fn((key: string) => {
+      const [scopeName, tokenName] = key.split('.');
+      const scope = scopes.get(scopeName);
+      if (!scope) throw new Error(`Scope ${scopeName} not found`);
+      return scope.resolution(tokenName);
+    }),
     getScope: vi.fn((name: string) => scopes.get(name)),
     getFunction: vi.fn(),
     _accept: vi.fn(),

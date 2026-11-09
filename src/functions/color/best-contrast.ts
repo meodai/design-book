@@ -10,7 +10,8 @@ import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colo
 import { contrastAgainst } from './color-math';
 import { readableOnOptions } from './readable';
 import type { ReadableOn, ReadableOnOptions } from './readable';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 /** The contrast selectors' options as the implementation receives them. */
 export interface ContrastInputs extends ReadableOn {
@@ -23,7 +24,7 @@ export interface ContrastInputs extends ReadableOn {
 
 /** The member of `scope` that contrasts most with the target: WCAG ratio
  *  for colors, the ratio of the two values for sizes and text styles. */
-export function bestContrastWithImpl(targetValue: string, scope: Scope, options: ContrastInputs): string {
+export function bestContrastWithImpl(targetValue: string, scope: Scope, options: ContrastInputs): Pick {
   const fn = 'bestContrastWith';
   const { not, direction, readableOn, readableContrast, by } = options;
   const measure = measureOf(targetValue, by);
@@ -41,7 +42,7 @@ export function bestContrastWithImpl(targetValue: string, scope: Scope, options:
     'max',
   );
   if (!top) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  return picked(scope, top.key, top.value);
+  return pick(scope, top.key);
 }
 
 export function bestContrastWith(

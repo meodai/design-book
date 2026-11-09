@@ -11,7 +11,8 @@ import type {
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { poolKeys, resolvePool } from '../scope-members';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 export interface NthOptions {
   /** Keys to exclude from the candidate pool. */
@@ -20,7 +21,7 @@ export interface NthOptions {
   [key: string]: any;
 }
 
-export function nthImpl(scope: Scope, options: { index: number; not: string[] }): string {
+export function nthImpl(scope: Scope, options: { index: number; not: string[] }): Pick {
   const { index, not } = options;
   // A non-negative whole index needs the members only up to it.
   if (Number.isInteger(index) && index >= 0) {
@@ -32,7 +33,7 @@ export function nthImpl(scope: Scope, options: { index: number; not: string[] })
       } catch {
         continue; // unresolvable members are not candidates
       }
-      if (++position === index) return picked(scope, key, value);
+      if (++position === index) return pick(scope, key);
     }
     if (position === -1) throw new FunctionError(`nth: no candidates found in scope "${scope.name}"`, 'nth');
     throw new FunctionError(
@@ -59,7 +60,7 @@ export function nthImpl(scope: Scope, options: { index: number; not: string[] })
       'nth',
     );
   }
-  return picked(scope, candidates[i].key, candidates[i].value);
+  return pick(scope, candidates[i].key);
 }
 
 /**

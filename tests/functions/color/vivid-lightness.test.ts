@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { DesignBook } from '../../../src/design-book';
 import { color, ref } from '../../../src/tokens';
 import { mostVivid, leastVivid } from '../../../src/functions/color/vividness';
-import { capturePick } from '../../../src/functions/picks';
 import { parseTokenInput } from '../../../site/editor/editor-input-parser';
 import { loadEditorModule } from '../../editor/load-editor';
 
@@ -23,7 +22,7 @@ describe('mostVivid / leastVivid with a lightness band', () => {
     ui.set('loudLight', mostVivid(ref('pool'), { lightness: [0.85, 1] }));
     ui.set('quiet', leastVivid(ref('pool')));
     ui.set('quietMid', leastVivid(ref('pool'), { lightness: [0.4, 0.8] }));
-    const pickOf = (key: string) => capturePick(() => book.resolve(key));
+    const pickOf = (key: string) => book.pickOf(key);
     expect(pickOf('ui.loud')).toBe('pool.red');
     expect(pickOf('ui.loudLight')).toBe('pool.pale');
     expect(pickOf('ui.quiet')).toBe('pool.ink');

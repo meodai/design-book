@@ -3,7 +3,7 @@ import { DependencyGraph } from './dependency-graph';
 import { Scope } from './scope';
 import { ScopeError, TokenError } from './errors';
 import { ResolveCache } from './resolve-cache';
-import { capturePick } from './functions/picks';
+import type { Pick, Resolution } from './functions/picks';
 import { scopeOf, splitKey } from './keys';
 import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
@@ -108,7 +108,9 @@ export type DesignBookEvent<K extends keyof DesignBookEventMap> = {
   detail: DesignBookEventMap[K];
 };
 
-export type FunctionImplementation<Args extends unknown[] = unknown[]> = (...args: Args) => string;
+/** A function's implementation: its resolved arguments and options in, a
+ *  value out — or, for a selector, the member it picked (`pick`). */
+export type FunctionImplementation<Args extends unknown[] = unknown[]> = (...args: Args) => string | Pick;
 
 /** What a function tells the book besides its implementation. */
 export interface FunctionTraits {
@@ -416,6 +418,23 @@ export class DesignBook {
   // --- Token operations ---
 
   resolve(key: string): string {
+    return this._resolution(key).value;
+  }
+
+  /** The member a key's value is, when it is one a selector picked (also
+   *  through references to that selector): `pickOf('ui.text')` →
+   *  `'palette.ink'`. `undefined` for a value of its own or one computed from
+   *  a pick (`lighten(mostVivid(…))`), and when the key does not resolve. */
+  pickOf(key: string): string | undefined {
+    try {
+      return this._resolution(key).pick;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** A key's value and the member it is, when it is one. */
+  _resolution(key: string): Resolution {
     if (isRelativeKey(key)) {
       throw new TokenError(
         `"${key}" is relative to the scope that reads it; resolve it through a scope (scope.resolve("${key.slice(1)}")) or qualify it`,
@@ -430,7 +449,7 @@ export class DesignBook {
     if (!scope) {
       throw new TokenError(`Scope "${parts[0]}" not found`, key);
     }
-    return scope.resolve(parts[1]);
+    return scope.resolution(parts[1]);
   }
 
   has(key: string): boolean {
@@ -513,9 +532,7 @@ export class DesignBook {
     let value: string | undefined;
     let pick: string | undefined;
     try {
-      pick = capturePick(() => {
-        value = this.resolve(key);
-      });
+      ({ value, pick } = this._resolution(key));
     } catch {
       value = undefined;
     }

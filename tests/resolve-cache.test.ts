@@ -5,7 +5,6 @@ import { nth } from '../src/functions/generic/nth';
 import { lighten } from '../src/functions/color/lighten-darken';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { mostVivid } from '../src/functions/color/vividness';
-import { capturePick } from '../src/functions/picks';
 
 function paletteBook() {
   const book = new DesignBook('t');
@@ -21,13 +20,13 @@ function paletteBook() {
 }
 
 describe('the resolve cache', () => {
-  it('answers capturePick from a cached value, through references too', () => {
+  it('answers pickOf from a cached value, through references too', () => {
     const book = paletteBook();
     expect(book.resolve('ui.text')).toBe('#111111');           // computed, cached
-    expect(capturePick(() => book.resolve('ui.text'))).toBe('palette.dark');
-    expect(capturePick(() => book.resolve('ui.alias'))).toBe('palette.dark');
-    expect(capturePick(() => book.resolve('ui.alias'))).toBe('palette.dark'); // both cached now
-    expect(capturePick(() => book.resolve('palette.mid'))).toBeUndefined();
+    expect(book.pickOf('ui.text')).toBe('palette.dark');
+    expect(book.pickOf('ui.alias')).toBe('palette.dark');
+    expect(book.pickOf('ui.alias')).toBe('palette.dark'); // both cached now
+    expect(book.pickOf('palette.mid')).toBeUndefined();
   });
 
   it('is cleared by a write, a delete, a new order and a new function', () => {

@@ -29,7 +29,7 @@ describe('selectors and translucent candidates', () => {
     const ui = book.addScope('ui');
     ui.set('text', bestContrastWith(color('#ffffff'), ref('pool')));
 
-    expect(book.resolve('ui.text')).toBe('#00000080');
+    expect(book.resolve('ui.text')).toBe('rgba(0, 0, 0, 0.5)');
   });
 
   it('minContrastWith judges a translucent candidate as composited', () => {
@@ -44,7 +44,7 @@ describe('selectors and translucent candidates', () => {
     const ui = book.addScope('ui');
     ui.set('text', minContrastWith(color('#ffffff'), ref('pool'), { minContrast: 1.05 }));
 
-    expect(book.resolve('ui.text')).toBe('#0000000d');
+    expect(book.resolve('ui.text')).toBe('rgba(0, 0, 0, 0.05)');
   });
 
   it('leastVivid keeps alpha in the value it returns when there is no target', () => {
@@ -56,6 +56,6 @@ describe('selectors and translucent candidates', () => {
     const ui = book.addScope('ui');
     ui.set('muted', leastVivid(ref('pool')));
 
-    expect(book.resolve('ui.muted')).toBe('#0000000d');
+    expect(book.resolve('ui.muted')).toBe('rgba(0, 0, 0, 0.05)');
   });
 });

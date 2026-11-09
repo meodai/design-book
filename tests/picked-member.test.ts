@@ -3,7 +3,6 @@ import { DesignBook } from '../src/design-book';
 import { color, ref } from '../src/tokens';
 import { bestContrastWith } from '../src/functions/color/best-contrast';
 import { nth } from '../src/functions/generic/nth';
-import { capturePick } from '../src/functions/picks';
 
 /** A scale where a and c share a value. */
 function duplicateScale() {
@@ -24,7 +23,7 @@ describe('a selector reports the member it picked', () => {
   it('reports the member, not the first one with its value', () => {
     const { book, ui } = duplicateScale();
     ui.set('pick', nth(ref('scale'), 2));
-    expect(capturePick(() => book.resolve('ui.pick'))).toBe('scale.c');
+    expect(book.pickOf('ui.pick')).toBe('scale.c');
   });
 
   it('reports the outer selector, not a selector among its pool members', () => {
@@ -35,18 +34,18 @@ describe('a selector reports the member it picked', () => {
     scale.set('dyn', nth(ref('other'), 0));
     ui.set('pick', nth(ref('scale'), -1));
     expect(book.resolve('ui.pick')).toBe('#abcdef');
-    expect(capturePick(() => book.resolve('ui.pick'))).toBe('scale.dyn');
+    expect(book.pickOf('ui.pick')).toBe('scale.dyn');
   });
 
   it('reports what a contrast selector chose', () => {
     const { book, ui } = duplicateScale();
     ui.set('text', bestContrastWith(ref('scale.b'), ref('scale')));
-    expect(capturePick(() => book.resolve('ui.text'))).toBe('scale.a');
+    expect(book.pickOf('ui.text')).toBe('scale.a');
   });
 
   it('reports nothing for a plain reference', () => {
     const { book, ui } = duplicateScale();
     ui.set('alias', ref('scale.d'));
-    expect(capturePick(() => book.resolve('ui.alias'))).toBeUndefined();
+    expect(book.pickOf('ui.alias')).toBeUndefined();
   });
 });

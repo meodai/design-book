@@ -86,7 +86,7 @@ export {
   random,
   nth,
   sibling,
-  picked,
+  pick,
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';

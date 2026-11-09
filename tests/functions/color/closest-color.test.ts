@@ -42,9 +42,10 @@ describe('closest', () => {
     const ui = book.addScope('ui');
     ui.set('match', closest(ref('palette.accent'), ref('palette')));
 
-    // oklch(0.7 0.3 150) is out of sRGB; gamut-mapped in OKLCH it is #00c248
-    // (clipping would give #00cb00). Either way it is closer to itself than
-    // to mint.
-    expect(book.resolve('ui.match')).toBe('#00c248');
+    // oklch(0.7 0.3 150) is out of sRGB; compared gamut-mapped (#00c248) it
+    // is still closer to itself than to mint. The pick is the member, as
+    // written: converting it is the renderer's business.
+    expect(book.pickOf('ui.match')).toBe('palette.accent');
+    expect(book.resolve('ui.match')).toBe('oklch(0.7 0.3 150)');
   });
 });

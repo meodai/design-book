@@ -6,7 +6,8 @@ import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { onlyMeasuredGroup, byOption } from '../kinds';
 import { best, measuredPool } from '../pool';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 type Extreme = 'largest' | 'smallest';
 
@@ -17,17 +18,17 @@ type Extreme = 'largest' | 'smallest';
  * sizes and text styles), `type` picks one or the call throws. Ties go to the
  * first member in scope order.
  */
-function extremeImpl(name: Extreme, scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
+function extremeImpl(name: Extreme, scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): Pick {
   const members = onlyMeasuredGroup(name, scope, measuredPool(scope, options.not, options.by), options.type);
-  const pick = best(members, (m) => m.num, name === 'largest' ? 'max' : 'min')!;
-  return picked(scope, pick.key, pick.value);
+  const choice = best(members, (m) => m.num, name === 'largest' ? 'max' : 'min')!;
+  return pick(scope, choice.key);
 }
 
-export function largestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
+export function largestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): Pick {
   return extremeImpl('largest', scope, options);
 }
 
-export function smallestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): string {
+export function smallestImpl(scope: Scope, options: { not: string[]; type?: 'size' | 'text'; by?: string }): Pick {
   return extremeImpl('smallest', scope, options);
 }
 

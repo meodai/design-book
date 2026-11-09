@@ -269,33 +269,33 @@ describe('siblingImpl laziness and skipping', () => {
   it('resolves only the anchor and the members it steps over', () => {
     const { ramp: s } = setup();
     const spy = vi.spyOn(s, 'resolve');
-    expect(siblingImpl(s, 'ramp.s100', 1)).toBe('#cccccc');
+    expect(s.resolveKey(siblingImpl(s, 'ramp.s100', 1).picked)).toBe('#cccccc');
     expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['s100', 's200']);
   });
 
   it('steps over an unresolvable member without counting it', () => {
     const { s } = withBroken();
-    expect(siblingImpl(s, 's.a', 1)).toBe('2px');
-    expect(siblingImpl(s, 's.b', -1)).toBe('1px');
-    expect(siblingImpl(s, 's.a', 3)).toBe('4px');
+    expect(s.resolveKey(siblingImpl(s, 's.a', 1).picked)).toBe('2px');
+    expect(s.resolveKey(siblingImpl(s, 's.b', -1).picked)).toBe('1px');
+    expect(s.resolveKey(siblingImpl(s, 's.a', 3).picked)).toBe('4px');
   });
 
   it('clamps to the last resolvable member past the end', () => {
     const { s } = withBroken();
     s.set('e', ref('nowhere.else'));
-    expect(siblingImpl(s, 's.b', 99)).toBe('4px');
-    expect(siblingImpl(s, 's.c', -99)).toBe('1px');
+    expect(s.resolveKey(siblingImpl(s, 's.b', 99).picked)).toBe('4px');
+    expect(s.resolveKey(siblingImpl(s, 's.c', -99).picked)).toBe('1px');
   });
 
   it('wraps by the number of resolvable members, even for large offsets', () => {
     const { s } = withBroken();
     // Resolvable pool: a b c d (4 members).
-    expect(siblingImpl(s, 's.d', 1, true)).toBe('1px');
-    expect(siblingImpl(s, 's.a', -1, true)).toBe('4px');
-    expect(siblingImpl(s, 's.a', 5, true)).toBe('2px');
-    expect(siblingImpl(s, 's.a', 4, true)).toBe('1px');
-    expect(siblingImpl(s, 's.b', -9, true)).toBe('1px');
-    expect(siblingImpl(s, 's.c', 4001, true)).toBe('4px');
+    expect(s.resolveKey(siblingImpl(s, 's.d', 1, true).picked)).toBe('1px');
+    expect(s.resolveKey(siblingImpl(s, 's.a', -1, true).picked)).toBe('4px');
+    expect(s.resolveKey(siblingImpl(s, 's.a', 5, true).picked)).toBe('2px');
+    expect(s.resolveKey(siblingImpl(s, 's.a', 4, true).picked)).toBe('1px');
+    expect(s.resolveKey(siblingImpl(s, 's.b', -9, true).picked)).toBe('1px');
+    expect(s.resolveKey(siblingImpl(s, 's.c', 4001, true).picked)).toBe('4px');
   });
 
   it('throws when the anchor itself does not resolve', () => {

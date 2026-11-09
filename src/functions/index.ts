@@ -23,6 +23,7 @@ import type { Scope } from '../scope';
 import type { AnyTokenValue, FunctionTokenValue } from '../tokens';
 import { isMemberReference, isUnresolvable } from '../tokens';
 import { FunctionError } from '../errors';
+import type { Pick } from './picks';
 
 export { bestContrastWith } from './color/best-contrast';
 export { minContrastWith } from './color/min-contrast';
@@ -55,20 +56,23 @@ export type { RandomOptions, RandomType } from './generic/random';
 export { nth } from './generic/nth';
 export type { NthOptions } from './generic/nth';
 export { sibling } from './generic/sibling';
-export { picked } from './picks';
+export { pick } from './picks';
+export type { Pick } from './picks';
 export type { SiblingOptions } from './generic/sibling';
 
 /** What the built-in functions need from a book. */
 export interface BuiltinHost {
   registerFunction<Args extends unknown[]>(
     name: string,
-    impl: (...args: Args) => string,
+    impl: (...args: Args) => string | Pick,
     traits?: { scopesRead?(token: FunctionTokenValue): string[] },
   ): void;
   /** `sibling` looks up the scope its anchor key lives in. */
   getScope(name: string): Scope | undefined;
   /** A typography variant reads its base's fields. */
   resolve(key: string): string;
+  /** The member a key's value is, when a selector picked it. */
+  pickOf(key: string): string | undefined;
   getTokenByKey(key: string): AnyTokenValue | undefined;
   /** `ramp` copies the masters of a ramp set the book keeps. */
   getRampEngine(name?: string): RampEngine;
@@ -91,7 +95,7 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
     ({ ...options, not: excludedMembers(book, fn, scope, (options?.not as unknown[] | undefined) ?? []) }) as O & { not: string[] };
 
   // Selectors with a target: (target, pool, options).
-  const targeted: Record<string, (target: string, scope: Scope, options: never) => string> = {
+  const targeted: Record<string, (target: string, scope: Scope, options: never) => Pick> = {
     bestContrastWith: bestContrastWithImpl,
     minContrastWith: minContrastWithImpl,
     closest: closestImpl,
@@ -103,7 +107,7 @@ export function registerBuiltinFunctions(book: BuiltinHost): void {
   }
 
   // Selectors over a pool alone: (pool, options).
-  const pools: Record<string, (scope: Scope, options: never) => string> = {
+  const pools: Record<string, (scope: Scope, options: never) => Pick> = {
     mostVivid: mostVividImpl,
     leastVivid: leastVividImpl,
     lightest: lightestImpl,

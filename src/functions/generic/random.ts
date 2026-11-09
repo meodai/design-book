@@ -12,7 +12,8 @@ import type {
 import type { Scope } from '../../scope';
 import { FunctionError } from '../../errors';
 import { resolvePool } from '../scope-members';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 export type RandomType = 'color' | 'dimension' | 'string';
 
@@ -60,7 +61,7 @@ function mulberry32(seed: number): () => number {
 }
 
 
-export function randomImpl(scope: Scope, options: { type: RandomType; seed: number | string; not: string[] }): string {
+export function randomImpl(scope: Scope, options: { type: RandomType; seed: number | string; not: string[] }): Pick {
   const { type, seed, not } = options;
   // The constructor always stores both; a hand-built or saved token may not.
   if (typeof seed !== 'number' && typeof seed !== 'string') {
@@ -77,7 +78,7 @@ export function randomImpl(scope: Scope, options: { type: RandomType; seed: numb
 
   const rng = mulberry32(seedToInt(seed));
   const index = Math.floor(rng() * candidates.length);
-  return picked(scope, candidates[index].key, candidates[index].value);
+  return pick(scope, candidates[index].key);
 }
 
 /**

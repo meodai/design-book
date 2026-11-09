@@ -8,7 +8,8 @@ import { FunctionError } from '../../errors';
 import { best, colorPool } from '../pool';
 import { readableOnOptions } from './readable';
 import type { ReadableOn, ReadableOnOptions } from './readable';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 /**
  * `lightest` / `darkest`: the color at one end of the OKLCH lightness axis.
@@ -31,17 +32,17 @@ export interface LightnessInputs extends ReadableOn {
   by?: string;
 }
 
-function endImpl(fn: End, scope: Scope, options: LightnessInputs): string {
-  const pick = best(colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), (c) => c.l, fn === 'lightest' ? 'max' : 'min');
-  if (!pick) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  return picked(scope, pick.key, pick.value);
+function endImpl(fn: End, scope: Scope, options: LightnessInputs): Pick {
+  const choice = best(colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), (c) => c.l, fn === 'lightest' ? 'max' : 'min');
+  if (!choice) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
+  return pick(scope, choice.key);
 }
 
-export function lightestImpl(scope: Scope, options: LightnessInputs): string {
+export function lightestImpl(scope: Scope, options: LightnessInputs): Pick {
   return endImpl('lightest', scope, options);
 }
 
-export function darkestImpl(scope: Scope, options: LightnessInputs): string {
+export function darkestImpl(scope: Scope, options: LightnessInputs): Pick {
   return endImpl('darkest', scope, options);
 }
 

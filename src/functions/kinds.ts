@@ -2,7 +2,8 @@ import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { best, describeKind, ofKind } from './pool';
 import type { Kind, Measure, MeasuredMember } from './pool';
-import { picked } from './picks';
+import { pick } from './picks';
+import type { Pick } from './picks';
 import { VALID_TOKEN_KEY } from '../keys';
 
 /**
@@ -95,7 +96,7 @@ export function measuredContrast(
   members: MeasuredMember[],
   direction: Direction | undefined,
   mode: { pick: 'best' } | { pick: 'min'; minContrast: number },
-): string {
+): Pick {
   assertDirectionFits(fn, direction, target.kind);
   if (!(target.num > 0)) {
     throw new FunctionError(`${fn}: a ratio needs a positive target, got ${targetValue}`, fn);
@@ -112,8 +113,8 @@ export function measuredContrast(
   }
   if (mode.pick === 'min') {
     const meeting = best(candidates.filter((c) => c.ratio >= mode.minContrast - 1e-9), (c) => c.ratio, 'min');
-    if (meeting) return picked(scope, meeting.key, meeting.value);
+    if (meeting) return pick(scope, meeting.key);
   }
   const top = best(candidates, (c) => c.ratio, 'max')!;
-  return picked(scope, top.key, top.value);
+  return pick(scope, top.key);
 }

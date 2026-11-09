@@ -2,7 +2,6 @@ import { FunctionError } from '../errors';
 import { scopeOf } from '../keys';
 import type { Scope } from '../scope';
 import { isFieldKey, isFunctionTokenValue, isMemberReference, isReferenceValue, isScopeKey } from '../tokens';
-import { capturePick } from './picks';
 import type { AnyTokenValue } from '../tokens';
 
 /**
@@ -19,6 +18,8 @@ export interface MemberBook {
   getScope(name: string): Scope | undefined;
   getTokenByKey(key: string): AnyTokenValue | undefined;
   resolve(key: string): string;
+  /** The member a key's value is, when a selector picked it. */
+  pickOf(key: string): string | undefined;
 }
 
 /** The reference a token holds, when it is one to another token. */
@@ -133,12 +134,7 @@ export function landIn(book: MemberBook, key: string, scopeName: string): string
 /** The member a selector at `key` picked, if it is in `scopeName`. */
 function pickIn(book: MemberBook, key: string, scopeName: string): string | undefined {
   if (!isFunctionTokenValue(book.getTokenByKey(key))) return undefined;
-  let reported: string | undefined;
-  try {
-    reported = capturePick(() => book.resolve(key));
-  } catch {
-    return undefined;
-  }
+  const reported = book.pickOf(key);
   return reported !== undefined && scopeOf(reported) === scopeName ? reported : undefined;
 }
 

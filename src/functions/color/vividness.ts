@@ -10,7 +10,8 @@ import { readableOnOptions } from './readable';
 import type { ReadableOn, ReadableOnOptions } from './readable';
 import { filterLightness, lightnessOption } from './lightness-range';
 import type { LightnessRange } from './lightness-range';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 /**
  * `mostVivid` / `leastVivid`: the color with the highest / lowest OKLCH
@@ -32,20 +33,20 @@ export interface VividnessInputs extends ReadableOn {
   by?: string;
 }
 
-function vividImpl(fn: Vividness, scope: Scope, options: VividnessInputs): string {
+function vividImpl(fn: Vividness, scope: Scope, options: VividnessInputs): Pick {
   const pool = filterLightness(fn, colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), options.lightness, scope.name);
-  const pick = best(pool, (c) => c.c, fn === 'mostVivid' ? 'max' : 'min');
-  if (!pick) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  return picked(scope, pick.key, pick.value);
+  const choice = best(pool, (c) => c.c, fn === 'mostVivid' ? 'max' : 'min');
+  if (!choice) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
+  return pick(scope, choice.key);
 }
 
 /** The most vivid color in `scope` (highest OKLCH chroma). */
-export function mostVividImpl(scope: Scope, options: VividnessInputs): string {
+export function mostVividImpl(scope: Scope, options: VividnessInputs): Pick {
   return vividImpl('mostVivid', scope, options);
 }
 
 /** The least vivid color in `scope` (lowest OKLCH chroma). */
-export function leastVividImpl(scope: Scope, options: VividnessInputs): string {
+export function leastVividImpl(scope: Scope, options: VividnessInputs): Pick {
   return vividImpl('leastVivid', scope, options);
 }
 

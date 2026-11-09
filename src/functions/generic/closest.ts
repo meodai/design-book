@@ -11,7 +11,8 @@ import { DIRECTION_KIND, assertDirection, assertDirectionFits, byOption } from '
 import type { Direction } from '../kinds';
 import { best, colorForm, colorPool, describeKind, lightnessOf, measureOf, measuredPool, ofKind, parseColor, colorValueOf } from '../pool';
 import type { Measure } from '../pool';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 /** `closest`'s options as the implementation receives them. */
 export interface ClosestInputs extends ReadableOn {
@@ -52,7 +53,7 @@ function noneOnSide(scope: Scope, targetValue: string, options: ClosestInputs, g
  * target's kind: colors by OKLab distance, sizes by value (same unit), text
  * styles by font size. See `closest`.
  */
-export function closestImpl(targetValue: string, scope: Scope, options: ClosestInputs): string {
+export function closestImpl(targetValue: string, scope: Scope, options: ClosestInputs): Pick {
   const measure = measureOf(targetValue, options.by);
   if (measure) return closestMeasured(targetValue, measure, scope, options);
   assertDirectionFits('closest', options.direction, 'color');
@@ -63,7 +64,7 @@ export function closestImpl(targetValue: string, scope: Scope, options: ClosestI
 }
 
 /** Sizes and text styles: by value, in the target's unit. */
-function closestMeasured(targetValue: string, target: Measure, scope: Scope, options: ClosestInputs): string {
+function closestMeasured(targetValue: string, target: Measure, scope: Scope, options: ClosestInputs): Pick {
   assertDirectionFits('closest', options.direction, target.kind);
   if (options.readableOn !== undefined) {
     throw new FunctionError(`closest: \`readableOn\` applies to colors, not ${describeKind(target.kind)}`, 'closest');
@@ -83,9 +84,9 @@ function closestMeasured(targetValue: string, target: Measure, scope: Scope, opt
     limit = Math.abs(upTo.num - target.num) + 1e-9;
   }
   const onSide = sideOf(sign, limit, options.minDistance);
-  const pick = best(members.filter((m) => onSide(m.num - target.num)), (m) => Math.abs(m.num - target.num), 'min');
-  if (!pick) throw noneOnSide(scope, targetValue, options, target.unit);
-  return picked(scope, pick.key, pick.value);
+  const choice = best(members.filter((m) => onSide(m.num - target.num)), (m) => Math.abs(m.num - target.num), 'min');
+  if (!choice) throw noneOnSide(scope, targetValue, options, target.unit);
+  return pick(scope, choice.key);
 }
 
 /** Colors: by OKLab distance, compared in gamut-mapped sRGB as the
@@ -93,7 +94,7 @@ function closestMeasured(targetValue: string, target: Measure, scope: Scope, opt
  *  distance zero). A direction keeps the members on one side of the
  *  target's OKLCH lightness, strictly past it by `minDistance`; `upTo` no
  *  further than the other color's lightness. */
-function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs): string {
+function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs): Pick {
   // A text style is compared by its color field `by`.
   const targetValue = colorValueOf(styleOrColor, options.by) ?? styleOrColor;
   if (!parseColor(targetValue)) {
@@ -116,16 +117,16 @@ function closestColor(styleOrColor: string, scope: Scope, options: ClosestInputs
   // Translucent colors are compared as they are seen: over the readableOn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = options.readableOn === undefined ? null : parseColor(options.readableOn) ?? null;
-  const pick = best(
+  const choice = best(
     colorPool('closest', scope, options.not, options.readableOn, options.readableContrast, options.by).filter((c) => onSide(c.l - target.l)),
     (c) => visibleDistance(target.color, c.color, backdrop),
     'min',
   );
-  if (!pick) {
+  if (!choice) {
     if (sign !== 0) throw noneOnSide(scope, targetValue, options, ' in OKLCH lightness');
     throw new FunctionError('closest: no valid color candidates found in scope', 'closest');
   }
-  return picked(scope, pick.key, pick.value);
+  return pick(scope, choice.key);
 }
 
 export interface ClosestOptions extends ReadableOnOptions {

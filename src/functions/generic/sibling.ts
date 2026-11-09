@@ -14,7 +14,8 @@ import { parseKey } from '../../keys';
 import { poolKeys } from '../scope-members';
 import { assertOptions, poolArg } from '../args';
 import type { PoolArg } from '../args';
-import { picked } from '../picks';
+import { pick } from '../picks';
+import type { Pick } from '../picks';
 
 export interface SiblingOptions {
   /** Step in the direction of this token's color on the same scale, and
@@ -60,7 +61,7 @@ export function siblingImpl(
   wrap: boolean = false,
   not: string[] = [],
   toward?: string,
-): string {
+): Pick {
   // Membership is cheap to decide; resolving is not. Only the anchor and the
   // members actually stepped over are resolved. A member that fails to
   // resolve is not part of the pool: it is stepped over without counting.
@@ -98,7 +99,7 @@ export function siblingImpl(
     if (target === -1) {
       throw new FunctionError(`sibling: "${toward}" is not in the pool of scope "${scope.name}"`, 'sibling');
     }
-    if (target === at) return picked(scope, keys[at], valueAt(at)!);
+    if (target === at) return pick(scope, keys[at]);
     const towardDir = Math.sign(target - at);
     dir = offset >= 0 ? towardDir : -towardDir;
     if (offset >= 0) stopAt = target;
@@ -117,7 +118,7 @@ export function siblingImpl(
       i = (i + dir + keys.length) % keys.length;
       if (valueAt(i) !== null) steps--;
     }
-    return picked(scope, keys[i], valueAt(i)!);
+    return pick(scope, keys[i]);
   }
 
   // Without wrap, stop at the last resolvable member in that direction —
@@ -132,7 +133,7 @@ export function siblingImpl(
       steps--;
     }
   }
-  return picked(scope, keys[last], valueAt(last)!);
+  return pick(scope, keys[last]);
 }
 
 /**
