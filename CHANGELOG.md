@@ -6,6 +6,28 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **WCAG or APCA**: `new DesignBook(name, { contrast: 'apca' })` measures
+  every color contrast (`readableOn` / `readableContrast`,
+  `bestContrastWith`, `minContrastWith`) as APCA Lc instead of a WCAG
+  ratio. A threshold is a number in the book's scale (default 4.5, or
+  Lc 60), or a text style (`ref('type.body')`, `{ fontSize, fontWeight }`)
+  that the method turns into its minimum for that size and weight.
+  `apcaContrast`, `apcaMinimumLc` and `wcagMinimumRatio` are exported.
+- **`targetIs: 'text'`** on `bestContrastWith` / `minContrastWith`: the
+  target is the text and the members its backgrounds (APCA is asymmetric).
+
+### Changed
+
+- **CSS: a selector is written as `var()` of the member it picked**
+  (`--ui-text: var(--ink-navy)` instead of `#172c4f`), also when nested in
+  a transform. The choice is fixed at render, the member's value stays
+  live, and a `changedFrom` variation leaves out a pick that is the same
+  member.
+- Contrast thresholds are stored as written; the default is no longer
+  stored on the token, since it depends on the book's method.
+
 ## [0.26.0] - 2026-11-10
 
 ### Added

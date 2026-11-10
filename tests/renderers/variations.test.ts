@@ -59,17 +59,26 @@ describe('css-variables: scopes', () => {
 });
 
 describe('css-variables: changedFrom', () => {
-  it('emits the override and the computed tokens it changed, not var() references', () => {
+  it('emits the override and the picks it changed, not references that follow', () => {
     const base = buildBook();
     const inverted = buildBook();
     inverted.getScope('surface')!.set('normal', ref('brand.shade'));
 
     const out = css(inverted, { selector: '.inverted', changedFrom: base });
     expect(out).toContain('--surface-normal: var(--brand-shade);');
-    expect(out).toContain('--ui-text: #ffffff;');        // recomputed for the dark surface
+    expect(out).toContain('--ui-text: var(--brand-paper);'); // picked again for the dark surface
     expect(out).not.toContain('--ui-background');        // var(--surface-normal) follows on its own
     expect(out).not.toContain('--brand-ink');            // unchanged
     expect(out).not.toContain('.type-lead');                  // typography blocks only hold var()s
+  });
+
+  it('leaves out a pick that is the same member, even when the member changed', () => {
+    const base = buildBook();
+    const brand = buildBook();
+    brand.getScope('brand')!.set('ink', color('#221100'));
+    const out = css(brand, { selector: '.brand', changedFrom: base });
+    expect(out).toContain('--brand-ink: #221100;');
+    expect(out).not.toContain('--ui-text');                // still var(--brand-ink): follows on its own
   });
 
   it('emits keys only the variation has', () => {

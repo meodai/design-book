@@ -219,10 +219,11 @@ describe('sibling in the renderers', () => {
     expect(json['ui.gap']).toBe('16px');
   });
 
-  it('CSS gets the resolved value', () => {
+  it('CSS gets the variable of the member picked', () => {
     const css = new Renderer(book3(), 'css-variables').render();
-    expect(css).toContain('--ui-up: #999999;');
-    expect(css).toContain('--ui-gap: 16px;');
+    expect(css).toContain('--ui-up: var(--ramp-b);');
+    expect(css).toContain('--ui-gap: var(--space-l);');
+    expect(css).toContain('--ui-pick: var(--ramp-b);');
   });
 
   it('W3 types the result by what it resolves to', () => {

@@ -1082,10 +1082,21 @@ Other useful methods: `book.getRendererNames()`, `book.getRenderer(name)`. Regis
   --ui-background: var(--brand-white);
   --ui-hover: color-mix(in lab, var(--brand-primary) 85%, #000000);
   --ui-complement: color(from var(--brand-primary) oklch l c calc(h + 180));
+  --ui-text: var(--ink-navy);   /* bestContrastWith(ref('.background'), ref('ink')) */
 }
 ```
 
 References become `var()`, functions become CSS-native where possible (`color-mix`, `calc`, `color(from ...)`).
+
+A selector (`bestContrastWith`, `closest`, `mostVivid`, `nth`, `sibling`, …)
+has no CSS form: CSS cannot choose from a set. What it chose is a member
+with a variable of its own, so it is written as `var()` of that member, also
+when nested (`color-mix(in oklch, var(--ink-navy) 80%, black)`). The
+**choice** is fixed when the CSS is rendered; the chosen member's **value**
+stays live. Overriding `--ink-navy` in CSS moves `--ui-text` with it, but
+overriding `--ui-background` does not pick again: a variation that needs
+another pick is another book (`changedFrom`), or the library running in the
+page.
 
 Custom-property names are checked for collisions before anything is emitted.
 Two different keys can mangle to the same name — `a.b-c` and `a-b.c` both

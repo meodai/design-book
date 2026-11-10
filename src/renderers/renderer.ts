@@ -224,12 +224,15 @@ export class Renderer {
   /** Render a function token to a CSS expression. Nested function tokens
    *  reach this through `argToCssValue`, so a `darken(lighten(…))` nests
    *  its `color-mix()` calls instead of stringifying to `[object Object]`.
-   *  Functions with no registered renderer fall back to their resolved
-   *  value, which is the only thing CSS can express for them. */
+   *  A selector has no CSS form for its choosing, but what it chose is a
+   *  member with a variable of its own: it is written as `var()` of that
+   *  member, so the choice is frozen and its value stays live. Other
+   *  functions with no registered renderer fall back to their resolved value. */
   renderFunctionToken(fn: FunctionTokenValue): string {
     const funcRenderer = this.functionRenderers.get(fn.name);
     if (funcRenderer) return funcRenderer(fn.args, fn.options);
-    return evaluateFunction(this.book, fn).value;
+    const { value, pick } = evaluateFunction(this.book, fn);
+    return pick === undefined ? value : `var(--${keyToHyphen(pick)})`;
   }
 
   /** Two different `scope.token` pairs can mangle to the same CSS custom
@@ -347,7 +350,15 @@ export class Renderer {
         } else if (token.type === 'function') {
           const fn = token as FunctionTokenValue;
           const funcRenderer = this.functionRenderers.get(fn.name);
-          value = funcRenderer ? funcRenderer(fn.args, fn.options) : resolveTokenValue(this.book, scope.name, key);
+          if (funcRenderer) {
+            value = funcRenderer(fn.args, fn.options);
+          } else {
+            // Resolved first, so a selector that fails is reported here.
+            value = resolveTokenValue(this.book, scope.name, key);
+            // A selector: the member it picked, by its variable.
+            const pick = this.book.pickOf(path);
+            if (pick !== undefined && pick !== path) value = `var(--${keyToHyphen(pick)})`;
+          }
         } else {
           value = resolveTokenValue(this.book, scope.name, key);
         }

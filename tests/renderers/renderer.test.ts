@@ -124,7 +124,7 @@ describe('Renderer', () => {
       expect(output).not.toContain('--brand-accent_color');
     });
 
-    it('renders bestContrastWith as resolved value (no CSS equivalent)', () => {
+    it('renders bestContrastWith as the variable of the member it picked', () => {
       const book = new DesignBook('test');
       const brand = book.addScope('brand');
       brand.set('dark', color('#000000'));
@@ -134,8 +134,8 @@ describe('Renderer', () => {
 
       const renderer = new Renderer(book, 'css-variables');
       const output = renderer.render();
-      // bestContrastWith resolves to computed hex — no CSS function for this
-      expect(output).toContain('--ui-text: #000000');
+      // CSS cannot choose, but the choice is a member with its own variable
+      expect(output).toContain('--ui-text: var(--brand-dark);');
     });
   });
 
@@ -287,7 +287,7 @@ describe('Renderer', () => {
       expect(output).not.toContain('[object Object]');
     });
 
-    it('falls back to the resolved value for functions with no renderer', () => {
+    it('writes a nested selector as the variable of its pick', () => {
       const book = new DesignBook('test');
       const palette = book.addScope('palette');
       palette.set('black', color('#000000'));
@@ -296,7 +296,7 @@ describe('Renderer', () => {
       ui.set('x', darken(bestContrastWith(color('#ffffff'), ref('palette')), { amount: 0.2 }));
 
       const output = new Renderer(book, 'css-variables').render();
-      expect(output).toContain('--ui-x: color-mix(in oklch, #000000 80%, black);');
+      expect(output).toContain('--ui-x: color-mix(in oklch, var(--palette-black) 80%, black);');
       expect(output).not.toContain('[object Object]');
     });
   });
