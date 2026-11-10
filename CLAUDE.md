@@ -14,6 +14,8 @@ npm run build        # Build library to dist/ (plain Vite)
 
 Run a single test file: `npx vitest run tests/graph.test.ts`
 
+TypeScript is 7 (the native compiler, `tsc`). It ships no JavaScript compiler API, which the declaration build (`vite-plugin-dts`) needs, so `@typescript/typescript6` is installed next to it for that tool alone; npm warns about an optional peer (`@volar/*` wants TypeScript < 7) on install, which is expected.
+
 ## Website
 
 The site is one Astro project (`astro.config.mjs`, sources in `site/`):
