@@ -798,6 +798,9 @@ export class DesignBook {
   /** One `tokenChanged`: a written key with its tokens before and after, or
    *  a dependent (no `written`), whose token is unchanged. */
   private _emitTokenChanged(key: string, written?: { newValue: any; oldValue: any }): void {
+    // The event carries the resolved value: with nobody listening, nothing
+    // is resolved for it.
+    if (!this.listeners.get('tokenChanged')?.size) return;
     // A key whose value is a group has no single value: `undefined`, asked
     // without building the error `resolve` would throw.
     let value: string | undefined;

@@ -3,7 +3,7 @@ import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { parseDimension } from '../values';
-import { resolvePool } from './scope-members';
+import { resolvePool, without } from './scope-members';
 import { formatColor, gamutMapSrgb } from './color/color-math';
 import { contrastOn, contrastThreshold, formatContrast } from './color/contrast';
 import type { ContrastMethod } from './color/contrast';
@@ -93,13 +93,19 @@ export function colorPool(
   readableContrast: unknown,
   by: string | undefined,
   method: ContrastMethod = 'wcag',
-): ColorMember[] {
-  const members: ColorMember[] = [];
-  for (const { key, value, group } of resolvePool(scope, not)) {
-    const color = colorValueOf(group ?? value, by);
-    const form = color === undefined ? null : colorForm(color);
-    if (form) members.push({ key, ...form });
-  }
+): ReadonlyArray<ColorMember> {
+  // The scope's colors are the same for every selector over it: built once
+  // per state of the book and shared, then narrowed by `not` and `readableOn`.
+  const colors = scope.memo(`colors:${by ?? ''}`, () => {
+    const all: ColorMember[] = [];
+    for (const { key, value, group } of resolvePool(scope)) {
+      const color = colorValueOf(group ?? value, by);
+      const form = color === undefined ? null : colorForm(color);
+      if (form) all.push({ key, ...form });
+    }
+    return all;
+  });
+  const members = without(scope, colors, not);
   if (readableOn === undefined || readableOn === null) return members;
   const backdrop = parseColor(readableOn);
   if (!backdrop) {

@@ -16,9 +16,13 @@ import type { Resolution } from './functions/picks';
  * - anything computed while a scope sorts its keys (`without`), when pools
  *   see the keys in insertion order.
  * Errors are not kept either.
+ *
+ * `memo` keeps anything else built from resolved values (a scope's pool of
+ * candidates) under the same rules, per owner, until the next `clear`.
  */
 export class ResolveCache {
   private entries = new Map<string, Resolution>();
+  private derived = new WeakMap<object, Map<string, unknown>>();
   private off = 0;
   private trips = 0;
   private _generation = 0;
@@ -33,7 +37,28 @@ export class ResolveCache {
   /** Forget every value. */
   clear(): void {
     this.entries.clear();
+    this.derived = new WeakMap();
     this._generation++;
+  }
+
+  /** Something built from resolved values, kept for `owner` under `name`
+   *  until the next change — unless it was built with the cache off or
+   *  while the re-entrancy guard turned a key away, when it may be missing
+   *  a member that was only mid-resolution. */
+  memo<T>(owner: object, name: string, build: () => T): T {
+    if (this.off === 0) {
+      const hit = this.derived.get(owner);
+      if (hit?.has(name)) return hit.get(name) as T;
+    }
+    const trips = this.trips;
+    const generation = this._generation;
+    const built = build();
+    if (this.off === 0 && this.trips === trips && this._generation === generation) {
+      let kept = this.derived.get(owner);
+      if (!kept) this.derived.set(owner, kept = new Map());
+      kept.set(name, built);
+    }
+    return built;
   }
 
   /** The re-entrancy guard refused a key: nothing computed around it is kept. */

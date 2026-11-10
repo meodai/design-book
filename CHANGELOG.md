@@ -29,6 +29,11 @@ All notable changes to Design Book are recorded here. The format follows
   stored on the token, since it depends on the book's method.
 - Internal members (`book._accept`, `_settle`, `_cache`, …) are no longer
   in the published type declarations.
+- **Faster selectors**: a scope's pool of candidates is built once per
+  state of the book and shared by every selector over it, and a change
+  resolves values for `tokenChanged` only when something listens to it. A
+  write with a `change` listener no longer works out every dependent, and
+  a render after a write does about half the work on a large palette.
 
 ### Fixed
 

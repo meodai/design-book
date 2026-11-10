@@ -130,6 +130,13 @@ export class Scope {
     return this.name;
   }
 
+  /** Something built from this scope's resolved values (its pool of
+   *  candidates), kept until the book next changes — see `ResolveCache.memo`.
+   *  @internal */
+  memo<T>(name: string, build: () => T): T {
+    return this.book._cache.memo(this, name, build);
+  }
+
   /** Any scope of the same book by path (a group: `type.title`). */
   scopeAt(path: string): Scope | undefined {
     return this.book.getScope(path);

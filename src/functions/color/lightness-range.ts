@@ -20,10 +20,10 @@ export function lightnessOption(fn: string, range: unknown): [number, number] | 
 /** Keeps the members whose OKLCH lightness lies in the band; throws when none do. */
 export function filterLightness(
   fn: string,
-  pool: ColorMember[],
+  pool: ReadonlyArray<ColorMember>,
   range: LightnessRange | undefined,
   scopeName: string,
-): ColorMember[] {
+): ReadonlyArray<ColorMember> {
   if (!range) return pool;
   const [min, max] = range;
   const kept = pool.filter((c) => c.l >= min - 1e-9 && c.l <= max + 1e-9);

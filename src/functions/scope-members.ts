@@ -53,23 +53,40 @@ export interface PoolMember {
   group?: Scope;
 }
 
+/** Every candidate of `scope` with its value, nothing left out by `not`:
+ *  the same for every selector over the scope, so it is built once per
+ *  state of the book (`Scope.memo`) and shared. */
+function wholePool(scope: Scope): ReadonlyArray<PoolMember> {
+  return scope.memo('pool', () => {
+    const members: PoolMember[] = [];
+    for (const key of poolKeys(scope)) {
+      try {
+        const { value, group } = scope.resolution(key);
+        if (group === undefined) members.push({ key, value });
+        else {
+          const held = scope.scopeAt(group);
+          if (held) members.push({ key, value, group: held });
+        }
+      } catch {
+        // Unresolvable members are not candidates.
+      }
+    }
+    return members;
+  });
+}
+
+/** `members` without the ones `not` names (qualified keys of `scope`). The
+ *  same list when nothing is left out: do not change it. */
+export function without<M extends { key: string }>(scope: Scope, members: ReadonlyArray<M>, not: ReadonlyArray<string>): ReadonlyArray<M> {
+  if (not.length === 0) return members;
+  const excluded = new Set(not);
+  return members.filter((m) => !isExcluded(scope, m.key, excluded));
+}
+
 /**
  * `poolKeys` resolved: every candidate with its value, members that fail to
- * resolve skipped.
+ * resolve skipped. Shared between selectors: read it, do not change it.
  */
-export function resolvePool(scope: Scope, not: ReadonlyArray<string> = []): PoolMember[] {
-  const members: PoolMember[] = [];
-  for (const key of poolKeys(scope, not)) {
-    try {
-      const { value, group } = scope.resolution(key);
-      if (group === undefined) members.push({ key, value });
-      else {
-        const held = scope.scopeAt(group);
-        if (held) members.push({ key, value, group: held });
-      }
-    } catch {
-      // Unresolvable members are not candidates.
-    }
-  }
-  return members;
+export function resolvePool(scope: Scope, not: ReadonlyArray<string> = []): ReadonlyArray<PoolMember> {
+  return without(scope, wholePool(scope), not);
 }
