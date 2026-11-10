@@ -1547,21 +1547,12 @@ h1, h2, h3 {
   margin-top: 8px;
 }
 .typo-sample {
-  font-family: var(--font-display);
-  color: var(--text);
   margin: 0;
+  color: inherit;
 }
-.typo-sample--heading {
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.typo-sample--hero {
-  font-size: clamp(44px, 6.5vw, 72px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
+.typo-card {
+  display: grid;
+  gap: 0.5em;
 }
 
 /* ── Themes: layer stack visualization ─────────────────────────── */

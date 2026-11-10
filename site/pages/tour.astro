@@ -1249,36 +1249,60 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
       </div>
 
     <div class="typo-feature-body split feature-sub">
-      <h3 class="rule-title" id="typo-title">Type styles as one token.</h3>
+      <h3 class="rule-title" id="typo-title">A key that holds a table.</h3>
       <div class="typo-feature-text">
-        <p>A type style is a set of properties: family, size, weight,
-          line-height, tracking. <code>typography()</code> makes it one token,
-          the W3 <code>typography</code> composite, so it sits in a scope like
-          everything else. Its fields are tracked in the graph like any rule: a
-          <code>ref()</code> carries the whole style,
-          <code>ref('type.heading.fontSize')</code> reads one field. Renderers
-          write a variable per field plus a CSS class for the browser, and a
-          <code>$type: 'typography'</code> token for W3 Design Tokens.</p>
+        <p>Some decisions are several values at once. A type style is family,
+          size, weight, line-height and tracking: a small table of its own.
+          A key can hold one. Name the style once, list it where the styles
+          are offered, and refer to it wherever it is used: the card's heading
+          <em>is</em> the heading style, so it follows every change to it.
+          <code is:raw>typography({ … })</code> is shorthand for a style written in
+          place.</p>
+        <p>Each property is a key at its path,
+          <code>ref('card.heading.fontSize')</code>. A second argument to
+          <code>ref</code> changes a member and keeps following the rest:
+          the callout's heading is the same style, one size down. Renderers
+          write a variable per member and a class per style, and a
+          <code>typography</code> token for W3 Design Tokens.</p>
       </div>
 
-      <Folder>
-        <Sheet name="code" label="Code"><Code is:raw>type.set('heading', typography({
-  fontFamily:    ref('fonts.serif'),
-  fontSize:      rem(2.5),
-  fontWeight:    '700',
-  lineHeight:    1,
-  letterSpacing: '-0.02em',
-}));
+      <Folder class="typo-folder">
+        <Sheet name="code" label="Code"><Code is:raw>const heading = book.addScope('type-heading', { kind: 'typography' });
+heading.set('fontFamily', ref('font.text'));
+heading.set('fontSize',   ref('font-size.xl'));
+heading.set('fontWeight', string('700'));
 
-// the heading with one member changed: the rest stay live
-type.set('hero', ref('type.heading', { fontSize: rem(4) }));
+// the styles a system offers: a table of tables
+const type = book.addScope('type');
+type.set('heading', ref('type-heading'));
+type.set('body',    ref('type-body'));
 
-// one field, anywhere
-callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
+card.set('heading', ref('type.heading'));
+card.set('text',    ref('type.body'));
+
+// the same style, one member changed: the rest stay live
+callout.set('heading', ref('type-heading', {
+  fontSize: ref('font-size.lg'),
+}));</Code></Sheet>
+        <Sheet name="groups-css" label="CSS"><pre class="typo-css" id="typo-css"></pre></Sheet>
+        <Sheet name="groups-graph" label="Graph" bodyClass="typo-graph blueprint">
+          <div id="typo-graph" aria-label="The type tables and the keys holding them"></div>
+        </Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="typo-stage">
-            <div class="typo-sample typo-sample--heading">Type styles travel whole.</div>
-            <div class="typo-sample typo-sample--hero">Changes follow.</div>
+            <div class="typo-card">
+              <p class="typo-sample" id="typo-card-heading">Revenue grew twelve percent.</p>
+              <p class="typo-sample" id="typo-card-text">Led by enterprise deals, the quarter closed above plan.</p>
+            </div>
+            <p class="typo-sample" id="typo-callout-heading">The callout keeps the style, one size down.</p>
+            <div class="step-controls stub">
+              <label>
+                <span class="step-lbl">font-size.xl</span>
+                <Slider id="typo-xl" min="1.6" max="4" step="0.1" value="2.6" />
+                <span class="step-val" id="typo-xl-val">2.6rem</span>
+              </label>
+            </div>
+            <figcaption id="typo-readout"></figcaption>
           </figure>
         </Sheet>
       </Folder>

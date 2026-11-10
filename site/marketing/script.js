@@ -39,6 +39,7 @@ import {
   ref,
   px,
   string,
+  rem,
   ramp,
   relativeTo,
   createFunctionToken,
@@ -459,6 +460,72 @@ function tailwindRenderer (b) {
 };`;
 }
 book.registerRenderer("tailwind", tailwindRenderer);
+
+// ─── A key that holds a table: named type styles, listed and reused ───
+(function typoSection () {
+  const stage = document.getElementById("typo-card-heading");
+  if (!stage) return;
+  const slider = document.getElementById("typo-xl");
+  const readout = document.getElementById("typo-readout");
+  const cssOut = document.getElementById("typo-css");
+  const graph = document.getElementById("typo-graph");
+
+  const book = new DesignBook("type");
+  book.addScope("font").set("text", string('"Valley Sans", ui-sans-serif, system-ui, sans-serif'));
+  const size = book.addScope("font-size");
+  size.set("md", rem(1));
+  size.set("lg", rem(1.6));
+  size.set("xl", rem(Number(slider.value)));
+
+  const heading = book.addScope("type-heading", { kind: "typography" });
+  heading.set("fontFamily", ref("font.text"));
+  heading.set("fontSize", ref("font-size.xl"));
+  heading.set("fontWeight", string("700"));
+  heading.set("lineHeight", string("1.05"));
+  heading.set("letterSpacing", string("-0.02em"));
+  const body = book.addScope("type-body", { kind: "typography" });
+  body.set("fontFamily", ref("font.text"));
+  body.set("fontSize", ref("font-size.md"));
+  body.set("lineHeight", string("1.5"));
+
+  const type = book.addScope("type");
+  type.set("heading", ref("type-heading"));
+  type.set("body", ref("type-body"));
+  const card = book.addScope("card");
+  card.set("heading", ref("type.heading"));
+  card.set("text", ref("type.body"));
+  book.addScope("callout").set("heading", ref("type-heading", { fontSize: ref("font-size.lg") }));
+
+  // A style applied: each member of the group, as the property it names.
+  const FIELDS = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing"];
+  function apply (el, path) {
+    for (const field of FIELDS) {
+      el.style[field] = book.has(`${path}.${field}`) ? book.resolve(`${path}.${field}`) : "";
+    }
+  }
+
+  function paint () {
+    apply(document.getElementById("typo-card-heading"), "card.heading");
+    apply(document.getElementById("typo-card-text"), "card.text");
+    apply(document.getElementById("typo-callout-heading"), "callout.heading");
+    readout.textContent =
+      `card.heading.fontSize = ${book.resolve("card.heading.fontSize")} · ` +
+      `callout.heading.fontSize = ${book.resolve("callout.heading.fontSize")}`;
+    cssOut.textContent = book.render("css-variables");
+    graph.innerHTML = new SVGRenderer(book, {
+      gap: 36, padding: 30, fontSize: 13, dotSize: 5, strokeWidth: 1.5,
+      interactive: true, linksOnly: false,
+    }).render();
+  }
+
+  const sliderVal = document.getElementById("typo-xl-val");
+  slider.addEventListener("input", () => {
+    size.set("xl", rem(Number(slider.value)));
+    sliderVal.textContent = book.resolve("font-size.xl");
+    paint();
+  });
+  paint();
+})();
 
 (function graphSection () {
   const viz     = document.getElementById("graph-viz");

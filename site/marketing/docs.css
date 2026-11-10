@@ -350,6 +350,45 @@ p em {
 .folder-sheet--result:has(.mix-stage),
 .extend-card:nth-child(1) .folder-sheet--result { --pp: var(--green); --pp-text: var(--black); }
 
+/* The groups example: its graph and its CSS are papers of their own,
+   between the result and the code (their tabs in that order). */
+.folder-sheet--groups-graph { --pp: var(--blue); --pp-text: var(--on-black); --tab-left: 1px; }
+.folder-sheet--groups-css { --pp: var(--green); --pp-text: var(--black); --tab-left: 2px; }
+/* Its papers are one height, so none shows under another; the CSS
+   scrolls within it. */
+.typo-folder > .folder-sheet > .folder-body > * { box-sizing: border-box; min-height: calc(var(--row) * 20); }
+.typo-folder .typo-css { height: calc(var(--row) * 20); max-height: none; }
+.typo-folder .typo-stage { align-content: start; }
+/* the graph's paper is its body, padded a row all round */
+.typo-folder .typo-graph > #typo-graph { min-height: calc(var(--row) * 18); }
+#typo-readout { text-transform: none; letter-spacing: 0; }
+/* the tables keep the renderer's own ink, on the paper the blueprint
+   fills their rows with */
+.typo-graph {
+  padding: var(--row);
+}
+.typo-graph svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.typo-css {
+  margin: 0;
+  padding: var(--row) var(--row) var(--row) calc(var(--row) * 2);
+  max-height: calc(var(--row) * 18);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: var(--row);
+  color: var(--pp-text);
+  background-color: var(--pp);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 calc(var(--row) - 1px),
+    color-mix(in srgb, var(--pp-text) 12%, var(--pp)) calc(var(--row) - 1px) var(--row)
+  );
+}
+
 .folder-body > * {
   margin: 0;
 }
