@@ -6,6 +6,61 @@ All notable changes to Design Book are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-10
+
+### Added
+
+- **Groups: a key can hold a scope.** A text style, a set of button
+  states or any other thing that is several values at once is one key:
+  `card.set('heading', ref('typography-title'))` holds a named scope,
+  a plain object written at a key is a group of its own
+  (`button.set('hover', { bg: …, text: … })`, nested objects nest).
+  Members are ordinary keys at their paths (`card.heading.fontSize`),
+  read through references and selector picks; groups extend scopes, are
+  pools for selectors and sort like any scope. `resolve` on a group key
+  throws and asks for a member.
+- **`ref(scope, { … })`**: the scope with some members changed, a group
+  extending it that follows the rest live; `null` leaves a member out.
+  `inherited(ref('.title', { … }))` changes the inherited style.
+- **`book.groupAt(key)`**: the group a key holds (its own, inherited,
+  referred to or picked), or `undefined`.
+- **Named text styles**: `addScope(name, { kind: 'typography' })` is a
+  text style; `typography({ … })` is shorthand for one written in place.
+- **Watching a path through a reference**: `book.watch('card.heading.fontSize', …)`
+  reports changes to the member it reaches, also when the reference is
+  written after the watch starts, and follows it when it is re-pointed.
+- Rendering: CSS writes a variable per member at its path and a class per
+  text style, a held group pointing at the original's variables; JSON
+  writes members at their paths; W3 nests groups, a text style is the
+  `typography` composite. In the SVG graph a group is a table with a line
+  from the key holding it.
+- `asMember` and `detectValueType` in `design-book/internals`.
+
+### Changed
+
+- Selectors return the member they picked as written; renderers convert
+  colors for their format. `book.pickOf(key)` names the member.
+- A text style is a group: its fields are keys (`type.title.fontSize`),
+  set and themed like any key.
+- `inherited` navigates from the scope reading a relative reference, or
+  from the scope an absolute one names.
+- An inherited key that is not re-bound renders in CSS as `var()` of the
+  key it comes from.
+- `ref`'s second argument is the members to change, no longer options.
+
+### Removed
+
+- `variant` (use `ref(scope, { … })`) and the text-style helpers
+  (`isTypographyToken`, `typographyFields`, `typographyBase`,
+  `typographyFieldNames`): a text style is a scope.
+
+### Fixed
+
+- Bundlers could drop the `design-book` entry's renderer registration in
+  production builds (`sideEffects`), leaving `render()` with no renderers.
+- The article's token chips show a swatch for function tokens and name
+  the member a selector picked.
+
 ## [0.25.0] - 2026-11-09
 
 ### Added
