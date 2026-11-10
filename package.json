@@ -28,7 +28,9 @@
     "skills"
   ],
   "sideEffects": [
-    "./site/**"
+    "./site/**",
+    "./src/index.ts",
+    "./dist/index.js"
   ],
   "keywords": [
     "design-tokens",

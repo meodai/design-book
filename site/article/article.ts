@@ -20,6 +20,7 @@ import type {
   ReferenceValue,
   TokenValue,
 } from '../../src';
+import { detectValueType } from '../../src/internals';
 import { parse, wcagContrast } from 'culori';
 import { Poline, positionFunctions } from 'poline';
 import 'poline/picker';
@@ -370,7 +371,8 @@ function resolveToPrimitive(scopeName: string, name: string): { scopeName: strin
     if (!tok) return null;
     if (tok.type !== 'reference') return { scopeName: s, name: n };
     const key = (tok as ReferenceValue).key;
-    const dot = key.indexOf('.');
+    // a key belongs to the scope before its last dot
+    const dot = key.lastIndexOf('.');
     if (dot < 0) return null;
     s = key.slice(0, dot);
     n = key.slice(dot + 1);
@@ -378,11 +380,20 @@ function resolveToPrimitive(scopeName: string, name: string): { scopeName: strin
   return null;
 }
 
+/** What a token holds — `color`, `dimension`, `string` — following its
+ *  references. A function token is typed by the value it resolves to:
+ *  its own `type` is only `function`. */
 function getPrimitiveType(scopeName: string, name: string): string | null {
   const prim = resolveToPrimitive(scopeName, name);
   if (!prim) return null;
   const tok = book.getScope(prim.scopeName)?.get(prim.name);
-  return tok?.type ?? null;
+  if (!tok) return null;
+  if (tok.type !== 'function') return tok.type;
+  try {
+    return detectValueType(book.resolve(`${prim.scopeName}.${prim.name}`));
+  } catch {
+    return null;
+  }
 }
 
 /** The "role" of a token for swap-target matching: a function token's
@@ -392,7 +403,7 @@ function getPrimitiveType(scopeName: string, name: string): string | null {
 function getRoleType(scopeName: string, name: string): string | null {
   const tok = book.getScope(scopeName)?.get(name);
   if (tok?.type === 'function') {
-    return (tok as FunctionTokenValue).metadata?.returnType ?? null;
+    return (tok as FunctionTokenValue).metadata?.returnType ?? getPrimitiveType(scopeName, name);
   }
   return getPrimitiveType(scopeName, name);
 }
@@ -458,8 +469,11 @@ function renderChip(chip: HTMLElement) {
   // visible. The swatch shows the resolved color for context; the arrow + key
   // make it unmistakable that this token points elsewhere rather than holding
   // a value.
-  if (tok && tok.type === 'reference') {
-    const refKey = (tok as ReferenceValue).key;
+  // A selector shows the member it picked the same way: the value is that
+  // member's, so the chip names it.
+  const picked = tok?.type === 'function' ? book.pickOf(`${info.scopeName}.${info.name}`) : undefined;
+  if ((tok && tok.type === 'reference') || picked) {
+    const refKey = picked ?? (tok as ReferenceValue).key;
     chip.classList.add('token-chip--ref');
     if (primType === 'color') {
       const swatch = document.createElement('span');
@@ -475,7 +489,9 @@ function renderChip(chip: HTMLElement) {
     target.className = 'chip-value';
     target.textContent = refKey;
     chip.append(target);
-    chip.title = `${info.scopeName}.${info.name} = ref('${refKey}')`;
+    chip.title = picked
+      ? `${info.scopeName}.${info.name} = ${(tok as FunctionTokenValue).name}(…), picked ${refKey}`
+      : `${info.scopeName}.${info.name} = ref('${refKey}')`;
     return;
   }
 

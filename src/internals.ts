@@ -19,5 +19,7 @@ export {
 } from './tokens';
 export type { BindingContext, TokenProcessor } from './tokens';
 export { DependencyGraph } from './dependency-graph';
+/** The one rule for typing a resolved value: color, dimension or string. */
+export { detectValueType } from './values';
 export { registerBuiltinFunctions } from './functions';
 export type { BuiltinHost } from './functions';

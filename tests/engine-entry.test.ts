@@ -45,3 +45,14 @@ describe('design-book/engine', () => {
     expect(root.DesignBook).toBe(engine.DesignBook);
   });
 });
+
+describe('the design-book entry keeps its side effect', () => {
+  it('package.json marks the entry as having side effects, so bundlers keep the renderer registration', () => {
+    // A bundler told the entry is side-effect-free drops its top-level
+    // registerBuiltinRenderers() when an importer only uses re-exports
+    // (DesignBook lives in another module): render() then has no renderers.
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8'));
+    expect(pkg.sideEffects).toEqual(expect.arrayContaining(['./src/index.ts', './dist/index.js']));
+    expect(readFileSync(resolve(SRC, 'index.ts'), 'utf8')).toMatch(/^registerBuiltinRenderers\(\);$/m);
+  });
+});
