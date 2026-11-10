@@ -220,6 +220,20 @@ mostVivid: `not` entry "other.red" is not a member of "scale" and its references
 A key of the pool itself never throws, even when it does not exist (yet), so
 a `not` list can name a member that comes and goes.
 
+**Scopes that select from each other.** A selector may search a scope
+whose own members select from the selector's scope: a ramp with a step that
+is `darkest(ref('card'))`, and a card whose text is picked from that ramp.
+A few of these work, each reading the other as it stands without itself.
+Every such selector is worked out again inside every other one, though, so
+the work multiplies: past a handful on each side, reading one of them
+throws instead of running on ("selectors in "card", "gray" read each
+other's scopes…"). Name the members that select back in `not` and each
+selector reads only plain members, at once:
+
+```typescript
+card.set('text', bestContrastWith(ref('.bg'), ref('gray'), { not: [ref('gray.ink')] }));
+```
+
 ### How a key names a member
 
 `not` entries, a `sibling` anchor and its `toward` target all name a
@@ -1093,7 +1107,8 @@ has no CSS form: CSS cannot choose from a set. What it chose is a member
 with a variable of its own, so it is written as `var()` of that member, also
 when nested (`color-mix(in oklch, var(--ink-navy) 80%, black)`). The
 **choice** is fixed when the CSS is rendered; the chosen member's **value**
-stays live. Overriding `--ink-navy` in CSS moves `--ui-text` with it, but
+stays live. (Where two scopes select from each other and a pick would
+point back at its own variable, the value is written instead.) Overriding `--ink-navy` in CSS moves `--ui-text` with it, but
 overriding `--ui-background` does not pick again: a variation that needs
 another pick is another book (`changedFrom`), or the library running in the
 page.

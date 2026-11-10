@@ -37,6 +37,17 @@ All notable changes to Design Book are recorded here. The format follows
 
 ### Fixed
 
+- **Scopes that select from each other no longer freeze.** A few
+  selectors on each side work as before; with more, each is worked out
+  again inside every other one, and reading such a key took seconds or
+  did not end. It is now given up with an error that names the scopes and
+  says to leave the members that select back out with `not`; a render
+  reports it in place, per key.
+- CSS: a selector is written as the variable of its pick only when that
+  member has the same value by itself, and never where the variables
+  would lead back to each other (`--a: var(--b); --b: var(--a)`); those
+  are written as values.
+
 - Types: the naming functions imported from the package root
   (`import { scaleNames } from 'design-book'`) were typed `any`; they now
   carry their real types, as they did from `design-book/naming`.

@@ -1,4 +1,15 @@
 import type { Resolution } from './functions/picks';
+import { TokenError } from './errors';
+import { rootScopeOf } from './keys';
+
+/**
+ * How often one read may be turned away by the re-entrancy guard before it
+ * is given up. Selectors in two scopes that read each other's scope are each
+ * worked out again inside every other one — the work multiplies with every
+ * such selector — so a handful per scope is quick and a few more would not
+ * end in reasonable time. Reading a key that gets there throws instead.
+ */
+export const REENTRY_BUDGET = 2_000;
 
 /**
  * The book's memo of resolved values, keyed by qualified key.
@@ -25,6 +36,15 @@ export class ResolveCache {
   private derived = new WeakMap<object, Map<string, unknown>>();
   private off = 0;
   private trips = 0;
+  /** Reads in progress, one inside another. */
+  private depth = 0;
+  /** Times the guard turned a key away during the outermost read, and the
+   *  scopes those keys are in. */
+  private turnedAway = 0;
+  private turnedAwayIn = new Set<string>();
+  /** The outermost read went over `REENTRY_BUDGET`: everything inside it
+   *  stops, and it throws. */
+  private spent = false;
   private _generation = 0;
 
   /** Bumped by every `clear`: anything derived from resolved values and
@@ -37,6 +57,7 @@ export class ResolveCache {
   /** Forget every value. */
   clear(): void {
     this.entries.clear();
+    this.givenUpKeys.clear();
     this.derived = new WeakMap();
     this._generation++;
   }
@@ -70,9 +91,13 @@ export class ResolveCache {
     return value;
   }
 
-  /** The re-entrancy guard refused a key: nothing computed around it is kept. */
-  trip(): void {
+  /** The re-entrancy guard refused `key`: nothing computed around it is
+   *  kept. Over the budget, the read it happened in is given up. */
+  trip(key: string): void {
     this.trips++;
+    if (this.depth === 0) return;
+    if (this.turnedAwayIn.size < 8) this.turnedAwayIn.add(rootScopeOf(key));
+    if (++this.turnedAway > REENTRY_BUDGET) this.spent = true;
   }
 
   /** Runs `fn` with the cache neither read nor written. */
@@ -92,9 +117,54 @@ export class ResolveCache {
       const hit = this.entries.get(key);
       if (hit) return hit;
     }
+    // Given up: every read still inside the outermost one ends at once.
+    if (this.spent) {
+      // Turned away like a key mid-resolution: whatever is being worked out
+      // around this is missing it, and must not be kept.
+      this.trips++;
+      throw new TokenError(`${key}: not read, the read around it was given up`, key);
+    }
     const trips = this.trips;
-    const resolution = compute();
+    const outermost = this.depth === 0;
+    // Given up before, in this state of the book: the same answer, at once.
+    if (outermost && this.givenUpKeys.has(key)) throw this.givenUpKeys.get(key)!;
+    if (outermost) {
+      this.turnedAway = 0;
+      this.turnedAwayIn.clear();
+    }
+    this.depth++;
+    let resolution: Resolution;
+    try {
+      resolution = compute();
+    } catch (e) {
+      // Given up: say so, whatever error the unwinding ended on.
+      if (outermost && this.spent) throw this.givenUp(key);
+      throw e;
+    } finally {
+      this.depth--;
+    }
+    if (outermost && this.spent) throw this.givenUp(key);
     if (this.off === 0 && this.trips === trips) this.entries.set(key, resolution);
     return resolution;
   }
+
+  /** The error for a read given up over the budget: which scopes read each
+   *  other, and how to stop them. */
+  private givenUp(key: string): TokenError {
+    this.spent = false;
+    const names = [...this.turnedAwayIn].sort();
+    const scopes = names.map((name) => `"${name}"`).join(', ');
+    const error = new TokenError(
+      `${key}: selectors in ${scopes} read each other's scopes, and each is worked out again inside every other one — `
+      + 'too many of them to finish. Leave the members that select back out of each selector\'s pool with `not` '
+      + '(for example `not: [ref(\'scope.member\')]`), or move them to a scope the others do not search.',
+      key,
+      { scopes: names },
+    );
+    this.givenUpKeys.set(key, error);
+    return error;
+  }
+
+  /** Keys whose read was given up, until the book next changes. */
+  private givenUpKeys = new Map<string, TokenError>();
 }

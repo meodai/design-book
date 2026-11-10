@@ -7,6 +7,7 @@ import { FunctionError } from '../errors';
 import { parse, formatHex, converter } from 'culori';
 import { gamutMapSrgb } from '../functions/color/color-math';
 import { DIMENSION_VALUE_PATTERN, detectValueType } from '../scope';
+import { rootScopeOf } from '../keys';
 import type { Scope } from '../scope';
 
 export type RenderFormat = 'css-variables' | 'json' | 'w3-design-tokens';
@@ -39,7 +40,85 @@ export interface RendererOptions {
 }
 
 /** One custom property: its name, its value, and the key it stands for. */
-interface CssDeclaration { prop: string; value: string; owner?: string; unresolved?: string }
+interface CssDeclaration {
+  prop: string;
+  value: string;
+  owner?: string;
+  unresolved?: string;
+  /** The resolved value, for a declaration written as an expression over
+   *  other variables (a function, a selector's pick): what it falls back to
+   *  when those variables lead back to it. */
+  literal?: () => string;
+}
+
+/** The custom properties a declaration's value reads. */
+function variablesIn(value: string): string[] {
+  return value.includes('var(') ? [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map((m) => m[1]) : [];
+}
+
+/**
+ * The declarations with no variable leading back to itself. A selector is
+ * written as the variable of the member it picked; two selectors that read
+ * each other's scopes can pick each other (`--a: var(--b); --b: var(--a)`),
+ * which a browser gives up on. A declaration on such a loop that has a
+ * value of its own to fall back to is written as that value.
+ */
+function withoutLoops(declarations: CssDeclaration[]): CssDeclaration[] {
+  const reads = new Map<string, string[]>();
+  for (const d of declarations) if (d.unresolved === undefined) reads.set(d.prop, variablesIn(d.value));
+  /** Does following `from`'s variables come back to `prop`? */
+  const leadsBack = (prop: string): boolean => {
+    const seen = new Set<string>();
+    const stack = [...(reads.get(prop) ?? [])];
+    while (stack.length > 0) {
+      const next = stack.pop()!;
+      if (next === prop) return true;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      stack.push(...(reads.get(next) ?? []));
+    }
+    return false;
+  };
+  // Is there any loop at all? One pass; almost every book has none.
+  const state = new Map<string, 1 | 2>();
+  const loops = (start: string): boolean => {
+    const path: Array<[string, number]> = [[start, 0]];
+    state.set(start, 1);
+    while (path.length > 0) {
+      const top = path[path.length - 1];
+      const next = (reads.get(top[0]) ?? [])[top[1]++];
+      if (next === undefined) {
+        state.set(top[0], 2);
+        path.pop();
+      } else if (state.get(next) === 1) {
+        return true;
+      } else if (state.get(next) === undefined && reads.has(next)) {
+        state.set(next, 1);
+        path.push([next, 0]);
+      }
+    }
+    return false;
+  };
+  let any = false;
+  for (const prop of reads.keys()) {
+    if (state.get(prop) === undefined && loops(prop)) {
+      any = true;
+      break;
+    }
+  }
+  if (!any) return declarations;
+  // Every declaration on a loop, found before any is rewritten: each keeps
+  // the value its own key resolves to.
+  const onLoop = new Set(declarations.filter((d) => d.literal && d.unresolved === undefined && leadsBack(d.prop)).map((d) => d.prop));
+  return declarations.map((d) => {
+    if (!onLoop.has(d.prop)) return d;
+    try {
+      return { ...d, value: d.literal!() };
+    } catch {
+      return d;
+    }
+  });
+}
 
 export interface W3ColorValue {
   colorSpace: string;
@@ -218,6 +297,7 @@ export class Renderer {
   }
 
   registerFunctionRenderer(name: string, renderer: FunctionRenderer): void {
+    this.declared = undefined;
     this.functionRenderers.set(name, renderer);
   }
 
@@ -232,7 +312,19 @@ export class Renderer {
     const funcRenderer = this.functionRenderers.get(fn.name);
     if (funcRenderer) return funcRenderer(fn.args, fn.options);
     const { value, pick } = evaluateFunction(this.book, fn);
-    return pick === undefined ? value : `var(--${keyToHyphen(pick)})`;
+    return pick !== undefined && this.isValueOf(pick, value) ? `var(--${keyToHyphen(pick)})` : value;
+  }
+
+  /** Is `value` what `key` resolves to on its own? A selector's value is
+   *  its pick's — except where selectors read each other's scopes, when a
+   *  member can have one value inside the selector asking and another by
+   *  itself. Only a pick that holds the same value is written by variable. */
+  private isValueOf(key: string, value: string): boolean {
+    try {
+      return this.book.resolve(key) === value;
+    } catch {
+      return false;
+    }
   }
 
   /** Two different `scope.token` pairs can mangle to the same CSS custom
@@ -241,7 +333,7 @@ export class Renderer {
    *  emitting both means the last declaration wins, so fail loudly instead. */
   private assertNoVarNameCollisions(): void {
     const seen = new Map<string, string[]>();
-    for (const { prop, owner } of this.cssDeclarations(this.renderable())) {
+    for (const { prop, owner } of this.allDeclarations()) {
       const owners = seen.get(prop);
       if (owners) owners.push(owner ?? prop);
       else seen.set(prop, [owner ?? prop]);
@@ -304,10 +396,27 @@ export class Renderer {
   /** One `--path: value` declaration per token, in book order: a group's
    *  members at their paths, at any depth. */
   private cssDeclarations(scopes: Scope[] = this.scopesToRender()): CssDeclaration[] {
-    const out: CssDeclaration[] = [];
-    for (const scope of scopes) this.declareScope(scope, out, new Set([scope.name]));
-    return out;
+    const names = new Set(scopes.map((scope) => scope.name));
+    return this.allDeclarations().filter((d) => names.has(rootScopeOf(d.owner ?? '')));
   }
+
+  /** Every top-level scope's declarations, for this state of the book:
+   *  the collision check and each block of the output read the same list.
+   *  Variables that would lead back to themselves are written as values
+   *  (`withoutLoops`), which takes the whole book to see. */
+  private allDeclarations(): CssDeclaration[] {
+    const generation = this.book._cache.generation;
+    if (this.declared?.generation === generation && this.declared.renderers === this.functionRenderers.size) {
+      return this.declared.list;
+    }
+    const out: CssDeclaration[] = [];
+    for (const scope of this.renderable()) this.declareScope(scope, out, new Set([scope.name]));
+    const list = withoutLoops(out);
+    this.declared = { generation, renderers: this.functionRenderers.size, list };
+    return list;
+  }
+
+  private declared: { generation: number; renderers: number; list: CssDeclaration[] } | undefined;
 
   private declareScope(scope: Scope, out: CssDeclaration[], inside: ReadonlySet<string>): void {
     for (const key of scope.getAllKeys()) {
@@ -344,12 +453,14 @@ export class Renderer {
       }
 
       let value: string;
+      let literal: (() => string) | undefined;
       try {
         if (token.type === 'reference') {
           value = `var(--${keyToHyphen((token as ReferenceValue).key)})`;
         } else if (token.type === 'function') {
           const fn = token as FunctionTokenValue;
           const funcRenderer = this.functionRenderers.get(fn.name);
+          literal = () => resolveTokenValue(this.book, scope.name, key);
           if (funcRenderer) {
             value = funcRenderer(fn.args, fn.options);
           } else {
@@ -357,7 +468,7 @@ export class Renderer {
             value = resolveTokenValue(this.book, scope.name, key);
             // A selector: the member it picked, by its variable.
             const pick = this.book.pickOf(path);
-            if (pick !== undefined && pick !== path) value = `var(--${keyToHyphen(pick)})`;
+            if (pick !== undefined && pick !== path && this.isValueOf(pick, value)) value = `var(--${keyToHyphen(pick)})`;
           }
         } else {
           value = resolveTokenValue(this.book, scope.name, key);
@@ -369,7 +480,7 @@ export class Renderer {
         out.push({ prop, value: '', owner: path, unresolved: (e as Error).message });
         continue;
       }
-      out.push({ prop, value, owner: path });
+      out.push(literal ? { prop, value, owner: path, literal } : { prop, value, owner: path });
     }
   }
 

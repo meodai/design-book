@@ -536,7 +536,7 @@ export class Scope {
     if (this.resolving.has(name)) {
       // Turned away mid-resolution: whatever is being computed around this
       // depends on the order things were asked in, not on the book alone.
-      this.book._cache.trip();
+      this.book._cache.trip(qualified);
       throw new CircularDependencyError([qualified, qualified]);
     }
     // A group's value is the group: the scope at its path — the source's
