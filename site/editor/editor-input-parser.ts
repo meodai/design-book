@@ -818,9 +818,9 @@ function parseSelectorTail(
     } else if (key === 'readableOn') {
       options.readableOn = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'readableContrast') {
-      options.readableContrast = parseFloat(valueStr);
+      options.readableContrast = parseThreshold(valueStr, book);
     } else if (key === 'minContrast' && name === 'minContrastWith') {
-      options.minContrast = parseFloat(valueStr);
+      options.minContrast = parseThreshold(valueStr, book);
     } else if (key === 'by') {
       options.by = parseQuotedString(valueStr);
     } else if (key === 'minDistance') {
@@ -834,6 +834,8 @@ function parseSelectorTail(
       options.type = parseQuotedString(valueStr) as 'color' | 'size' | 'text';
     } else if (key === 'direction') {
       options.direction = parseQuotedString(valueStr) as SelectorTailOptions['direction'];
+    } else if (key === 'targetIs' && (name === 'bestContrastWith' || name === 'minContrastWith')) {
+      options.targetIs = parseQuotedString(valueStr) as 'background' | 'text';
     } else if (key === 'upTo') {
       options.upTo = getTokenArg(parseArg(valueStr, book));
     } else if (key === 'description') {
@@ -867,14 +869,23 @@ type SelectorTailOptions = {
   /** mostVivid / leastVivid only: an OKLCH lightness band. */
   lightness?: [number, number];
   direction?: 'lighter' | 'darker' | 'larger' | 'smaller';
+  /** bestContrastWith / minContrastWith: which side of an APCA contrast the target is. */
+  targetIs?: 'background' | 'text';
   upTo?: AnyTokenValue;
   not?: Array<ReferenceValue | string>;
   readableOn?: AnyTokenValue;
-  readableContrast?: number;
+  readableContrast?: number | AnyTokenValue;
   /** minContrastWith only: the contrast against the target. */
-  minContrast?: number;
+  minContrast?: number | AnyTokenValue;
   description?: string;
 };
+
+/** A contrast threshold: a number in the book's method, or a reference (a
+ *  text style, which the method turns into its minimum for its size). */
+function parseThreshold(valueStr: string, book?: DesignBook): number | AnyTokenValue {
+  const trimmed = valueStr.trim();
+  return /^-?\d*\.?\d+$/.test(trimmed) ? parseFloat(trimmed) : getTokenArg(parseArg(trimmed, book));
+}
 
 function parseOptionsArg(str: string): Record<string, any> | undefined {
   const trimmed = str.trim();

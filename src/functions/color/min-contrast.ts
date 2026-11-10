@@ -8,7 +8,8 @@ import { assertDirection, assertDirectionFits, measuredContrast, onLightnessSide
 import type { Direction } from '../kinds';
 import { best, colorPool, lightnessOf, measureOf, measuredPool, parseColor, colorValueOf, colorTarget } from '../pool';
 import type { Measurable } from '../pool';
-import { contrastAgainst } from './color-math';
+import { contrastOn, contrastOption, contrastThreshold, targetIsOption } from './contrast';
+import type { ContrastRole, ContrastThreshold } from './contrast';
 import { readableOnOptions } from './readable';
 import type { ReadableOnOptions } from './readable';
 import type { ContrastInputs } from './best-contrast';
@@ -16,13 +17,20 @@ import { pick } from '../picks';
 import type { Pick } from '../picks';
 
 export interface MinContrastOptions extends ReadableOnOptions {
-  /** The contrast to reach: a WCAG ratio for colors (default 4.5), the ratio
-   *  between two sizes or font sizes for sizes and text styles (1.25 is a
-   *  major third). The same name as on the color selectors' `readableOn`. */
-  minContrast?: number;
+  /** The contrast to reach. For colors, in the book's method: a WCAG ratio
+   *  (default 4.5) or an APCA Lc (default 60, the target as the background)
+   *  — or a text style (`ref('type.body')`, `{ fontSize, fontWeight }`) the
+   *  method turns into its minimum for that size and weight. For sizes and
+   *  text styles, the ratio between the two (1.25 is a major third). */
+  minContrast?: ContrastThreshold;
   /** Only candidates on that side of the target: 'lighter' / 'darker' for
    *  colors, 'larger' / 'smaller' for sizes and text styles. */
   direction?: Direction;
+  /** Which side the target is when the book measures APCA, which scores
+   *  text on a background differently from the reverse: 'background'
+   *  (default, the members are text on it) or 'text' (the members are
+   *  backgrounds for it). WCAG gives the same either way. */
+  targetIs?: ContrastRole;
   /** Keys to exclude from the candidate pool. */
   not?: ReadonlyArray<string | ReferenceValue | MemberReference>;
   /** The field a text style is measured by: its font size unless given
@@ -37,27 +45,36 @@ export interface MinContrastOptions extends ReadableOnOptions {
 export function minContrastWithImpl(
   targetValue: Measurable,
   scope: Scope,
-  options: ContrastInputs & { minContrast?: number },
+  options: ContrastInputs & { minContrast?: unknown },
 ): Pick {
   const fn = 'minContrastWith';
-  const { not, direction, readableOn, readableContrast, minContrast = 4.5, by } = options;
+  const { not, direction, readableOn, readableContrast, minContrast, by, contrast = 'wcag', targetIs } = options;
   const measure = measureOf(targetValue, by);
   if (measure && readableOn !== undefined) {
     throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
   }
+  if (measure && targetIs !== undefined) {
+    throw new FunctionError(`${fn}: \`targetIs\` is for colors; the target is a size or a text style`, fn);
+  }
   if (measure) {
-    return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'min', minContrast });
+    // Sizes and text styles: a plain ratio, whatever the book's method.
+    const ratio = minContrast === undefined ? 4.5 : typeof minContrast === 'number' ? minContrast : Number(minContrast);
+    if (!(ratio > 0)) {
+      throw new FunctionError(`${fn}: \`minContrast\` against a size or a text style is a ratio, got ${String(minContrast)}`, fn);
+    }
+    return measuredContrast(fn, targetValue, measure, scope, measuredPool(scope, not, by), direction, { pick: 'min', minContrast: ratio });
   }
   assertDirectionFits(fn, direction, 'color');
   const target = parseColor(colorTarget(fn, targetValue, by));
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
-  const candidates = colorPool(fn, scope, not, readableOn, readableContrast, by)
+  const candidates = colorPool(fn, scope, not, readableOn, readableContrast, by, contrast)
     .filter((c) => onLightnessSide(direction, targetL, c.l))
-    .map((c) => ({ ...c, contrast: contrastAgainst(target, c.color) }));
+    .map((c) => ({ ...c, score: contrastOn(contrast, target, c.color, targetIs) }));
   if (candidates.length === 0) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
-  const choice = best(candidates.filter((c) => c.contrast >= minContrast), (c) => c.contrast, 'min')
-    ?? best(candidates, (c) => c.contrast, 'max')!;
+  const min = contrastThreshold(fn, 'minContrast', minContrast, contrast);
+  const choice = best(candidates.filter((c) => c.score >= min - 1e-9), (c) => c.score, 'min')
+    ?? best(candidates, (c) => c.score, 'max')!;
   return pick(scope, choice.key);
 }
 
@@ -66,18 +83,17 @@ export function minContrastWith(
   pool: PoolArg,
   options?: MinContrastOptions,
 ): FunctionTokenValue {
-  assertOptions('minContrastWith', options, ['minContrast', 'direction', 'not', 'by', ...READABLE_OPTIONS]);
+  assertOptions('minContrastWith', options, ['minContrast', 'direction', 'targetIs', 'not', 'by', ...READABLE_OPTIONS]);
   const fn = 'minContrastWith';
   const scope = poolArg(fn, pool);
   valueArg(fn, targetValue);
-  const { minContrast = 4.5, not, description, direction, by } = options ?? {};
+  const { not, description, direction, by } = options ?? {};
   assertDirection(fn, direction);
-  if (typeof minContrast !== 'number' || !(minContrast > 0)) {
-    throw new FunctionError(`${fn}: \`minContrast\` must be a positive number, got ${String(minContrast)}`, fn);
-  }
+  // Kept as written: its default and its meaning depend on the book's method.
+  const minContrast = contrastOption(fn, 'minContrast', options?.minContrast);
   return createFunctionToken(fn, [targetValue, scope], {
     description,
-    options: { minContrast, not: toMembers(not), ...(direction ? { direction } : {}), ...byOption(fn, by), ...readableOnOptions(fn, options) },
+    options: { ...(minContrast !== undefined ? { minContrast } : {}), not: toMembers(not), ...(direction ? { direction } : {}), ...targetIsOption(fn, options?.targetIs), ...byOption(fn, by), ...readableOnOptions(fn, options) },
     // A color, a size or a text style, as the target is.
     metadata: { dependencies: [], returnType: undefined },
   });

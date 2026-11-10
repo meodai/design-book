@@ -11,6 +11,7 @@ import { relativeToImpl } from './color/relative-to';
 import { shadeImpl } from './color/shade';
 import { rampImpl } from './color/ramp';
 import type { RampEngine } from './color/ramp';
+import type { ContrastMethod } from './color/contrast';
 import { spacingScaleImpl } from './non-color/spacing-scale';
 import { timingImpl } from './non-color/timing';
 import { typographyScaleImpl } from './non-color/typography-scale';
@@ -56,6 +57,8 @@ export type { RandomOptions, RandomType } from './generic/random';
 export { nth } from './generic/nth';
 export type { NthOptions } from './generic/nth';
 export { sibling } from './generic/sibling';
+export { apcaContrast, apcaMinimumLc, wcagMinimumRatio } from './color/contrast';
+export type { ContrastMethod, ContrastThreshold, TextSpec } from './color/contrast';
 export { pick } from './picks';
 export type { Pick } from './picks';
 export type { SiblingOptions } from './generic/sibling';
@@ -78,6 +81,8 @@ export interface BuiltinHost {
   getRampEngine(name?: string): RampEngine;
   /** The scopes a ramp set's masters live in. */
   rampMasterScopes(name?: string): string[];
+  /** How color contrast is measured: WCAG ratios or APCA Lc. */
+  readonly contrast?: ContrastMethod;
 }
 
 /**
@@ -90,9 +95,14 @@ export interface BuiltinHost {
  * the registry hands the implementation the qualified keys it names.
  */
 export function registerBuiltinFunctions(book: BuiltinHost): void {
-  /** A selector over `scope`: its `not` read against the pool. */
+  /** A selector over `scope`: its `not` read against the pool, and the
+   *  book's contrast method handed over with the options. */
   const pooled = <O extends { not?: unknown }>(fn: string, scope: Scope, options: O | undefined) =>
-    ({ ...options, not: excludedMembers(book, fn, scope, (options?.not as unknown[] | undefined) ?? []) }) as O & { not: string[] };
+    ({
+      ...options,
+      not: excludedMembers(book, fn, scope, (options?.not as unknown[] | undefined) ?? []),
+      contrast: book.contrast ?? 'wcag',
+    }) as unknown as O & { not: string[] };
 
   // Selectors with a target: (target, pool, options).
   const targeted: Record<string, (target: Measurable, scope: Scope, options: never) => Pick> = {

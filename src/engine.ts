@@ -92,7 +92,9 @@ export {
   nth,
   sibling,
   pick,
+  apcaContrast, apcaMinimumLc, wcagMinimumRatio,
 } from './functions';
+export type { ContrastMethod, ContrastThreshold, TextSpec } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';
 export type { TypographyField, TypographyFields } from './functions';

@@ -15,6 +15,8 @@ import { CircularDependencyError } from './errors';
 import type { Ramp } from 'dittotones';
 import { RampEngine, rampImpl, rampSet } from './functions/color/ramp';
 import type { RampSet, RampSetSource } from './functions/color/ramp';
+import { assertContrastMethod } from './functions/color/contrast';
+import type { ContrastMethod } from './functions/color/contrast';
 import { tailwindV3Ramps } from 'dittotones/ramps/tailwind-v3';
 import { FunctionError } from './errors';
 
@@ -45,6 +47,12 @@ export interface DesignBookOptions {
   preserveHueOffsets?: boolean;
   /** Pass-through to dittotones. Default: true. */
   gamutMap?: boolean;
+  /** How color contrast is measured everywhere in the book — `readableOn` /
+   *  `readableContrast`, `bestContrastWith`, `minContrastWith`: `'wcag'`
+   *  (default; ratios 1 to 21, 4.5 for body text) or `'apca'` (Lc 0 to
+   *  about 106, 60 by default). A threshold can also be a text style, which
+   *  each method turns into its minimum for that size and weight. */
+  contrast?: ContrastMethod;
 }
 
 export interface TokenChangedDetail {
@@ -195,6 +203,10 @@ interface Announcement {
 
 export class DesignBook {
   readonly name: string;
+  /** How color contrast is measured: `'wcag'` ratios or `'apca'` Lc (the
+   *  `contrast` option; fixed for the book's life — a book measuring the
+   *  other way is another book, like a theme). */
+  readonly contrast: ContrastMethod;
   readonly description?: string;
 
   private _mode: 'auto' | 'batch';
@@ -261,6 +273,7 @@ export class DesignBook {
     this.name = name;
     this.description = options?.description;
     this._mode = options?.mode ?? 'auto';
+    this.contrast = assertContrastMethod('DesignBook', options?.contrast);
     this._rampOptions = {
       preserveHueOffsets: options?.preserveHueOffsets,
       gamutMap: options?.gamutMap,

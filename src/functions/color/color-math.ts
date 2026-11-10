@@ -1,6 +1,6 @@
 /** Color math the color functions share: gamut mapping, formatting,
- *  compositing, contrast and perceptual distance. */
-import { parse, formatHex, formatHex8, wcagContrast, differenceEuclidean, converter, inGamut, toGamut } from 'culori';
+    compositing and perceptual distance (contrast is in `contrast.ts`). */
+import { parse, formatHex, formatHex8, differenceEuclidean, converter, inGamut, toGamut } from 'culori';
 import type { Color } from 'culori';
 
 const toRgb = converter('rgb');
@@ -50,15 +50,6 @@ export function compositeOver(color: Color, backdrop: Color): Color {
     b: fg.b * alpha + bg.b * (1 - alpha),
     alpha: alpha + bgAlpha * (1 - alpha),
   };
-}
-
-/**
- * WCAG contrast of a candidate against a target, compositing the candidate
- * over that target first when it is translucent — reading a 5% black hairline
- * as opaque black would score 21:1 against white instead of ~1.1:1.
- */
-export function contrastAgainst(target: Color, candidate: Color): number {
-  return wcagContrast(target, compositeOver(candidate, target));
 }
 
 /**

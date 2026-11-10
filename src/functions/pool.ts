@@ -4,7 +4,9 @@ import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { parseDimension } from '../values';
 import { resolvePool } from './scope-members';
-import { contrastAgainst, formatColor, gamutMapSrgb } from './color/color-math';
+import { formatColor, gamutMapSrgb } from './color/color-math';
+import { contrastOn, contrastThreshold, formatContrast } from './color/contrast';
+import type { ContrastMethod } from './color/contrast';
 
 /**
  * The candidate pool the selectors share, measured once.
@@ -78,7 +80,7 @@ export function colorForm(value: string): ColorForm | null {
 /**
  * The pool's colors: members resolved by the shared pool rule, the ones that
  * are colors in their compared forms, then — with `readableOn` — only those
- * that reach `readableContrast` on it. An empty pool passes through, so each
+ * that reach `readableContrast` on it (in the book's contrast method). An empty pool passes through, so each
  * selector keeps its own empty-scope message; a pool that empties *because
  * of* the readability filter throws, so a selector never hands back a color
  * the caller asked to be readable but is not.
@@ -87,9 +89,10 @@ export function colorPool(
   fn: string,
   scope: Scope,
   not: ReadonlyArray<string>,
-  readableOn?: string | null,
-  readableContrast: number = DEFAULT_READABLE_CONTRAST,
-  by?: string,
+  readableOn: string | null | undefined,
+  readableContrast: unknown,
+  by: string | undefined,
+  method: ContrastMethod = 'wcag',
 ): ColorMember[] {
   const members: ColorMember[] = [];
   for (const { key, value, group } of resolvePool(scope, not)) {
@@ -102,15 +105,13 @@ export function colorPool(
   if (!backdrop) {
     throw new FunctionError(`${fn}: cannot parse \`readableOn\` color "${readableOn}"`, fn);
   }
-  const readable = members.filter((m) => contrastAgainst(backdrop, m.color) >= readableContrast);
+  const min = contrastThreshold(fn, 'readableContrast', readableContrast, method);
+  const readable = members.filter((m) => contrastOn(method, backdrop, m.color) >= min - 1e-9);
   if (members.length > 0 && readable.length === 0) {
-    throw new FunctionError(`${fn}: no candidate reaches ${readableContrast}:1 against ${readableOn}`, fn);
+    throw new FunctionError(`${fn}: no candidate reaches ${formatContrast(method, min)} against ${readableOn}`, fn);
   }
   return readable;
 }
-
-/** WCAG ratio a `readableOn` candidate must reach unless told otherwise. */
-export const DEFAULT_READABLE_CONTRAST = 4.5;
 
 /** The member scoring highest (`max`) or lowest (`min`); a tie keeps the
  *  first, so ties go to the earlier member in scope order. Members scoring

@@ -33,7 +33,7 @@ export interface LightnessInputs extends ReadableOn {
 }
 
 function endImpl(fn: End, scope: Scope, options: LightnessInputs): Pick {
-  const choice = best(colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), (c) => c.l, fn === 'lightest' ? 'max' : 'min');
+  const choice = best(colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by, options.contrast), (c) => c.l, fn === 'lightest' ? 'max' : 'min');
   if (!choice) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
   return pick(scope, choice.key);
 }

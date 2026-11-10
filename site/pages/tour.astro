@@ -211,13 +211,13 @@ ui.set('text', mostVivid(ref('ink'), {
     <article class="fn" id="best-contrast">
       <header class="fn-head">
         <h3 class="rule-title">bestContrastWith</h3>
-        <code is:raw class="sig">bestContrastWith( target, scope, { direction?, readableOn?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
+        <code is:raw class="sig">bestContrastWith( target, scope, { direction?, targetIs?, readableOn?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio or APCA Lc</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>Change either ink</em> and every contrast is checked again.</p>
-          <p class="fn-detail">The member with the highest contrast against a target: the WCAG ratio for colors, the ratio between two values for sizes and text styles, so a heading can be the style that stands out most from the body. The check is part of the rule, so you don't redo it after every redesign.</p>
+          <p class="fn-detail">The member with the highest contrast against a target: for colors the WCAG ratio, or the APCA Lc in a book made with <code is:raw>{ contrast: 'apca' }</code>; the ratio between two values for sizes and text styles, so a heading can be the style that stands out most from the body. The check is part of the rule, so you don't redo it after every redesign.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>const ink = book.addScope('ink');
@@ -327,13 +327,13 @@ ui.set('accent', furthestFrom(
     <article class="fn" id="min-contrast">
       <header class="fn-head">
         <h3 class="rule-title">minContrastWith</h3>
-        <code is:raw class="sig">minContrastWith( target, scope, { minContrast?, readableOn?, not? } )</code>
-        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
+        <code is:raw class="sig">minContrastWith( target, scope, { minContrast?, targetIs?, readableOn?, not? } )</code>
+        <ul class="fn-kinds" aria-label="Works on"><li class="kind-color"><b>color</b> WCAG ratio or APCA Lc</li><li class="kind-size"><b>size</b> value ratio</li><li class="kind-text"><b>text style</b> font-size ratio</li></ul>
       </header>
       <div class="fn-body split">
         <div class="fn-pitch">
           <p class="fn-claim"><em>As subtle as possible</em> while still readable.</p>
-          <p class="fn-detail">The lowest contrast that still reaches a ratio. For colors that is WCAG (4.5 by default): hairlines, captions and dim labels that pass the next audit without anyone checking them by hand. It works the other way too: a hairline, a divider or a ruled background at a ratio around 1.2 stays faint on any surface but never disappears. For sizes and text styles it is the ratio between two values: the smallest heading that still reads as bigger than the body.</p>
+          <p class="fn-detail">The lowest contrast that still reaches a threshold. For colors that is the book's contrast setting: WCAG 4.5 by default, or Lc 60 under APCA. The threshold can also be a text style, and the rule asks for what its size and weight need. APCA scores text on a background differently from the reverse, so when the target is the text and you are picking its surface, add <code>targetIs: 'text'</code>. Either way you get hairlines, captions and dim labels that pass the next audit without anyone checking them by hand. It works the other way too: a hairline, a divider or a ruled background at a ratio around 1.2 stays faint on any surface but never disappears. For sizes and text styles it is the ratio between two values: the smallest heading that still reads as bigger than the body.</p>
         </div>
         <Folder>
           <Sheet name="code" label="Code"><Code is:raw>// text that just passes AA
@@ -346,6 +346,12 @@ ui.set('caption', minContrastWith(
 ui.set('hairline', minContrastWith(
   ref('ui.surface'), neutral,
   { minContrast: 1.2 },
+));
+
+// in an APCA book: a surface white text still reads on
+ui.set('badge', minContrastWith(
+  ref('ui.white'), neutral,
+  { minContrast: 60, targetIs: 'text' },
 ));
 
 // the smallest heading that still reads as bigger

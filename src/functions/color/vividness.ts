@@ -34,7 +34,7 @@ export interface VividnessInputs extends ReadableOn {
 }
 
 function vividImpl(fn: Vividness, scope: Scope, options: VividnessInputs): Pick {
-  const pool = filterLightness(fn, colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by), options.lightness, scope.name);
+  const pool = filterLightness(fn, colorPool(fn, scope, options.not, options.readableOn, options.readableContrast, options.by, options.contrast), options.lightness, scope.name);
   const choice = best(pool, (c) => c.c, fn === 'mostVivid' ? 'max' : 'min');
   if (!choice) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);
   return pick(scope, choice.key);

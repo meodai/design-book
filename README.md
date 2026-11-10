@@ -115,7 +115,7 @@ largest(ref('scope'))  / smallest(ref('scope'))       // Extremes of size (sizes
 | `closest` | OKLab distance | value | font size |
 | `direction` (`nextLarger` …) | `lighter` / `darker` (OKLCH L) | `larger` / `smaller` | `larger` / `smaller` |
 | `minDistance` | OKLCH lightness, 0–1 | the target's unit | the target's unit |
-| `bestContrastWith` / `minContrastWith` | WCAG luminance ratio | ratio of the two sizes | ratio of the font sizes |
+| `bestContrastWith` / `minContrastWith` | WCAG ratio or APCA Lc (the book's `contrast`) | ratio of the two sizes | ratio of the font sizes |
 | `furthestFrom` | OKLab distance | value | font size |
 | `maxDistance` (`furthestFrom`) | OKLab distance, 0 to about 1 | the target's unit | the target's unit |
 | extremes | `lightest` / `darkest` | `largest` / `smallest` | `largest` / `smallest` |
@@ -141,7 +141,7 @@ ui.set('breath', nextSmaller(ref('space.l'), ref('space')));                   /
 ui.set('hover',  nextLighter(ref('.button'), ref('brand')));                   // nearest lighter look-alike
 ```
 
-**Contrast** is a ratio for every kind: WCAG luminance for colors (4.5 is AA text), the ratio of the larger to the smaller value for sizes and text styles (1.25 is a major third). So a type scale can be written as a rule:
+**Contrast** for colors is measured the way the book is set to (see [WCAG or APCA](#wcag-or-apca)); for sizes and text styles it is the ratio of the larger to the smaller value for sizes and text styles (1.25 is a major third). So a type scale can be written as a rule:
 
 ```typescript
 // the smallest style at least 1.25× the body, going up
@@ -249,9 +249,10 @@ matched by it: ask with `refersTo`.
 
 Every color selector — `mostVivid`, `leastVivid`, `lightest`, `darkest`,
 `closest`, `furthestFrom`, `bestContrastWith` and `minContrastWith` — also
-takes `readableOn`, a backdrop color, and `readableContrast` (default 4.5).
+takes `readableOn`, a backdrop color, and `readableContrast` (default 4.5,
+or Lc 60 in an APCA book).
 Like `not`, it narrows the pool before the selector ranks anything:
-candidates below that WCAG ratio against the backdrop are dropped, so the
+candidates below that contrast against the backdrop are dropped, so the
 vivid pick is the most vivid *readable* color.
 
 ```typescript
@@ -286,6 +287,55 @@ The two thresholds are separate on purpose: `minContrast` is what
 `minContrastWith` aims for on its target, `readableContrast` is the floor on
 the backdrop. Sizes and text styles have no `readableOn`: a size target with
 one throws.
+
+### WCAG or APCA
+
+A book measures color contrast one way, chosen once:
+
+```typescript
+const book = new DesignBook('app', { contrast: 'apca' }); // default 'wcag'
+```
+
+It applies everywhere a color contrast is read: `readableOn` /
+`readableContrast`, `bestContrastWith` and `minContrastWith`. A threshold is
+a number in the book's scale — a WCAG ratio (1 to 21, default 4.5) or an
+APCA Lc (0 to about 106, default 60) — so the same `{ minContrast: 60 }`
+means Lc 60 in an APCA book. A number that cannot belong to the method (a
+ratio above 21, an Lc below 15) throws, naming the other one.
+
+APCA's minimum depends on how large and heavy the text is, so a threshold
+can also be a text style. Each method turns it into its own minimum: WCAG
+3:1 for large text (24px, or 18.66px bold) and 4.5:1 otherwise; APCA's
+simple levels, Lc 45 from 36px (24px bold), 60 from 24px (16px bold), 75
+from 18px (14px bold), 90 below.
+
+```typescript
+ui.set('text', minContrastWith(ref('.page'), ref('ink'), {
+  minContrast: ref('type.body'),             // a text style: a real dependency
+}));
+ui.set('caption', mostVivid(ref('palette'), {
+  readableOn: ref('.page'),
+  readableContrast: { fontSize: '14px', fontWeight: 700 },
+}));
+```
+
+A token written this way reads right in either kind of book.
+
+**Text or background.** APCA is asymmetric: white on gray is not the same
+Lc as gray on white. By default the target of `bestContrastWith` /
+`minContrastWith` is the background and the members are text on it. When
+the target is the text and you are picking a surface for it, say so:
+
+```typescript
+// a surface white text still reads on (white as text, the members as backgrounds)
+ui.set('badge', minContrastWith(ref('.white'), ref('ramp'), { minContrast: 60, targetIs: 'text' }));
+```
+
+A `readableOn` backdrop is always a background. WCAG ratios are the same
+either way, so `targetIs` only changes an APCA book. Picks rank by |Lc|, so
+light text on dark counts like dark text on light. Sizes and text-style targets keep their plain
+ratio. `apcaContrast(text, background)`, `apcaMinimumLc(px, weight)` and
+`wcagMinimumRatio(px, weight)` are exported.
 
 ### Color transforms
 

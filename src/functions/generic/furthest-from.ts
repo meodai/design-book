@@ -30,7 +30,7 @@ export interface FurthestFromInputs extends ReadableOn {
  */
 export function furthestFromImpl(targetValue: Measurable, scope: Scope, options: FurthestFromInputs): Pick {
   const fn = 'furthestFrom';
-  const { not, readableOn, readableContrast, maxDistance, by } = options;
+  const { not, readableOn, readableContrast, maxDistance, by, contrast } = options;
   const limit = maxDistance === undefined ? Infinity : maxDistance + 1e-9;
   const measure = measureOf(targetValue, by);
 
@@ -59,7 +59,7 @@ export function furthestFromImpl(targetValue: Measurable, scope: Scope, options:
   // Compared in gamut-mapped sRGB, as the candidates are (see `closest`).
   const target = colorForm(targetColor);
   if (!target) throw new FunctionError(`${fn}: cannot format target color "${targetValue}"`, fn);
-  const pool = colorPool(fn, scope, not, readableOn, readableContrast, by);
+  const pool = colorPool(fn, scope, not, readableOn, readableContrast, by, contrast);
   if (pool.length === 0) {
     throw new FunctionError(`${fn}: scope "${scope.name}" has no colors to compare with ${targetValue}`, fn);
   }

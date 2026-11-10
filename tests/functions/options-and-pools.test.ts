@@ -9,7 +9,7 @@ import {
 describe('constructors refuse options they do not read', () => {
   it('names the option and the ones it takes', () => {
     expect(() => minContrastWith(color('#fff'), ref('p'), { ratio: 7 } as never))
-      .toThrow('minContrastWith: unknown option `ratio` (expected minContrast, direction, not, by, readableOn, readableContrast, description)');
+      .toThrow('minContrastWith: unknown option `ratio` (expected minContrast, direction, targetIs, not, by, readableOn, readableContrast, description)');
   });
 
   it('catches misspellings, which used to fall back to the default without a word', () => {
