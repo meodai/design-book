@@ -53,26 +53,58 @@ export interface PoolMember {
   group?: Scope;
 }
 
-/** Every candidate of `scope` with its value, nothing left out by `not`:
- *  the same for every selector over the scope, so it is built once per
- *  state of the book (`Scope.memo`) and shared. */
-function wholePool(scope: Scope): ReadonlyArray<PoolMember> {
-  return scope.memo('pool', () => {
-    const members: PoolMember[] = [];
-    for (const key of poolKeys(scope)) {
-      try {
-        const { value, group } = scope.resolution(key);
-        if (group === undefined) members.push({ key, value });
-        else {
-          const held = scope.scopeAt(group);
-          if (held) members.push({ key, value, group: held });
-        }
-      } catch {
-        // Unresolvable members are not candidates.
-      }
-    }
-    return members;
-  });
+/** One candidate of a scope's pool: its key, and its value once a selector
+ *  has read it (`null`: it does not resolve). */
+interface Slot {
+  key: string;
+  read: boolean;
+  member: PoolMember | null;
+}
+
+/** A scope's pool as the selectors over it share it, for one state of the
+ *  book: the candidate keys, each resolved the first time a selector reads
+ *  it, and the whole list once every one has been read. */
+interface SharedPool {
+  slots: Slot[];
+  /** Every candidate that resolves — set once all of them were read and
+   *  their values depend on the book alone. */
+  all?: ReadonlyArray<PoolMember>;
+}
+
+function sharedPool(scope: Scope): SharedPool {
+  // Only the keys: nothing is resolved here, so a member a selector leaves
+  // out with `not` is never read on its behalf.
+  return scope.memo('pool', (): SharedPool => ({ slots: poolKeys(scope).map((key) => ({ key, read: false, member: null })) }));
+}
+
+function readMember(scope: Scope, key: string): PoolMember | null {
+  try {
+    const { value, group } = scope.resolution(key);
+    if (group === undefined) return { key, value };
+    const held = scope.scopeAt(group);
+    return held ? { key, value, group: held } : null;
+  } catch {
+    // Unresolvable members are not candidates.
+    return null;
+  }
+}
+
+/** A slot's member: read once and kept, unless the value depended on what
+ *  was mid-resolution around it (then it is read again each time). */
+function memberAt(scope: Scope, slot: Slot): PoolMember | null {
+  if (slot.read) return slot.member;
+  const { value, settled } = scope.settle(() => readMember(scope, slot.key));
+  if (settled) {
+    slot.read = true;
+    slot.member = value;
+  }
+  return value;
+}
+
+/** The whole pool when every candidate has been read and is settled: the
+ *  one list all selectors over the scope can share. `undefined` until then. */
+export function settledPool(scope: Scope): ReadonlyArray<PoolMember> | undefined {
+  return sharedPool(scope).all;
 }
 
 /** `members` without the ones `not` names (qualified keys of `scope`). The
@@ -85,8 +117,27 @@ export function without<M extends { key: string }>(scope: Scope, members: Readon
 
 /**
  * `poolKeys` resolved: every candidate with its value, members that fail to
- * resolve skipped. Shared between selectors: read it, do not change it.
+ * resolve skipped. A member `not` names is not read at all. Shared between
+ * selectors: read the list, do not change it.
  */
 export function resolvePool(scope: Scope, not: ReadonlyArray<string> = []): ReadonlyArray<PoolMember> {
-  return without(scope, wholePool(scope), not);
+  const pool = sharedPool(scope);
+  if (pool.all) return without(scope, pool.all, not);
+  const excluded = new Set(not);
+  const members: PoolMember[] = [];
+  let whole = true;
+  for (const slot of pool.slots) {
+    if (excluded.size > 0 && isExcluded(scope, slot.key, excluded)) {
+      whole &&= slot.read;
+      continue;
+    }
+    const member = memberAt(scope, slot);
+    whole &&= slot.read;
+    if (member) members.push(member);
+  }
+  // Everything read and settled: from now on the list itself is shared.
+  if (whole) {
+    pool.all = excluded.size === 0 ? members : pool.slots.flatMap((slot) => (slot.member ? [slot.member] : []));
+  }
+  return members;
 }

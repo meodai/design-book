@@ -41,6 +41,17 @@ export class ResolveCache {
     this._generation++;
   }
 
+  /** Runs `build` and says whether its result depends on the book alone
+   *  (`settled`) — not built with the cache off, nor while the re-entrancy
+   *  guard turned a key away, nor across a change. Only a settled result
+   *  may be kept and shared. */
+  settle<T>(build: () => T): { value: T; settled: boolean } {
+    const trips = this.trips;
+    const generation = this._generation;
+    const value = build();
+    return { value, settled: this.off === 0 && this.trips === trips && this._generation === generation };
+  }
+
   /** Something built from resolved values, kept for `owner` under `name`
    *  until the next change — unless it was built with the cache off or
    *  while the re-entrancy guard turned a key away, when it may be missing
@@ -50,15 +61,13 @@ export class ResolveCache {
       const hit = this.derived.get(owner);
       if (hit?.has(name)) return hit.get(name) as T;
     }
-    const trips = this.trips;
-    const generation = this._generation;
-    const built = build();
-    if (this.off === 0 && this.trips === trips && this._generation === generation) {
+    const { value, settled } = this.settle(build);
+    if (settled) {
       let kept = this.derived.get(owner);
       if (!kept) this.derived.set(owner, kept = new Map());
-      kept.set(name, built);
+      kept.set(name, value);
     }
-    return built;
+    return value;
   }
 
   /** The re-entrancy guard refused a key: nothing computed around it is kept. */

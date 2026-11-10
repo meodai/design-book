@@ -137,6 +137,12 @@ export class Scope {
     return this.book._cache.memo(this, name, build);
   }
 
+  /** Runs `build` and says whether its result may be kept — see
+   *  `ResolveCache.settle`. @internal */
+  settle<T>(build: () => T): { value: T; settled: boolean } {
+    return this.book._cache.settle(build);
+  }
+
   /** Any scope of the same book by path (a group: `type.title`). */
   scopeAt(path: string): Scope | undefined {
     return this.book.getScope(path);

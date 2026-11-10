@@ -137,6 +137,53 @@ describe('a shared pool changes no result', () => {
     }
   }
 
+  it('never reads a member that `not` leaves out', () => {
+    const book = new DesignBook('not');
+    const pal = book.addScope('pal');
+    pal.set('a', color('#ffffff'));
+    pal.set('b', color('#172c4f'));
+    pal.set('heavy', lighten(ref('pal.a'), { amount: 0.1 }));
+    const ui = book.addScope('ui');
+    ui.set('bg', color('#fbf7ee'));
+    for (let i = 0; i < 5; i++) ui.set('t' + i, bestContrastWith(ref('.bg'), ref('pal'), { not: [ref('pal.heavy')] }));
+    ui.set('v', mostVivid(ref('pal'), { not: [ref('pal.heavy')] }));
+    const read: string[] = [];
+    const resolution = pal.resolution.bind(pal);
+    pal.resolution = (name: string) => { read.push(name); return resolution(name); };
+    for (let i = 0; i < 5; i++) book.resolve('ui.t' + i);
+    book.resolve('ui.v');
+    expect(read).not.toContain('heavy');
+    // A selector that does not leave it out reads it, and the others still do not.
+    ui.set('all', lightest(ref('pal')));
+    read.length = 0;
+    book.resolve('ui.all');
+    expect(read).toContain('heavy');
+  });
+
+  it('two scopes selecting from each other stay quick when `not` names the members that do', () => {
+    const book = new DesignBook('mutual');
+    const ramp = book.addScope('ramp');
+    ['#f4f4f4', '#c4c4c4', '#7a7a7a', '#3d3d3d', '#161616'].forEach((c, i) => ramp.set('s' + i, color(c)));
+    const card = book.addScope('card');
+    card.set('bg', color('#ffffff'));
+    const cardRules = Array.from({ length: 8 }, (_, i) => `card.r${i}`);
+    const rampRules = Array.from({ length: 8 }, (_, i) => `ramp.r${i}`);
+    for (let i = 0; i < 8; i++) {
+      ramp.set('r' + i, lightest(ref('card'), { not: cardRules }));
+      card.set('r' + i, minContrastWith(ref('.bg'), ref('ramp'), { minContrast: 2 + i, not: rampRules }));
+    }
+    // Unbroken, eight selectors a side would take longer than the suite.
+    let resolutions = 0;
+    for (const scope of [ramp, card]) {
+      const resolution = scope.resolution.bind(scope);
+      scope.resolution = (name: string) => { resolutions++; return resolution(name); };
+    }
+    for (const key of [...cardRules, ...rampRules]) book.resolve(key);
+    expect(resolutions).toBeLessThan(200);
+    expect(book.resolve('ramp.r0')).toBe('#ffffff');
+    expect(book.pickOf('card.r0')).toBe('ramp.s2');
+  });
+
   it('builds a pool once for many selectors, and again after a change', () => {
     const book = new DesignBook('count');
     const pal = book.addScope('pal');

@@ -3,7 +3,8 @@ import type { Color } from 'culori';
 import type { Scope } from '../scope';
 import { FunctionError } from '../errors';
 import { parseDimension } from '../values';
-import { resolvePool, without } from './scope-members';
+import { resolvePool, settledPool, without } from './scope-members';
+import type { PoolMember } from './scope-members';
 import { formatColor, gamutMapSrgb } from './color/color-math';
 import { contrastOn, contrastThreshold, formatContrast } from './color/contrast';
 import type { ContrastMethod } from './color/contrast';
@@ -94,18 +95,23 @@ export function colorPool(
   by: string | undefined,
   method: ContrastMethod = 'wcag',
 ): ReadonlyArray<ColorMember> {
-  // The scope's colors are the same for every selector over it: built once
-  // per state of the book and shared, then narrowed by `not` and `readableOn`.
-  const colors = scope.memo(`colors:${by ?? ''}`, () => {
-    const all: ColorMember[] = [];
-    for (const { key, value, group } of resolvePool(scope)) {
+  const colorsOf = (pool: ReadonlyArray<PoolMember>) => {
+    const colors: ColorMember[] = [];
+    for (const { key, value, group } of pool) {
       const color = colorValueOf(group ?? value, by);
       const form = color === undefined ? null : colorForm(color);
-      if (form) all.push({ key, ...form });
+      if (form) colors.push({ key, ...form });
     }
-    return all;
-  });
-  const members = without(scope, colors, not);
+    return colors;
+  };
+  // Members `not` names are never read (`resolvePool`). Once the whole pool
+  // has been read, its colors are the same for every selector over the
+  // scope: built once per state of the book and shared.
+  const candidates = resolvePool(scope, not);
+  const whole = settledPool(scope);
+  const members = whole
+    ? without(scope, scope.memo(`colors:${by ?? ''}`, () => colorsOf(whole)), not)
+    : colorsOf(candidates);
   if (readableOn === undefined || readableOn === null) return members;
   const backdrop = parseColor(readableOn);
   if (!backdrop) {
