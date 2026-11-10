@@ -27,6 +27,14 @@ All notable changes to Design Book are recorded here. The format follows
   member.
 - Contrast thresholds are stored as written; the default is no longer
   stored on the token, since it depends on the book's method.
+- Internal members (`book._accept`, `_settle`, `_cache`, …) are no longer
+  in the published type declarations.
+
+### Fixed
+
+- Types: the naming functions imported from the package root
+  (`import { scaleNames } from 'design-book'`) were typed `any`; they now
+  carry their real types, as they did from `design-book/naming`.
 
 ## [0.26.0] - 2026-11-10
 

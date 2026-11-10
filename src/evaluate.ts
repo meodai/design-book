@@ -9,6 +9,7 @@ import type { Resolution } from './functions/picks';
 /** What evaluating a token needs from the book. */
 export interface EvaluationBook {
   resolve(key: string): string;
+  /** @internal */
   _resolution(key: string): Resolution;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;

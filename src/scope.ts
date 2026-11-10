@@ -25,7 +25,7 @@ type SortEntry = { key: string; index: number; type: string; resolved: string | 
 /** What a scope needs from its book. */
 export type BookWithScope = {
   resolve(key: string): string;
-  /** A key's value and the member it is, when it is one. */
+  /** A key's value and the member it is, when it is one. @internal */
   _resolution(key: string): Resolution;
   getTokenByKey(key: string): AnyTokenValue | undefined;
   getDependencyGraph(): { getDependentsOf(key: string): string[] };
@@ -33,18 +33,21 @@ export type BookWithScope = {
   getSourceKey?(key: string): string | undefined;
   /** True for an inherited key that re-binds relative refs to its own scope. */
   isRebound?(key: string): boolean;
-  /** The book's memo of resolved values. */
+  /** The book's memo of resolved values. @internal */
   _cache: ResolveCache;
   getScope(name: string): Scope | undefined;
   getFunction(name: string): FunctionImplementation | undefined;
+  /** @internal */
   _accept(key: string, newValue: AnyTokenValue | undefined, oldValue: AnyTokenValue | undefined): void;
-  /** Writes a group at `name` of `scope`: its entry, its scope, its members. */
+  /** Writes a group at `name` of `scope`: its entry, its scope, its members. @internal */
   _setGroup(scope: Scope, name: string, group: GroupValue): void;
-  /** Removes the group at `name` of `scope`, its scope and everything in it. */
+  /** Removes the group at `name` of `scope`, its scope and everything in it. @internal */
   _deleteGroup(scope: Scope, name: string): void;
+  /** @internal */
   _settle(): void;
+  /** @internal */
   _restoreRejectedDelete(key: string, restored: AnyTokenValue): void;
-  /** How this book's `extends` chains are read while binding a token. */
+  /** How this book's `extends` chains are read while binding a token. @internal */
   _bindingContext?(): BindingContext;
   getOrderer(type: string): TokenOrderer | undefined;
   getOrdererTypes(): string[];
@@ -260,7 +263,8 @@ export class Scope {
 
   /** Put a token back after the book rejected the change that set it —
    *  restoring `undefined` removes the entry. Deliberately silent: the
-   *  caller is already mid-propagation and must not start a new change. */
+   *  caller is already mid-propagation and must not start a new change.
+   *  @internal */
   _rollback(name: string, oldValue: AnyTokenValue | undefined): void {
     if (oldValue === undefined) this.tokens.delete(name);
     else this.tokens.set(name, oldValue);
@@ -316,7 +320,8 @@ export class Scope {
    *  stays reachable. `ScopeManager.deleteScope` needs that window — the
    *  book refreshes a key's dependents' reference caches through the scope
    *  that owns the key, so unregistering the scope first made the whole
-   *  notification a no-op. Silent by design; the manager notifies per key. */
+   *  notification a no-op. Silent by design; the manager notifies per key.
+   *  @internal */
   _detachForDeletion(): void {
     this.tokens.clear();
     this.extendsName = undefined;

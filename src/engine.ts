@@ -74,8 +74,8 @@ export { layer, composeBook, layerOf, keysFromLayer } from './layers';
 export type { Layer, LayerData } from './layers';
 
 // Naming schemes for primitive token keys
-export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming';
-export type { NamingScheme, NamingAnchor, BuiltinSchemeName, ScaleNamesOptions } from './naming';
+export { scaleNames, nameValues, nameBetween, namingScheme, schemes } from './naming/index';
+export type { NamingScheme, NamingAnchor, BuiltinSchemeName, ScaleNamesOptions } from './naming/index';
 
 // Functions
 export {

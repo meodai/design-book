@@ -58,7 +58,8 @@ export class ScopeManager {
   }
 
   /** Registers a group: a scope held at a key, named by its path
-   *  (`type.title`). Only the book makes them, for the keys that hold one. */
+   *  (`type.title`). Only the book makes them, for the keys that hold one.
+   *  @internal */
   _addGroup(
     path: string,
     options: { extends?: string; description?: string; kind?: string; omit?: readonly string[] },
@@ -131,7 +132,8 @@ export class ScopeManager {
   }
 
   /** Unregister a scope that was just added, silently — for an `addScope`
-   *  the book refused after the fact. */
+   *  the book refused after the fact.
+   *  @internal */
   _discard(name: string): void {
     const scope = this.scopes.get(name);
     if (!scope) return;

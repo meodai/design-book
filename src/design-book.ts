@@ -217,7 +217,8 @@ export class DesignBook {
   private functionTraits: Map<string, FunctionTraits> = new Map();
   private renderers: Map<string, RendererFn> = new Map();
   /** Resolved values, cleared on every change (see `ResolveCache`). Read
-   *  by the scopes; internal. */
+   *  by the scopes; internal.
+   *  @internal */
   readonly _cache = new ResolveCache();
   private orderers: Map<string, TokenOrderer> = new Map();
   private batchQueue: Map<string, { newValue: any; oldValue: any }> = new Map();
@@ -442,6 +443,7 @@ export class DesignBook {
     version: 0,
   };
 
+  /** @internal */
   _bindingContext(): BindingContext {
     return this._binding;
   }
@@ -498,7 +500,7 @@ export class DesignBook {
     return picked === undefined ? undefined : this.groupAt(picked, seen);
   }
 
-  /** A key's value and the member it is, when it is one. */
+  /** A key's value and the member it is, when it is one. @internal */
   _resolution(key: string): Resolution {
     if (isRelativeKey(key)) {
       throw new TokenError(
@@ -883,7 +885,7 @@ export class DesignBook {
    * announced are wired the same way, so a refused one throws to the
    * listener that made it; only their announcements wait. In batch mode the
    * write is queued for `flush`, which wires it with the rest.
-   */
+   *  @internal */
   _accept(key: string, newValue: AnyTokenValue | undefined, oldValue: AnyTokenValue | undefined): void {
     if (this._mode === 'batch') {
       // Several writes to one key merge into one entry, which must keep the
@@ -907,7 +909,7 @@ export class DesignBook {
    * outer one carries on with the queue. A listener that throws does not
    * undo anything; every listener still hears every change, and the error
    * is thrown when the outermost operation is done (`_operation`).
-   */
+   *  @internal */
   _settle(): void {
     if (this._mode === 'batch' || this._announcing) return;
     this._operation(() => this._announceWhile(() => {}));
@@ -994,7 +996,8 @@ export class DesignBook {
 
   /** Writes a group at `name` of `holder` (see `Scope.set`): the entry in
    *  the holder, the group's scope, its members — replacing what was there.
-   *  A member the graph refuses undoes the whole write. */
+   *  A member the graph refuses undoes the whole write.
+   *  @internal */
   _setGroup(holder: Scope, name: string, group: GroupValue): void {
     const path = `${holder.name}.${name}`;
     const members = group.members ?? {};
@@ -1031,7 +1034,7 @@ export class DesignBook {
     });
   }
 
-  /** Removes the group at `name` of `holder` with everything in it. */
+  /** Removes the group at `name` of `holder` with everything in it. @internal */
   _deleteGroup(holder: Scope, name: string): void {
     this._change(() => this._deleteGroupNow(holder, name));
   }
@@ -1083,6 +1086,7 @@ export class DesignBook {
     return { ...entry, members };
   }
 
+  /** @internal */
   _restoreRejectedDelete(qualifiedKey: string, restored: AnyTokenValue): void {
     this._rollbackKey(qualifiedKey, restored);
   }
