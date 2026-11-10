@@ -3,7 +3,7 @@ import {
   DesignBook, color, ref, rem, px, string, colorMix, darken, bestContrastWith,
   createFunctionToken, diffBooks, layer, composeBook, layerOf, keysFromLayer,
   LayerError, CircularDependencyError,
-  typography, variant,
+  typography,
 } from '../src/index';
 import type { Layer } from '../src/index';
 

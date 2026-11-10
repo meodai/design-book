@@ -723,7 +723,7 @@ book.resolve('button.hover');        // shade of brand.primary, unchanged
 
 Override one root in the child and every inherited token that reads it relatively re-flows. That is the "abstract base scope, concrete variants" pattern: sibling variants that ship together in one stylesheet (`--button-hover` and `--button-danger-hover`). Layers cover whole-system variations that ship as alternative outputs.
 
-- Relative keys work anywhere a key does: `ref()` tokens, function arguments, `not` lists, `sibling(ref('.g100'), 1)`, a field (`ref('.title.fontSize')`) and a live `variant(ref('.title'), …)`.
+- Relative keys work anywhere a key does: `ref()` tokens, function arguments, `not` lists, `sibling(ref('.g100'), 1)`, a member (`ref('.title.fontSize')`) and a changed style (`ref('.title', { … })`).
 - Tokens keep the relative form as written. `scope.get(name)` returns the token **bound** to that scope (relative keys qualified, `ref('.bg')` read through `button-danger` is `ref('button-danger.bg')`); `scope.getRaw(name)` returns it as written. Renderers see bound tokens: a `ref('.bg')` read through `button-danger` is `var(--button-danger-bg)` in CSS and `{button-danger.bg}` in W3, and computed values (`--button-danger-hover`, `--button-danger-fg`) are written per scope.
 - An inherited token with relative refs is **re-bound** (`book.isRebound('button-danger.hover')`): it gets graph edges of its own, to its scope's keys, so `watch()`, `change` events and dependents fire for it like for an own token.
 - A cycle that exists only in an inheriting scope is caught at write time. With `danger.set('bg', ref('button-danger.hover'))` in place, writing `button.hover = shade(ref('.bg'))` throws a `CircularDependencyError` and is rolled back; so does a `delete` or an `addScope({ extends })` that would expose such a cycle.
@@ -804,7 +804,7 @@ callout.set('surface', lighten(inherited(ref('.surface')), { amount: 0.2 }));
 - Only `extends` makes a parent. Reading from a scope (`ref('palette.white')`) does not.
 - Past the top of the chain it throws (`"card" has no parent`, `"callout" has only 2 levels above it`); `'root'` on a scope that extends nothing is that scope. Levels are whole numbers of 1 or more, and `inherited(inherited(x))` is `inherited(x, 2)`.
 - A reference that ends on its own key is a cycle and is rejected when written, as with `ref`.
-- `sibling` and `variant` take it too: `sibling(inherited(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `variant(inherited(ref('.title')), { fontWeight: '700' })` is a live variant of the title this scope replaces.
+- `sibling` and a changed scope take it too: `sibling(inherited(ref('.g100')), 1)` walks the parent's scope from its `g100`, and `inherited(ref('.title', { fontWeight: '700' }))` is the parent's title, changed, in place of the one this scope inherits.
 
 #### `source`: back along the references
 
@@ -909,9 +909,9 @@ Some things are several values at once: a text style (family, size, weight, line
 
 - **offer as a set of variants** — a `typography` scope listing the text styles a design system has;
 - **use exactly, elsewhere** — a card's heading *is* `typography.title`, and follows every change to it;
-- **place in several contexts** — one button definition, giving each context it is placed in its own colors.
+- **use with a change** — the card's heading as the title, only smaller.
 
-A group is an ordinary scope. Its keys are ordinary keys (`typography.title.fontSize`), it can extend another scope, be a selector's pool, be sorted, and every scope extending one that holds it holds it too.
+A group is an ordinary scope. Its keys are ordinary keys (`typography.title.fontSize`), it can extend another scope, be a selector's pool and be sorted. A scope extending one that holds a group reads that same group.
 
 ### Named tables, listed and reused
 
@@ -952,26 +952,17 @@ book.addScope('typography-title', { kind: 'typography' })   // named, then held 
 
 It also takes plain numbers and strings for fields (`lineHeight: 1.2`, `fontWeight: '700'`) instead of `dimension(1.2, '')` and `string('700')`.
 
-### Variants and placing: `variant`
+### With a change: `ref(scope, { … })`
 
-`variant(ref, { … })` is a group extending another: the members it does not set read the base, live; `null` leaves one out.
-
-```typescript
-type.set('hero', variant(ref('.title'), { fontWeight: '800' }));
-```
-
-With no members it **places** a group: its relative references read where it is placed. Inside a group `.` is the group itself; `holder(ref('.x'))` is `x` of the scope holding it. So one button definition, placed in several contexts, reads each context's own surface:
+A reference to a scope with a second argument is that scope with those members changed: a group extending it. The members it does not set read the original, live; `null` leaves one out.
 
 ```typescript
-const major = book.addScope('button-major', { template: true });   // a definition: left out of the output
-major.set('bg', minContrastWith(holder(ref('.surface')), ref('scale')));
-major.set('text', bestContrastWith(ref('.bg'), ref('scale')));
-
-normal.set('major', variant(ref('button-major')));   // normal.major.bg reads normal.surface
-strong.set('major', variant(ref('button-major')));   // strong.major.bg reads strong.surface
+card.set('heading', ref('typography-title', { fontSize: rem(1.8) }));
+type.set('plain', ref('.title', { fontWeight: null }));
+tablet.set('title', inherited(ref('.title', { fontSize: rem(2) })));   // the inherited style, smaller
 ```
 
-A reference (`ref('button-major')`) shares the group as it is: it reads where it is defined. Place it with `variant` when each place should get its own answer from the same rules. A scope extending one that places a group holds its own placed copy, reading its own context.
+A plain `ref('typography-title')` is the original itself; with changes it is a group of the key's own. A changed member replaces the original's whole (a nested group too). Like `typography()`, it takes plain numbers and strings for members.
 
 To change a group in place — what a theme layer does — set its members:
 
@@ -986,7 +977,7 @@ const dense = layer('dense', (book) => book.getScope('typography-title').set('fo
   --typography-title-font-family: var(--font-sans);
   --typography-title-font-size: 2.4rem;
   --card-heading-font-size: var(--typography-title-font-size);
-  --type-hero-font-size: var(--type-title-font-size);    /* a variant points at its base */
+  --type-hero-font-size: var(--type-title-font-size);    /* a changed style points at the original */
   /* … */
 }
 .card-heading {
@@ -1236,7 +1227,7 @@ layerOf(cafeBook, 'brand.highlight'); // 'old-town'
 layerOf(cafeBook, 'text.highlight');  // 'cafe'
 ```
 
-A layer is either a **function** `(book) => void` — free to add scopes with `extends`, set `typography()` tokens or change them with `variant`, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
+A layer is either a **function** `(book) => void` — free to add scopes with `extends`, set `typography()` tokens or change their members, register functions, build selectors over a scope, or delete tokens — or **data**, `{ scope: { token: <token> } }`. Data layers create scopes that don't exist yet, accept tokens only (a bare `'#fff'` throws, since it could be a color or a string), and clone their tokens on every apply, so one layer can go into many books.
 
 `composeBook(name, layers, options?)` applies the layers in order, last one wins, and returns an ordinary book in `options.mode` (default `auto`). A layer that throws, or that would close a dependency cycle, stops the composition with a `LayerError` carrying `layerName`, `tokenKey` and the original error as `cause`. A ref to a key that a later layer adds is fine.
 
@@ -1510,13 +1501,9 @@ they fit together.
 - Color transforms: `colorMix`, `lighten`, `darken`, `shade`, `relativeTo`, `withAlpha`
 - Positions: `nth`, `sibling`, `random`
 - Scales: `spacingScale`, `typographyScale`, `timing`
-- Typography: `typography`, `variant`
+- Typography: `typography`
 
-**Typography helpers**, for custom renderers and tooling:
-- `isTypographyToken(token)`
-- `typographyFields(token)` returns the token's own fields as `{ name: value }`
-- `typographyBase(token)` returns a live variant's base key, or `undefined`
-- `typographyFieldNames(book, token)` returns every field, inherited ones included
+**Groups**, for custom renderers and tooling: `isGroupValue(token)`; a group is a scope, so `book.getScope('type.title')` gives its members (`getAllKeys()`, `getKind()`, `holderName`), and `book.groupValueOf(path)` writes one back out as data.
 
 **Themes and variations.** `layer`, `composeBook`, `layerOf`, `keysFromLayer`, `diffBooks`.
 

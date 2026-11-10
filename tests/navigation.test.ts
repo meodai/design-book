@@ -2,7 +2,7 @@ import { beforeAll, describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
 import {
   color, ref, px, rem, typography, inherited, 
-  mostVivid, lightest, darkest, nth, lighten, sibling, variant, bestContrastWith,
+  mostVivid, lightest, darkest, nth, lighten, sibling, bestContrastWith,
   CircularDependencyError, FunctionError, TokenError,
 } from '../src/index';
 import type { ReferenceValue } from '../src/tokens';
@@ -226,7 +226,7 @@ describe('inherited', () => {
     type.set('title', typography({ fontSize: rem(2), fontWeight: '400' }));
     const article = book.addScope('article', { extends: 'type' });
     // a variant of the title it replaces: not a variant of itself
-    article.set('title', variant(inherited(ref('.title')), { fontWeight: '700' }));
+    article.set('title', inherited(ref('.title', { fontWeight: '700' })));
 
     // A group has no single value: its members are read.
     expect(() => book.resolve('article.title')).toThrow(/is a group/);
@@ -240,7 +240,7 @@ describe('inherited', () => {
     expect(book.resolve('article.title.fontSize')).toBe('2.5rem');
     expect(book.resolve('article.title.fontWeight')).toBe('700');
 
-    expect(() => type.set('x', variant(inherited(ref('.title')), { fontWeight: '700' }))).toThrow(/"type" has no parent/);
+    expect(() => type.set('x', inherited(ref('.title', { fontWeight: '700' })))).toThrow(/"type" has no parent/);
   });
 
   it('re-binds when the chain is rebuilt with a different parent', () => {
@@ -295,7 +295,7 @@ describe('renderers and the editor', () => {
     expect(getTokenDisplayValue(callout, 'probe')).toBe("lightest(inherited(ref('.')))");
     for (const input of [
       "sibling(inherited(ref('.surface')), 1)",
-      "variant(inherited(ref('.title')), { fontWeight: '700' })",
+      "inherited(ref('.title', { fontWeight: '700' }))",
     ]) {
       callout.set('probe', parseTokenInput(input, book, callout));
       expect(getTokenDisplayValue(callout, 'probe')).toBe(input);

@@ -42,7 +42,7 @@ export class ScopeManager {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; template?: boolean; kind?: string },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; kind?: string },
   ): Scope {
     this.validateScopeName(name);
     this.validateMetadata(name, options?.metadata);
@@ -61,7 +61,7 @@ export class ScopeManager {
    *  (`type.title`). Only the book makes them, for the keys that hold one. */
   _addGroup(
     path: string,
-    options: { extends?: string; description?: string; kind?: string; omit?: readonly string[]; implicit?: boolean },
+    options: { extends?: string; description?: string; kind?: string; omit?: readonly string[] },
   ): Scope {
     this.validateExtends(path, options.extends);
     const scope = new Scope(path, this.book, options);

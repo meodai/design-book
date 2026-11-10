@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  DesignBook, typography, variant, ref, rem, px, color, string, holder, inherited, composeBook, layer,
-  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest, sibling, minContrastWith,
+  DesignBook, typography, ref, rem, px, color, string, inherited, composeBook, layer,
+  CircularDependencyError, FunctionError, TokenError, Renderer, SVGRenderer, bestContrastWith, largest,
 } from '../src/index';
 import { isGroupValue } from '../src/tokens';
 
@@ -157,10 +157,10 @@ describe('members in the graph', () => {
   });
 });
 
-describe('variants: groups extending groups', () => {
+describe('ref with changes: a group extending a scope', () => {
   function withHero() {
     const { book, type } = typeBook();
-    type.set('hero', variant(ref('.title'), { fontWeight: '800', letterSpacing: rem(-0.02) }));
+    type.set('hero', ref('.title', { fontWeight: '800', letterSpacing: rem(-0.02) }));
     return { book, type };
   }
 
@@ -174,87 +174,63 @@ describe('variants: groups extending groups', () => {
     void type;
   });
 
-  it('is of its base kind: a variant of a text style is a text style', () => {
+  it('is of its base kind: a text style changed is a text style', () => {
     const { book } = withHero();
     expect(book.getScope('type.hero')!.getKind()).toBe('typography');
   });
 
   it('null leaves a member of the base out', () => {
     const { book, type } = typeBook();
-    type.set('plain', variant(ref('.title'), { fontWeight: null }));
+    type.set('plain', ref('.title', { fontWeight: null }));
     expect(book.getScope('type.plain')!.getAllKeys()).toEqual(['fontFamily', 'fontSize']);
     expect(book.has('type.plain.fontWeight')).toBe(false);
   });
 
-  it('can extend a variant', () => {
+  it('can extend one that extends another', () => {
     const { book, type } = withHero();
-    type.set('mega', variant(ref('.hero'), { fontSize: rem(6) }));
+    type.set('mega', ref('.hero', { fontSize: rem(6) }));
     expect(book.resolve('type.mega.fontWeight')).toBe('800');
     expect(book.resolve('type.mega.fontSize')).toBe('6rem');
   });
 
   it('cannot extend the group it replaces, and says how to change it in place', () => {
     const { type } = typeBook();
-    expect(() => type.set('title', variant(ref('.title'), { fontWeight: '900' }))).toThrow(/set its members/);
-    expect(() => variant(typography({ fontSize: rem(1) }) as never, {})).toThrow(/set its members/);
+    expect(() => type.set('title', ref('.title', { fontWeight: '900' }))).toThrow(/set its members/);
   });
 
-  it('needs a group as its base', () => {
+  it('needs a scope to change', () => {
     const { type } = typeBook();
-    expect(() => type.set('x', variant(ref('font-size.md'), {}))).toThrow(/needs a group to extend/);
+    expect(() => type.set('x', ref('font-size.md', { fontSize: rem(1) }))).toThrow(/changes the members of a scope/);
+    expect(() => ref('type.title', 'bold' as never)).toThrow(/members to change, as an object/);
+  });
+
+  it('a plain ref to a scope is still a reference, not a copy', () => {
+    const { book, type } = typeBook();
+    type.set('same', ref('.title'));
+    expect(book.getScope('type.same')).toBeUndefined();
+    expect(book.resolve('type.same.fontSize')).toBe('3.2rem');
   });
 });
 
-describe('groups and extends: contexts', () => {
-  it('a scope extending one that holds a group holds it too, reading its own context', () => {
-    const book = new DesignBook('c');
-    const normal = book.addScope('context-normal');
-    normal.set('surface', color('#ffffff'));
-    normal.set('major', { bg: color('#0055aa'), surface: holder(ref('.surface')) });
-    const strong = book.addScope('context-strong', { extends: 'context-normal' });
-    strong.set('surface', color('#0b1f3a'));
-    expect(book.resolve('context-normal.major.surface')).toBe('#ffffff');
-    expect(book.resolve('context-strong.major.surface')).toBe('#0b1f3a');
-    expect(book.resolve('context-strong.major.bg')).toBe('#0055aa');
-    expect(book.getScope('context-strong.major')!.implicit).toBe(true);
-  });
-
-  it('a group placed with variant reads where it is placed', () => {
-    const book = new DesignBook('c');
-    const buttons = book.addScope('button');
-    buttons.set('major', { text: holder(ref('.surface')) });
-    const card = book.addScope('card');
-    card.set('surface', color('#eeeeee'));
-    card.set('button', variant(ref('button.major')));
-    expect(book.resolve('card.button.text')).toBe('#eeeeee');
-  });
-
-  it('holder works where a member is named too: a sibling anchor and target', () => {
-    const book = new DesignBook('c');
-    const scale = book.addScope('scale');
-    ['#ffffff', '#cccccc', '#888888', '#444444', '#000000'].forEach((c, i) => scale.set(`s${i}`, color(c)));
-    book.addScope('button').set('major', {
-      bg: ref('scale.s1'),
-      hover: { bg: sibling(holder(ref('.bg')), ref('scale'), 1) },
-    });
-    expect(book.resolve('button.major.hover.bg')).toBe('#888888');
-  });
-
-  it('holder in a top-level scope waits to be placed: it reads nothing there', () => {
-    const book = new DesignBook('c');
-    book.addScope('a').set('x', holder(ref('.y')));
-    expect(() => book.resolve('a.x')).toThrow(/top-level scope: no scope holds it/);
-    expect(book.render('css-variables')).toContain('/* --a-x: ');
+describe('groups and extends', () => {
+  it('a scope extending one that holds a group reads that same group', () => {
+    const { book } = typeBook();
+    book.addScope('type-tablet', { extends: 'type' });
+    expect(book.getScope('type-tablet.title')).toBeUndefined();
+    expect(book.resolve('type-tablet.title.fontSize')).toBe('3.2rem');
+    book.getScope('type.title')!.set('fontWeight', string('800'));
+    expect(book.resolve('type-tablet.title.fontWeight')).toBe('800');
+    expect(book.render('css-variables')).toContain('--type-tablet-title-font-size: var(--type-title-font-size);');
   });
 
   it('a breakpoint scope refines a style one level up without naming it', () => {
     const { book } = typeBook();
     const tablet = book.addScope('type-tablet', { extends: 'type' });
-    tablet.set('title', variant(inherited(ref('.title')), { fontSize: rem(2.4) }));
+    tablet.set('title', inherited(ref('.title', { fontSize: rem(2.4) })));
     expect(book.resolve('type-tablet.title.fontSize')).toBe('2.4rem');
     expect(book.resolve('type-tablet.title.fontWeight')).toBe('700');
     const phone = book.addScope('type-phone', { extends: 'type-tablet' });
-    phone.set('title', variant(inherited(ref('.title')), { fontSize: rem(2) }));
+    phone.set('title', inherited(ref('.title', { fontSize: rem(2) })));
     expect(book.resolve('type-phone.title.fontSize')).toBe('2rem');
     expect(book.resolve('type-phone.title.fontWeight')).toBe('700');
   });
@@ -312,15 +288,6 @@ describe('holding a top-level scope', () => {
     expect(book.render('css-variables')).toContain('--card-action-bg: var(--button-major-bg);');
   });
 
-  it('or place it, so it reads where it is placed', () => {
-    const book = new DesignBook('t');
-    book.addScope('button-major').set('text', holder(ref('.surface')));
-    const card = book.addScope('card');
-    card.set('surface', color('#eeeeee'));
-    card.set('action', variant(ref('button-major')));
-    expect(book.resolve('card.action.text')).toBe('#eeeeee');
-  });
-
   it('a scope cannot come to hold itself', () => {
     const book = new DesignBook('t');
     const a = book.addScope('a');
@@ -331,26 +298,12 @@ describe('holding a top-level scope', () => {
   });
 });
 
-describe('templates, overrides and watching through', () => {
-  it('a template is a definition: left out of the output, rendered where it is placed', () => {
-    const book = new DesignBook('t');
-    const major = book.addScope('button-major', { template: true });
-    major.set('text', holder(ref('.surface')));
-    const card = book.addScope('card');
-    card.set('surface', color('#eeeeee'));
-    card.set('action', variant(ref('button-major')));
-    const css = book.render('css-variables');
-    expect(css).not.toContain('button-major');
-    expect(css).toContain('--card-action-text: var(--card-surface);');
-    expect(JSON.parse(book.render('json'))['button-major.text']).toBeUndefined();
-    expect(new Renderer(book, 'w3-design-tokens').renderW3DesignTokensObject()['button-major']).toBeUndefined();
-  });
-
-  it('a variant setting a nested group replaces it whole', () => {
+describe('changes and watching through', () => {
+  it('changing a nested group replaces it whole', () => {
     const book = new DesignBook('t');
     const b = book.addScope('button');
     b.set('major', { hover: { bg: color('#12307f'), text: color('#ffffff') } });
-    b.set('minor', variant(ref('.major'), { hover: { bg: color('#d6e2ff') } }));
+    b.set('minor', ref('.major', { hover: { bg: color('#d6e2ff') } }));
     expect(book.getScope('button.minor.hover')!.getAllKeys()).toEqual(['bg']);
     expect(book.has('button.minor.hover.text')).toBe(false);
   });
@@ -368,6 +321,49 @@ describe('templates, overrides and watching through', () => {
     expect(seen[0]).toBe('#12307f');
     stop();
     expect(book.getDependencyGraph().hasNode('card.action.bg')).toBe(false);
+  });
+});
+
+describe('watching a path before it leads anywhere', () => {
+  it('starts reporting once the reference it is read through is written', () => {
+    const book = new DesignBook('t');
+    book.addScope('button-major').set('bg', color('#1f4fd6'));
+    book.addScope('button-minor').set('bg', color('#d6e2ff'));
+    const card = book.addScope('card');
+    const seen: Array<string | undefined> = [];
+    const stop = book.watch('card.action.bg', (value) => seen.push(value));
+    card.set('action', ref('button-major'));
+    book.getScope('button-major')!.set('bg', color('#12307f'));
+    card.set('action', ref('button-minor'));
+    card.delete('action');
+    card.set('action', ref('button-major'));
+    expect(seen).toEqual(['#1f4fd6', '#12307f', '#d6e2ff', undefined, '#12307f']);
+    stop();
+    expect(book.getDependencyGraph().hasNode('card.action.bg')).toBe(false);
+    expect(book.getDependencyGraph().hasNode('card.action')).toBe(true);
+  });
+
+  it('waits for a scope that does not exist yet, and leaves nothing behind', () => {
+    const book = new DesignBook('t');
+    book.addScope('type').set('title', typography({ fontSize: rem(2) }));
+    const seen: Array<string | undefined> = [];
+    const stop = book.watch('card.heading.fontSize', (value) => seen.push(value));
+    book.addScope('card').set('heading', ref('type.title'));
+    book.getScope('type.title')!.set('fontSize', rem(3));
+    expect(seen).toEqual(['2rem', '3rem']);
+    stop();
+    book.deleteScope('card');
+    expect(book.getDependencyGraph().hasNode('card.heading.fontSize')).toBe(false);
+    expect(book.getDependencyGraph().hasNode('card.heading')).toBe(false);
+  });
+
+  it('a key of its own or a top-level key is watched as before', () => {
+    const book = new DesignBook('t');
+    const seen: Array<string | undefined> = [];
+    book.watch('brand.primary', (value) => seen.push(value));
+    book.addScope('brand').set('primary', color('#ff0000'));
+    expect(seen).toEqual(['#ff0000']);
+    expect(book.getDependencyGraph().hasNode('brand.primary')).toBe(true);
   });
 });
 
@@ -420,9 +416,9 @@ describe('rendering groups', () => {
     expect(css).toContain('.button-label {\n  font-family: var(--button-label-font-family);');
   });
 
-  it('css: a variant points its inherited members at the base', () => {
+  it('css: a changed scope points its other members at the original', () => {
     const { book, type } = typeBook();
-    type.set('hero', variant(ref('.title'), { fontWeight: '800' }));
+    type.set('hero', ref('.title', { fontWeight: '800' }));
     const css = book.render('css-variables');
     expect(css).toContain('  --type-hero-font-family: var(--type-title-font-family);\n  --type-hero-font-size: var(--type-title-font-size);\n  --type-hero-font-weight: 800;');
   });
@@ -495,45 +491,6 @@ describe('rendering groups', () => {
     expect(svg).toContain('>type.title</text>');
     expect(svg).toContain('data-from="type.title" data-to="__header__type.title"');
     expect(svg).toContain('data-from="callout.size" data-to="type.title.fontSize"');
-  });
-});
-
-describe('groups and flat keys give the same answers', () => {
-  it('a button placed in each context equals the same rules copied into each', () => {
-    const shades = Array.from({ length: 12 }, (_, i) => `hsl(220 70% ${Math.round(97 - i * 8)}%)`);
-    const withScale = () => {
-      const book = new DesignBook('t');
-      const scale = book.addScope('scale');
-      shades.forEach((c, i) => scale.set(`s${i}`, color(c)));
-      return book;
-    };
-    const grouped = withScale();
-    const t = grouped.addScope('button-major', { template: true });
-    t.set('bg', minContrastWith(holder(ref('.surface')), ref('scale'), { minContrast: 4.5 }));
-    t.set('text', bestContrastWith(ref('.bg'), ref('scale')));
-    t.set('hover', { bg: sibling(holder(ref('.bg')), ref('scale'), 1), text: bestContrastWith(ref('.bg'), ref('scale')) });
-    const flat = withScale();
-    for (let c = 0; c < 12; c++) {
-      const g = grouped.addScope(`ctx${c}`);
-      g.set('surface', ref(`scale.s${c}`));
-      g.set('major', variant(ref('button-major')));
-      const f = flat.addScope(`ctx${c}`);
-      f.set('surface', ref(`scale.s${c}`));
-      f.set('major-bg', minContrastWith(ref('.surface'), ref('scale'), { minContrast: 4.5 }));
-      f.set('major-text', bestContrastWith(ref('.major-bg'), ref('scale')));
-      f.set('major-hover-bg', sibling(ref('.major-bg'), ref('scale'), 1));
-      f.set('major-hover-text', bestContrastWith(ref('.major-hover-bg'), ref('scale')));
-    }
-    const answers = (book: DesignBook, path: (c: number, m: string) => string) =>
-      Array.from({ length: 12 }, (_, c) => ['bg', 'text', 'hover.bg', 'hover.text'].map((m) => {
-        try { return book.resolve(path(c, m)); } catch (e) { return (e as Error).constructor.name; }
-      }));
-    const before = answers(grouped, (c, m) => `ctx${c}.major.${m}`);
-    expect(before).toEqual(answers(flat, (c, m) => `ctx${c}.major-${m.replace('.', '-')}`));
-    // and they stay the same after a change upstream
-    grouped.getScope('scale')!.set('s5', color('hsl(220 70% 50%)'));
-    flat.getScope('scale')!.set('s5', color('hsl(220 70% 50%)'));
-    expect(answers(grouped, (c, m) => `ctx${c}.major.${m}`)).toEqual(answers(flat, (c, m) => `ctx${c}.major-${m.replace('.', '-')}`));
   });
 });
 

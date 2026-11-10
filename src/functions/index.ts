@@ -48,8 +48,8 @@ export { ramp, rampStops, rampSet } from './color/ramp';
 export type { RampSet, RampSetSource } from './color/ramp';
 export { spacingScale } from './non-color/spacing-scale';
 export { typographyScale } from './non-color/typography-scale';
-export { typography, variant } from './non-color/typography';
-export type { TypographyField, TypographyFields, TypographyOverrides } from './non-color/typography';
+export { typography } from './non-color/typography';
+export type { TypographyField, TypographyFields } from './non-color/typography';
 export { timing } from './non-color/timing';
 export { random } from './generic/random';
 export type { RandomOptions, RandomType } from './generic/random';
@@ -69,7 +69,7 @@ export interface BuiltinHost {
   ): void;
   /** `sibling` looks up the scope its anchor key lives in. */
   getScope(name: string): Scope | undefined;
-  /** A typography variant reads its base's fields. */
+  /** Selectors read members of the pool. */
   resolve(key: string): string;
   /** The member a key's value is, when a selector picked it. */
   pickOf(key: string): string | undefined;

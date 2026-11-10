@@ -301,7 +301,7 @@ export class DesignBook {
 
   addScope(
     name: string,
-    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; template?: boolean; kind?: string },
+    options?: { extends?: string; description?: string; order?: import('./scope').ScopeOrder; metadata?: import('./scope').ScopeMetadata; kind?: string },
   ): Scope {
     const scope = this.scopeManager.addScope(name, options);
     this._scopesChanged();
@@ -313,8 +313,6 @@ export class DesignBook {
       this._discardScope(name);
       throw e;
     }
-    // A scope extending one that holds groups holds them too.
-    this._change(() => this._syncInheritedGroups(scope));
     this.emit('scopeAdded', { scope: name });
     return scope;
   }
@@ -340,19 +338,12 @@ export class DesignBook {
     }
     // The scope goes with every group in it, announced as one change; the
     // scopes extending it then lose the groups they inherited from it.
-    const below = this.scopeManager.lineageBelow(name).slice(1);
     const scopes = this._scopeTree(name);
     this._scopesChanged();
     const removed: Array<[string, AnyTokenValue | undefined]> = [];
     for (const path of scopes) this.scopeManager.deleteScope(path, (keys) => removed.push(...keys));
     this._scopesChanged();
     this._notifyRemoved(removed);
-    this._change(() => {
-      for (const scope of below) {
-        const live = this.scopeManager.getScope(scope);
-        if (live) this._syncInheritedGroups(live);
-      }
-    });
     for (const path of scopes.slice(0, -1)) this.emit('scopeRemoved', { scope: path, removedKeys: removed.map(([k]) => k).filter((k) => scopeOf(k) === path) });
     const keys = removed.map(([k]) => k).filter((k) => scopeOf(k) === name);
     this.emit('scopeRemoved', { scope: name, removedKeys: keys });
@@ -813,10 +804,13 @@ export class DesignBook {
       if (event.detail.key === key) callback(event.detail.value, event.detail);
     });
     // A path read through a group (`card.action.bg`) is no key of its own:
-    // while it is watched it keeps its node and is announced like one.
-    if (this._locate(key) || !this._through(key)) return off;
+    // while it is watched it keeps its node and is announced like one. One
+    // that nothing leads to yet waits on the keys it could be read through,
+    // and is wired once one of them is written.
+    if (this._locate(key) || !splitKey(key) || !scopeOf(key).includes('.')) return off;
     this._watchedPaths.set(key, (this._watchedPaths.get(key) ?? 0) + 1);
-    this._wireThrough([key]);
+    if (this._through(key)) this._wireThrough([key]);
+    else this._waitThrough(key);
     return () => {
       off();
       const count = (this._watchedPaths.get(key) ?? 1) - 1;
@@ -993,10 +987,8 @@ export class DesignBook {
         const scope = this.scopeManager._addGroup(path, { extends: base, kind: group.kind, omit: group.omit, description: group.description });
         this._scopesChanged();
         this._wireInherited(scope.getAllKeys().map((k) => `${path}.${k}`));
-        this._syncInheritedGroups(scope);
         this._accept(path, entry, old);
         for (const [member, value] of Object.entries(members)) scope.set(member, value as AnyTokenValue);
-        this._syncBelow(holder.name);
         this.emit('scopeAdded', { scope: path });
       } catch (e) {
         if (this.scopeManager.getScope(path)) this._deleteGroupNow(holder, name);
@@ -1023,11 +1015,10 @@ export class DesignBook {
     this._notifyRemoved(removed);
     holder._rollback(name, undefined);
     this._accept(path, undefined, old);
-    this._syncBelow(holder.name);
     for (const scope of scopes) this.emit('scopeRemoved', { scope, removedKeys: removed.map(([k]) => k).filter((k) => scopeOf(k) === scope) });
   }
 
-  /** The path of the group a group extends (`variant`'s base), checked. */
+  /** The path of the scope a group extends (`ref(scope, { … })`), checked. */
   private _groupBase(holder: Scope, path: string, group: GroupValue): string | undefined {
     if (group.base === undefined) return undefined;
     const bound = bindToken(group.base, holder.name, this._binding);
@@ -1035,13 +1026,21 @@ export class DesignBook {
     const base = bound.key;
     if (base === path) {
       const error = new CircularDependencyError([path, path]);
-      error.message += ` — a variant cannot extend the group it replaces; to change "${path}" in place, set its members: book.getScope('${path}').set(…)`;
+      error.message += ` — ref('${path}', { … }) cannot stand in for "${path}" itself; to change it in place, set its members: book.getScope('${path}').set(…)`;
       throw error;
     }
-    if (!this.scopeManager.getScope(base)) {
-      throw new TokenError(`${path}: variant(…) needs a group to extend, and "${base}" is none`, path);
+    if (this.scopeManager.getScope(base)) return base;
+    // A key holding a group (inherited, or a reference to one): that group.
+    let held: string | undefined;
+    try {
+      held = this.has(base) ? this._resolution(base).group : undefined;
+    } catch {
+      held = undefined;
     }
-    return base;
+    if (held === undefined || held === path) {
+      throw new TokenError(`${path}: ref('${base}', { … }) changes the members of a scope, and "${base}" is none`, path);
+    }
+    return held;
   }
 
   /** The group at `path` as it would be written: its entry with its own
@@ -1057,62 +1056,6 @@ export class DesignBook {
       members[key] = (isGroupValue(raw) ? this.groupValueOf(`${path}.${key}`) : raw) as GroupInput;
     }
     return { ...entry, members };
-  }
-
-  /** Keeps every scope extending `holder` (at any depth) in step with the
-   *  groups it inherits. */
-  private _syncBelow(holder: string): void {
-    for (const name of this.scopeManager.lineageBelow(holder).slice(1)) {
-      const scope = this.scopeManager.getScope(name);
-      if (scope) this._syncInheritedGroups(scope);
-    }
-  }
-
-  /**
-   * A scope that inherits a group key holds a group there too: an implicit
-   * group extending the one it inherits, so its members are inherited keys
-   * of the scope's own — re-bound where they read relative to it — and a
-   * group placed in a context reads that context (`holder`). Makes the
-   * implicit groups `scope` needs, drops the ones it no longer does, and
-   * goes on into every group it holds.
-   */
-  private _syncInheritedGroups(scope: Scope): void {
-    const keys = new Set(scope.getAllKeys());
-    for (const key of keys) {
-      const path = `${scope.name}.${key}`;
-      const existing = this.scopeManager.getScope(path);
-      const raw = scope.getRaw(key);
-      if (scope.hasOwn(key) || !isGroupValue(raw)) {
-        if (existing?.implicit) this._dropImplicit(path);
-        else if (existing) this._syncInheritedGroups(existing);
-        continue;
-      }
-      const parent = `${scope.extendsScope}.${key}`;
-      if (existing?.implicit && existing.extendsScope === parent) {
-        this._syncInheritedGroups(existing);
-        continue;
-      }
-      if (existing) this._dropImplicit(path);
-      const created = this.scopeManager._addGroup(path, { extends: parent, implicit: true });
-      this._scopesChanged();
-      this._wireInherited([path, ...created.getAllKeys().map((k) => `${path}.${k}`)]);
-      this._syncInheritedGroups(created);
-    }
-    // Implicit groups at keys the scope no longer has.
-    const prefix = `${scope.name}.`;
-    for (const other of this.scopeManager.getAllScopes()) {
-      if (!other.implicit || !other.name.startsWith(prefix)) continue;
-      const rest = other.name.slice(prefix.length);
-      if (!rest.includes('.') && !keys.has(rest)) this._dropImplicit(other.name);
-    }
-  }
-
-  /** Removes an implicit group and everything in it. */
-  private _dropImplicit(path: string): void {
-    const removed: Array<[string, AnyTokenValue | undefined]> = [];
-    for (const scope of this._scopeTree(path)) this.scopeManager.deleteScope(scope, (keys) => removed.push(...keys));
-    this._scopesChanged();
-    this._notifyRemoved(removed);
   }
 
   _restoreRejectedDelete(qualifiedKey: string, restored: AnyTokenValue): void {
@@ -1201,9 +1144,12 @@ export class DesignBook {
   }
 
   private _getEffectiveDepsForKey(qualifiedKey: string, value: AnyTokenValue): string[] {
+    // A key holding a group of its own depends on the group's members, so a
+    // change in any of them reaches whoever reads the group; one inheriting
+    // a group key reads that group, through its source like any key.
+    if (isGroupValue(value) && !this._readsSource(qualifiedKey)) return this._memberKeys(qualifiedKey);
     // A key holding a group depends on the group's members, so a change in
     // any of them reaches whoever reads the group.
-    if (isGroupValue(value)) return this._memberKeys(qualifiedKey);
     if (splitKey(qualifiedKey) && this._readsSource(qualifiedKey)) {
       return [this.getSourceKey(qualifiedKey)!];
     }
@@ -1243,6 +1189,27 @@ export class DesignBook {
 
   /** Re-point the through paths read through `key`: its value may now be
    *  another group (a re-pointed reference, a selector's new pick). */
+  /** The keys a path could be read through: `a.b` and `a.b.c` for `a.b.c.d`. */
+  private _pathPrefixes(path: string): string[] {
+    const parts = path.split('.');
+    const prefixes: string[] = [];
+    for (let end = 2; end < parts.length; end++) prefixes.push(parts.slice(0, end).join('.'));
+    return prefixes;
+  }
+
+  /** A watched path nothing leads to yet: a node depending on every key it
+   *  could be read through, so writing one reaches it. */
+  private _waitThrough(path: string): void {
+    const prefixes = this._pathPrefixes(path);
+    this.graph.addNode(path);
+    this.graph.updateEdges(path, prefixes);
+    for (const prefix of prefixes) {
+      let nodes = this._throughNodes.get(prefix);
+      if (!nodes) this._throughNodes.set(prefix, (nodes = new Set()));
+      nodes.add(path);
+    }
+  }
+
   private _rewireThrough(key: string): void {
     const nodes = this._throughNodes.get(key);
     if (!nodes) return;
@@ -1253,8 +1220,14 @@ export class DesignBook {
       }
       const through = this._through(node);
       try {
-        this.graph.updateEdges(node, through ? [through.via, through.target] : [key]);
-        if (through) this._wireThrough([through.target]);
+        if (through) {
+          this.graph.updateEdges(node, [through.via, through.target]);
+          this._wireThrough([through.target]);
+        } else if (this._watchedPaths.has(node)) {
+          this._waitThrough(node);
+        } else {
+          this.graph.updateEdges(node, [key]);
+        }
       } catch { /* the path keeps the edges it had */ }
     }
     if (nodes.size === 0) this._throughNodes.delete(key);
@@ -1558,7 +1531,10 @@ export class DesignBook {
       }
       // A key that exists — own or inherited — keeps its node.
       if (this.has(key)) continue;
+      // Neither does a node for a key that does not exist, nor what only it read.
+      const prerequisites = this.graph.getPrerequisitesFor(key);
       this.graph.removeNode(key);
+      this._pruneOrphans(prerequisites);
     }
   }
 

@@ -281,11 +281,9 @@ export class Renderer {
   }
 
   /** The scopes to render: all, or the `scopes` option (unknown names throw). */
-  /** The top-level scopes that have output: templates are only
-   *  definitions, rendered where they are placed. */
+  /** The top-level scopes: groups are written through the keys holding them. */
   private renderable(): Scope[] {
-    // Groups are written through the keys holding them.
-    return this.book.getAllScopes().filter((scope) => !scope.template && scope.holderName === undefined);
+    return this.book.getAllScopes().filter((scope) => scope.holderName === undefined);
   }
 
   private scopesToRender() {
@@ -313,8 +311,8 @@ export class Renderer {
       const path = `${scope.name}.${key}`;
       const prop = `--${keyToHyphen(path)}`;
 
-      // A group held here: its members, at their paths.
-      if (isGroupValue(token)) {
+      // A group of its own: its members, at their paths.
+      if (isGroupValue(token) && scope.hasOwn(key)) {
         const group = this.book.getScope(path);
         if (group && !inside.has(path)) this.declareScope(group, out, new Set([...inside, path]));
         continue;
@@ -378,7 +376,7 @@ export class Renderer {
           '}',
         ]);
       }
-      if (isGroupValue(scope.get(key)) && !inside.has(path)) {
+      if (isGroupValue(scope.get(key)) && scope.hasOwn(key) && !inside.has(path)) {
         this.textStyleClasses(group, blocks, new Set([...inside, path]));
       }
     }
@@ -480,7 +478,7 @@ export class Renderer {
       const group = this.groupOf(path);
       if (!group) {
         result[path] = resolveTokenValue(this.book, scope.name, key);
-      } else if (isGroupValue(scope.get(key))) {
+      } else if (isGroupValue(scope.get(key)) && scope.hasOwn(key)) {
         this.jsonScope(group, result);
       } else {
         for (const member of this.leafMembers(group)) result[`${path}.${member}`] = this.book.resolve(`${group.name}.${member}`);
@@ -528,7 +526,7 @@ export class Renderer {
       const path = `${scope.name}.${key}`;
       const group = this.groupOf(path);
       if (group) {
-        out[key] = isGroupValue(token)
+        out[key] = isGroupValue(token) && scope.hasOwn(key)
           ? this.w3Group(path, group, token.description, inside)
           : this.w3GroupAlias(group);
         continue;

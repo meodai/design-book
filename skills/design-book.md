@@ -200,24 +200,28 @@ is fine — no need to invent intermediate tokens.
 ### 6. Text styles: `typography()`
 
 A text style (a Figma text style, a `.heading-1` class, a group of
-`--h1-*` variables) is **one token**, the W3 `typography` composite. Fields
-can hold refs to primitives, so changing `font-size.xl` updates every style
-that uses it:
+`--h1-*` variables) is a **group**: a key holding a small scope of fields,
+written as the W3 `typography` composite. `typography({ … })` is shorthand
+for one written in place; a named scope made with
+`addScope('typography-title', { kind: 'typography' })` and listed with
+`ref('typography-title')` is the same thing. Fields can hold refs to
+primitives, so changing `font-size.xl` updates every style that uses it:
 
 ```typescript
 type.set('body',  typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.md'), lineHeight: 1.5 }));
 type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700' }));
 
-// a style that differs in a few fields: a live variant of another
-type.set('hero', variant(ref('type.title'), { fontWeight: '800' }));  // null drops a field
+// a style that differs in a few fields: ref with the changes (live; null drops a field)
+type.set('hero', ref('type.title', { fontWeight: '800' }));
 
-// one field of a style
+// the exact style somewhere else, and one field of it
+card.set('heading', ref('type.title'));
 callout.set('size', ref('type.title.fontSize'));
 ```
 
 CSS output gets one variable per field (`--type-title-font-size`) plus a
-`.type-title` class; a variant's unchanged fields render as `var()` of its
-base's.
+`.type-title` class; a changed style's other fields render as `var()` of
+the original's.
 
 Text styles compare and sort by their font size unless told otherwise:
 `by` names another field for the comparisons, `field` for a scope's value
@@ -229,7 +233,7 @@ largest(ref('type'), { by: 'fontWeight' });                   // the heaviest st
 bestContrastWith(ref('.surface'), ref('type'), { by: 'color' }); // the style whose color stands out most
 nextLarger(ref('.body'), ref('type'), { by: 'lineHeight' });  // the next looser one
 type.setOrder([{ by: 'value', field: 'fontWeight' }]);         // light → heavy
-tablet.set('title', variant(inherited(ref('.title')), { fontSize: rem(2.4) }));
+tablet.set('title', inherited(ref('.title', { fontSize: rem(2.4) })));
 ```
 
 ### 7. Contexts side by side: `extends` and relative refs
@@ -376,12 +380,12 @@ phoneBook.render('css-variables', { media: '(max-width: 620px)', changedFrom: li
 // → @media (max-width: 620px) { :root { --font-size-xl: 2.4rem; } }
 ```
 
-To change one field of a style in a layer, pass the **token** (not a ref)
-to `variant` — a token cannot ref the value it replaces:
+To change one field of a style in a layer, set the field itself — a style
+is a scope:
 
 ```typescript
 const tablet = layer('tablet', (book) => {
-  book.getScope('type').set('title', variant(book.getTokenByKey('type.title'), { fontSize: rem(3.2) }));
+  book.getScope('type.title').set('fontSize', rem(3.2));
 });
 ```
 
@@ -404,7 +408,7 @@ A typical migration produces something like:
 import {
   DesignBook, color, ref, px, rem, string, nameValues,
   darken, colorMix, bestContrastWith, minContrastWith,
-  spacingScale, typography, variant,
+  spacingScale, typography,
 } from 'design-book';
 
 const book = new DesignBook('app');
@@ -448,7 +452,7 @@ size.set('xl', rem(2));
 const type = book.addScope('type');
 type.set('body',  typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.md'), lineHeight: 1.5 }));
 type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: ref('font-size.xl'), fontWeight: '700' }));
-type.set('hero',  variant(ref('type.title'), { fontWeight: '800' }));
+type.set('hero',  ref('type.title', { fontWeight: '800' }));
 ```
 
 Wrap it in `layer('base', (book) => { … })` as soon as the system has a
@@ -650,7 +654,7 @@ Aliases in a mode stay refs in its layer, so a dark-mode alias to
 Point its fields at the matching variables when the style is bound to them
 (`fontSize: ref('font-size.xl')`), otherwise use the literal values. Styles
 that differ from another only in a few properties (`Heading/Bold` vs
-`Heading/Regular`) can be `variant(ref('type.heading'), { fontWeight: '700' })`.
+`Heading/Regular`) can be `ref('type.heading', { fontWeight: '700' })`.
 
 ### Detecting procedural intent in Figma data
 

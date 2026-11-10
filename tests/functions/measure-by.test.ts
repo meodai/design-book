@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { DesignBook } from '../../src/design-book';
 import { color, px, ref, rem } from '../../src/tokens';
-import { typography, variant } from '../../src/functions/non-color/typography';
+import { typography } from '../../src/functions/non-color/typography';
 import {
   bestContrastWith, closest, darkest, furthestFrom, largest, lighten, lightest, minContrastWith, mostVivid, nextLarger, smallest,
 } from '../../src/functions';
@@ -64,7 +64,7 @@ describe('by: the field a text style is compared by', () => {
 
   it('reads inherited fields of a variant', () => {
     const { b, type, ui } = book();
-    type.set('lead', variant(ref('type.body'), { fontSize: rem(1.25) })); // weight 400 from body
+    type.set('lead', ref('type.body', { fontSize: rem(1.25) })); // weight 400 from body
     ui.set('x', closest(ref('type.lead'), ref('type'), { by: 'fontWeight', not: [ref('type.lead')] }));
     expect(pick(b, 'ui.x')).toBe('type.body');
   });

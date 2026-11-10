@@ -1270,18 +1270,15 @@ composeBook('old-town', [system, oldTown]);</Code></Sheet>
   letterSpacing: '-0.02em',
 }));
 
-// a variant reads the rest from its base, live
-type.set('hero', variant(
-  ref('type.heading'),
-  { fontSize: rem(4) },
-));
+// the heading with one member changed: the rest stay live
+type.set('hero', ref('type.heading', { fontSize: rem(4) }));
 
 // one field, anywhere
 callout.set('size', ref('type.heading.fontSize'));</Code></Sheet>
         <Sheet name="result" label="Result" front>
           <figure class="typo-stage">
             <div class="typo-sample typo-sample--heading">Type styles travel whole.</div>
-            <div class="typo-sample typo-sample--hero">Variants follow.</div>
+            <div class="typo-sample typo-sample--hero">Changes follow.</div>
           </figure>
         </Sheet>
       </Folder>

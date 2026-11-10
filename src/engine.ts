@@ -33,7 +33,6 @@ export {
   color,
   ref,
   inherited,
-  holder,
   pool,
   source,
   refersTo,
@@ -87,7 +86,7 @@ export {
   largest, smallest,
   ramp, rampStops, rampSet,
   spacingScale, typographyScale, timing,
-  typography, variant,
+  typography,
   nextLarger, nextSmaller, nextLighter, nextDarker,
   random,
   nth,
@@ -96,5 +95,5 @@ export {
 } from './functions';
 export type { RandomOptions, RandomType } from './functions';
 export type { NthOptions, SiblingOptions } from './functions';
-export type { TypographyField, TypographyFields, TypographyOverrides } from './functions';
+export type { TypographyField, TypographyFields } from './functions';
 export type { LightnessSelectorOptions, ReadableOnOptions, ClosestOptions, NextOptions, ExtremeOptions } from './functions';

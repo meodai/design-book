@@ -1,7 +1,7 @@
 import {
   DesignBook, color, ref, px, rem, ms, string,
   bestContrastWith, minContrastWith, colorMix, relativeTo, mostVivid, shade, ramp,
-  spacingScale, typographyScale, typography, variant,
+  spacingScale, typographyScale, typography,
   nextLarger, nextSmaller,
   lightest, darkest, sibling, scaleNames,
   Renderer, SVGRenderer, TableViewRenderer,
@@ -119,8 +119,8 @@ function bootDesignSystem() {
     lineHeight:    1.15,
     letterSpacing: '-0.02em',
   }));
-  // A live variant: every field it doesn't set keeps reading type.display.
-  type.set('display-sans', variant(ref('type.display'), { fontFamily: ref('fonts.sans') }));
+  // type.display with one member changed: the rest keep reading it, live.
+  type.set('display-sans', ref('type.display', { fontFamily: ref('fonts.sans') }));
 
   // Dark theme extending brand — neutrals flow through the semantic
   // layer so the inversion is visible as a graph edge instead of a
@@ -421,7 +421,7 @@ function serializeMember(group: Scope, name: string): string {
   return raw?.type === 'function' ? serializeFunctionToken(raw) : serializePlainToken(raw);
 }
 
-/** A group as it is typed: `typography({ … })`, `variant(ref('…'), { … })`
+/** A group as it is typed: `typography({ … })`, `ref('…', { … })`
  *  or a plain object of members — its own members only (the rest come from
  *  its base), `null` for the base's members it leaves out. */
 function serializeGroup(holder: Scope, name: string): string {
@@ -431,7 +431,13 @@ function serializeGroup(holder: Scope, name: string): string {
   for (const member of entry.omit ?? []) pairs.push(`${member}: null`);
   const members = pairs.length > 0 ? `{ ${pairs.join(', ')} }` : '{}';
   const tail = entry.description ? `, { description: ${JSON.stringify(entry.description)} }` : '';
-  if (entry.base) return `variant(${serializePlainToken(entry.base)}${pairs.length > 0 || tail ? `, ${members}` : ''}${tail})`;
+  if (entry.base) {
+    // ref('…', { … }); an inherited base around it: inherited(ref('…', { … }))
+    const changed = `ref('${entry.base.key}', ${members})`;
+    const up = entry.base.up;
+    const written = up === undefined ? changed : `inherited(${changed}${up === 1 ? '' : up === 'root' ? ", 'root'" : `, ${up}`})`;
+    return tail ? `${written.slice(0, -1)}${tail})` : written;
+  }
   if (entry.kind === 'typography') return `typography(${members}${tail})`;
   return members;
 }

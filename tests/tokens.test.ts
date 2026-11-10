@@ -62,9 +62,11 @@ describe('ref', () => {
     expect(r.key).toBe('brand.primary');
   });
 
-  it('accepts description option', () => {
-    const r = ref('x.y', { description: 'link' });
-    expect(r.description).toBe('link');
+  it('with a second argument, is the scope with those members changed', () => {
+    const g = ref('type.title', { fontWeight: '800', lineHeight: null });
+    expect(g.type).toBe('group');
+    expect(g.base).toEqual({ type: 'member', key: 'type.title' });
+    expect(g.omit).toEqual(['lineHeight']);
   });
 });
 

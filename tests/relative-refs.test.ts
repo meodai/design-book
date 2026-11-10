@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DesignBook } from '../src/design-book';
-import {
-  color, ref, holder, rem, colorMix, lighten, sibling, nth, typography, variant,
+import { inherited,
+  color, ref, rem, colorMix, lighten, sibling, nth, typography,
   composeBook, layer, CircularDependencyError,
 } from '../src/index';
 import type { ReferenceValue } from '../src/tokens';
@@ -203,36 +203,35 @@ describe('relative refs: ref(".token")', () => {
     expect(watcher).toHaveBeenCalledWith('#0000ff', expect.anything());
   });
 
-  it('works for typography fields and variants', () => {
+  it('works for typography fields and changed styles', () => {
     const book = new DesignBook('t');
     const type = book.addScope('type');
     type.set('size', rem(2));
-    // Inside the style `.` is the style; the scope holding it is its holder.
-    type.set('title', typography({ fontSize: holder(ref('.size')), lineHeight: 1.2 }));
+    type.set('title', typography({ fontSize: ref('type.size'), lineHeight: 1.2 }));
     type.set('title-size', ref('.title.fontSize'));
-    type.set('loose', variant(ref('.title'), { lineHeight: 1.6 }));
+    type.set('loose', ref('.title', { lineHeight: 1.6 }));
     const compact = book.addScope('compact', { extends: 'type' });
     compact.set('size', rem(1.5));
+    compact.set('title-size', ref('.title.fontSize'));
 
     expect(book.resolve('type.title.fontSize')).toBe('2rem');
-    // compact inherits the style, and the style reads the scope it is in.
+    // compact reads the same style: it does not copy it.
+    expect(book.resolve('compact.title.fontSize')).toBe('2rem');
+    expect(book.resolve('compact.title-size')).toBe('2rem');
+    expect(book.resolve('compact.loose.lineHeight')).toBe('1.6');
+    // a style of its own, from the inherited one, changed
+    compact.set('title', inherited(ref('.title', { fontSize: ref('compact.size') })));
     expect(book.resolve('compact.title.fontSize')).toBe('1.5rem');
     expect(book.resolve('compact.title.lineHeight')).toBe('1.2');
     expect(book.resolve('compact.title-size')).toBe('1.5rem');
-    expect(book.resolve('compact.loose.fontSize')).toBe('1.5rem');
-    expect(book.resolve('compact.loose.lineHeight')).toBe('1.6');
-
-    const watcher = vi.fn();
-    book.watch('compact.title-size', watcher);
-    compact.set('size', rem(1.25));
-    expect(watcher).toHaveBeenCalledWith('1.25rem', expect.anything());
   });
+
 
   it('refuses a variant of its own key, relative form too', () => {
     const book = new DesignBook('t');
     const type = book.addScope('type');
     type.set('title', typography({ fontSize: rem(2) }));
-    expect(() => type.set('title', variant(ref('.title'), { lineHeight: 1 }))).toThrow(CircularDependencyError);
+    expect(() => type.set('title', ref('.title', { lineHeight: 1 }))).toThrow(CircularDependencyError);
   });
 });
 

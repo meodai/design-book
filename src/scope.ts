@@ -70,16 +70,8 @@ export class Scope {
   /** What the scope is outside the book when it is a group (`'typography'`
    *  for a text style); read through `getKind`, which follows `extends`. */
   readonly kind?: string;
-  /** Inherited keys the scope leaves out (a variant's `null` members). */
+  /** Inherited keys the scope leaves out (`null` in `ref(scope, { … })`). */
   private readonly omitted: ReadonlySet<string>;
-  /** True for a group the book made because the scope holding it inherits
-   *  a group: it extends the inherited one and has no members of its own
-   *  until something is written into it. */
-  readonly implicit: boolean;
-  /** A definition meant to be placed elsewhere (`variant(ref(name))`): it
-   *  may read a holder it does not have, and renderers leave it out — only
-   *  the places it is put appear in the output. */
-  readonly template: boolean;
   private tokens: Map<string, AnyTokenValue>;
   private book: BookWithScope;
   /** Local order config. `undefined` = inherit from extends chain;
@@ -104,7 +96,7 @@ export class Scope {
   constructor(
     name: string,
     book: BookWithScope,
-    options?: { extends?: string; description?: string; metadata?: ScopeMetadata; kind?: string; omit?: readonly string[]; implicit?: boolean; template?: boolean }
+    options?: { extends?: string; description?: string; metadata?: ScopeMetadata; kind?: string; omit?: readonly string[] }
   ) {
     this.name = name;
     this.book = book;
@@ -113,8 +105,6 @@ export class Scope {
     this.extendsName = options?.extends;
     this.kind = options?.kind;
     this.omitted = new Set(options?.omit ?? []);
-    this.implicit = options?.implicit ?? false;
-    this.template = options?.template ?? false;
     this.tokens = new Map();
   }
 
@@ -126,7 +116,7 @@ export class Scope {
   }
 
   /** What the scope is outside the book — its own kind, or the kind of the
-   *  scope it extends (a variant of a text style is a text style). */
+   *  scope it extends (a text style changed is a text style). */
   getKind(): string | undefined {
     if (this.kind !== undefined) return this.kind;
     return this.extendsName ? this.book.getScope(this.extendsName)?.getKind() : undefined;
@@ -191,7 +181,7 @@ export class Scope {
   /**
    * Writes a token, or a group, at `name`. A group is written as a plain
    * object of members (`{ bg: …, text: … }`), `typography({ … })` or
-   * `variant(ref, { … })`; nested objects are nested groups.
+   * `ref(scope, { …changes })`; nested objects are nested groups.
    */
   set(name: string, value: AnyTokenValue | Record<string, unknown>): void {
     assertValidTokenKey(this.name, name);
@@ -531,8 +521,9 @@ export class Scope {
       this.book._cache.trip();
       throw new CircularDependencyError([qualified, qualified]);
     }
-    // A group's value is the group: the scope at its path.
-    if (isGroupValue(token)) return { value: '', group: qualified };
+    // A group's value is the group: the scope at its path — the source's
+    // when the key inherits it.
+    if (isGroupValue(token)) return { value: '', group: this.getSourceKey(name) ?? qualified };
     this.resolving.add(name);
     try {
       // A reference passes on what it refers to, a pick included.

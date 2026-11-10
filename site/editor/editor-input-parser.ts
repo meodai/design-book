@@ -7,7 +7,7 @@ import {
   spacingScale, typographyScale, timing,
   nextLarger, nextSmaller,
   nth, random, sibling,
-  typography, variant,
+  typography,
 } from '../../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../../src/index';
 import { isScopePath } from '../../src/internals';
@@ -38,6 +38,11 @@ export function parseTokenInput(
   currentScope?: Scope,
 ): AnyTokenValue {
   const trimmed = input.trim();
+
+  // ref('scope', { … }) and inherited(ref('scope', { … }), n?): the scope
+  // with some members changed.
+  const changed = parseChangedRef(trimmed, book);
+  if (changed) return changed;
 
   // { member: value, … }: a group of members (nested objects nest).
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
@@ -358,7 +363,7 @@ function getScopeArg(parsed: ReturnType<typeof parseArg>): ReferenceValue {
 
 /** An object literal of typography fields: `{ name: value, … }`. A value is
  *  a token or ref (as in any argument), a quoted string, a number, or — for
- *  variant — `null` to drop the field. */
+ *  the changes in `ref('…', { … })` — `null` to leave a member out. */
 function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: boolean): Record<string, any> {
   const body = str.trim().replace(/^\{/, '').replace(/\}$/, '');
   const fields: Record<string, any> = {};
@@ -383,13 +388,28 @@ function parseFieldObject(str: string, book: DesignBook | undefined, allowNull: 
   return fields;
 }
 
+/** `ref('scope', { … })`, possibly inside `inherited(…, n?)`, or undefined. */
+function parseChangedRef(text: string, book?: DesignBook): AnyTokenValue | undefined {
+  const wrapped = text.match(/^inherited\(\s*(ref\(.+\))\s*(?:,\s*(\d+|['"]root['"])\s*)?\)$/s);
+  const inner = wrapped ? wrapped[1] : text;
+  const call = inner.match(/^ref\(([\s\S]*)\)$/);
+  if (!call) return undefined;
+  const args = splitArgs(call[1]);
+  if (args.length !== 2 || !args[1].trim().startsWith('{')) return undefined;
+  const key = parseQuotedString(args[0].trim());
+  const group = ref(key, groupMembers(parseFieldObject(args[1], book, true)) as never);
+  if (!wrapped) return group as AnyTokenValue;
+  const levels = wrapped[2] === undefined ? 1 : /root/.test(wrapped[2]) ? 'root' as const : Number(wrapped[2]);
+  return inherited(group, levels) as AnyTokenValue;
+}
+
 /** Members as a group takes them: a quoted string is a string token, a bare
  *  number a unitless dimension (as `typography` reads them), the rest as
  *  parsed. */
 function groupMembers(fields: Record<string, any>): Record<string, any> {
   return Object.fromEntries(Object.entries(fields).map(([name, value]) => [
     name,
-    typeof value === 'number' ? dimension(value, '') : typeof value === 'string' ? string(value) : value,
+    value === null ? null : typeof value === 'number' ? dimension(value, '') : typeof value === 'string' ? string(value) : value,
   ]));
 }
 
@@ -477,17 +497,6 @@ const FUNCTION_PARSERS: Record<string, FuncParser> = {
     return typography(fields, description ? { description } : undefined);
   },
 
-  // variant(ref('type.title'), { fontWeight: '800', letterSpacing: null })
-  variant(argsStr, book) {
-    const args = splitArgs(argsStr);
-    if (args.length < 1 || (args.length > 1 && !args[1].startsWith('{'))) {
-      throw new Error("variant requires a base and, optionally, an object of members: variant(ref('type.title'), { fontWeight: '800' })");
-    }
-    const base = getTokenArg(parseArg(args[0], book));
-    const token = variant(base as ReferenceValue, args.length > 1 ? parseFieldObject(args[1], book, true) : {});
-    const description = args.length > 2 ? parseOptionsArg(args.slice(2).join(','))?.description : undefined;
-    return description ? { ...token, description } : token;
-  },
 
   // ramp(seed, { shade: '500' })
   ramp(argsStr, book, currentScope) {

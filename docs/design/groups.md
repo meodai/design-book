@@ -1,6 +1,36 @@
 # Groups: a key that holds a scope
 
-Status: proposal, for review before any code.
+Status: built, then simplified (see *Revision* below; it overrides the
+sections after it where they disagree).
+
+## Revision: no placing
+
+Placing — one definition reading the context it is put in, through
+`holder(ref('.x'))`, `variant(ref(…))` with no members, templates and an
+implicit copy of a group in every scope extending one that holds it — was
+built and then removed. It worked, but it was more than groups need: in
+practice they hold text styles, which read nothing from their surroundings.
+Contexts keep doing per-context answers the way they always have, with flat
+keys and relative refs in scopes that extend each other.
+
+What is left:
+
+- A key holds a scope: `ref('scope')` (the scope itself, nothing copied), or
+  one written in place (a plain object, `typography({ … })`).
+- `ref('scope', { … })` is that scope with those members changed: a group
+  extending it (`null` leaves a member out). It replaces `variant`. The scope
+  may be a key holding a group (an inherited one, a reference): it extends
+  that group. `inherited(ref('.title', { … }))` extends the inherited style.
+- A scope extending one that holds a group reads that same group, like any
+  inherited key: no copy, a `var()` in CSS.
+- `holder`, templates and implicit groups are gone. `ref`'s second argument
+  is no longer an options object (`description`).
+
+W3 (2025.10) agrees with this shape: a group can `$extends` another group,
+a redefined token replaces the inherited one whole, cycles are errors; an
+alias may only point at a token, never a group (so a held group is exported
+member by member, a text style as an alias of the composite); removing an
+inherited token is not defined.
 
 ## Why
 
@@ -22,7 +52,7 @@ The demo is typography:
 const type = book.addScope('type');
 type.set('body',  typography({ fontFamily: ref('font.sans'), fontSize: rem(1), lineHeight: 1.5 }));
 type.set('title', typography({ fontFamily: ref('font.sans'), fontSize: rem(2.4), lineHeight: 1.2 }));
-type.set('title--compact', variant(ref('.title'), { fontSize: rem(1.8) }));
+type.set('title--compact', ref('.title', { fontSize: rem(1.8) }));
 
 card.set('heading', ref('type.title--compact'));     // the card uses that exact style
 ref('card.heading.fontSize')                          // one of its members, through the card
