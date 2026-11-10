@@ -282,9 +282,10 @@ Kept here so the build follows one plan.
   (`member`), and now a pool (`pool`), set by the selector constructors
   (`poolArg`). Whether a path names a scope can no longer be told from its
   dots, so "is this a pool" is a type check, and `isScopeKey` goes.
-- **Navigation starts at the owning scope** of the path: `inherited` moves
-  along `extends`, `holder` drops one path segment per level (a top-level
-  scope has no holder: unresolvable).
+- **Navigation starts where the reference is read** (revised): a relative
+  reference from the scope reading it, an absolute one from the scope it
+  names; `inherited` moves along `extends`. A group's parent is the scope it
+  changes; one changing nothing has none.
 - **A group is stored twice, cleanly**: the holding scope keeps a
   `GroupValue` entry (`{ type: 'group', kind?, base?, omit? }`, no
   members), the members live in the group's own `Scope`, registered under

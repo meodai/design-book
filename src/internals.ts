@@ -10,6 +10,7 @@ export {
   isRelativeKey,
   qualifyKey,
   isScopePath,
+  asMember,
   extractDependencies,
   functionDependencies,
   extractIteratedScopes,

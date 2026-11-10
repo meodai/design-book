@@ -1,5 +1,5 @@
 import { parse } from 'culori';
-import { parseKey, rootScopeOf, scopeOf } from './keys';
+import { parseKey, scopeOf } from './keys';
 import { TokenError } from './errors';
 
 export interface TokenProcessor {
@@ -246,11 +246,8 @@ export function ref(key: string, overrides?: Record<string, GroupInput | string 
       omit.push(name);
       continue;
     }
-    // A plain number or string stands for the token, as in typography():
-    // `1.2` a unitless dimension, `'800'` a string.
-    if (typeof value === 'number') members[name] = dimension(value, '');
-    else if (typeof value === 'string') members[name] = string(value);
-    else if (isGroupInput(value)) members[name] = value;
+    const member = asMember(value);
+    if (isGroupInput(member)) members[name] = member;
     else {
       throw new TokenError(
         `ref('${key}', { ${name}: ${JSON.stringify(value)} }): a member is a token (rem(1.8), ref(…)), a plain number or string, or a group`,
@@ -259,6 +256,18 @@ export function ref(key: string, overrides?: Record<string, GroupInput | string 
     }
   }
   return { type: 'group', base: toMember(reference), members, ...(omit.length ? { omit } : {}) };
+}
+
+/**
+ * A member as written where a group is: a plain number stands for a unitless
+ * dimension (`1.5`), a plain string for a string (`'700'`); anything else is
+ * passed on as it is. Shared by `typography()`, `ref(scope, { … })` and the
+ * editor, so `lineHeight: 1.5` means the same everywhere.
+ */
+export function asMember<T>(value: T): T extends number | string ? TokenValue : T {
+  if (typeof value === 'number') return dimension(value, '') as never;
+  if (typeof value === 'string') return string(value) as never;
+  return value as never;
 }
 
 /** A token, a group, or a plain object of members. */
@@ -551,15 +560,13 @@ export function needsBinding(token: unknown): boolean {
 }
 
 /**
- * Follows `inherited` (`up`) from the scope a qualified path belongs to —
- * the path itself for a pool, everything before its last dot for a token —
- * and puts the rest of the path back.
+ * Follows `inherited` (`up`) along the `extends` chain from `start` — the
+ * scope a relative reference is read in, or the scope an absolute one names
+ * — and puts the rest of the path back: `inherited(ref('.title.fontSize'))`
+ * in `callout` is `title.fontSize` in callout's parent. A group's parent is
+ * the scope it extends (`ref('.title', { … })`); one extending nothing has none.
  */
-function navigate(path: string, isScope: boolean, up: number | 'root', context: BindingContext): string | { error: string } {
-  // A path inside a group no scope extends (`card.title.fontSize`) climbs
-  // the chain of the top-level scope it is in.
-  const own = isScope ? path : scopeOf(path);
-  const start = context.parentOf(own) === undefined ? rootScopeOf(own) : own;
+function navigate(path: string, start: string, up: number | 'root', context: BindingContext): string | { error: string } {
   const rest = path.slice(start.length);
   let scope = start;
   if (up === 'root') {
@@ -575,7 +582,7 @@ function navigate(path: string, isScope: boolean, up: number | 'root', context: 
     if (parent === undefined) {
       return {
         error: level === 0
-          ? `"${start}" has no parent: it extends no scope, so inherited(...) cannot read "${path}" there`
+          ? `"${start}" has no parent: it extends no scope, so inherited(...) cannot read "${path}" there${start.includes('.') ? ' — name the scope instead' : ''}`
           : `"${start}" has only ${level} level${level === 1 ? '' : 's'} above it, so inherited(...) cannot go ${up} up`,
       };
     }
@@ -591,8 +598,10 @@ function bindNode(node: RefNode, scope: string, context: BindingContext | undefi
   const qualified = qualifyKey(node.key, scope);
   const { up, ...plain } = node;
   if (up === undefined) return { ...plain, key: qualified };
+  // Relative: from the scope reading it. Absolute: from the scope it names.
+  const start = node.key.startsWith('.') ? scope : isPoolReference(node) ? qualified : scopeOf(qualified);
   const navigated = context
-    ? navigate(qualified, isPoolReference(node), up, context)
+    ? navigate(qualified, start, up, context)
     : { error: `"${node.key}" needs a book to read inherited(...)` };
   if (typeof navigated !== 'string') return { type: 'unresolvable', key: qualified, message: navigated.error };
   return { ...plain, key: navigated } as RefNode;

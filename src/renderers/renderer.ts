@@ -258,13 +258,15 @@ export class Renderer {
 
   /** The group a key's value is — the key holds one, refers to one or picked
    *  one — or `undefined`. */
+  /** The group written at `path` itself — not one it inherits or refers
+   *  to, which are written where they live. */
+  private ownGroup(path: string): Scope | undefined {
+    return this.book.groupAt(path) === path ? this.book.getScope(path) : undefined;
+  }
+
   private groupOf(path: string): Scope | undefined {
-    try {
-      const group = this.book._resolution(path).group;
-      return group === undefined ? undefined : this.book.getScope(group);
-    } catch {
-      return undefined;
-    }
+    const group = this.book.groupAt(path);
+    return group === undefined ? undefined : this.book.getScope(group);
   }
 
   /** A group's members as paths relative to it, nested groups' members
@@ -312,9 +314,9 @@ export class Renderer {
       const prop = `--${keyToHyphen(path)}`;
 
       // A group of its own: its members, at their paths.
-      if (isGroupValue(token) && scope.hasOwn(key)) {
-        const group = this.book.getScope(path);
-        if (group && !inside.has(path)) this.declareScope(group, out, new Set([...inside, path]));
+      const own = this.ownGroup(path);
+      if (own) {
+        if (!inside.has(path)) this.declareScope(own, out, new Set([...inside, path]));
         continue;
       }
       // A group referred to or picked: each member points at the original's.
@@ -376,7 +378,7 @@ export class Renderer {
           '}',
         ]);
       }
-      if (isGroupValue(scope.get(key)) && scope.hasOwn(key) && !inside.has(path)) {
+      if (this.ownGroup(path) && !inside.has(path)) {
         this.textStyleClasses(group, blocks, new Set([...inside, path]));
       }
     }
@@ -478,7 +480,7 @@ export class Renderer {
       const group = this.groupOf(path);
       if (!group) {
         result[path] = resolveTokenValue(this.book, scope.name, key);
-      } else if (isGroupValue(scope.get(key)) && scope.hasOwn(key)) {
+      } else if (this.ownGroup(path)) {
         this.jsonScope(group, result);
       } else {
         for (const member of this.leafMembers(group)) result[`${path}.${member}`] = this.book.resolve(`${group.name}.${member}`);
@@ -526,7 +528,7 @@ export class Renderer {
       const path = `${scope.name}.${key}`;
       const group = this.groupOf(path);
       if (group) {
-        out[key] = isGroupValue(token) && scope.hasOwn(key)
+        out[key] = this.ownGroup(path) && isGroupValue(token)
           ? this.w3Group(path, group, token.description, inside)
           : this.w3GroupAlias(group);
         continue;

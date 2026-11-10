@@ -9,7 +9,7 @@ import { registerBuiltinFunctions } from './functions';
 import { registerBuiltinOrderers } from './orderers';
 import type { AnyTokenValue, BindingContext, FunctionArg, GroupInput, GroupValue, ReferenceValue, FunctionTokenValue, TokenValue } from './tokens';
 import type { TokenOrderer } from './orderers';
-import { bindToken, functionDependencies, hasRelativeKeys, isGroupValue, isPoolReference, isRelativeKey, isUnresolvable, iteratedScopesOf } from './tokens';
+import { bindToken, functionDependencies, hasRelativeKeys, isFunctionTokenValue, isGroupValue, isPoolReference, isReferenceValue, isRelativeKey, isUnresolvable, iteratedScopesOf } from './tokens';
 import { assertValidTokenKey } from './keys';
 import { CircularDependencyError } from './errors';
 import type { Ramp } from 'dittotones';
@@ -462,6 +462,29 @@ export class DesignBook {
     }
   }
 
+  /**
+   * The path of the group a key holds — its own, the one it inherits, the
+   * one it refers to (through any chain of references) or the one a
+   * selector picked — or `undefined` when it holds none. A scope's own path
+   * holds itself. Read from the tokens; only a selector is evaluated.
+   */
+  groupAt(key: string, seen: Set<string> = new Set()): string | undefined {
+    if (this.scopeManager.getScope(key)) return key;
+    if (seen.has(key)) return undefined;
+    seen.add(key);
+    const at = this._locate(key);
+    if (!at) {
+      const through = this._through(key);
+      return through ? this.groupAt(through.target, seen) : undefined;
+    }
+    if (!at.scope.has(at.name)) return undefined;
+    const token = at.scope.get(at.name);
+    if (isGroupValue(token)) return at.scope.getSourceKey(at.name) ?? key;
+    if (isReferenceValue(token)) return this.groupAt(token.key, seen);
+    const picked = isFunctionTokenValue(token) ? this.pickOf(key) : undefined;
+    return picked === undefined ? undefined : this.groupAt(picked, seen);
+  }
+
   /** A key's value and the member it is, when it is one. */
   _resolution(key: string): Resolution {
     if (isRelativeKey(key)) {
@@ -492,12 +515,7 @@ export class DesignBook {
   private _through(key: string): { via: string; target: string } | undefined {
     const parts = splitKey(key);
     if (!parts || this.scopeManager.getScope(parts[0])) return undefined;
-    let group: string | undefined;
-    try {
-      group = this._resolution(parts[0]).group;
-    } catch {
-      return undefined;
-    }
+    const group = this.groupAt(parts[0]);
     // A key whose group is its own scope (being replaced, or gone) leads
     // nowhere further: only a key holding another group is read through.
     if (group === undefined || group === parts[0]) return undefined;
@@ -1029,14 +1047,8 @@ export class DesignBook {
       error.message += ` — ref('${path}', { … }) cannot stand in for "${path}" itself; to change it in place, set its members: book.getScope('${path}').set(…)`;
       throw error;
     }
-    if (this.scopeManager.getScope(base)) return base;
-    // A key holding a group (inherited, or a reference to one): that group.
-    let held: string | undefined;
-    try {
-      held = this.has(base) ? this._resolution(base).group : undefined;
-    } catch {
-      held = undefined;
-    }
+    // A scope, or a key holding a group (inherited, or referred to): that group.
+    const held = this.groupAt(base);
     if (held === undefined || held === path) {
       throw new TokenError(`${path}: ref('${base}', { … }) changes the members of a scope, and "${base}" is none`, path);
     }

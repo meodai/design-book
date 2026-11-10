@@ -324,6 +324,37 @@ describe('changes and watching through', () => {
   });
 });
 
+describe('inherited inside groups, and groupAt', () => {
+  it('a relative path navigates from the scope reading it', () => {
+    const { book } = typeBook();
+    const tablet = book.addScope('type-tablet', { extends: 'type' });
+    tablet.set('title-size', inherited(ref('.title.fontSize')));
+    expect(book.resolve('type-tablet.title-size')).toBe('3.2rem');
+  });
+
+  it('in a changed group, inherited reads the scope it changes; in a plain one it is an error', () => {
+    const { book, type } = typeBook();
+    type.set('hero', ref('.title', { fontWeight: '800' }));
+    book.getScope('type.hero')!.set('baseWeight', inherited(ref('.fontWeight')));
+    expect(book.resolve('type.hero.baseWeight')).toBe('700');
+    expect(() => book.getScope('type.title')!.set('x', inherited(ref('.fontWeight'))))
+      .toThrow(/"type.title" has no parent.*name the scope instead/);
+  });
+
+  it('groupAt names the group a key holds: own, inherited, referred to, picked', () => {
+    const { book } = typeBook();
+    book.addScope('type-tablet', { extends: 'type' });
+    book.addScope('ui').set('big', largest(ref('type')));
+    book.getScope('ui')!.set('also', ref('.big'));
+    expect(book.groupAt('type.title')).toBe('type.title');
+    expect(book.groupAt('type-tablet.title')).toBe('type.title');
+    expect(book.groupAt('button.label')).toBe('type.body');
+    expect(book.groupAt('ui.also')).toBe('type.title');
+    expect(book.groupAt('type.title.fontSize')).toBeUndefined();
+    expect(book.groupAt('nope.nothing')).toBeUndefined();
+  });
+});
+
 describe('watching a path before it leads anywhere', () => {
   it('starts reporting once the reference it is read through is written', () => {
     const book = new DesignBook('t');

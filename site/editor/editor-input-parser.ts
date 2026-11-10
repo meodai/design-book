@@ -10,7 +10,7 @@ import {
   typography,
 } from '../../src/index';
 import type { AnyTokenValue, DesignBook, RandomOptions, ReferenceValue, Scope } from '../../src/index';
-import { isScopePath } from '../../src/internals';
+import { asMember, isScopePath } from '../../src/internals';
 import { parse } from 'culori';
 
 /**
@@ -409,7 +409,7 @@ function parseChangedRef(text: string, book?: DesignBook): AnyTokenValue | undef
 function groupMembers(fields: Record<string, any>): Record<string, any> {
   return Object.fromEntries(Object.entries(fields).map(([name, value]) => [
     name,
-    value === null ? null : typeof value === 'number' ? dimension(value, '') : typeof value === 'string' ? string(value) : value,
+    value === null ? null : asMember(value),
   ]));
 }
 

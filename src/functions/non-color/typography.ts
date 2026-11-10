@@ -1,6 +1,6 @@
 import { assertOptions } from '../args';
 import { VALID_TOKEN_KEY } from '../../keys';
-import { dimension, string } from '../../tokens';
+import { asMember } from '../../tokens';
 import type { FunctionTokenValue, GroupInput, GroupValue, ReferenceValue, TokenValue } from '../../tokens';
 import { FunctionError } from '../../errors';
 
@@ -17,16 +17,8 @@ function assertMemberNames(names: string[], fn: string): void {
   }
 }
 
-/** A field written as a plain string or number, as the token it stands for:
- *  a number is a unitless dimension (`1.5`), a string a string (`'700'`). */
-function asMember(value: unknown): GroupInput {
-  if (typeof value === 'number') return dimension(value, '');
-  if (typeof value === 'string') return string(value);
-  return value as GroupInput;
-}
-
 function members(fields: Record<string, unknown>): Record<string, GroupInput> {
-  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, asMember(value)]));
+  return Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, asMember(value) as GroupInput]));
 }
 
 /**
