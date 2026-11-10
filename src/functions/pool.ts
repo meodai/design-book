@@ -78,6 +78,21 @@ export function colorForm(value: string): ColorForm | null {
   return remember(forms, value, { hex, color, l: oklch?.l ?? NaN, c: oklch?.c ?? NaN });
 }
 
+/** What narrows a scope's colors to a selector's candidates: the options
+ *  every color selector receives. */
+export interface ColorPoolOptions {
+  /** Qualified member keys left out. */
+  not: ReadonlyArray<string>;
+  /** Backdrop every candidate must stay readable on. */
+  readableOn?: string | null;
+  /** The contrast to reach on it: a number in the book's method, or a text style. */
+  readableContrast?: unknown;
+  /** A text style's color field to compare it by. */
+  by?: string;
+  /** The book's contrast method. */
+  contrast?: ContrastMethod;
+}
+
 /**
  * The pool's colors: members resolved by the shared pool rule, the ones that
  * are colors in their compared forms, then — with `readableOn` — only those
@@ -86,15 +101,8 @@ export function colorForm(value: string): ColorForm | null {
  * of* the readability filter throws, so a selector never hands back a color
  * the caller asked to be readable but is not.
  */
-export function colorPool(
-  fn: string,
-  scope: Scope,
-  not: ReadonlyArray<string>,
-  readableOn: string | null | undefined,
-  readableContrast: unknown,
-  by: string | undefined,
-  method: ContrastMethod = 'wcag',
-): ReadonlyArray<ColorMember> {
+export function colorPool(fn: string, scope: Scope, options: ColorPoolOptions): ReadonlyArray<ColorMember> {
+  const { not, readableOn, readableContrast, by, contrast: method = 'wcag' } = options;
   const colorsOf = (pool: ReadonlyArray<PoolMember>) => {
     const colors: ColorMember[] = [];
     for (const { key, value, group } of pool) {

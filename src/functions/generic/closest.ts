@@ -119,7 +119,7 @@ function closestColor(styleOrColor: Measurable, scope: Scope, options: ClosestIn
   // backdrop when there is one, otherwise over both white and black.
   const backdrop = options.readableOn === undefined ? null : parseColor(options.readableOn) ?? null;
   const choice = best(
-    colorPool('closest', scope, options.not, options.readableOn, options.readableContrast, options.by, options.contrast).filter((c) => onSide(c.l - target.l)),
+    colorPool('closest', scope, options).filter((c) => onSide(c.l - target.l)),
     (c) => visibleDistance(target.color, c.color, backdrop),
     'min',
   );

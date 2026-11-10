@@ -4,7 +4,7 @@ import { color, ref } from '../../../src/tokens';
 import { mostVivid } from '../../../src/functions/color/vividness';
 import { lighten } from '../../../src/functions/color/lighten-darken';
 import { colorPool } from '../../../src/functions/pool';
-const colorsOf = (scope: Parameters<typeof colorPool>[1]) => colorPool('test', scope, []);
+const colorsOf = (scope: Parameters<typeof colorPool>[1]) => colorPool('test', scope, { not: [] });
 
 describe('the color pool and wide-gamut members', () => {
   function makeBook() {

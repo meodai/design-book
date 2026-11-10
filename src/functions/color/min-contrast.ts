@@ -48,7 +48,7 @@ export function minContrastWithImpl(
   options: ContrastInputs & { minContrast?: unknown },
 ): Pick {
   const fn = 'minContrastWith';
-  const { not, direction, readableOn, readableContrast, minContrast, by, contrast = 'wcag', targetIs } = options;
+  const { not, direction, readableOn, minContrast, by, contrast = 'wcag', targetIs } = options;
   const measure = measureOf(targetValue, by);
   if (measure && readableOn !== undefined) {
     throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
@@ -68,7 +68,7 @@ export function minContrastWithImpl(
   const target = parseColor(colorTarget(fn, targetValue, by));
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
-  const candidates = colorPool(fn, scope, not, readableOn, readableContrast, by, contrast)
+  const candidates = colorPool(fn, scope, options)
     .filter((c) => onLightnessSide(direction, targetL, c.l))
     .map((c) => ({ ...c, score: contrastOn(contrast, target, c.color, targetIs) }));
   if (candidates.length === 0) throw new FunctionError(`${fn}: no valid color candidates found in scope`, fn);

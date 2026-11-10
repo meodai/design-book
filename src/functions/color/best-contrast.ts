@@ -31,7 +31,7 @@ export interface ContrastInputs extends ReadableOn {
  *  background), the ratio of the two values for sizes and text styles. */
 export function bestContrastWithImpl(targetValue: Measurable, scope: Scope, options: ContrastInputs): Pick {
   const fn = 'bestContrastWith';
-  const { not, direction, readableOn, readableContrast, by, contrast = 'wcag', targetIs } = options;
+  const { not, direction, readableOn, by, contrast = 'wcag', targetIs } = options;
   const measure = measureOf(targetValue, by);
   if (measure && readableOn !== undefined) {
     throw new FunctionError(`${fn}: \`readableOn\` is for colors; the target is a size or a text style`, fn);
@@ -45,7 +45,7 @@ export function bestContrastWithImpl(targetValue: Measurable, scope: Scope, opti
   if (!target) throw new FunctionError(`${fn}: cannot parse target color "${targetValue}"`, fn);
   const targetL = lightnessOf(target);
   const top = best(
-    colorPool(fn, scope, not, readableOn, readableContrast, by, contrast).filter((c) => onLightnessSide(direction, targetL, c.l)),
+    colorPool(fn, scope, options).filter((c) => onLightnessSide(direction, targetL, c.l)),
     (c) => contrastOn(contrast, target, c.color, targetIs),
     'max',
   );
