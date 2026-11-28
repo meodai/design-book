@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import type { ConfigEnv, UserConfig } from 'vite';
-import { resolve } from 'path';
+import { existsSync } from 'fs';
+import { dirname, relative, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import dts from 'vite-plugin-dts';
 
@@ -26,7 +27,7 @@ function config({ mode }: ConfigEnv): UserConfig {
   }
 
   return {
-    plugins: [dts({ rollupTypes: true })],
+    plugins: [dts({ beforeWriteFile: withExplicitExtensions })],
     build: {
       lib: {
         // `design-book/naming` is its own entry: it has no dependencies,
@@ -49,4 +50,22 @@ function config({ mode }: ConfigEnv): UserConfig {
       },
     },
   };
+}
+
+// The declarations keep the source's extensionless relative imports ('./engine'), which a
+// `"type": "module"` package's .d.ts cannot use under `moduleResolution: node16/nodenext`.
+// Give each one the extension Node resolves: './engine.js', or './naming/index.js' for a folder.
+function withExplicitExtensions(filePath: string, content: string) {
+  const src = resolve(__dirname, 'src', dirname(relative(resolve(__dirname, 'dist'), filePath)));
+  const fixed = content.replace(
+    /(\bfrom\s*|\bimport\s*\(\s*)(['"])(\.\.?\/[^'"]*?)\2/g,
+    (match, lead: string, quote: string, spec: string) => {
+      if (/\.[cm]?js$/.test(spec)) return match;
+      const target = resolve(src, spec);
+      if (existsSync(`${target}.ts`)) return `${lead}${quote}${spec}.js${quote}`;
+      if (existsSync(resolve(target, 'index.ts'))) return `${lead}${quote}${spec}/index.js${quote}`;
+      return match;
+    },
+  );
+  return { content: fixed };
 }
